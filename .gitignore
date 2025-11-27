@@ -28,3 +28,9 @@ appsettings.*.json
 
 # Windows device files
 nul
+
+# Installer output and build artifacts
+installer/output/
+*.zip
+publish/
+output/
