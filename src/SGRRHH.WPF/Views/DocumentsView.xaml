@@ -1,0 +1,168 @@
+<UserControl x:Class="SGRRHH.WPF.Views.DocumentsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:enums="clr-namespace:SGRRHH.Core.Enums;assembly=SGRRHH.Core"
+             xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
+             mc:Ignorable="d"
+             d:DesignWidth="1100" d:DesignHeight="700"
+             Background="White">
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+        <converters:NotNullToVisibilityConverter x:Key="NotNullToVisibilityConverter" />
+        <converters:IsNullOrEmptyToVisibilityConverter x:Key="IsNullOrEmptyToVisibilityConverter" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="380" />
+            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Config Panel -->
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="20">
+                <TextBlock Text="Documentos PDF" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
+                <TextBlock Text="Genera actas, certificados y constancias con los datos registrados en SGRRHH." Foreground="#616161" Margin="0,0,0,15"/>
+
+                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="Plantilla" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding Templates}"
+                                  SelectedItem="{Binding SelectedTemplate}"
+                                  DisplayMemberPath="Nombre" Margin="0,8,0,0" />
+                        <TextBlock Text="{Binding SelectedTemplate.Descripcion}"
+                                   Margin="0,5,0,0" Foreground="#757575" FontSize="12" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Permiso Selector -->
+                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTemplate.Tipo}" Value="{x:Static enums:TipoDocumentoPdf.ActaPermiso}">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel>
+                        <TextBlock Text="Permiso" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding Permisos}"
+                                  SelectedItem="{Binding SelectedPermiso}"
+                                  DisplayMemberPath="NumeroActa" Margin="0,8,0,0" />
+                        <TextBlock Text="Selecciona la solicitud aprobada para emitir el acta." FontSize="12" Foreground="#757575" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Empleado Selector -->
+                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTemplate.RequiresEmpleado}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel>
+                        <TextBlock Text="Empleado" FontWeight="SemiBold" />
+                        <ComboBox ItemsSource="{Binding Empleados}"
+                                  SelectedItem="{Binding SelectedEmpleado}"
+                                  DisplayMemberPath="NombreCompleto" Margin="0,8,0,0" />
+                        <TextBlock Text="El colaborador aparecerá automáticamente si eliges un permiso." FontSize="12" Foreground="#757575" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Opciones Certificado -->
+                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTemplate.Tipo}" Value="{x:Static enums:TipoDocumentoPdf.CertificadoLaboral}">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel>
+                        <TextBlock Text="Opciones Certificado" FontWeight="SemiBold" />
+                        <TextBlock Text="Ciudad" />
+                        <TextBox Text="{Binding CertificadoOptions.CiudadExpedicion, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="Responsable" />
+                        <TextBox Text="{Binding CertificadoOptions.ResponsableNombre, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="Cargo" />
+                        <TextBox Text="{Binding CertificadoOptions.ResponsableCargo, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="Párrafo adicional" />
+                        <TextBox Text="{Binding CertificadoOptions.ParrafoAdicional, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Opciones Constancia -->
+                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTemplate.Tipo}" Value="{x:Static enums:TipoDocumentoPdf.ConstanciaTrabajo}">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel>
+                        <TextBlock Text="Opciones Constancia" FontWeight="SemiBold" />
+                        <TextBlock Text="Ciudad" />
+                        <TextBox Text="{Binding ConstanciaOptions.CiudadExpedicion, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="Motivo" />
+                        <TextBox Text="{Binding ConstanciaOptions.Motivo, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="Responsable" />
+                        <TextBox Text="{Binding ConstanciaOptions.ResponsableNombre, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="Cargo" />
+                        <TextBox Text="{Binding ConstanciaOptions.ResponsableCargo, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBlock Text="Notas" />
+                        <TextBox Text="{Binding ConstanciaOptions.NotasAdicionales, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" />
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Generar" Command="{Binding GenerateDocumentCommand}"
+                            Background="#1E88E5" Foreground="White" Padding="15,8" Margin="0,0,10,0"/>
+                    <Button Content="Descargar" Command="{Binding DownloadDocumentCommand}" Padding="15,8" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Abrir" Command="{Binding OpenPreviewExternallyCommand}" Padding="15,8" Margin="0,0,10,0"/>
+                    <Button Content="Imprimir" Command="{Binding PrintDocumentCommand}" Padding="15,8" />
+                </StackPanel>
+
+                <TextBlock Text="{Binding StatusMessage}" Foreground="#616161" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Preview Panel -->
+        <Border Grid.Column="2" Margin="0,20,20,20" Background="#FAFAFA" CornerRadius="10" Padding="10">
+            <Grid>
+                <wv2:WebView2 x:Name="PreviewWebView" DefaultBackgroundColor="#FFFFFFFF" />
+
+                <TextBlock Text="Genera un documento para previsualizarlo aquí"
+                           FontSize="18" Foreground="#9E9E9E" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="{Binding PreviewFilePath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}" />
+
+                <Grid Background="#CCFFFFFF" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <ProgressBar IsIndeterminate="True" Width="220" />
+                        <TextBlock Text="Procesando..." FontWeight="SemiBold" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

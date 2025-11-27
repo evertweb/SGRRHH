@@ -1,0 +1,173 @@
+﻿<Window x:Class="SGRRHH.WPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SGRRHH.WPF"
+        mc:Ignorable="d"
+        Title="{Binding WindowTitle}" 
+        Height="700" Width="1100"
+        MinHeight="600" MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized">
+    
+    <Grid Background="#FAFAFA">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Panel lateral (Menú) -->
+        <Border Grid.Column="0" Background="#37474F">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Logo y título -->
+                <Border Grid.Row="0" Background="#263238" Padding="20">
+                    <StackPanel>
+                        <TextBlock Text="🏢 SGRRHH" FontSize="24" FontWeight="Bold" 
+                                   Foreground="White" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Sistema de Gestión RRHH" FontSize="11" 
+                                   Foreground="#B0BEC5" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Usuario actual -->
+                <Border Grid.Row="1" Background="#455A64" Padding="15">
+                    <StackPanel>
+                        <TextBlock Text="👤" FontSize="30" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding CurrentUserName}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="White" HorizontalAlignment="Center" Margin="0,5,0,0"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding CurrentUserRole}" FontSize="11"
+                                   Foreground="#90A4AE" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Menú de navegación -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding MenuItems}" Margin="0,10">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.NavigateToCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"
+                                        Cursor="Hand" Margin="5,2">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                            <Setter Property="BorderThickness" Value="0"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                                                CornerRadius="5" Padding="15,12">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Icon}" FontSize="18" 
+                                                                           VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                                                <TextBlock Text="{Binding Title}" FontSize="14" 
+                                                                           Foreground="White" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter TargetName="border" Property="Background" Value="#1E88E5"/>
+                                                            </DataTrigger>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="border" Property="Background" Value="#546E7A"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                
+                <!-- Opciones de usuario (abajo) -->
+                <Border Grid.Row="3" BorderBrush="#455A64" BorderThickness="0,1,0,0" Padding="10">
+                    <StackPanel>
+                        <Button Content="🔑 Cambiar Contraseña" 
+                                Command="{Binding ChangePasswordCommand}"
+                                Background="Transparent" Foreground="#B0BEC5" 
+                                BorderThickness="0" HorizontalAlignment="Left"
+                                Cursor="Hand" Padding="10,8" FontSize="12"/>
+                        <Button Content="🚪 Cerrar Sesión" 
+                                Command="{Binding LogoutCommand}"
+                                Background="Transparent" Foreground="#EF5350" 
+                                BorderThickness="0" HorizontalAlignment="Left"
+                                Cursor="Hand" Padding="10,8" FontSize="12"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+        
+        <!-- Contenido principal -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Barra superior -->
+            <Border Grid.Row="0" Background="White" 
+                    BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+                <Grid Margin="25,15">
+                    <TextBlock Text="{Binding CurrentViewTitle}" FontSize="22" FontWeight="SemiBold"
+                               Foreground="#37474F" VerticalAlignment="Center"/>
+                    
+                    <!-- Alertas y notificaciones -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="🔔" FontSize="18" Background="Transparent" 
+                                BorderThickness="0" Cursor="Hand" Padding="10,5"
+                                ToolTip="Notificaciones"/>
+                        <TextBlock Text="{Binding PendingAlerts}" FontSize="11" 
+                                   Foreground="White" Background="#E53935"
+                                   Padding="5,2" VerticalAlignment="Top" Margin="-15,0,15,0"
+                                   Visibility="{Binding PendingAlerts, Converter={StaticResource IntToVisibilityConverter}}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <!-- Área de contenido -->
+            <Border Grid.Row="1" Margin="25">
+                <Grid>
+                    <!-- Vista cargada dinámicamente -->
+                    <ContentControl Content="{Binding CurrentView}"
+                                    Visibility="{Binding CurrentView, Converter={StaticResource NotNullToVisibilityConverter}}"/>
+                    
+                    <!-- Placeholder para módulos no implementados (solo cuando no hay vista cargada) -->
+                    <Border Background="White" CornerRadius="10" Padding="30">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CurrentView}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="🚧" FontSize="50" HorizontalAlignment="Center"/>
+                            <TextBlock FontSize="18" Foreground="#757575" HorizontalAlignment="Center" Margin="0,15,0,0">
+                                <Run Text="Módulo de "/>
+                                <Run Text="{Binding CurrentViewTitle}" FontWeight="SemiBold"/>
+                            </TextBlock>
+                            <TextBlock Text="En construcción - Próximamente disponible" FontSize="13" 
+                                       Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

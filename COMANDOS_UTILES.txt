@@ -1,0 +1,125 @@
+═══════════════════════════════════════════════════════════
+  COMANDOS ÚTILES - SGRRHH Configuración de Red
+═══════════════════════════════════════════════════════════
+
+IMPORTANTE: Ejecuta PowerShell COMO ADMINISTRADOR para estos comandos.
+Clic derecho en "Windows PowerShell" → "Ejecutar como administrador"
+
+═══════════════════════════════════════════════════════════
+1. COMPARTIR LA CARPETA (EL MÁS IMPORTANTE)
+═══════════════════════════════════════════════════════════
+
+New-SmbShare -Name "SGRRHH" -Path "C:\SGRRHH_Data" -FullAccess "Todos"
+
+═══════════════════════════════════════════════════════════
+2. VERIFICAR QUE LA CARPETA ESTÁ COMPARTIDA
+═══════════════════════════════════════════════════════════
+
+Get-SmbShare -Name "SGRRHH"
+
+Deberías ver:
+Name    ScopeName Path              Description
+----    --------- ----              -----------
+SGRRHH  *         C:\SGRRHH_Data
+
+═══════════════════════════════════════════════════════════
+3. VER TODAS LAS CARPETAS COMPARTIDAS EN TU PC
+═══════════════════════════════════════════════════════════
+
+Get-SmbShare
+
+═══════════════════════════════════════════════════════════
+4. CONFIGURAR FIREWALL (SI HAY PROBLEMAS DE ACCESO)
+═══════════════════════════════════════════════════════════
+
+Set-NetFirewallRule -DisplayGroup "Compartir archivos e impresoras" -Enabled True -Profile Private
+
+═══════════════════════════════════════════════════════════
+5. VER INFORMACIÓN DE RED (NOMBRE DE PC E IP)
+═══════════════════════════════════════════════════════════
+
+# Nombre del PC:
+hostname
+
+# Dirección IP:
+ipconfig | findstr IPv4
+
+═══════════════════════════════════════════════════════════
+6. VERIFICAR CONECTIVIDAD DESDE OTRAS PCS
+═══════════════════════════════════════════════════════════
+
+# Ejecuta esto desde la PC de la ingeniera o secretaria:
+
+# Por nombre:
+ping ELITEBOOK-EVERT
+
+# Por IP:
+ping 192.168.1.76
+
+# Acceder a la carpeta compartida:
+explorer \\ELITEBOOK-EVERT\SGRRHH
+
+# O:
+explorer \\192.168.1.76\SGRRHH
+
+═══════════════════════════════════════════════════════════
+7. LISTAR ARCHIVOS EN LA CARPETA DE DATOS
+═══════════════════════════════════════════════════════════
+
+dir C:\SGRRHH_Data
+
+═══════════════════════════════════════════════════════════
+8. VER QUIÉN ESTÁ ACCEDIENDO A LA CARPETA COMPARTIDA
+═══════════════════════════════════════════════════════════
+
+Get-SmbSession
+
+═══════════════════════════════════════════════════════════
+9. SI NECESITAS DEJAR DE COMPARTIR LA CARPETA
+═══════════════════════════════════════════════════════════
+
+Remove-SmbShare -Name "SGRRHH" -Force
+
+(Luego puedes volver a compartirla con el comando #1)
+
+═══════════════════════════════════════════════════════════
+10. COPIAR ARCHIVOS AL SERVIDOR (DESDE OTRAS PCS)
+═══════════════════════════════════════════════════════════
+
+# Desde la PC de la ingeniera o secretaria, para copiar algo al servidor:
+Copy-Item "C:\Ruta\del\archivo.txt" "\\ELITEBOOK-EVERT\SGRRHH\documentos\"
+
+═══════════════════════════════════════════════════════════
+RESOLUCIÓN DE PROBLEMAS
+═══════════════════════════════════════════════════════════
+
+PROBLEMA: "No se encuentra la ruta de red"
+SOLUCIÓN:
+1. Verifica que el servidor está encendido
+2. Ejecuta: ping 192.168.1.76
+3. Verifica que compartiste la carpeta (comando #1)
+
+PROBLEMA: "Acceso denegado"
+SOLUCIÓN:
+1. Verifica permisos con: Get-SmbShare -Name "SGRRHH" | Get-SmbShareAccess
+2. Si no tiene "Control total", ejecuta el comando #1 nuevamente
+
+PROBLEMA: "Otras PCs no pueden acceder"
+SOLUCIÓN:
+1. Ejecuta el comando #4 (Firewall)
+2. Verifica que todas las PCs están en la misma red WiFi
+
+═══════════════════════════════════════════════════════════
+NOTAS IMPORTANTES
+═══════════════════════════════════════════════════════════
+
+✓ Tu PC (servidor) debe estar SIEMPRE ENCENDIDO cuando otros usen el sistema
+✓ Todos deben estar en la misma red WiFi
+✓ El nombre de la carpeta compartida DEBE ser exactamente "SGRRHH"
+✓ La ruta debe ser exactamente "C:\SGRRHH_Data"
+
+═══════════════════════════════════════════════════════════
+
+Para más información, revisa:
+- RESUMEN_CONFIGURACION_RED.md
+- INSTRUCCIONES_PC_SERVIDOR.md

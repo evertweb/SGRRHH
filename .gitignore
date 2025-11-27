@@ -1,0 +1,30 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+.sln.docstates
+
+# Build Folders
+**/bin/
+**/obj/
+publish/
+
+# Rider
+.idea/
+
+# NuGet
+packages/
+*.nupkg
+
+# VSCode
+.vscode/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Local appsettings
+appsettings.*.json
+
+# Windows device files
+nul

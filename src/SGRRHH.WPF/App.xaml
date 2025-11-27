@@ -1,0 +1,30 @@
+﻿<Application x:Class="SGRRHH.WPF.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:SGRRHH.WPF"
+             xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <!-- Convertidores -->
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <converters:IntToVisibilityConverter x:Key="IntToVisibilityConverter"/>
+        <converters:DashboardVisibilityConverter x:Key="DashboardVisibilityConverter"/>
+        <converters:NotDashboardVisibilityConverter x:Key="NotDashboardVisibilityConverter"/>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:NotNullToVisibilityConverter x:Key="NotNullToVisibilityConverter"/>
+        <converters:IsNullOrEmptyToVisibilityConverter x:Key="IsNullOrEmptyToVisibilityConverter"/>
+        <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"/>
+        <converters:BoolToEditTextConverter x:Key="BoolToEditTextConverter"/>
+        <converters:LessThanConverter x:Key="LessThanConverter"/>
+        <converters:BoolToTextConverter x:Key="BoolToTextConverter"/>
+        <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+        <converters:EnumToStringConverter x:Key="EnumToStringConverter"/>
+        <converters:EqualityConverter x:Key="EqualityConverter"/>
+        <converters:EstadoPermisoToColorConverter x:Key="EstadoPermisoToColorConverter"/>
+        <converters:CurrencyConverter x:Key="CurrencyConverter"/>
+        <converters:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
+        <converters:HexToColorConverter x:Key="HexToColorConverter"/>
+    </Application.Resources>
+</Application>

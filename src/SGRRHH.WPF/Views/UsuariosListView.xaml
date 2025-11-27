@@ -1,0 +1,185 @@
+<UserControl x:Class="SGRRHH.WPF.Views.UsuariosListView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900"
+             Background="#F5F5F5">
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Encabezado -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
+            <TextBlock Text="👤 Gestión de Usuarios" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+            <Button Content="➕ Nuevo Usuario" 
+                    Command="{Binding NuevoUsuarioCommand}"
+                    Margin="20,0,0,0"
+                    Padding="15,8"
+                    Background="#4CAF50"
+                    Foreground="White"
+                    Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+        </StackPanel>
+        
+        <!-- Panel de edición -->
+        <Border Grid.Row="1" 
+                Background="White" 
+                BorderBrush="#E0E0E0" 
+                BorderThickness="1"
+                CornerRadius="5"
+                Padding="20"
+                Margin="0,0,0,15"
+                Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="{Binding IsCreating, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Nuevo Usuario|Editar Usuario'}" 
+                           FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+                
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Fila 1 -->
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                        <TextBlock Text="Nombre de Usuario *" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding EditUsername, UpdateSourceTrigger=PropertyChanged}" 
+                                 Padding="8" FontSize="14"
+                                 IsEnabled="{Binding IsCreating}"/>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,10"
+                                Visibility="{Binding IsCreating, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Contraseña *" Margin="0,0,0,5"/>
+                        <PasswordBox x:Name="PasswordBox" Padding="8" FontSize="14"/>
+                    </StackPanel>
+                    
+                    <!-- Fila 2 -->
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
+                        <TextBlock Text="Nombre Completo *" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding EditNombreCompleto, UpdateSourceTrigger=PropertyChanged}" 
+                                 Padding="8" FontSize="14"/>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
+                        <TextBlock Text="Correo Electrónico" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding EditEmail, UpdateSourceTrigger=PropertyChanged}" 
+                                 Padding="8" FontSize="14"/>
+                    </StackPanel>
+                    
+                    <!-- Fila 3 -->
+                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
+                        <TextBlock Text="Rol *" Margin="0,0,0,5"/>
+                        <ComboBox ItemsSource="{Binding Roles}" 
+                                  SelectedItem="{Binding EditRol}"
+                                  Padding="8" FontSize="14">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource EnumToStringConverter}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,10" 
+                                Visibility="{Binding IsCreating, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <TextBlock Text="Estado" Margin="0,0,0,5"/>
+                        <CheckBox Content="Activo" IsChecked="{Binding EditActivo}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <!-- Fila 4 - Botones -->
+                    <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" 
+                                Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                        <Button Content="Cancelar" 
+                                Command="{Binding CancelarEdicionCommand}"
+                                Padding="20,8" Margin="0,0,10,0"/>
+                        <Button Content="💾 Guardar" 
+                                Command="{Binding GuardarUsuarioCommand}"
+                                Padding="20,8"
+                                Background="#4CAF50"
+                                Foreground="White"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+        
+        <!-- Lista de usuarios -->
+        <Border Grid.Row="2" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <DataGrid Grid.Row="0"
+                          ItemsSource="{Binding Usuarios}"
+                          SelectedItem="{Binding SelectedUsuario}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          CanUserAddRows="False"
+                          RowHeaderWidth="0"
+                          GridLinesVisibility="Horizontal"
+                          BorderThickness="0">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                        <DataGridTextColumn Header="Usuario" Binding="{Binding Username}" Width="120"/>
+                        <DataGridTextColumn Header="Nombre Completo" Binding="{Binding NombreCompleto}" Width="*"/>
+                        <DataGridTextColumn Header="Rol" Binding="{Binding Rol}" Width="120"/>
+                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="180"/>
+                        <DataGridTextColumn Header="Último Acceso" Binding="{Binding UltimoAcceso, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="140"/>
+                        <DataGridTemplateColumn Header="Estado" Width="80">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding Activo, Converter={StaticResource BoolToColorConverter}}"
+                                            CornerRadius="3" Padding="5,2">
+                                        <TextBlock Text="{Binding Activo, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Activo|Inactivo'}"
+                                                   Foreground="White" FontSize="11" HorizontalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                
+                <!-- Botones de acción -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+                    <Button Content="✏️ Editar" 
+                            Command="{Binding EditarUsuarioCommand}"
+                            Padding="15,8" Margin="0,0,5,0"/>
+                    <Button Content="🔑 Restablecer Contraseña" 
+                            Command="{Binding ResetPasswordCommand}"
+                            Padding="15,8" Margin="0,0,5,0"/>
+                    <Button Content="{Binding SelectedUsuario.Activo, Converter={StaticResource BoolToTextConverter}, ConverterParameter='⏸️ Desactivar|▶️ Activar', FallbackValue='⏸️ Activar/Desactivar'}" 
+                            Command="{Binding ToggleActivoCommand}"
+                            Padding="15,8" Margin="0,0,5,0"/>
+                    <Button Content="🗑️ Eliminar" 
+                            Command="{Binding EliminarUsuarioCommand}"
+                            Padding="15,8"
+                            Background="#f44336"
+                            Foreground="White"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Loading overlay -->
+        <Border Grid.RowSpan="3" 
+                Background="#80FFFFFF" 
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="Cargando..." FontSize="16"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,316 @@
+<UserControl x:Class="SGRRHH.WPF.Views.ConfiguracionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:SGRRHH.WPF.ViewModels"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900"
+             Background="#F5F5F5">
+    
+    <UserControl.Resources>
+        <Style x:Key="ConfigMenuButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#A0AEC0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,12"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#4A5568"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+    
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Panel lateral de navegación -->
+        <Border Grid.Column="0" Background="#2D3748" Padding="0">
+            <StackPanel>
+                <TextBlock Text="⚙️ Configuración" 
+                           Foreground="White" 
+                           FontSize="18" 
+                           FontWeight="Bold"
+                           Padding="15"/>
+                
+                <Button Content="🏢 Empresa" 
+                        Command="{Binding NavigateToSectionCommand}"
+                        CommandParameter="Empresa"
+                        Style="{StaticResource ConfigMenuButton}"/>
+                
+                <Button Content="💾 Backup" 
+                        Command="{Binding NavigateToSectionCommand}"
+                        CommandParameter="Backup"
+                        Style="{StaticResource ConfigMenuButton}"/>
+                
+                <Button Content="📋 Auditoría" 
+                        Command="{Binding NavigateToSectionCommand}"
+                        CommandParameter="Auditoria"
+                        Style="{StaticResource ConfigMenuButton}"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Contenido de la sección -->
+        <Border Grid.Column="1" Margin="10">
+            <ContentPresenter Content="{Binding CurrentSectionView}">
+                <ContentPresenter.Resources>
+                    <!-- Template para ConfiguracionEmpresaViewModel -->
+                    <DataTemplate DataType="{x:Type local:ConfiguracionEmpresaViewModel}" 
+                                  xmlns:local="clr-namespace:SGRRHH.WPF.ViewModels">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="20">
+                                <TextBlock Text="Datos de la Empresa" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
+                                
+                                <!-- Grid de campos -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Fila 1 -->
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                                        <TextBlock Text="Nombre de la Empresa *" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="8" FontSize="14"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,10">
+                                        <TextBlock Text="NIT *" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Nit, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="8" FontSize="14"/>
+                                    </StackPanel>
+                                    
+                                    <!-- Fila 2 -->
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
+                                        <TextBlock Text="Dirección" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Direccion, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="8" FontSize="14"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
+                                        <TextBlock Text="Ciudad" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Ciudad, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="8" FontSize="14"/>
+                                    </StackPanel>
+                                    
+                                    <!-- Fila 3 -->
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
+                                        <TextBlock Text="Teléfono" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Telefono, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="8" FontSize="14"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,10">
+                                        <TextBlock Text="Correo Electrónico" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding Correo, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="8" FontSize="14"/>
+                                    </StackPanel>
+                                    
+                                    <!-- Fila 4 - Representante -->
+                                    <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,10,10">
+                                        <TextBlock Text="Nombre Representante Legal" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding RepresentanteNombre, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="8" FontSize="14"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="3" Grid.Column="1" Margin="10,0,0,10">
+                                        <TextBlock Text="Cargo Representante Legal" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding RepresentanteCargo, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="8" FontSize="14"/>
+                                    </StackPanel>
+                                    
+                                    <!-- Fila 5 - Logo -->
+                                    <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,10">
+                                        <TextBlock Text="Logo de la Empresa" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="150" Height="100" BorderBrush="#CCCCCC" BorderThickness="1" Margin="0,0,15,0">
+                                                <Image Source="{Binding LogoPath}" Stretch="Uniform"
+                                                       Visibility="{Binding HayLogo, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <Button Content="📁 Seleccionar Logo" 
+                                                        Command="{Binding SeleccionarLogoCommand}"
+                                                        Padding="15,8" Margin="0,0,0,5"/>
+                                                <Button Content="🗑️ Eliminar Logo" 
+                                                        Command="{Binding EliminarLogoCommand}"
+                                                        Padding="15,8"
+                                                        Visibility="{Binding HayLogo, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    
+                                    <!-- Fila 6 - Botón Guardar -->
+                                    <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" 
+                                                Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                                        <Button Content="💾 Guardar Configuración" 
+                                                Command="{Binding GuardarCommand}"
+                                                Padding="20,10"
+                                                FontSize="14"
+                                                Background="#4CAF50"
+                                                Foreground="White"/>
+                                    </StackPanel>
+                                </Grid>
+                                
+                                <!-- Mensaje -->
+                                <TextBlock Text="{Binding Mensaje}" 
+                                           Foreground="Red" 
+                                           Margin="0,10,0,0"
+                                           Visibility="{Binding Mensaje, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DataTemplate>
+                    
+                    <!-- Template para BackupViewModel -->
+                    <DataTemplate DataType="{x:Type local:BackupViewModel}" 
+                                  xmlns:local="clr-namespace:SGRRHH.WPF.ViewModels">
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Título -->
+                            <TextBlock Grid.Row="0" Text="Respaldo de Base de Datos" FontSize="24" FontWeight="Bold" Margin="0,0,0,10"/>
+                            
+                            <!-- Botones de acción -->
+                            <WrapPanel Grid.Row="1" Margin="0,0,0,15">
+                                <Button Content="💾 Crear Backup" 
+                                        Command="{Binding CrearBackupCommand}"
+                                        Padding="15,8" Margin="0,0,10,5"
+                                        Background="#4CAF50" Foreground="White"/>
+                                <Button Content="📁 Guardar Backup en..." 
+                                        Command="{Binding CrearBackupEnCommand}"
+                                        Padding="15,8" Margin="0,0,10,5"/>
+                                <Button Content="📂 Restaurar desde archivo..." 
+                                        Command="{Binding RestaurarDesdeArchivoCommand}"
+                                        Padding="15,8" Margin="0,0,10,5"/>
+                                <Button Content="📁 Abrir carpeta de backups" 
+                                        Command="{Binding AbrirCarpetaBackupsCommand}"
+                                        Padding="15,8" Margin="0,0,10,5"/>
+                            </WrapPanel>
+                            
+                            <!-- Lista de backups -->
+                            <GroupBox Grid.Row="2" Header="Backups disponibles" Padding="10">
+                                <DataGrid ItemsSource="{Binding Backups}"
+                                          SelectedItem="{Binding SelectedBackup}"
+                                          AutoGenerateColumns="False"
+                                          IsReadOnly="True"
+                                          SelectionMode="Single"
+                                          CanUserAddRows="False">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Archivo" Binding="{Binding NombreArchivo}" Width="*"/>
+                                        <DataGridTextColumn Header="Fecha" Binding="{Binding FechaCreacion, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="150"/>
+                                        <DataGridTextColumn Header="Tamaño" Binding="{Binding TamañoFormateado}" Width="100"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </GroupBox>
+                            
+                            <!-- Botones para backup seleccionado -->
+                            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                                <Button Content="♻️ Restaurar seleccionado" 
+                                        Command="{Binding RestaurarBackupCommand}"
+                                        Padding="15,8" Margin="0,0,10,0"
+                                        Background="#2196F3" Foreground="White"/>
+                                <Button Content="🗑️ Eliminar seleccionado" 
+                                        Command="{Binding EliminarBackupCommand}"
+                                        Padding="15,8"
+                                        Background="#f44336" Foreground="White"/>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                    
+                    <!-- Template para AuditLogViewModel -->
+                    <DataTemplate DataType="{x:Type local:AuditLogViewModel}" 
+                                  xmlns:local="clr-namespace:SGRRHH.WPF.ViewModels">
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Título -->
+                            <TextBlock Grid.Row="0" Text="Log de Auditoría" FontSize="24" FontWeight="Bold" Margin="0,0,0,10"/>
+                            
+                            <!-- Filtros -->
+                            <WrapPanel Grid.Row="1" Margin="0,0,0,15">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                                    <TextBlock Text="Desde:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <DatePicker SelectedDate="{Binding FechaDesde}" Width="120"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                                    <TextBlock Text="Hasta:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <DatePicker SelectedDate="{Binding FechaHasta}" Width="120"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                                    <TextBlock Text="Entidad:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                    <ComboBox ItemsSource="{Binding Entidades}" 
+                                              SelectedItem="{Binding FiltroEntidad}"
+                                              Width="120"/>
+                                </StackPanel>
+                                <Button Content="🔍 Buscar" 
+                                        Command="{Binding BuscarCommand}"
+                                        Padding="15,5" Margin="0,0,5,5"/>
+                                <Button Content="🔄 Limpiar" 
+                                        Command="{Binding LimpiarFiltrosCommand}"
+                                        Padding="15,5" Margin="0,0,0,5"/>
+                            </WrapPanel>
+                            
+                            <!-- Lista de registros -->
+                            <DataGrid Grid.Row="2"
+                                      ItemsSource="{Binding Registros}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      CanUserAddRows="False">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Fecha/Hora" Binding="{Binding FechaHora, StringFormat='{}{0:dd/MM/yyyy HH:mm:ss}'}" Width="140"/>
+                                    <DataGridTextColumn Header="Usuario" Binding="{Binding UsuarioNombre}" Width="120"/>
+                                    <DataGridTextColumn Header="Acción" Binding="{Binding Accion}" Width="100"/>
+                                    <DataGridTextColumn Header="Entidad" Binding="{Binding Entidad}" Width="100"/>
+                                    <DataGridTextColumn Header="Descripción" Binding="{Binding Descripcion}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            
+                            <!-- Botón limpiar antiguos -->
+                            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                                <TextBlock Text="{Binding Mensaje}" Foreground="Gray" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                                <Button Content="🗑️ Limpiar registros antiguos (90+ días)" 
+                                        Command="{Binding LimpiarRegistrosAntiguosCommand}"
+                                        Padding="15,8"/>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(nul)",
+      "Bash(dir:*)",
+      "Bash(dotnet build:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(ipconfig:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\Users\\evert\\Documents\\rrhh\\crear_acceso_directo.ps1\")",
+      "Bash(cat:*)",
+      "Bash(dotnet publish:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

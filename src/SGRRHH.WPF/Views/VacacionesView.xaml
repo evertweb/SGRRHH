@@ -1,0 +1,449 @@
+<UserControl x:Class="SGRRHH.WPF.Views.VacacionesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1100">
+    
+    <UserControl.Resources>
+        <!-- Estilos locales -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        
+        <Style x:Key="InfoLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#7F8C8D"/>
+            <Setter Property="Margin" Value="0,5,0,2"/>
+        </Style>
+        
+        <Style x:Key="InfoValueStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+        </Style>
+        
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#3498DB"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2980B9"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#BDC3C7"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#ECF0F1"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D5DBDB"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="SuccessButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#27AE60"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1E8449"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="DangerButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#E74C3C"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#C0392B"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    
+    <Grid Background="#F5F6FA">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="350"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Panel izquierdo: Selección de empleado y resumen -->
+        <Grid Grid.Column="0" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Selección de empleado -->
+            <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Text="Seleccionar Empleado" Style="{StaticResource HeaderTextStyle}"/>
+                    <ComboBox ItemsSource="{Binding Empleados}"
+                              SelectedItem="{Binding SelectedEmpleado}"
+                              DisplayMemberPath="NombreCompleto"
+                              Margin="0,5,0,0"
+                              Padding="10,8"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- Resumen de vacaciones -->
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}" 
+                    Visibility="{Binding ResumenVacaciones, Converter={StaticResource NullToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="📊 Resumen de Vacaciones" Style="{StaticResource HeaderTextStyle}"/>
+                    
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                            <TextBlock Text="Antigüedad" Style="{StaticResource InfoLabelStyle}"/>
+                            <TextBlock Style="{StaticResource InfoValueStyle}">
+                                <Run Text="{Binding ResumenVacaciones.AntiguedadAnos}"/>
+                                <Run Text=" años"/>
+                            </TextBlock>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,10">
+                            <TextBlock Text="Periodo Actual" Style="{StaticResource InfoLabelStyle}"/>
+                            <TextBlock Text="{Binding ResumenVacaciones.PeriodoActual}" Style="{StaticResource InfoValueStyle}"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
+                            <TextBlock Text="Días Ganados" Style="{StaticResource InfoLabelStyle}"/>
+                            <TextBlock Text="{Binding ResumenVacaciones.DiasGanadosPeriodo}" 
+                                       Style="{StaticResource InfoValueStyle}"
+                                       Foreground="#27AE60"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,10">
+                            <TextBlock Text="Días Tomados" Style="{StaticResource InfoLabelStyle}"/>
+                            <TextBlock Text="{Binding ResumenVacaciones.DiasTomadosPeriodo}" 
+                                       Style="{StaticResource InfoValueStyle}"
+                                       Foreground="#E74C3C"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
+                            <TextBlock Text="Disponibles Periodo" Style="{StaticResource InfoLabelStyle}"/>
+                            <TextBlock Text="{Binding ResumenVacaciones.DiasDisponiblesPeriodo}" 
+                                       Style="{StaticResource InfoValueStyle}"
+                                       Foreground="#3498DB"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,10">
+                            <TextBlock Text="Acumulados" Style="{StaticResource InfoLabelStyle}"/>
+                            <TextBlock Text="{Binding ResumenVacaciones.DiasAcumuladosAnteriores}" 
+                                       Style="{StaticResource InfoValueStyle}"
+                                       Foreground="#9B59B6"/>
+                        </StackPanel>
+                        
+                        <Border Grid.Row="3" Grid.ColumnSpan="2" 
+                                Background="#E8F6F3" CornerRadius="4" Padding="10" Margin="0,5,0,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock Text="TOTAL DISPONIBLE: " 
+                                           FontWeight="SemiBold" 
+                                           Foreground="#16A085"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding ResumenVacaciones.TotalDiasDisponibles}" 
+                                           FontSize="24" 
+                                           FontWeight="Bold" 
+                                           Foreground="#16A085"/>
+                                <TextBlock Text=" días" 
+                                           VerticalAlignment="Center"
+                                           Foreground="#16A085"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+            
+            <!-- Botones de acción -->
+            <Border Grid.Row="2" Style="{StaticResource CardStyle}" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="Acciones" Style="{StaticResource HeaderTextStyle}"/>
+                    
+                    <Button Content="➕ Nueva Vacación" 
+                            Command="{Binding NuevaVacacionCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Margin="0,5,0,5"/>
+                    
+                    <Button Content="✏️ Editar Seleccionada" 
+                            Command="{Binding EditarVacacionCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Margin="0,5,0,5"/>
+                    
+                    <Button Content="✅ Marcar como Disfrutada" 
+                            Command="{Binding MarcarDisfrutadaCommand}"
+                            Style="{StaticResource SuccessButtonStyle}"
+                            Margin="0,5,0,5"/>
+                    
+                    <Button Content="🗑️ Eliminar" 
+                            Command="{Binding EliminarVacacionCommand}"
+                            Style="{StaticResource DangerButtonStyle}"
+                            Margin="0,5,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+        
+        <!-- Panel derecho: Lista de vacaciones y formulario -->
+        <Grid Grid.Column="1" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Lista de vacaciones -->
+            <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="📅 Historial de Vacaciones" Style="{StaticResource HeaderTextStyle}"/>
+                    
+                    <DataGrid Grid.Row="1" 
+                              ItemsSource="{Binding Vacaciones}"
+                              SelectedItem="{Binding SelectedVacacion}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              SelectionMode="Single"
+                              GridLinesVisibility="Horizontal"
+                              HeadersVisibility="Column"
+                              BorderThickness="0"
+                              Background="Transparent"
+                              RowBackground="White"
+                              AlternatingRowBackground="#F8F9FA">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Periodo" Binding="{Binding PeriodoCorrespondiente}" Width="80"/>
+                            <DataGridTextColumn Header="Fecha Inicio" Binding="{Binding FechaInicio, StringFormat=dd/MM/yyyy}" Width="100"/>
+                            <DataGridTextColumn Header="Fecha Fin" Binding="{Binding FechaFin, StringFormat=dd/MM/yyyy}" Width="100"/>
+                            <DataGridTextColumn Header="Días" Binding="{Binding DiasTomados}" Width="60"/>
+                            <DataGridTemplateColumn Header="Estado" Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="4" Padding="8,4" HorizontalAlignment="Left">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="Programada">
+                                                            <Setter Property="Background" Value="#E3F2FD"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="Disfrutada">
+                                                            <Setter Property="Background" Value="#E8F5E9"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="Cancelada">
+                                                            <Setter Property="Background" Value="#FFEBEE"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding Estado}" FontSize="12">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Estado}" Value="Programada">
+                                                                <Setter Property="Foreground" Value="#1976D2"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Estado}" Value="Disfrutada">
+                                                                <Setter Property="Foreground" Value="#388E3C"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Estado}" Value="Cancelada">
+                                                                <Setter Property="Foreground" Value="#D32F2F"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Observaciones" Binding="{Binding Observaciones}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+            
+            <!-- Formulario de vacación -->
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}" 
+                    Visibility="{Binding IsFormVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource HeaderTextStyle}">
+                        <TextBlock.Text>
+                            <MultiBinding StringFormat="{}🏖️ {0} Vacación">
+                                <Binding Path="IsEditing" Converter="{StaticResource BoolToEditTextConverter}"/>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
+                    
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                            <TextBlock Text="Fecha Inicio *" Style="{StaticResource InfoLabelStyle}"/>
+                            <DatePicker SelectedDate="{Binding FormFechaInicio}" 
+                                        Padding="8" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,10">
+                            <TextBlock Text="Fecha Fin *" Style="{StaticResource InfoLabelStyle}"/>
+                            <DatePicker SelectedDate="{Binding FormFechaFin}" 
+                                        Padding="8" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,10,10">
+                            <TextBlock Text="Periodo *" Style="{StaticResource InfoLabelStyle}"/>
+                            <ComboBox ItemsSource="{Binding PeriodosDisponibles}"
+                                      SelectedItem="{Binding FormPeriodo}"
+                                      Padding="8" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="0" Grid.Column="3" Margin="0,0,0,10">
+                            <TextBlock Text="Estado" Style="{StaticResource InfoLabelStyle}"/>
+                            <ComboBox ItemsSource="{Binding EstadosVacacion}"
+                                      SelectedItem="{Binding FormEstado}"
+                                      Padding="8" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,10,10">
+                            <TextBlock Text="Observaciones" Style="{StaticResource InfoLabelStyle}"/>
+                            <TextBox Text="{Binding FormObservaciones, UpdateSourceTrigger=PropertyChanged}"
+                                     Padding="8" Margin="0,5,0,0"/>
+                        </StackPanel>
+                        
+                        <Border Grid.Row="1" Grid.Column="3" 
+                                Background="#FFF3E0" CornerRadius="4" Padding="10" 
+                                VerticalAlignment="Center" Margin="0,0,0,10">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="Días hábiles" FontSize="12" Foreground="#F57C00" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding FormDiasCalculados}" 
+                                           FontSize="24" FontWeight="Bold" Foreground="#E65100" 
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <StackPanel Grid.Row="2" Grid.ColumnSpan="4" 
+                                    Orientation="Horizontal" 
+                                    HorizontalAlignment="Right"
+                                    Margin="0,10,0,0">
+                            <Button Content="Cancelar" 
+                                    Command="{Binding CancelarFormularioCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="0,0,10,0"/>
+                            <Button Content="Guardar" 
+                                    Command="{Binding GuardarVacacionCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+        
+        <!-- Loading overlay -->
+        <Border Grid.ColumnSpan="2" 
+                Background="#80000000" 
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Cargando..." Foreground="White" FontSize="18"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
