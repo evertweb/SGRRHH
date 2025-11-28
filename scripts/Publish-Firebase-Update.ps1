@@ -280,7 +280,9 @@ if ($Incremental) {
     if ($filesToUpload.Count -eq 0) {
         Write-Warn "No hay archivos modificados. Solo se actualizará version.json"
     } else {
-        $changedSize = ($filesToUpload | Measure-Object -Property size -Sum).Sum
+        # Sumar tamaños manualmente (Measure-Object no funciona bien con hashtables)
+        $changedSize = 0
+        foreach ($f in $filesToUpload) { $changedSize += $f.size }
         Write-Info "Archivos modificados: $($filesToUpload.Count) de $($files.Count)"
         Write-Info "Tamaño a subir: $([math]::Round($changedSize / 1MB, 2)) MB (en lugar de $([math]::Round($totalSize / 1MB, 2)) MB)"
         Write-Info "Archivos sin cambios (omitidos): $skippedFiles"
