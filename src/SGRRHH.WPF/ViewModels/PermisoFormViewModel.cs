@@ -247,6 +247,14 @@ public partial class PermisoFormViewModel : ObservableObject
             return;
         }
         
+        // Verificación adicional de null (aunque la validación ya lo cubre)
+        if (SelectedEmpleado == null || SelectedTipoPermiso == null)
+        {
+            MessageBox.Show("Datos incompletos. Verifique empleado y tipo de permiso.", "Error", 
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+        
         IsLoading = true;
         
         try

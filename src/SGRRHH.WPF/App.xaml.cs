@@ -1,11 +1,10 @@
 ﻿using System.IO;
 using System.Windows;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
-using SGRRHH.Infrastructure.Data;
-using SGRRHH.Infrastructure.Repositories;
+using SGRRHH.Core.Models;
+using SGRRHH.Infrastructure.Firebase;
 using SGRRHH.Infrastructure.Services;
 using SGRRHH.WPF.Helpers;
 using SGRRHH.WPF.ViewModels;
@@ -20,6 +19,9 @@ public partial class App : Application
 {
     private IServiceProvider? _serviceProvider;
     private Usuario? _currentUser;
+    private IUpdateService? _updateService;
+    private bool _shouldRestartForUpdate;
+    private FirebaseInitializer? _firebaseInitializer;
     
     /// <summary>
     /// Proveedor de servicios para acceso global
@@ -38,77 +40,122 @@ public partial class App : Application
         // Configurar manejo global de excepciones
         SetupGlobalExceptionHandling();
         
-        // Configurar servicios
+        // Configurar servicios Firebase
         var services = new ServiceCollection();
-        ConfigureServices(services);
+        ConfigureFirebaseServices(services);
+        
         _serviceProvider = services.BuildServiceProvider();
         Services = _serviceProvider;
         
         // Configurar proveedor de usuario actual para el servicio de auditoría
         AuditService.ConfigureCurrentUserProvider(() => CurrentUser);
         
-        // Inicializar base de datos
-        await InitializeDatabaseAsync();
+        // Inicializar Firebase
+        await InitializeFirebaseAsync();
+        
+        // Verificar actualizaciones si está habilitado
+        await CheckForUpdatesAsync();
         
         // Mostrar login
         await ShowLoginAsync();
     }
     
-    private void ConfigureServices(IServiceCollection services)
+    protected override void OnExit(ExitEventArgs e)
     {
-        // Obtener ruta de la base de datos desde configuración
-        var dbPath = AppSettings.GetDatabasePath();
-        var dbDirectory = Path.GetDirectoryName(dbPath);
+        base.OnExit(e);
         
-        // Crear directorio si no existe
-        if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
+        // Liberar recursos de Firebase
+        _firebaseInitializer?.Dispose();
+        
+        // Si hay actualización pendiente, ejecutar el script de actualización
+        if (_shouldRestartForUpdate)
         {
-            Directory.CreateDirectory(dbDirectory);
+            FirebaseUpdateService.ExecutePendingUpdate();
         }
+    }
+    
+    /// <summary>
+    /// Configura los servicios para Firebase
+    /// </summary>
+    private void ConfigureFirebaseServices(IServiceCollection services)
+    {
+        // Obtener configuración de Firebase
+        var firebaseConfig = AppSettings.GetFirebaseConfig();
+        var currentVersion = AppSettings.GetAppVersion();
         
-        // Obtener cadena de conexión optimizada
-        var connectionString = AppSettings.GetConnectionString();
+        // Crear e inicializar Firebase
+        _firebaseInitializer = new FirebaseInitializer(firebaseConfig);
         
-        // Configurar DbContext con opciones optimizadas para concurrencia
-        services.AddDbContext<AppDbContext>(options =>
-        {
-            options.UseSqlite(connectionString);
-        });
-        
-        // Registrar repositorios
-        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-        services.AddScoped<IEmpleadoRepository, EmpleadoRepository>();
-        services.AddScoped<IDepartamentoRepository, DepartamentoRepository>();
-        services.AddScoped<ICargoRepository, CargoRepository>();
-        services.AddScoped<IProyectoRepository, ProyectoRepository>();
-        services.AddScoped<IActividadRepository, ActividadRepository>();
-        services.AddScoped<IRegistroDiarioRepository, RegistroDiarioRepository>();
-        services.AddScoped<IPermisoRepository, PermisoRepository>();
-        services.AddScoped<ITipoPermisoRepository, TipoPermisoRepository>();
-        services.AddScoped<IVacacionRepository, VacacionRepository>();
-        services.AddScoped<IContratoRepository, ContratoRepository>();
-        services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
-        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
-        
-        // Registrar servicios
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IEmpleadoService, EmpleadoService>();
-        services.AddScoped<IDepartamentoService, DepartamentoService>();
-        services.AddScoped<ICargoService, CargoService>();
-        services.AddScoped<IProyectoService, ProyectoService>();
-        services.AddScoped<IActividadService, ActividadService>();
-        services.AddScoped<IControlDiarioService, ControlDiarioService>();
-        services.AddScoped<IPermisoService, PermisoService>();
-        services.AddScoped<ITipoPermisoService, TipoPermisoService>();
-        services.AddScoped<IDocumentService, DocumentService>();
-        services.AddScoped<IVacacionService, VacacionService>();
-        services.AddScoped<IContratoService, ContratoService>();
-        services.AddScoped<IConfiguracionService, ConfiguracionService>();
-        services.AddScoped<IBackupService, BackupService>();
-        services.AddScoped<IAuditService, AuditService>();
-        services.AddScoped<IUsuarioService, UsuarioService>();
+        // ========== Registrar todos los servicios de Firebase ==========
+        // Esto incluye:
+        // - Autenticación Firebase (IAuthService, IFirebaseAuthService)
+        // - Repositorios de catálogos (Departamento, Cargo, Actividad, Proyecto, TipoPermiso, Configuracion)
+        // - Repositorios principales (Empleado, Usuario, Permiso, Vacacion, Contrato)
+        // - Repositorios de registros (RegistroDiario, AuditLog)
+        // - Firebase Storage (IFirebaseStorageService)
+        // - Sistema de actualizaciones (IUpdateService, IFirebaseUpdateService)
+        services.AddFullFirebaseSupport(firebaseConfig, _firebaseInitializer, currentVersion);
         
         // Registrar ViewModels
+        RegisterViewModels(services);
+    }
+    
+    /// <summary>
+    /// Inicializa Firebase
+    /// </summary>
+    private async Task InitializeFirebaseAsync()
+    {
+        if (_firebaseInitializer == null) return;
+        
+        try
+        {
+            // Inicializar Firebase
+            var initialized = await _firebaseInitializer.InitializeAsync();
+            
+            if (!initialized)
+            {
+                MessageBox.Show(
+                    "No se pudo conectar con Firebase. Verifique la configuración y las credenciales.",
+                    "Error de Conexión",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                
+                Shutdown();
+                return;
+            }
+            
+            // Verificar conexión
+            var connected = await _firebaseInitializer.TestConnectionAsync();
+            if (!connected)
+            {
+                MessageBox.Show(
+                    "No se pudo verificar la conexión con Firebase. Verifique su conexión a internet.",
+                    "Error de Conexión",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                
+                Shutdown();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            LogException("InitializeFirebase", ex);
+            MessageBox.Show(
+                $"Error al inicializar Firebase: {ex.Message}",
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            
+            Shutdown();
+        }
+    }
+    
+    /// <summary>
+    /// Registra los ViewModels
+    /// </summary>
+    private void RegisterViewModels(IServiceCollection services)
+    {
         services.AddTransient<LoginViewModel>();
         services.AddTransient<EmpleadosListViewModel>();
         services.AddTransient<EmpleadoFormViewModel>();
@@ -134,36 +181,50 @@ public partial class App : Application
         services.AddTransient<UsuariosListViewModel>();
         services.AddTransient<CambiarPasswordViewModel>();
         services.AddTransient<CatalogosViewModel>();
+        services.AddTransient<DocumentosEmpleadoViewModel>();
+        services.AddTransient<ChatViewModel>();
     }
     
-    private async Task InitializeDatabaseAsync()
+    /// <summary>
+    /// Verifica si hay actualizaciones disponibles
+    /// </summary>
+    private async Task CheckForUpdatesAsync()
     {
-        using var scope = _serviceProvider!.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
-        // Inicializar base de datos
-        await DatabaseInitializer.InitializeAsync(context);
-        
-        // Habilitar modo WAL para mejor concurrencia en red
-        if (AppSettings.EnableWalMode())
+        // Verificar si las actualizaciones están habilitadas
+        if (!AppSettings.UpdatesEnabled() || !AppSettings.CheckUpdatesOnStartup())
         {
-            try
+            return;
+        }
+        
+        try
+        {
+            _updateService = _serviceProvider!.GetService<IUpdateService>();
+            if (_updateService == null) return;
+            
+            var result = await _updateService.CheckForUpdatesAsync();
+            
+            if (result.Success && result.UpdateAvailable && result.NewVersion != null)
             {
-                var busyTimeout = AppSettings.GetBusyTimeout();
-                await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
-                // Usar parámetro numérico directamente (no es SQL injection porque es un int)
-                #pragma warning disable EF1002
-                await context.Database.ExecuteSqlRawAsync($"PRAGMA busy_timeout={busyTimeout};");
-                #pragma warning restore EF1002
-                // Sincronización normal para balance entre seguridad y rendimiento
-                await context.Database.ExecuteSqlRawAsync("PRAGMA synchronous=NORMAL;");
-                // Cache compartido para mejor concurrencia
-                await context.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-64000;"); // 64MB cache
+                // Mostrar diálogo de actualización
+                var viewModel = new UpdateDialogViewModel(_updateService, result.NewVersion);
+                var dialog = new UpdateDialog(viewModel);
+                
+                var dialogResult = dialog.ShowDialog();
+                
+                if (dialogResult == true && viewModel.DownloadCompleted)
+                {
+                    // Marcar para reinicio con actualización
+                    _shouldRestartForUpdate = true;
+                    
+                    // Cerrar la aplicación para aplicar la actualización
+                    Shutdown();
+                }
             }
-            catch (Exception ex)
-            {
-                LogException("WAL Mode Configuration", ex);
-            }
+        }
+        catch (Exception ex)
+        {
+            // No bloquear el inicio si falla la verificación de actualizaciones
+            LogException("CheckForUpdates", ex);
         }
     }
     
@@ -286,12 +347,6 @@ public partial class App : Application
     {
         return ex switch
         {
-            Microsoft.Data.Sqlite.SqliteException sqliteEx =>
-                $"Error de base de datos: {GetSqliteErrorMessage(sqliteEx)}",
-            
-            DbUpdateException dbEx =>
-                "Error al guardar en la base de datos. Verifique los datos ingresados.",
-            
             IOException ioEx =>
                 "Error al acceder al sistema de archivos. Verifique permisos y espacio disponible.",
             
@@ -301,24 +356,10 @@ public partial class App : Application
             InvalidOperationException when ex.Message.Contains("disposed") =>
                 "Error interno: componente no disponible. Intente nuevamente.",
             
+            Grpc.Core.RpcException rpcEx =>
+                $"Error de conexión con Firebase: {rpcEx.Status.Detail}. Verifique su conexión a internet.",
+            
             _ => $"Ha ocurrido un error inesperado.\n\nDetalles técnicos: {ex.Message}\n\nSi el problema persiste, contacte al administrador del sistema."
-        };
-    }
-    
-    /// <summary>
-    /// Obtiene mensaje amigable para errores de SQLite
-    /// </summary>
-    private string GetSqliteErrorMessage(Microsoft.Data.Sqlite.SqliteException ex)
-    {
-        return ex.SqliteErrorCode switch
-        {
-            5 => "La base de datos está bloqueada por otro usuario. Espere un momento e intente nuevamente.",
-            6 => "La tabla está bloqueada. Otro usuario está realizando una operación. Intente de nuevo.",
-            19 => "El registro no puede guardarse porque viola una restricción de unicidad.",
-            1 => "Error de sintaxis en la base de datos.",
-            11 => "La base de datos está corrupta. Considere restaurar un backup.",
-            14 => "No se puede abrir la base de datos. Verifique que el archivo existe y tiene permisos de red.",
-            _ => ex.Message
         };
     }
     

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
@@ -13,11 +14,18 @@ namespace SGRRHH.Infrastructure.Services;
 public class EmpleadoService : IEmpleadoService
 {
     private readonly IEmpleadoRepository _empleadoRepository;
+    private readonly IDateCalculationService _dateCalculationService;
+    private readonly ILogger<EmpleadoService>? _logger;
     private readonly string _fotosPath;
     
-    public EmpleadoService(IEmpleadoRepository empleadoRepository)
+    public EmpleadoService(
+        IEmpleadoRepository empleadoRepository,
+        IDateCalculationService dateCalculationService,
+        ILogger<EmpleadoService>? logger = null)
     {
         _empleadoRepository = empleadoRepository;
+        _dateCalculationService = dateCalculationService;
+        _logger = logger;
         
         // Configurar ruta para fotos
         _fotosPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "fotos");
@@ -102,7 +110,34 @@ public class EmpleadoService : IEmpleadoService
             ? "Solicitud de empleado enviada. Pendiente de aprobación."
             : "Empleado creado exitosamente";
         
+        _logger?.LogInformation("Empleado {Codigo} creado exitosamente", empleado.Codigo);
         return ServiceResult<Empleado>.Ok(empleado, mensaje);
+    }
+    
+    /// <summary>
+    /// Crea un empleado determinando el estado según el rol del usuario
+    /// Esta lógica de negocio estaba antes en el ViewModel
+    /// </summary>
+    public async Task<ServiceResult<Empleado>> CreateWithRoleAsync(Empleado empleado, int usuarioId, RolUsuario rolUsuario)
+    {
+        _logger?.LogInformation("Creando empleado con rol {Rol}", rolUsuario);
+        
+        // Establecer quién creó el empleado
+        empleado.CreadoPorId = usuarioId;
+        
+        // Determinar estado según rol del usuario
+        // Solo Operadores (Secretarias) crean solicitudes pendientes
+        // Admin y Aprobadores crean empleados directamente activos
+        if (rolUsuario == RolUsuario.Operador)
+        {
+            empleado.Estado = EstadoEmpleado.PendienteAprobacion;
+        }
+        else
+        {
+            empleado.Estado = EstadoEmpleado.Activo;
+        }
+        
+        return await CreateAsync(empleado);
     }
     
     public async Task<ServiceResult> UpdateAsync(Empleado empleado)
@@ -304,7 +339,7 @@ public class EmpleadoService : IEmpleadoService
             .Where(e => e.FechaNacimiento.HasValue)
             .Select(e => new {
                 Empleado = e,
-                ProximoCumple = GetNextBirthday(e.FechaNacimiento!.Value)
+                ProximoCumple = _dateCalculationService.GetProximoCumpleanos(e.FechaNacimiento!.Value)
             })
             .Where(x => (x.ProximoCumple - hoy).Days >= 0 && (x.ProximoCumple - hoy).Days <= diasAnticipacion)
             .OrderBy(x => x.ProximoCumple)
@@ -320,54 +355,13 @@ public class EmpleadoService : IEmpleadoService
         return empleados
             .Select(e => new {
                 Empleado = e,
-                ProximoAniversario = GetNextAnniversary(e.FechaIngreso),
-                AnosServicio = CalculateYearsOfService(e.FechaIngreso)
+                ProximoAniversario = _dateCalculationService.GetProximoAniversario(e.FechaIngreso),
+                AnosServicio = _dateCalculationService.CalcularAnosServicio(e.FechaIngreso)
             })
             .Where(x => (x.ProximoAniversario - hoy).Days >= 0 && (x.ProximoAniversario - hoy).Days <= diasAnticipacion)
             .OrderBy(x => x.ProximoAniversario)
             .Select(x => x.Empleado)
             .ToList();
-    }
-    
-    private static DateTime GetNextBirthday(DateTime fechaNacimiento)
-    {
-        var hoy = DateTime.Today;
-        try
-        {
-            var cumpleEsteAnio = new DateTime(hoy.Year, fechaNacimiento.Month, fechaNacimiento.Day);
-            return cumpleEsteAnio < hoy ? cumpleEsteAnio.AddYears(1) : cumpleEsteAnio;
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            // Manejo para 29 de febrero en años no bisiestos
-            var cumpleEsteAnio = new DateTime(hoy.Year, fechaNacimiento.Month, 28);
-            return cumpleEsteAnio < hoy ? cumpleEsteAnio.AddYears(1) : cumpleEsteAnio;
-        }
-    }
-    
-    private static DateTime GetNextAnniversary(DateTime fechaIngreso)
-    {
-        var hoy = DateTime.Today;
-        try
-        {
-            var aniversarioEsteAnio = new DateTime(hoy.Year, fechaIngreso.Month, fechaIngreso.Day);
-            return aniversarioEsteAnio < hoy ? aniversarioEsteAnio.AddYears(1) : aniversarioEsteAnio;
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            // Manejo para 29 de febrero en años no bisiestos
-            var aniversarioEsteAnio = new DateTime(hoy.Year, fechaIngreso.Month, 28);
-            return aniversarioEsteAnio < hoy ? aniversarioEsteAnio.AddYears(1) : aniversarioEsteAnio;
-        }
-    }
-    
-    private static int CalculateYearsOfService(DateTime fechaIngreso)
-    {
-        var hoy = DateTime.Today;
-        var anos = hoy.Year - fechaIngreso.Year;
-        if (hoy < fechaIngreso.AddYears(anos))
-            anos--;
-        return anos;
     }
     
     public async Task<IEnumerable<EstadisticaItemDTO>> GetEmpleadosPorDepartamentoAsync()

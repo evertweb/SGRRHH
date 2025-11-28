@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 using System.Collections.ObjectModel;
 using System.Windows;
 

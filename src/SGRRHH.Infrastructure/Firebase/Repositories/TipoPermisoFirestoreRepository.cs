@@ -1,0 +1,125 @@
+using Google.Cloud.Firestore;
+using Microsoft.Extensions.Logging;
+using SGRRHH.Core.Entities;
+using SGRRHH.Core.Interfaces;
+
+namespace SGRRHH.Infrastructure.Firebase.Repositories;
+
+/// <summary>
+/// Implementación del repositorio de Tipos de Permiso para Firestore.
+/// Colección: "tipos-permiso"
+/// </summary>
+public class TipoPermisoFirestoreRepository : FirestoreRepository<TipoPermiso>, ITipoPermisoRepository
+{
+    private const string COLLECTION_NAME = "tipos-permiso";
+    
+    public TipoPermisoFirestoreRepository(FirebaseInitializer firebase, ILogger<TipoPermisoFirestoreRepository>? logger = null) 
+        : base(firebase, COLLECTION_NAME, logger)
+    {
+    }
+    
+    #region Entity <-> Document Mapping
+    
+    protected override Dictionary<string, object?> EntityToDocument(TipoPermiso entity)
+    {
+        var doc = base.EntityToDocument(entity);
+        doc["nombre"] = entity.Nombre;
+        doc["descripcion"] = entity.Descripcion;
+        doc["color"] = entity.Color;
+        doc["requiereAprobacion"] = entity.RequiereAprobacion;
+        doc["requiereDocumento"] = entity.RequiereDocumento;
+        doc["diasPorDefecto"] = entity.DiasPorDefecto;
+        doc["esCompensable"] = entity.EsCompensable;
+        // Campo para búsquedas case-insensitive
+        doc["nombreLower"] = entity.Nombre?.ToLowerInvariant();
+        return doc;
+    }
+    
+    protected override TipoPermiso DocumentToEntity(DocumentSnapshot document)
+    {
+        var entity = base.DocumentToEntity(document);
+        
+        if (document.TryGetValue<string>("nombre", out var nombre))
+            entity.Nombre = nombre;
+        
+        if (document.TryGetValue<string>("descripcion", out var descripcion))
+            entity.Descripcion = descripcion;
+        
+        if (document.TryGetValue<string>("color", out var color))
+            entity.Color = color;
+        
+        if (document.TryGetValue<bool>("requiereAprobacion", out var requiereAprobacion))
+            entity.RequiereAprobacion = requiereAprobacion;
+        
+        if (document.TryGetValue<bool>("requiereDocumento", out var requiereDocumento))
+            entity.RequiereDocumento = requiereDocumento;
+        
+        if (document.TryGetValue<int>("diasPorDefecto", out var diasPorDefecto))
+            entity.DiasPorDefecto = diasPorDefecto;
+        
+        if (document.TryGetValue<bool>("esCompensable", out var esCompensable))
+            entity.EsCompensable = esCompensable;
+        
+        return entity;
+    }
+    
+    #endregion
+    
+    #region ITipoPermisoRepository Implementation
+    
+    /// <summary>
+    /// Obtiene todos los tipos de permiso activos ordenados por nombre
+    /// </summary>
+    public async Task<IEnumerable<TipoPermiso>> GetActivosAsync()
+    {
+        try
+        {
+            var query = Collection.WhereEqualTo("activo", true);
+            var snapshot = await query.GetSnapshotAsync();
+            
+            return snapshot.Documents
+                .Select(DocumentToEntity)
+                .OrderBy(tp => tp.Nombre)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al obtener tipos de permiso activos");
+            throw;
+        }
+    }
+    
+    /// <summary>
+    /// Verifica si existe un tipo de permiso con el nombre especificado
+    /// </summary>
+    public async Task<bool> ExisteNombreAsync(string nombre, int? excludeId = null)
+    {
+        try
+        {
+            var nombreLower = nombre.ToLowerInvariant();
+            var query = Collection.WhereEqualTo("nombreLower", nombreLower);
+            var snapshot = await query.GetSnapshotAsync();
+            
+            if (!excludeId.HasValue)
+                return snapshot.Documents.Any();
+            
+            return snapshot.Documents.Any(doc => 
+                doc.TryGetValue<int>("id", out var id) && id != excludeId.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al verificar nombre existente: {Nombre}", nombre);
+            throw;
+        }
+    }
+    
+    /// <summary>
+    /// Obtiene todos los tipos de permiso activos (override del base)
+    /// </summary>
+    public override async Task<IEnumerable<TipoPermiso>> GetAllActiveAsync()
+    {
+        return await GetActivosAsync();
+    }
+    
+    #endregion
+}

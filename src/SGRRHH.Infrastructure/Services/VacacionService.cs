@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
@@ -14,16 +15,22 @@ public class VacacionService : IVacacionService
 {
     private readonly IVacacionRepository _vacacionRepository;
     private readonly IEmpleadoRepository _empleadoRepository;
+    private readonly IDateCalculationService _dateCalculationService;
+    private readonly IAbsenceValidationService _absenceValidationService;
+    private readonly ILogger<VacacionService>? _logger;
     
-    /// <summary>
-    /// Días de vacaciones por año según ley colombiana
-    /// </summary>
-    private const int DIAS_VACACIONES_POR_ANO = 15;
-    
-    public VacacionService(IVacacionRepository vacacionRepository, IEmpleadoRepository empleadoRepository)
+    public VacacionService(
+        IVacacionRepository vacacionRepository, 
+        IEmpleadoRepository empleadoRepository,
+        IDateCalculationService dateCalculationService,
+        IAbsenceValidationService absenceValidationService,
+        ILogger<VacacionService>? logger = null)
     {
         _vacacionRepository = vacacionRepository;
         _empleadoRepository = empleadoRepository;
+        _dateCalculationService = dateCalculationService;
+        _absenceValidationService = absenceValidationService;
+        _logger = logger;
     }
     
     public async Task<ServiceResult<IEnumerable<Vacacion>>> GetByEmpleadoIdAsync(int empleadoId)
@@ -59,12 +66,25 @@ public class VacacionService : IVacacionService
     {
         try
         {
+            _logger?.LogInformation("Creando vacación para empleado {EmpleadoId}", vacacion.EmpleadoId);
+            
             var errors = await ValidarVacacionAsync(vacacion);
             if (errors.Any())
+            {
+                _logger?.LogWarning("Validación fallida: {Errores}", string.Join(", ", errors));
                 return ServiceResult<Vacacion>.FailureResult(errors);
+            }
             
-            // Calcular días tomados
-            vacacion.DiasTomados = CalcularDiasHabiles(vacacion.FechaInicio, vacacion.FechaFin);
+            // Validar solapamiento con permisos (validación cruzada)
+            var validacionPermisos = await _absenceValidationService.TienePermisosEnRangoAsync(
+                vacacion.EmpleadoId, vacacion.FechaInicio, vacacion.FechaFin);
+            if (validacionPermisos.Success && validacionPermisos.Data)
+            {
+                return ServiceResult<Vacacion>.FailureResult("El empleado tiene permisos aprobados o pendientes en las fechas seleccionadas");
+            }
+            
+            // Calcular días tomados usando el servicio centralizado
+            vacacion.DiasTomados = _dateCalculationService.CalcularDiasHabiles(vacacion.FechaInicio, vacacion.FechaFin);
             
             // Verificar que no exceda los días disponibles
             var diasDisponibles = await CalcularDiasDisponiblesAsync(vacacion.EmpleadoId, vacacion.PeriodoCorrespondiente);
@@ -83,10 +103,12 @@ public class VacacionService : IVacacionService
             await _vacacionRepository.AddAsync(vacacion);
             await _vacacionRepository.SaveChangesAsync();
             
+            _logger?.LogInformation("Vacación creada exitosamente para empleado {EmpleadoId}", vacacion.EmpleadoId);
             return ServiceResult<Vacacion>.SuccessResult(vacacion, "Vacación registrada exitosamente");
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error al crear vacación");
             return ServiceResult<Vacacion>.FailureResult($"Error al crear vacación: {ex.Message}");
         }
     }
@@ -103,8 +125,16 @@ public class VacacionService : IVacacionService
             if (errors.Any())
                 return ServiceResult<Vacacion>.FailureResult(errors);
             
-            // Recalcular días
-            vacacion.DiasTomados = CalcularDiasHabiles(vacacion.FechaInicio, vacacion.FechaFin);
+            // Validar solapamiento con permisos (validación cruzada)
+            var validacionPermisos = await _absenceValidationService.TienePermisosEnRangoAsync(
+                vacacion.EmpleadoId, vacacion.FechaInicio, vacacion.FechaFin);
+            if (validacionPermisos.Success && validacionPermisos.Data)
+            {
+                return ServiceResult<Vacacion>.FailureResult("El empleado tiene permisos aprobados o pendientes en las fechas seleccionadas");
+            }
+            
+            // Recalcular días usando el servicio centralizado
+            vacacion.DiasTomados = _dateCalculationService.CalcularDiasHabiles(vacacion.FechaInicio, vacacion.FechaFin);
             
             // Verificar días disponibles (excluyendo esta vacación)
             var diasDisponibles = await CalcularDiasDisponiblesInternamenteAsync(
@@ -132,6 +162,7 @@ public class VacacionService : IVacacionService
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error al actualizar vacación");
             return ServiceResult<Vacacion>.FailureResult($"Error al actualizar vacación: {ex.Message}");
         }
     }
@@ -173,8 +204,8 @@ public class VacacionService : IVacacionService
             if (empleado == null)
                 return ServiceResult<int>.FailureResult("Empleado no encontrado");
             
-            // Calcular días ganados según antigüedad
-            var diasGanados = CalcularDiasGanados(empleado.FechaIngreso, periodo);
+            // Calcular días ganados usando el servicio centralizado
+            var diasGanados = _dateCalculationService.CalcularDiasVacacionesGanados(empleado.FechaIngreso, periodo);
             
             // Obtener días ya tomados en este periodo
             var diasTomadosResult = await GetDiasTomadosEnPeriodoAsync(empleadoId, periodo);
@@ -187,6 +218,7 @@ public class VacacionService : IVacacionService
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error al calcular días disponibles");
             return ServiceResult<int>.FailureResult($"Error al calcular días disponibles: {ex.Message}");
         }
     }
@@ -220,7 +252,7 @@ public class VacacionService : IVacacionService
                 return ServiceResult<ResumenVacaciones>.FailureResult("Empleado no encontrado");
             
             var periodoActual = DateTime.Today.Year;
-            var diasGanados = CalcularDiasGanados(empleado.FechaIngreso, periodoActual);
+            var diasGanados = _dateCalculationService.CalcularDiasVacacionesGanados(empleado.FechaIngreso, periodoActual);
             
             var diasTomadosResult = await GetDiasTomadosEnPeriodoAsync(empleadoId, periodoActual);
             var diasTomados = diasTomadosResult.Success ? diasTomadosResult.Data : 0;
@@ -246,6 +278,7 @@ public class VacacionService : IVacacionService
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error al obtener resumen de vacaciones");
             return ServiceResult<ResumenVacaciones>.FailureResult($"Error al obtener resumen: {ex.Message}");
         }
     }
@@ -358,57 +391,6 @@ public class VacacionService : IVacacionService
     }
     
     /// <summary>
-    /// Calcula días ganados según fecha de ingreso y periodo.
-    /// Colombia: 15 días por cada año completo trabajado.
-    /// Los días se generan proporcionales al tiempo trabajado en el periodo.
-    /// </summary>
-    private int CalcularDiasGanados(DateTime fechaIngreso, int periodo)
-    {
-        var inicioPeriodo = new DateTime(periodo, 1, 1);
-        var finPeriodo = new DateTime(periodo, 12, 31);
-        
-        // Si el empleado ingresó después del inicio del periodo
-        if (fechaIngreso > inicioPeriodo)
-            inicioPeriodo = fechaIngreso;
-            
-        // Si la fecha actual es antes del fin del periodo
-        if (DateTime.Today < finPeriodo)
-            finPeriodo = DateTime.Today;
-            
-        if (inicioPeriodo > finPeriodo)
-            return 0;
-            
-        // Calcular meses trabajados en el periodo
-        var mesesTrabajados = ((finPeriodo.Year - inicioPeriodo.Year) * 12) + 
-                             finPeriodo.Month - inicioPeriodo.Month;
-                             
-        // 15 días por 12 meses = 1.25 días por mes
-        var diasGanados = (int)Math.Floor(mesesTrabajados * (DIAS_VACACIONES_POR_ANO / 12.0));
-        
-        return Math.Min(diasGanados, DIAS_VACACIONES_POR_ANO);
-    }
-    
-    /// <summary>
-    /// Calcula días hábiles entre dos fechas (excluyendo fines de semana)
-    /// </summary>
-    private int CalcularDiasHabiles(DateTime fechaInicio, DateTime fechaFin)
-    {
-        int diasHabiles = 0;
-        var fecha = fechaInicio;
-        
-        while (fecha <= fechaFin)
-        {
-            if (fecha.DayOfWeek != DayOfWeek.Saturday && fecha.DayOfWeek != DayOfWeek.Sunday)
-            {
-                diasHabiles++;
-            }
-            fecha = fecha.AddDays(1);
-        }
-        
-        return diasHabiles;
-    }
-    
-    /// <summary>
     /// Calcula días acumulados de periodos anteriores
     /// </summary>
     private async Task<int> CalcularDiasAcumuladosAsync(int empleadoId, int periodoActual)
@@ -424,7 +406,7 @@ public class VacacionService : IVacacionService
         
         for (int periodo = periodoInicio; periodo < periodoActual; periodo++)
         {
-            var diasGanados = CalcularDiasGanados(empleado.FechaIngreso, periodo);
+            var diasGanados = _dateCalculationService.CalcularDiasVacacionesGanados(empleado.FechaIngreso, periodo);
             var diasTomadosResult = await GetDiasTomadosEnPeriodoAsync(empleadoId, periodo);
             var diasTomados = diasTomadosResult.Success ? diasTomadosResult.Data : 0;
             
@@ -439,7 +421,7 @@ public class VacacionService : IVacacionService
         var empleado = await _empleadoRepository.GetByIdAsync(empleadoId);
         if (empleado == null) return 0;
         
-        var diasGanados = CalcularDiasGanados(empleado.FechaIngreso, periodo);
+        var diasGanados = _dateCalculationService.CalcularDiasVacacionesGanados(empleado.FechaIngreso, periodo);
         
         var vacaciones = await _vacacionRepository.GetByEmpleadoYPeriodoAsync(empleadoId, periodo);
         var diasTomados = vacaciones

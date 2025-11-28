@@ -1,4 +1,4 @@
-<Window x:Class="SGRRHH.WPF.Views.PermisosListView"
+<UserControl x:Class="SGRRHH.WPF.Views.PermisosListView"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -7,12 +7,10 @@
         xmlns:vm="clr-namespace:SGRRHH.WPF.ViewModels"
         xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
         mc:Ignorable="d"
-        Title="Gestión de Permisos" 
-        Height="700" Width="1100"
-        WindowStartupLocation="CenterScreen"
+        d:DesignHeight="700" d:DesignWidth="1100"
         Background="#F5F5F5">
     
-    <Window.Resources>
+    <UserControl.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
         
@@ -22,7 +20,7 @@
             <Setter Property="Padding" Value="8,4"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
         </Style>
-    </Window.Resources>
+    </UserControl.Resources>
     
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -331,4 +329,4 @@
             </TextBlock>
         </Border>
     </Grid>
-</Window>
+</UserControl>

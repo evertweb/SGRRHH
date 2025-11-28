@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
@@ -13,15 +14,24 @@ public class PermisoService : IPermisoService
     private readonly IPermisoRepository _permisoRepository;
     private readonly ITipoPermisoRepository _tipoPermisoRepository;
     private readonly IEmpleadoRepository _empleadoRepository;
+    private readonly IDateCalculationService _dateCalculationService;
+    private readonly IAbsenceValidationService _absenceValidationService;
+    private readonly ILogger<PermisoService>? _logger;
 
     public PermisoService(
         IPermisoRepository permisoRepository,
         ITipoPermisoRepository tipoPermisoRepository,
-        IEmpleadoRepository empleadoRepository)
+        IEmpleadoRepository empleadoRepository,
+        IDateCalculationService dateCalculationService,
+        IAbsenceValidationService absenceValidationService,
+        ILogger<PermisoService>? logger = null)
     {
         _permisoRepository = permisoRepository;
         _tipoPermisoRepository = tipoPermisoRepository;
         _empleadoRepository = empleadoRepository;
+        _dateCalculationService = dateCalculationService;
+        _absenceValidationService = absenceValidationService;
+        _logger = logger;
     }
 
     public async Task<ServiceResult<IEnumerable<Permiso>>> GetAllAsync(
@@ -89,24 +99,35 @@ public class PermisoService : IPermisoService
     {
         try
         {
+            _logger?.LogInformation("Solicitando permiso para empleado {EmpleadoId}", permiso.EmpleadoId);
+            
             // Validaciones
             var errores = await ValidarPermisoAsync(permiso);
             if (errores.Any())
             {
+                _logger?.LogWarning("Validación fallida: {Errores}", string.Join(", ", errores));
                 return ServiceResult<Permiso>.FailureResult(errores);
             }
 
-            // Validar que no exista solapamiento
+            // Validar solapamiento con permisos existentes
             if (await _permisoRepository.ExisteSolapamientoAsync(permiso.EmpleadoId, permiso.FechaInicio, permiso.FechaFin))
             {
                 return ServiceResult<Permiso>.FailureResult("El empleado ya tiene un permiso en las fechas seleccionadas");
+            }
+            
+            // Validar solapamiento con vacaciones (validación cruzada)
+            var validacionVacaciones = await _absenceValidationService.TieneVacacionesEnRangoAsync(
+                permiso.EmpleadoId, permiso.FechaInicio, permiso.FechaFin);
+            if (validacionVacaciones.Success && validacionVacaciones.Data)
+            {
+                return ServiceResult<Permiso>.FailureResult("El empleado tiene vacaciones programadas en las fechas seleccionadas");
             }
 
             // Generar número de acta
             permiso.NumeroActa = await _permisoRepository.GetProximoNumeroActaAsync();
 
-            // Calcular días
-            permiso.TotalDias = CalcularDiasHabiles(permiso.FechaInicio, permiso.FechaFin);
+            // Calcular días usando el servicio centralizado
+            permiso.TotalDias = _dateCalculationService.CalcularDiasHabiles(permiso.FechaInicio, permiso.FechaFin);
 
             // Establecer valores predeterminados
             permiso.Estado = EstadoPermiso.Pendiente;
@@ -115,10 +136,13 @@ public class PermisoService : IPermisoService
 
             // Crear
             var created = await _permisoRepository.AddAsync(permiso);
+            
+            _logger?.LogInformation("Permiso {NumeroActa} creado exitosamente", created.NumeroActa);
             return ServiceResult<Permiso>.SuccessResult(created, $"Permiso solicitado exitosamente. Número de acta: {created.NumeroActa}");
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error al solicitar permiso");
             return ServiceResult<Permiso>.FailureResult($"Error al solicitar permiso: {ex.Message}");
         }
     }
@@ -127,6 +151,8 @@ public class PermisoService : IPermisoService
     {
         try
         {
+            _logger?.LogInformation("Aprobando permiso {PermisoId} por usuario {UsuarioId}", permisoId, usuarioAprobadorId);
+            
             var permiso = await _permisoRepository.GetByIdAsync(permisoId);
             if (permiso == null)
             {
@@ -149,10 +175,13 @@ public class PermisoService : IPermisoService
             }
 
             await _permisoRepository.UpdateAsync(permiso);
+            
+            _logger?.LogInformation("Permiso {NumeroActa} aprobado exitosamente", permiso.NumeroActa);
             return ServiceResult<Permiso>.SuccessResult(permiso, "Permiso aprobado exitosamente");
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error al aprobar permiso {PermisoId}", permisoId);
             return ServiceResult<Permiso>.FailureResult($"Error al aprobar permiso: {ex.Message}");
         }
     }
@@ -245,9 +274,17 @@ public class PermisoService : IPermisoService
             {
                 return ServiceResult<Permiso>.FailureResult("El empleado ya tiene un permiso en las fechas seleccionadas");
             }
+            
+            // Validar solapamiento con vacaciones (validación cruzada)
+            var validacionVacaciones = await _absenceValidationService.TieneVacacionesEnRangoAsync(
+                permiso.EmpleadoId, permiso.FechaInicio, permiso.FechaFin);
+            if (validacionVacaciones.Success && validacionVacaciones.Data)
+            {
+                return ServiceResult<Permiso>.FailureResult("El empleado tiene vacaciones programadas en las fechas seleccionadas");
+            }
 
-            // Recalcular días
-            permiso.TotalDias = CalcularDiasHabiles(permiso.FechaInicio, permiso.FechaFin);
+            // Recalcular días usando el servicio centralizado
+            permiso.TotalDias = _dateCalculationService.CalcularDiasHabiles(permiso.FechaInicio, permiso.FechaFin);
 
             await _permisoRepository.UpdateAsync(permiso);
             return ServiceResult<Permiso>.SuccessResult(permiso, "Permiso actualizado exitosamente");
@@ -347,28 +384,6 @@ public class PermisoService : IPermisoService
         }
 
         return errores;
-    }
-
-    private int CalcularDiasHabiles(DateTime fechaInicio, DateTime fechaFin)
-    {
-        // Calcular días calendario (incluyendo fines de semana)
-        // Para una implementación más sofisticada, se pueden excluir fines de semana y festivos
-        int dias = (fechaFin - fechaInicio).Days + 1;
-        
-        // Opción simple: devolver días calendario
-        return Math.Max(1, dias);
-        
-        /* Implementación avanzada para excluir fines de semana:
-        int diasHabiles = 0;
-        for (DateTime fecha = fechaInicio; fecha <= fechaFin; fecha = fecha.AddDays(1))
-        {
-            if (fecha.DayOfWeek != DayOfWeek.Saturday && fecha.DayOfWeek != DayOfWeek.Sunday)
-            {
-                diasHabiles++;
-            }
-        }
-        return Math.Max(1, diasHabiles);
-        */
     }
 
     #endregion

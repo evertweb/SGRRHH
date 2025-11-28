@@ -135,7 +135,14 @@ public partial class MainViewModel : ObservableObject
             },
             new MenuItemViewModel
             {
-                Icon = "📝",
+                Icon = "�",
+                Title = "Chat",
+                ViewName = "Chat",
+                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
+            },
+            new MenuItemViewModel
+            {
+                Icon = "�📝",
                 Title = "Permisos",
                 ViewName = "Permisos",
                 AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
@@ -320,6 +327,12 @@ public partial class MainViewModel : ObservableObject
                 var controlDiarioView = new ControlDiarioView(controlDiarioViewModel);
                 _ = controlDiarioViewModel.LoadDataAsync();
                 CurrentView = controlDiarioView;
+                break;
+            
+            case "Chat":
+                var chatViewModel = scope.ServiceProvider.GetRequiredService<ChatViewModel>();
+                var chatView = new ChatView(chatViewModel);
+                CurrentView = chatView;
                 break;
                 
             case "Proyectos":

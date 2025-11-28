@@ -26,6 +26,12 @@ public class UsuarioService : IUsuarioService
         return usuarios.ToList();
     }
     
+    public async Task<List<Usuario>> GetAllActiveAsync()
+    {
+        var usuarios = await _usuarioRepository.GetAllAsync();
+        return usuarios.Where(u => u.Activo).ToList();
+    }
+    
     public async Task<Usuario?> GetByIdAsync(int id)
     {
         return await _usuarioRepository.GetByIdAsync(id);

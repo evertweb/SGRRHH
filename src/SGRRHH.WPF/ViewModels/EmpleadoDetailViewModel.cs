@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Views;
 
 namespace SGRRHH.WPF.ViewModels;
 
@@ -49,6 +50,11 @@ public partial class EmpleadoDetailViewModel : ObservableObject
     /// Evento para solicitar edición
     /// </summary>
     public event EventHandler<Empleado>? EditRequested;
+    
+    /// <summary>
+    /// Evento para ver documentos del empleado
+    /// </summary>
+    public event EventHandler<int>? ViewDocumentsRequested;
     
     /// <summary>
     /// Evento para cerrar la ventana
@@ -110,6 +116,15 @@ public partial class EmpleadoDetailViewModel : ObservableObject
         if (Empleado != null)
         {
             EditRequested?.Invoke(this, Empleado);
+        }
+    }
+    
+    [RelayCommand]
+    private void VerDocumentos()
+    {
+        if (Empleado != null)
+        {
+            ViewDocumentsRequested?.Invoke(this, Empleado.Id);
         }
     }
     

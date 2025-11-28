@@ -26,6 +26,11 @@ ehthumbs.db
 # Local appsettings
 appsettings.*.json
 
+# Firebase credentials (IMPORTANTE: nunca subir credenciales)
+firebase-credentials.json
+*-firebase-adminsdk-*.json
+serviceAccountKey.json
+
 # Windows device files
 nul
 
@@ -34,3 +39,4 @@ installer/output/
 *.zip
 publish/
 output/
+node_modules

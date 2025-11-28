@@ -482,29 +482,29 @@ public partial class EmpleadoFormViewModel : ObservableObject
             }
             else
             {
-                // Determinar estado según rol del usuario actual
+                // Usar el nuevo método que maneja la lógica de roles en el servicio
                 var currentUser = App.CurrentUser;
                 if (currentUser != null)
                 {
-                    empleado.CreadoPorId = currentUser.Id;
-                    
-                    // Solo Operadores (Secretarias) crean solicitudes pendientes
-                    // Admin y Aprobadores crean empleados directamente activos
-                    if (currentUser.Rol == RolUsuario.Operador)
+                    var createResult = await _empleadoService.CreateWithRoleAsync(
+                        empleado, 
+                        currentUser.Id, 
+                        currentUser.Rol);
+                    result = createResult;
+                    if (createResult.Success && createResult.Data != null)
                     {
-                        empleado.Estado = EstadoEmpleado.PendienteAprobacion;
-                    }
-                    else
-                    {
-                        empleado.Estado = EstadoEmpleado.Activo;
+                        _empleadoId = createResult.Data.Id;
                     }
                 }
-                
-                var createResult = await _empleadoService.CreateAsync(empleado);
-                result = createResult;
-                if (createResult.Success && createResult.Data != null)
+                else
                 {
-                    _empleadoId = createResult.Data.Id;
+                    // Fallback sin rol (caso raro)
+                    var createResult = await _empleadoService.CreateAsync(empleado);
+                    result = createResult;
+                    if (createResult.Success && createResult.Data != null)
+                    {
+                        _empleadoId = createResult.Data.Id;
+                    }
                 }
             }
             

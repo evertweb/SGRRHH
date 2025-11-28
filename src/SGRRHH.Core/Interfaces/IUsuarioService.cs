@@ -15,6 +15,11 @@ public interface IUsuarioService
     Task<List<Usuario>> GetAllAsync();
     
     /// <summary>
+    /// Obtiene todos los usuarios activos
+    /// </summary>
+    Task<List<Usuario>> GetAllActiveAsync();
+    
+    /// <summary>
     /// Obtiene un usuario por su ID
     /// </summary>
     Task<Usuario?> GetByIdAsync(int id);

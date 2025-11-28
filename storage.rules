@@ -1,0 +1,101 @@
+rules_version = '2';
+
+// Reglas de seguridad para Firebase Storage - SGRRHH
+// Solo usuarios autenticados con documento en Firestore pueden acceder
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Función auxiliar: verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función auxiliar: verificar si el usuario existe en Firestore
+    function userExists() {
+      return isAuthenticated() && 
+             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+    
+    // Función auxiliar: obtener el rol del usuario desde Firestore
+    function getUserRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.rol;
+    }
+    
+    // Función auxiliar: verificar si es administrador
+    function isAdmin() {
+      return userExists() && getUserRole() == 'Administrador';
+    }
+    
+    // Función auxiliar: verificar si tiene acceso (cualquier rol válido)
+    function hasAccess() {
+      return userExists() && 
+             (getUserRole() == 'Administrador' || 
+              getUserRole() == 'Aprobador' || 
+              getUserRole() == 'Operador');
+    }
+    
+    // ============================================
+    // FOTOS DE EMPLEADOS
+    // ============================================
+    match /fotos/empleados/{empleadoId}/{fileName} {
+      // Usuarios con acceso pueden ver fotos
+      allow read: if hasAccess();
+      
+      // Admin y Operador pueden subir/modificar fotos
+      allow write: if isAdmin() || 
+                     (userExists() && getUserRole() == 'Operador');
+    }
+    
+    // ============================================
+    // DOCUMENTOS DE PERMISOS (soportes)
+    // ============================================
+    match /documentos/permisos/{permisoId}/{fileName} {
+      allow read: if hasAccess();
+      allow write: if hasAccess();
+    }
+    
+    // ============================================
+    // DOCUMENTOS DE CONTRATOS
+    // ============================================
+    match /documentos/contratos/{contratoId}/{fileName} {
+      allow read: if hasAccess();
+      allow write: if isAdmin() || 
+                     (userExists() && getUserRole() == 'Operador');
+    }
+    
+    // ============================================
+    // DOCUMENTOS GENERADOS (actas, certificados)
+    // ============================================
+    match /documentos/generados/{tipo}/{fileName} {
+      allow read: if hasAccess();
+      allow write: if hasAccess();
+    }
+    
+    // ============================================
+    // CONFIGURACIÓN (logo, etc.)
+    // ============================================
+    match /config/{fileName} {
+      allow read: if hasAccess();
+      allow write: if isAdmin();
+    }
+    
+    // ============================================
+    // ACTUALIZACIONES DE LA APP
+    // ============================================
+    match /updates/{path=**} {
+      // Cualquier usuario autenticado puede leer actualizaciones
+      allow read: if isAuthenticated();
+      
+      // Solo admin puede subir actualizaciones
+      allow write: if isAdmin();
+    }
+    
+    // ============================================
+    // DENEGAR TODO LO DEMÁS
+    // ============================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,10 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 
 namespace SGRRHH.WPF.ViewModels;
@@ -72,6 +75,9 @@ public partial class ContratosViewModel : ObservableObject
     
     [ObservableProperty]
     private string _formObservaciones = string.Empty;
+    
+    [ObservableProperty]
+    private string? _formArchivoAdjuntoPath;
     
     [ObservableProperty]
     private int _diasRestantesContrato;
@@ -262,6 +268,7 @@ public partial class ContratosViewModel : ObservableObject
         FormSalario = 0;
         FormCargo = Cargos.FirstOrDefault(c => c.Id == SelectedEmpleado.CargoId);
         FormObservaciones = string.Empty;
+        FormArchivoAdjuntoPath = null;
         IsFormVisible = true;
     }
     
@@ -291,6 +298,7 @@ public partial class ContratosViewModel : ObservableObject
         FormSalario = SelectedContrato.Salario;
         FormCargo = Cargos.FirstOrDefault(c => c.Id == SelectedContrato.CargoId);
         FormObservaciones = SelectedContrato.Observaciones ?? string.Empty;
+        FormArchivoAdjuntoPath = SelectedContrato.ArchivoAdjuntoPath;
         IsFormVisible = true;
     }
     
@@ -314,6 +322,7 @@ public partial class ContratosViewModel : ObservableObject
         FormSalario = ContratoActivo.Salario;
         FormCargo = Cargos.FirstOrDefault(c => c.Id == ContratoActivo.CargoId);
         FormObservaciones = "Renovación de contrato";
+        FormArchivoAdjuntoPath = null;
         IsFormVisible = true;
     }
     
@@ -358,7 +367,8 @@ public partial class ContratosViewModel : ObservableObject
                     FechaFin = FormTipoContrato == TipoContrato.Indefinido ? null : FormFechaFin,
                     Salario = FormSalario,
                     CargoId = FormCargo.Id,
-                    Observaciones = FormObservaciones
+                    Observaciones = FormObservaciones,
+                    ArchivoAdjuntoPath = FormArchivoAdjuntoPath
                 };
                 
                 var result = await _contratoService.RenovarContratoAsync(ContratoActivo.Id, nuevoContrato);
@@ -384,6 +394,7 @@ public partial class ContratosViewModel : ObservableObject
                 SelectedContrato.Salario = FormSalario;
                 SelectedContrato.CargoId = FormCargo.Id;
                 SelectedContrato.Observaciones = FormObservaciones;
+                SelectedContrato.ArchivoAdjuntoPath = FormArchivoAdjuntoPath;
                 
                 var result = await _contratoService.UpdateAsync(SelectedContrato);
                 
@@ -410,7 +421,8 @@ public partial class ContratosViewModel : ObservableObject
                     FechaFin = FormTipoContrato == TipoContrato.Indefinido ? null : FormFechaFin,
                     Salario = FormSalario,
                     CargoId = FormCargo.Id,
-                    Observaciones = FormObservaciones
+                    Observaciones = FormObservaciones,
+                    ArchivoAdjuntoPath = FormArchivoAdjuntoPath
                 };
                 
                 var result = await _contratoService.CreateAsync(nuevoContrato);
@@ -444,6 +456,141 @@ public partial class ContratosViewModel : ObservableObject
     private void CancelarFormulario()
     {
         IsFormVisible = false;
+    }
+    
+    /// <summary>
+    /// Selecciona un archivo PDF para adjuntar al contrato
+    /// </summary>
+    [RelayCommand]
+    private void SeleccionarArchivo()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Seleccionar contrato firmado",
+            Filter = "Documentos PDF|*.pdf|Imágenes|*.jpg;*.jpeg;*.png|Todos los archivos|*.*",
+            CheckFileExists = true
+        };
+        
+        if (dialog.ShowDialog() == true)
+        {
+            try
+            {
+                // Copiar archivo a carpeta de contratos
+                var contratosPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "contratos");
+                Directory.CreateDirectory(contratosPath);
+                
+                var fileName = $"contrato_{SelectedEmpleado?.Cedula ?? "temp"}_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(dialog.FileName)}";
+                var destPath = Path.Combine(contratosPath, fileName);
+                
+                File.Copy(dialog.FileName, destPath, true);
+                FormArchivoAdjuntoPath = destPath;
+                
+                MessageBox.Show("Archivo adjuntado correctamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error al adjuntar archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Abre el archivo adjunto del contrato
+    /// </summary>
+    [RelayCommand]
+    private void VerArchivo()
+    {
+        var path = FormArchivoAdjuntoPath ?? SelectedContrato?.ArchivoAdjuntoPath;
+        
+        if (string.IsNullOrEmpty(path))
+        {
+            MessageBox.Show("No hay archivo adjunto", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        
+        if (!File.Exists(path))
+        {
+            MessageBox.Show("El archivo no existe en la ubicación especificada", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error al abrir el archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+    
+    /// <summary>
+    /// Elimina el archivo adjunto del formulario
+    /// </summary>
+    [RelayCommand]
+    private void EliminarArchivo()
+    {
+        if (string.IsNullOrEmpty(FormArchivoAdjuntoPath))
+        {
+            MessageBox.Show("No hay archivo para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        
+        var result = MessageBox.Show(
+            "¿Está seguro de eliminar el archivo adjunto?",
+            "Confirmar",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+            
+        if (result == MessageBoxResult.Yes)
+        {
+            FormArchivoAdjuntoPath = null;
+        }
+    }
+    
+    /// <summary>
+    /// Ver archivo del contrato seleccionado en la tabla o contrato activo
+    /// </summary>
+    [RelayCommand]
+    private void VerArchivoContrato()
+    {
+        // Priorizar el contrato seleccionado, luego el activo
+        var contrato = SelectedContrato ?? ContratoActivo;
+        
+        if (contrato == null)
+        {
+            MessageBox.Show("Seleccione un contrato", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        
+        if (string.IsNullOrEmpty(contrato.ArchivoAdjuntoPath))
+        {
+            MessageBox.Show("Este contrato no tiene archivo adjunto", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        
+        if (!File.Exists(contrato.ArchivoAdjuntoPath))
+        {
+            MessageBox.Show("El archivo no existe en la ubicación especificada", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = contrato.ArchivoAdjuntoPath,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error al abrir el archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
     
     /// <summary>

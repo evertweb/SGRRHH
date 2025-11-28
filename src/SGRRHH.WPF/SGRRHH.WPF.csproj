@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\SGRRHH.Core\SGRRHH.Core.csproj" />
@@ -22,27 +22,33 @@
     <!-- Información del producto -->
     <AssemblyName>SGRRHH</AssemblyName>
     <Product>Sistema de Gestión de Recursos Humanos</Product>
-    <Company>SGRRHH</Company>
-    <Copyright>Copyright © 2025</Copyright>
-    <Version>1.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <Company>Forestech</Company>
+    <Authors>Forestech</Authors>
+    <Copyright>Copyright © 2025 Forestech</Copyright>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
     <Description>Sistema de Gestión de Recursos Humanos - Gestión de empleados, permisos, vacaciones y contratos</Description>
+    <PackageProjectUrl>https://forestech.com</PackageProjectUrl>
+    <RepositoryUrl>https://forestech.com</RepositoryUrl>
     
-    <!-- Configuración de publicación -->
+    <!-- Configuraci�n de publicaci�n -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     
-    <!-- Icono de aplicación (opcional) -->
+    <!-- Icono de aplicaci�n (opcional) -->
     <!-- <ApplicationIcon>Resources\app.ico</ApplicationIcon> -->
   </PropertyGroup>
   
-  <!-- Copiar archivo de configuración al output -->
+  <!-- Copiar archivo de configuraci�n al output -->
   <ItemGroup>
     <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="firebase-credentials.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -13,9 +13,14 @@ public class Usuario : EntidadBase
     public string Username { get; set; } = string.Empty;
     
     /// <summary>
-    /// Hash de la contraseña (BCrypt)
+    /// Hash de la contraseña (BCrypt) - Solo para modo SQLite
     /// </summary>
     public string PasswordHash { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// UID de Firebase Auth - Solo para modo Firebase
+    /// </summary>
+    public string? FirebaseUid { get; set; }
     
     /// <summary>
     /// Nombre completo del usuario
@@ -41,4 +46,9 @@ public class Usuario : EntidadBase
     /// ID del empleado asociado (opcional)
     /// </summary>
     public int? EmpleadoId { get; set; }
+    
+    /// <summary>
+    /// ID del empleado como string (para Firebase)
+    /// </summary>
+    public string? EmpleadoFirestoreId { get; set; }
 }

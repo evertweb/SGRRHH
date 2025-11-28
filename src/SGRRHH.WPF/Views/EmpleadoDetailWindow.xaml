@@ -235,6 +235,10 @@
                         <TextBlock Text="⚡ Acciones Rápidas" FontWeight="Bold" FontSize="15" 
                                    Foreground="#1565C0" Margin="0,0,0,15"/>
                         <WrapPanel>
+                            <Button Content="� Ver Documentos" Margin="0,0,10,10" Padding="15,8"
+                                    Command="{Binding VerDocumentosCommand}"
+                                    Background="#1565C0" Foreground="White" 
+                                    BorderThickness="0" Cursor="Hand"/>
                             <Button Content="📅 Ver Permisos" Margin="0,0,10,10" Padding="15,8"
                                     Background="White" Foreground="#1565C0" BorderBrush="#1565C0"
                                     BorderThickness="1" Cursor="Hand" IsEnabled="False"/>
@@ -248,8 +252,6 @@
                                     Background="White" Foreground="#1565C0" BorderBrush="#1565C0"
                                     BorderThickness="1" Cursor="Hand" IsEnabled="False"/>
                         </WrapPanel>
-                        <TextBlock Text="(Estas funciones estarán disponibles en próximas versiones)" 
-                                   FontSize="11" Foreground="#90CAF9" FontStyle="Italic"/>
                     </StackPanel>
                 </Border>
             </Grid>

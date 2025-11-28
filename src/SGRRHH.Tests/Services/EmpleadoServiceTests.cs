@@ -13,12 +13,14 @@ namespace SGRRHH.Tests.Services;
 public class EmpleadoServiceTests
 {
     private readonly Mock<IEmpleadoRepository> _mockRepository;
+    private readonly Mock<IDateCalculationService> _mockDateService;
     private readonly EmpleadoService _service;
 
     public EmpleadoServiceTests()
     {
         _mockRepository = new Mock<IEmpleadoRepository>();
-        _service = new EmpleadoService(_mockRepository.Object);
+        _mockDateService = new Mock<IDateCalculationService>();
+        _service = new EmpleadoService(_mockRepository.Object, _mockDateService.Object);
     }
 
     [Fact]

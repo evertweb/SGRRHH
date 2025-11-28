@@ -41,6 +41,14 @@ public interface IEmpleadoService
     Task<ServiceResult<Empleado>> CreateAsync(Empleado empleado);
     
     /// <summary>
+    /// Crea un nuevo empleado determinando el estado según el rol del usuario
+    /// </summary>
+    /// <param name="empleado">Datos del empleado</param>
+    /// <param name="usuarioId">ID del usuario que crea</param>
+    /// <param name="rolUsuario">Rol del usuario</param>
+    Task<ServiceResult<Empleado>> CreateWithRoleAsync(Empleado empleado, int usuarioId, RolUsuario rolUsuario);
+    
+    /// <summary>
     /// Actualiza un empleado existente
     /// </summary>
     Task<ServiceResult> UpdateAsync(Empleado empleado);

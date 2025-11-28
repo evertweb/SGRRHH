@@ -1,8 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
-using SGRRHH.Infrastructure.Data;
 
 namespace SGRRHH.Infrastructure.Services;
 
@@ -12,12 +10,10 @@ namespace SGRRHH.Infrastructure.Services;
 public class ControlDiarioService : IControlDiarioService
 {
     private readonly IRegistroDiarioRepository _registroRepository;
-    private readonly AppDbContext _context;
     
-    public ControlDiarioService(IRegistroDiarioRepository registroRepository, AppDbContext context)
+    public ControlDiarioService(IRegistroDiarioRepository registroRepository)
     {
         _registroRepository = registroRepository;
-        _context = context;
     }
     
     public async Task<RegistroDiario?> GetRegistroByFechaEmpleadoAsync(DateTime fecha, int empleadoId)
@@ -153,8 +149,8 @@ public class ControlDiarioService : IControlDiarioService
         detalle.FechaCreacion = DateTime.Now;
         detalle.Orden = (registro.DetallesActividades?.Count ?? 0) + 1;
         
-        _context.Set<DetalleActividad>().Add(detalle);
-        await _context.SaveChangesAsync();
+        await _registroRepository.AddDetalleAsync(registroId, detalle);
+        await _registroRepository.SaveChangesAsync();
         
         return ServiceResult<DetalleActividad>.Ok(detalle, "Actividad agregada exitosamente");
     }
@@ -163,15 +159,17 @@ public class ControlDiarioService : IControlDiarioService
     {
         var errors = new List<string>();
         
-        var existing = await _context.Set<DetalleActividad>()
-            .Include(d => d.RegistroDiario)
-            .FirstOrDefaultAsync(d => d.Id == detalle.Id);
+        // Obtener el detalle existente a través del repositorio
+        var existing = await _registroRepository.GetDetalleByIdAsync(detalle.Id);
             
         if (existing == null)
             return ServiceResult.Fail("Detalle de actividad no encontrado");
+        
+        // Obtener el registro para verificar el estado
+        var registro = await _registroRepository.GetByIdWithDetallesAsync(existing.RegistroDiarioId);
             
-        if (existing.RegistroDiario?.Estado == EstadoRegistroDiario.Completado || 
-            existing.RegistroDiario?.Estado == EstadoRegistroDiario.Aprobado)
+        if (registro?.Estado == EstadoRegistroDiario.Completado || 
+            registro?.Estado == EstadoRegistroDiario.Aprobado)
             return ServiceResult.Fail("No se pueden modificar actividades de un registro completado");
             
         // Validaciones
@@ -195,26 +193,29 @@ public class ControlDiarioService : IControlDiarioService
         existing.HoraFin = detalle.HoraFin;
         existing.FechaModificacion = DateTime.Now;
         
-        await _context.SaveChangesAsync();
+        await _registroRepository.UpdateDetalleAsync(existing);
+        await _registroRepository.SaveChangesAsync();
         
         return ServiceResult.Ok("Actividad actualizada exitosamente");
     }
     
     public async Task<ServiceResult> DeleteActividadAsync(int detalleId)
     {
-        var detalle = await _context.Set<DetalleActividad>()
-            .Include(d => d.RegistroDiario)
-            .FirstOrDefaultAsync(d => d.Id == detalleId);
+        // Obtener el detalle existente a través del repositorio
+        var detalle = await _registroRepository.GetDetalleByIdAsync(detalleId);
             
         if (detalle == null)
             return ServiceResult.Fail("Detalle de actividad no encontrado");
             
-        if (detalle.RegistroDiario?.Estado == EstadoRegistroDiario.Completado || 
-            detalle.RegistroDiario?.Estado == EstadoRegistroDiario.Aprobado)
+        // Obtener el registro para verificar el estado
+        var registro = await _registroRepository.GetByIdWithDetallesAsync(detalle.RegistroDiarioId);
+            
+        if (registro?.Estado == EstadoRegistroDiario.Completado || 
+            registro?.Estado == EstadoRegistroDiario.Aprobado)
             return ServiceResult.Fail("No se pueden eliminar actividades de un registro completado");
             
-        _context.Set<DetalleActividad>().Remove(detalle);
-        await _context.SaveChangesAsync();
+        await _registroRepository.DeleteDetalleAsync(detalle.RegistroDiarioId, detalleId);
+        await _registroRepository.SaveChangesAsync();
         
         return ServiceResult.Ok("Actividad eliminada exitosamente");
     }

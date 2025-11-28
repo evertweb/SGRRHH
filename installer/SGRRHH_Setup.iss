@@ -5,9 +5,9 @@
 
 #define MyAppName "SGRRHH"
 #define MyAppFullName "Sistema de Gestión de Recursos Humanos"
-#define MyAppVersion "1.0.0"
-#define MyAppPublisher "SGRRHH"
-#define MyAppURL "https://www.sgrrhh.com"
+#define MyAppVersion "1.0.1"
+#define MyAppPublisher "Forestech"
+#define MyAppURL "https://forestech.com"
 #define MyAppExeName "SGRRHH.exe"
 #define MyAppAssocName MyAppFullName
 #define MyAppAssocExt ".sgrrhh"
@@ -78,7 +78,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
 
 [Files]
-; Archivos principales de la aplicación
+; Archivos principales de la aplicación (self-contained para que funcione sin .NET instalado)
 Source: "..\src\publish\SGRRHH\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Crear carpeta de datos para la base de datos y configuración
@@ -134,13 +134,18 @@ english.UninstallProgram=Uninstall %1
 // Función para verificar si hay una instancia de la aplicación en ejecución
 function IsAppRunning(): Boolean;
 var
-  ResultCode: Integer;
+  WMIService: Variant;
+  ProcessList: Variant;
 begin
   Result := False;
-  if Exec('tasklist', '/FI "IMAGENAME eq SGRRHH.exe" /NH', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-  begin
-    // Si el proceso está corriendo, el resultado contendrá información
-    Result := (ResultCode = 0);
+  try
+    WMIService := CreateOleObject('WbemScripting.SWbemLocator');
+    WMIService := WMIService.ConnectServer('.', 'root\cimv2');
+    ProcessList := WMIService.ExecQuery('SELECT * FROM Win32_Process WHERE Name = "SGRRHH.exe"');
+    Result := (ProcessList.Count > 0);
+  except
+    // Si hay error con WMI, asumir que no está corriendo
+    Result := False;
   end;
 end;
 

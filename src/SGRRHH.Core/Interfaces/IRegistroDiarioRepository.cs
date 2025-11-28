@@ -46,4 +46,34 @@ public interface IRegistroDiarioRepository : IRepository<RegistroDiario>
     /// Calcula el total de horas de un empleado en un rango de fechas
     /// </summary>
     Task<decimal> GetTotalHorasByEmpleadoRangoAsync(int empleadoId, DateTime fechaInicio, DateTime fechaFin);
+    
+    /// <summary>
+    /// Agrega un detalle de actividad a un registro diario
+    /// </summary>
+    Task<DetalleActividad> AddDetalleAsync(int registroId, DetalleActividad detalle);
+    
+    /// <summary>
+    /// Actualiza un detalle de actividad (requiere registroId)
+    /// </summary>
+    Task UpdateDetalleAsync(int registroId, DetalleActividad detalle);
+    
+    /// <summary>
+    /// Actualiza un detalle de actividad (usa RegistroDiarioId del detalle)
+    /// </summary>
+    Task UpdateDetalleAsync(DetalleActividad detalle);
+    
+    /// <summary>
+    /// Elimina un detalle de actividad
+    /// </summary>
+    Task DeleteDetalleAsync(int registroId, int detalleId);
+    
+    /// <summary>
+    /// Obtiene un detalle de actividad con su registro padre (por registroId y detalleId)
+    /// </summary>
+    Task<DetalleActividad?> GetDetalleByIdAsync(int registroId, int detalleId);
+    
+    /// <summary>
+    /// Obtiene un detalle de actividad solo por su ID (busca en todos los registros)
+    /// </summary>
+    Task<DetalleActividad?> GetDetalleByIdAsync(int detalleId);
 }

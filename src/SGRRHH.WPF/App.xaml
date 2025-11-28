@@ -26,5 +26,6 @@
         <converters:CurrencyConverter x:Key="CurrencyConverter"/>
         <converters:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
         <converters:HexToColorConverter x:Key="HexToColorConverter"/>
+        <converters:InitialsConverter x:Key="InitialsConverter"/>
     </Application.Resources>
 </Application>

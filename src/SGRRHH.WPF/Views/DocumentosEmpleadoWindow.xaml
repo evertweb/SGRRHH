@@ -1,0 +1,454 @@
+<Window x:Class="SGRRHH.WPF.Views.DocumentosEmpleadoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Documentos del Empleado" 
+        Height="700" Width="1000"
+        MinHeight="550" MinWidth="800"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F6FA">
+    
+    <Window.Resources>
+        <!-- Estilos -->
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#7F8C8D"/>
+            <Setter Property="Margin" Value="0,5,0,2"/>
+        </Style>
+        
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#3498DB"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2980B9"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#BDC3C7"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#ECF0F1"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#D5DBDB"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="SuccessButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#27AE60"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1E8449"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="DangerButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#E74C3C"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#C0392B"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Encabezado -->
+        <Border Grid.Row="0" Background="#37474F" Padding="20">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="📁 Documentos del Empleado" FontSize="22" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="{Binding Empleado.NombreCompleto}" FontSize="14" Foreground="#B0BEC5" Margin="0,5,0,0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ProgresoChecklist}" Foreground="White" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                    <Button Content="➕ Nuevo Documento" 
+                            Command="{Binding NuevoDocumentoCommand}"
+                            Style="{StaticResource SuccessButtonStyle}"
+                            Visibility="{Binding PuedeGestionar, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- Contenido principal -->
+        <Grid Grid.Row="1" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Panel izquierdo - Checklist -->
+            <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Text="📋 Checklist de Documentos" Style="{StaticResource HeaderTextStyle}"/>
+                    
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Checklist}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,8" Padding="10" CornerRadius="4">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#F8F9FA"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding TieneDocumento}" Value="True">
+                                                        <Setter Property="Background" Value="#E8F5E9"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EstaVencido}" Value="True">
+                                                        <Setter Property="Background" Value="#FFEBEE"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <!-- Icono de estado -->
+                                            <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="16" Margin="0,0,10,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="⬜"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding TieneDocumento}" Value="True">
+                                                                <Setter Property="Text" Value="✅"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding EstaVencido}" Value="True">
+                                                                <Setter Property="Text" Value="⚠️"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            
+                                            <!-- Nombre del tipo -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding NombreTipo}" FontWeight="Medium" TextWrapping="Wrap"/>
+                                                <TextBlock FontSize="11" Foreground="#7F8C8D">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="Opcional"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding EsRequerido}" Value="True">
+                                                                    <Setter Property="Text" Value="Requerido"/>
+                                                                    <Setter Property="Foreground" Value="#E74C3C"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding EstaVencido}" Value="True">
+                                                                    <Setter Property="Text" Value="⚠️ Vencido"/>
+                                                                    <Setter Property="Foreground" Value="#E74C3C"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                            
+                                            <!-- Botón agregar si no tiene -->
+                                            <Button Grid.Column="2" Content="+" 
+                                                    Command="{Binding DataContext.NuevoDocumentoTipoCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding Tipo}"
+                                                    Width="28" Height="28"
+                                                    Background="#3498DB" Foreground="White"
+                                                    BorderThickness="0" Cursor="Hand"
+                                                    Visibility="{Binding DataContext.PuedeGestionar, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Button.Style>
+                                                    <Style TargetType="Button">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding TieneDocumento}" Value="True">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+            
+            <!-- Panel derecho - Lista de documentos y formulario -->
+            <Grid Grid.Column="1" Margin="5,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Lista de documentos -->
+                <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Grid.Row="0" Text="📄 Documentos Subidos" Style="{StaticResource HeaderTextStyle}"/>
+                        
+                        <DataGrid Grid.Row="1" 
+                                  ItemsSource="{Binding Documentos}"
+                                  SelectedItem="{Binding SelectedDocumento}"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  SelectionMode="Single"
+                                  GridLinesVisibility="Horizontal"
+                                  HeadersVisibility="Column"
+                                  BorderThickness="0"
+                                  Background="Transparent"
+                                  RowBackground="White"
+                                  AlternatingRowBackground="#F8F9FA">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Tipo" Width="150">
+                                    <DataGridTextColumn.Binding>
+                                        <Binding Path="TipoDocumento"/>
+                                    </DataGridTextColumn.Binding>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*"/>
+                                <DataGridTextColumn Header="Fecha Subida" Binding="{Binding FechaCreacion, StringFormat=dd/MM/yyyy}" Width="100"/>
+                                <DataGridTextColumn Header="Vencimiento" Binding="{Binding FechaVencimiento, StringFormat=dd/MM/yyyy}" Width="100"/>
+                                <DataGridTemplateColumn Header="Estado" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock HorizontalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="✅"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding EstaVigente}" Value="False">
+                                                                <Setter Property="Text" Value="⚠️"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        
+                        <!-- Botones de acción -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                            <Button Content="👁️ Ver" 
+                                    Command="{Binding VerDocumentoCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Margin="0,0,5,0"/>
+                            <Button Content="✏️ Editar" 
+                                    Command="{Binding EditarDocumentoCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="0,0,5,0"
+                                    Visibility="{Binding PuedeGestionar, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            <Button Content="🗑️ Eliminar" 
+                                    Command="{Binding EliminarDocumentoCommand}"
+                                    Style="{StaticResource DangerButtonStyle}"
+                                    Visibility="{Binding PuedeEliminar, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                
+                <!-- Formulario de documento -->
+                <Border Grid.Row="1" Style="{StaticResource CardStyle}" 
+                        Visibility="{Binding IsFormVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+                        Margin="5,10,5,5">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource HeaderTextStyle}">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="{}📝 {0} Documento">
+                                    <Binding Path="IsEditing" Converter="{StaticResource BoolToEditTextConverter}"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                        
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Tipo de documento -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
+                                <TextBlock Text="Tipo de Documento *" Style="{StaticResource LabelStyle}"/>
+                                <ComboBox ItemsSource="{Binding TiposDocumento}"
+                                          SelectedValue="{Binding FormTipoDocumento}"
+                                          SelectedValuePath="Tipo"
+                                          DisplayMemberPath="Nombre"
+                                          Padding="8" Margin="0,5,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- Nombre -->
+                            <StackPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,10">
+                                <TextBlock Text="Nombre del Documento *" Style="{StaticResource LabelStyle}"/>
+                                <TextBox Text="{Binding FormNombre, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="8" Margin="0,5,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- Fecha Emisión -->
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
+                                <TextBlock Text="Fecha de Emisión" Style="{StaticResource LabelStyle}"/>
+                                <DatePicker SelectedDate="{Binding FormFechaEmision}"
+                                            Padding="8" Margin="0,5,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- Fecha Vencimiento -->
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,10,10">
+                                <TextBlock Text="Fecha de Vencimiento" Style="{StaticResource LabelStyle}"/>
+                                <DatePicker SelectedDate="{Binding FormFechaVencimiento}"
+                                            Padding="8" Margin="0,5,0,0"/>
+                            </StackPanel>
+                            
+                            <!-- Archivo -->
+                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,10"
+                                        Visibility="{Binding IsEditing, Converter={StaticResource InvertedBoolToVisibilityConverter}}">
+                                <TextBlock Text="Archivo *" Style="{StaticResource LabelStyle}"/>
+                                <Grid Margin="0,5,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" Text="{Binding FormArchivoNombreOriginal, Mode=OneWay}" 
+                                             IsReadOnly="True" Padding="8" Background="#F8F9FA"/>
+                                    <Button Grid.Column="1" Content="📁" 
+                                            Command="{Binding SeleccionarArchivoCommand}"
+                                            Padding="8,6" Margin="5,0,0,0"
+                                            Background="#3498DB" Foreground="White"
+                                            BorderThickness="0" Cursor="Hand"/>
+                                </Grid>
+                            </StackPanel>
+                            
+                            <!-- Descripción -->
+                            <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,0,10">
+                                <TextBlock Text="Descripción / Notas" Style="{StaticResource LabelStyle}"/>
+                                <TextBox Text="{Binding FormDescripcion, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="8" Margin="0,5,0,0" Height="60"
+                                         TextWrapping="Wrap" AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto"/>
+                            </StackPanel>
+                            
+                            <!-- Botones -->
+                            <StackPanel Grid.Row="3" Grid.ColumnSpan="3" 
+                                        Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="Cancelar" 
+                                        Command="{Binding CancelarFormularioCommand}"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Margin="0,0,10,0"/>
+                                <Button Content="💾 Guardar" 
+                                        Command="{Binding GuardarDocumentoCommand}"
+                                        Style="{StaticResource SuccessButtonStyle}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+        
+        <!-- Loading overlay -->
+        <Border Grid.RowSpan="2" Background="#80000000" 
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="⏳" FontSize="40" HorizontalAlignment="Center"/>
+                <TextBlock Text="Procesando..." FontSize="16" Foreground="White" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using SGRRHH.Infrastructure.Firebase;
 
 namespace SGRRHH.WPF.Helpers;
 
@@ -31,114 +32,124 @@ public static class AppSettings
     }
     
     /// <summary>
-    /// Obtiene la ruta de la base de datos configurada
+    /// Indica si las actualizaciones automáticas están habilitadas
     /// </summary>
-    public static string GetDatabasePath()
+    public static bool UpdatesEnabled()
     {
         Load();
         
         try
         {
-            if (_settings?.RootElement.TryGetProperty("Database", out var dbSection) == true)
+            if (_settings?.RootElement.TryGetProperty("Updates", out var updateSection) == true)
             {
-                if (dbSection.TryGetProperty("Path", out var pathElement))
+                if (updateSection.TryGetProperty("Enabled", out var enabledElement))
                 {
-                    var configuredPath = pathElement.GetString();
-                    if (!string.IsNullOrWhiteSpace(configuredPath))
-                    {
-                        // Si es una ruta relativa, combinar con el directorio base
-                        if (!Path.IsPathRooted(configuredPath) && !configuredPath.StartsWith("\\\\"))
-                        {
-                            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, configuredPath);
-                        }
-                        return configuredPath;
-                    }
+                    return enabledElement.GetBoolean();
                 }
             }
         }
         catch { }
         
-        // Ruta por defecto
-        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sgrrhh.db");
+        return true; // Habilitado por defecto
     }
     
     /// <summary>
-    /// Indica si se debe usar el modo WAL para SQLite
+    /// Indica si se debe verificar actualizaciones al iniciar
     /// </summary>
-    public static bool EnableWalMode()
+    public static bool CheckUpdatesOnStartup()
     {
         Load();
         
         try
         {
-            if (_settings?.RootElement.TryGetProperty("Database", out var dbSection) == true)
+            if (_settings?.RootElement.TryGetProperty("Updates", out var updateSection) == true)
             {
-                if (dbSection.TryGetProperty("EnableWalMode", out var walElement))
+                if (updateSection.TryGetProperty("CheckOnStartup", out var checkElement))
                 {
-                    return walElement.GetBoolean();
+                    return checkElement.GetBoolean();
                 }
             }
         }
         catch { }
         
-        return true; // WAL habilitado por defecto
+        return true; // Verificar por defecto
     }
     
     /// <summary>
-    /// Obtiene el timeout de espera para operaciones de BD
+    /// Obtiene la versión actual de la aplicación
     /// </summary>
-    public static int GetBusyTimeout()
+    public static string GetAppVersion()
     {
         Load();
         
         try
         {
-            if (_settings?.RootElement.TryGetProperty("Database", out var dbSection) == true)
+            if (_settings?.RootElement.TryGetProperty("Application", out var appSection) == true)
             {
-                if (dbSection.TryGetProperty("BusyTimeout", out var timeoutElement))
+                if (appSection.TryGetProperty("Version", out var versionElement))
                 {
-                    return timeoutElement.GetInt32();
+                    return versionElement.GetString() ?? "1.0.0";
                 }
             }
         }
         catch { }
         
-        return 30000; // 30 segundos por defecto
+        // Intentar obtener de la asamblea
+        try
+        {
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version;
+            if (version != null)
+            {
+                return $"{version.Major}.{version.Minor}.{version.Build}";
+            }
+        }
+        catch { }
+        
+        return "1.0.0";
     }
     
+    // ========================
+    // Configuración de Firebase
+    // ========================
+    
     /// <summary>
-    /// Indica si está configurado para modo red
+    /// Obtiene la configuración de Firebase
     /// </summary>
-    public static bool IsNetworkMode()
+    public static FirebaseConfig GetFirebaseConfig()
     {
         Load();
         
+        var config = new FirebaseConfig();
+        
         try
         {
-            if (_settings?.RootElement.TryGetProperty("Network", out var netSection) == true)
+            if (_settings?.RootElement.TryGetProperty("Firebase", out var fbSection) == true)
             {
-                if (netSection.TryGetProperty("IsNetworkMode", out var modeElement))
-                {
-                    return modeElement.GetBoolean();
-                }
+                if (fbSection.TryGetProperty("Enabled", out var enabledElement))
+                    config.Enabled = enabledElement.GetBoolean();
+                    
+                if (fbSection.TryGetProperty("ProjectId", out var projectIdElement))
+                    config.ProjectId = projectIdElement.GetString() ?? "";
+                    
+                if (fbSection.TryGetProperty("DatabaseId", out var databaseIdElement))
+                    config.DatabaseId = databaseIdElement.GetString() ?? "(default)";
+                    
+                if (fbSection.TryGetProperty("StorageBucket", out var bucketElement))
+                    config.StorageBucket = bucketElement.GetString() ?? "";
+                    
+                if (fbSection.TryGetProperty("ApiKey", out var apiKeyElement))
+                    config.ApiKey = apiKeyElement.GetString() ?? "";
+                    
+                if (fbSection.TryGetProperty("AuthDomain", out var authDomainElement))
+                    config.AuthDomain = authDomainElement.GetString() ?? "";
+                    
+                if (fbSection.TryGetProperty("CredentialsPath", out var credentialsElement))
+                    config.CredentialsPath = credentialsElement.GetString() ?? "";
             }
         }
         catch { }
         
-        // También detectar si la ruta es de red
-        var dbPath = GetDatabasePath();
-        return dbPath.StartsWith("\\\\");
-    }
-    
-    /// <summary>
-    /// Obtiene la cadena de conexión completa para SQLite
-    /// </summary>
-    public static string GetConnectionString()
-    {
-        var dbPath = GetDatabasePath();
-        var busyTimeout = GetBusyTimeout();
-        
-        // Construir cadena de conexión con opciones optimizadas para concurrencia
-        return $"Data Source={dbPath};Cache=Shared;Mode=ReadWriteCreate;Pooling=True;Default Timeout={busyTimeout / 1000}";
+        return config;
     }
 }

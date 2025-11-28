@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
@@ -12,11 +13,19 @@ public class ContratoService : IContratoService
 {
     private readonly IContratoRepository _contratoRepository;
     private readonly IEmpleadoRepository _empleadoRepository;
+    private readonly IUnitOfWork? _unitOfWork;
+    private readonly ILogger<ContratoService>? _logger;
     
-    public ContratoService(IContratoRepository contratoRepository, IEmpleadoRepository empleadoRepository)
+    public ContratoService(
+        IContratoRepository contratoRepository, 
+        IEmpleadoRepository empleadoRepository,
+        IUnitOfWork? unitOfWork = null,
+        ILogger<ContratoService>? logger = null)
     {
         _contratoRepository = contratoRepository;
         _empleadoRepository = empleadoRepository;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
     }
     
     public async Task<ServiceResult<IEnumerable<Contrato>>> GetByEmpleadoIdAsync(int empleadoId)
@@ -157,11 +166,14 @@ public class ContratoService : IContratoService
     
     /// <summary>
     /// Renueva un contrato: finaliza el actual y crea uno nuevo
+    /// Usa transacción para garantizar consistencia
     /// </summary>
     public async Task<ServiceResult<Contrato>> RenovarContratoAsync(int contratoActualId, Contrato nuevoContrato)
     {
         try
         {
+            _logger?.LogInformation("Iniciando renovación de contrato {ContratoId}", contratoActualId);
+            
             var contratoActual = await _contratoRepository.GetByIdAsync(contratoActualId);
             if (contratoActual == null)
                 return ServiceResult<Contrato>.FailureResult("Contrato actual no encontrado");
@@ -180,28 +192,54 @@ public class ContratoService : IContratoService
                     "La fecha de inicio del nuevo contrato debe ser posterior a la fecha de fin del contrato actual");
             }
             
-            // Finalizar el contrato actual
-            contratoActual.Estado = EstadoContrato.Renovado;
-            contratoActual.FechaFin = nuevoContrato.FechaInicio.AddDays(-1);
-            contratoActual.Observaciones = $"Renovado el {DateTime.Now:dd/MM/yyyy}. {contratoActual.Observaciones}";
-            contratoActual.FechaModificacion = DateTime.Now;
+            // Usar transacción si está disponible
+            if (_unitOfWork != null)
+            {
+                await _unitOfWork.BeginTransactionAsync();
+            }
             
-            await _contratoRepository.UpdateAsync(contratoActual);
-            
-            // Crear el nuevo contrato
-            nuevoContrato.EmpleadoId = contratoActual.EmpleadoId;
-            nuevoContrato.Estado = EstadoContrato.Activo;
-            nuevoContrato.Activo = true;
-            nuevoContrato.FechaCreacion = DateTime.Now;
-            nuevoContrato.Observaciones = $"Renovación de contrato anterior (ID: {contratoActualId}). {nuevoContrato.Observaciones}";
-            
-            await _contratoRepository.AddAsync(nuevoContrato);
-            await _contratoRepository.SaveChangesAsync();
-            
-            return ServiceResult<Contrato>.SuccessResult(nuevoContrato, "Contrato renovado exitosamente");
+            try
+            {
+                // Finalizar el contrato actual
+                contratoActual.Estado = EstadoContrato.Renovado;
+                contratoActual.FechaFin = nuevoContrato.FechaInicio.AddDays(-1);
+                contratoActual.Observaciones = $"Renovado el {DateTime.Now:dd/MM/yyyy}. {contratoActual.Observaciones}";
+                contratoActual.FechaModificacion = DateTime.Now;
+                
+                await _contratoRepository.UpdateAsync(contratoActual);
+                
+                // Crear el nuevo contrato
+                nuevoContrato.EmpleadoId = contratoActual.EmpleadoId;
+                nuevoContrato.Estado = EstadoContrato.Activo;
+                nuevoContrato.Activo = true;
+                nuevoContrato.FechaCreacion = DateTime.Now;
+                nuevoContrato.Observaciones = $"Renovación de contrato anterior (ID: {contratoActualId}). {nuevoContrato.Observaciones}";
+                
+                await _contratoRepository.AddAsync(nuevoContrato);
+                await _contratoRepository.SaveChangesAsync();
+                
+                // Confirmar transacción
+                if (_unitOfWork != null)
+                {
+                    await _unitOfWork.CommitAsync();
+                }
+                
+                _logger?.LogInformation("Contrato {ContratoId} renovado exitosamente", contratoActualId);
+                return ServiceResult<Contrato>.SuccessResult(nuevoContrato, "Contrato renovado exitosamente");
+            }
+            catch
+            {
+                // Revertir transacción en caso de error
+                if (_unitOfWork != null)
+                {
+                    await _unitOfWork.RollbackAsync();
+                }
+                throw; // Re-lanzar para manejo externo
+            }
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error al renovar contrato {ContratoId}", contratoActualId);
             return ServiceResult<Contrato>.FailureResult($"Error al renovar contrato: {ex.Message}");
         }
     }
