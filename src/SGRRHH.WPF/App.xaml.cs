@@ -67,11 +67,8 @@ public partial class App : Application
         // Liberar recursos de Firebase
         _firebaseInitializer?.Dispose();
         
-        // Si hay actualización pendiente, ejecutar el script de actualización
-        if (_shouldRestartForUpdate)
-        {
-            FirebaseUpdateService.ExecutePendingUpdate();
-        }
+        // Si hay actualización pendiente, el Updater.exe ya debería estar corriendo esperando nuestro cierre
+        // No es necesario hacer nada extra aquí para GithubUpdateService
     }
     
     /// <summary>
@@ -95,6 +92,10 @@ public partial class App : Application
         // - Firebase Storage (IFirebaseStorageService)
         // - Sistema de actualizaciones (IUpdateService, IFirebaseUpdateService)
         services.AddFullFirebaseSupport(firebaseConfig, _firebaseInitializer, currentVersion);
+        
+        // Sobrescribir el servicio de actualización con la implementación de GitHub
+        services.AddSingleton<IUpdateService>(sp => 
+            new GithubUpdateService(currentVersion, sp.GetService<Microsoft.Extensions.Logging.ILogger<GithubUpdateService>>()));
         
         // Registrar ViewModels
         RegisterViewModels(services);

@@ -123,8 +123,14 @@ $hadDataDir = Test-Path $dataDir
 if ($Release) {
     Write-Info "Copiando aplicación self-contained completa..."
     
+    # Asegurar que OutputDir termine sin barra
+    $OutputDir = $OutputDir.TrimEnd('\', '/')
+    
     # Copiar todo excepto la carpeta data
     Get-ChildItem -Path $OutputDir -Recurse | ForEach-Object {
+        # Verificar que el path sea más largo que el directorio base
+        if ($_.FullName.Length -le $OutputDir.Length) { return }
+        
         $relativePath = $_.FullName.Substring($OutputDir.Length + 1)
         $destPath = Join-Path $TargetDir $relativePath
         
@@ -170,6 +176,48 @@ foreach ($file in $preserveFiles) {
     if ($preservedData.ContainsKey($file)) {
         $filePath = Join-Path $TargetDir $file
         Set-Content -Path $filePath -Value $preservedData[$file] -NoNewline
+    }
+}
+
+# Actualizar la versión en appsettings.json local con la versión del proyecto
+$localAppSettings = Join-Path $TargetDir "appsettings.json"
+$sourceAppSettings = Join-Path $OutputDir "appsettings.json"
+
+# Obtener versión del csproj (más confiable que appsettings)
+$csprojPath = Join-Path $ProjectDir "SGRRHH.WPF.csproj"
+$projectVersion = $null
+if (Test-Path $csprojPath) {
+    $csprojContent = Get-Content $csprojPath -Raw
+    if ($csprojContent -match '<Version>([^<]+)</Version>') {
+        $projectVersion = $matches[1]
+    }
+}
+
+if ((Test-Path $localAppSettings)) {
+    try {
+        $localConfig = Get-Content $localAppSettings -Raw | ConvertFrom-Json
+        
+        # Actualizar Application.Version con la versión del proyecto
+        $versionToSet = $projectVersion
+        
+        # Si no hay versión del proyecto, intentar del appsettings de origen
+        if (-not $versionToSet -and (Test-Path $sourceAppSettings)) {
+            $sourceConfig = Get-Content $sourceAppSettings -Raw | ConvertFrom-Json
+            if ($sourceConfig.Application -and $sourceConfig.Application.Version) {
+                $versionToSet = $sourceConfig.Application.Version
+            }
+        }
+        
+        if ($versionToSet) {
+            if (-not $localConfig.Application) {
+                $localConfig | Add-Member -NotePropertyName "Application" -NotePropertyValue @{} -Force
+            }
+            $localConfig.Application.Version = $versionToSet
+            $localConfig | ConvertTo-Json -Depth 10 | Set-Content $localAppSettings -Encoding UTF8
+            Write-Success "Versión sincronizada: $versionToSet"
+        }
+    } catch {
+        Write-Warn "No se pudo actualizar la versión en appsettings.json: $_"
     }
 }
 

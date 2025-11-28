@@ -1,0 +1,42 @@
+name: Release SGRRHH
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore src/SGRRHH.sln
+
+    - name: Publish WPF App (Framework-Dependent)
+      run: dotnet publish src/SGRRHH.WPF/SGRRHH.WPF.csproj -c Release -r win-x64 --self-contained false -o publish/SGRRHH
+
+    - name: Publish Updater (Framework-Dependent)
+      run: dotnet publish src/SGRRHH.Updater/SGRRHH.Updater.csproj -c Release -r win-x64 --self-contained false -o publish/Updater
+
+    - name: Copy Updater to Main Folder
+      run: copy publish/Updater/SGRRHH.Updater.exe publish/SGRRHH/
+
+    - name: Create ZIP
+      run: Compress-Archive -Path publish/SGRRHH/* -DestinationPath SGRRHH.zip
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: SGRRHH.zip
+        generate_release_notes: true

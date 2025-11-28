@@ -77,6 +77,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _totalEmpleados;
     
+    [ObservableProperty]
+    private string _currentDateTime = string.Empty;
+    
+    [ObservableProperty]
+    private string _appVersion = string.Empty;
+    
+    private System.Windows.Threading.DispatcherTimer? _dateTimeTimer;
+    
     /// <summary>
     /// Evento para cerrar sesión
     /// </summary>
@@ -88,6 +96,9 @@ public partial class MainViewModel : ObservableObject
         _serviceProvider = serviceProvider;
         CurrentUserName = currentUser.NombreCompleto;
         CurrentUserRole = GetRoleName(currentUser.Rol);
+        
+        // Inicializar fecha/hora y versión
+        InitializeDateTimeAndVersion();
         
         // Suscribirse a mensajes de navegación
         WeakReferenceMessenger.Default.Register<NavigationMessage>(this, (r, m) =>
@@ -574,6 +585,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public void Cleanup()
     {
+        StopDateTimeTimer();
         _currentViewScope?.Dispose();
         _currentViewScope = null;
     }
@@ -585,4 +597,72 @@ public partial class MainViewModel : ObservableObject
         RolUsuario.Operador => "Operador (Secretaria)",
         _ => "Desconocido"
     };
+    
+    /// <summary>
+    /// Inicializa el timer para actualizar fecha/hora y carga la versión
+    /// </summary>
+    private void InitializeDateTimeAndVersion()
+    {
+        // Actualizar fecha/hora inmediatamente
+        UpdateDateTime();
+        
+        // Crear timer para actualizar cada segundo
+        _dateTimeTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        _dateTimeTimer.Tick += (s, e) => UpdateDateTime();
+        _dateTimeTimer.Start();
+        
+        // Cargar versión desde configuración
+        LoadAppVersion();
+    }
+    
+    private void UpdateDateTime()
+    {
+        CurrentDateTime = DateTime.Now.ToString("dddd, dd 'de' MMMM yyyy  HH:mm:ss", 
+            new System.Globalization.CultureInfo("es-CO"));
+    }
+    
+    private void LoadAppVersion()
+    {
+        try
+        {
+            var appSettingsPath = System.IO.Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+            
+            if (System.IO.File.Exists(appSettingsPath))
+            {
+                var json = System.IO.File.ReadAllText(appSettingsPath);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                
+                if (doc.RootElement.TryGetProperty("Application", out var appSection) &&
+                    appSection.TryGetProperty("Version", out var versionProp))
+                {
+                    AppVersion = $"v{versionProp.GetString()}";
+                }
+                else
+                {
+                    AppVersion = "v1.0.0";
+                }
+            }
+            else
+            {
+                AppVersion = "v1.0.0";
+            }
+        }
+        catch
+        {
+            AppVersion = "v1.0.0";
+        }
+    }
+    
+    /// <summary>
+    /// Detiene el timer al limpiar recursos
+    /// </summary>
+    private void StopDateTimeTimer()
+    {
+        _dateTimeTimer?.Stop();
+        _dateTimeTimer = null;
+    }
 }

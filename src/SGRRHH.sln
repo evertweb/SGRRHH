@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SGRRHH.WPF", "SGRRHH.WPF\SG
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SGRRHH.Tests", "SGRRHH.Tests\SGRRHH.Tests.csproj", "{D7CD1D1F-02A8-40A4-AB32-547D918C925E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SGRRHH.Updater", "SGRRHH.Updater\SGRRHH.Updater.csproj", "{D08559BB-40F8-471C-B918-2B8D511D3EBE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{D7CD1D1F-02A8-40A4-AB32-547D918C925E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D7CD1D1F-02A8-40A4-AB32-547D918C925E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D7CD1D1F-02A8-40A4-AB32-547D918C925E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D08559BB-40F8-471C-B918-2B8D511D3EBE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D08559BB-40F8-471C-B918-2B8D511D3EBE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D08559BB-40F8-471C-B918-2B8D511D3EBE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D08559BB-40F8-471C-B918-2B8D511D3EBE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

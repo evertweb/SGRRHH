@@ -27,29 +27,50 @@
             </Style.Triggers>
         </Style>
         
-        <!-- Template para mensaje enviado (mío) -->
+        <!-- Template para mensaje enviado (mío) - Estilo WhatsApp mejorado -->
         <DataTemplate x:Key="MyMessageTemplate">
-            <Grid Margin="50,5,10,5" HorizontalAlignment="Right">
-                <Border Background="#1976D2" CornerRadius="15,15,0,15" Padding="12,8" MaxWidth="400">
+            <Grid Margin="60,3,12,3" HorizontalAlignment="Right">
+                <Border CornerRadius="18,18,4,18" Padding="14,10" MaxWidth="450">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#0084FF" Offset="0"/>
+                            <GradientStop Color="#0066CC" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Effect>
+                        <DropShadowEffect Color="#0084FF" BlurRadius="12" ShadowDepth="2" Opacity="0.3" Direction="270"/>
+                    </Border.Effect>
                     <StackPanel>
-                        <TextBlock Text="{Binding Content}" Foreground="White" TextWrapping="Wrap" FontSize="13"/>
-                        <TextBlock Text="{Binding FormattedTime}" Foreground="#B3E5FC" FontSize="10" 
-                                   HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                        <TextBlock Text="{Binding Content}" Foreground="White" TextWrapping="Wrap" 
+                                   FontSize="14" LineHeight="20" FontFamily="Segoe UI"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                            <TextBlock Text="{Binding FormattedTime}" Foreground="#E3F2FD" FontSize="11" 
+                                       FontWeight="Light" VerticalAlignment="Center" Opacity="0.9"/>
+                            <!-- Checkmark de leído -->
+                            <TextBlock Text=" ✓✓" Foreground="#4FC3F7" FontSize="11" 
+                                       VerticalAlignment="Center" Margin="3,0,0,0"
+                                       Visibility="{Binding IsRead, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </Grid>
         </DataTemplate>
         
-        <!-- Template para mensaje recibido -->
+        <!-- Template para mensaje recibido - Estilo WhatsApp mejorado -->
         <DataTemplate x:Key="ReceivedMessageTemplate">
-            <Grid Margin="10,5,50,5" HorizontalAlignment="Left">
-                <Border Background="White" CornerRadius="15,15,15,0" Padding="12,8" MaxWidth="400"
-                        BorderBrush="#E0E0E0" BorderThickness="1">
+            <Grid Margin="12,3,60,3" HorizontalAlignment="Left">
+                <Border CornerRadius="18,18,18,4" Padding="14,10" MaxWidth="450"
+                        Background="White" BorderBrush="#E8E8E8" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="1" Opacity="0.15" Direction="270"/>
+                    </Border.Effect>
                     <StackPanel>
-                        <TextBlock Text="{Binding SenderName}" Foreground="#1976D2" FontSize="11" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Content}" Foreground="#212121" TextWrapping="Wrap" FontSize="13" Margin="0,4,0,0"/>
-                        <TextBlock Text="{Binding FormattedTime}" Foreground="#9E9E9E" FontSize="10" 
-                                   HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                        <TextBlock Text="{Binding SenderName}" Foreground="#0084FF" FontSize="12" 
+                                   FontWeight="SemiBold" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding Content}" Foreground="#303030" TextWrapping="Wrap" 
+                                   FontSize="14" LineHeight="20" Margin="0,2,0,0" FontFamily="Segoe UI"/>
+                        <TextBlock Text="{Binding FormattedTime}" Foreground="#8A8A8A" FontSize="11" 
+                                   FontWeight="Light" HorizontalAlignment="Right" Margin="0,6,0,0" Opacity="0.8"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -293,9 +314,15 @@
                     <ScrollViewer x:Name="MessagesScrollViewer" 
                                   VerticalScrollBarVisibility="Auto"
                                   Visibility="{Binding HasActiveConversation, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ScrollViewer.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#ECE5DD" Offset="0"/>
+                                <GradientStop Color="#D9D0C9" Offset="1"/>
+                            </LinearGradientBrush>
+                        </ScrollViewer.Background>
                         <ItemsControl ItemsSource="{Binding Messages}" 
                                       ItemTemplateSelector="{StaticResource MessageTemplateSelector}"
-                                      Background="#F5F5F5" Padding="10">
+                                      Padding="15">
                         </ItemsControl>
                     </ScrollViewer>
                     

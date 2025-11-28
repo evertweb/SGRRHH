@@ -57,24 +57,7 @@ public static class FirebaseServiceCollectionExtensions
         return services;
     }
     
-    /// <summary>
-    /// Registra el servicio de actualizaciones de Firebase.
-    /// Fase 6 de la migración: Actualizaciones desde Firebase Storage.
-    /// </summary>
-    /// <param name="services">Colección de servicios</param>
-    /// <param name="firebase">Inicializador de Firebase</param>
-    /// <param name="currentVersion">Versión actual de la aplicación</param>
-    /// <returns>La colección de servicios para encadenamiento</returns>
-    public static IServiceCollection AddFirebaseUpdateService(this IServiceCollection services, FirebaseInitializer firebase, string currentVersion)
-    {
-        services.AddSingleton<IFirebaseUpdateService>(sp => 
-            new FirebaseUpdateService(firebase, currentVersion));
-        
-        // IUpdateService apunta al servicio Firebase
-        services.AddSingleton<IUpdateService>(sp => sp.GetRequiredService<IFirebaseUpdateService>());
-        
-        return services;
-    }
+
     
     /// <summary>
     /// Registra todos los servicios de aplicación con soporte completo para Firebase.
@@ -237,8 +220,7 @@ public static class FirebaseServiceCollectionExtensions
         // Registrar servicio de Storage (Fase 5)
         services.AddFirebaseStorageService(firebase);
         
-        // Registrar servicio de actualizaciones (Fase 6)
-        services.AddFirebaseUpdateService(firebase, currentVersion);
+
         
         // Registrar Unit of Work para transacciones de Firestore
         services.AddScoped<IUnitOfWork>(sp => 
