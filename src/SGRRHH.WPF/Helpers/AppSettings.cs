@@ -76,10 +76,24 @@ public static class AppSettings
     }
     
     /// <summary>
-    /// Obtiene la versión actual de la aplicación
+    /// Obtiene la versión actual de la aplicación.
+    /// PRIORIDAD: Assembly (csproj) > appsettings.json > fallback "1.0.0"
     /// </summary>
     public static string GetAppVersion()
     {
+        // PRIMERO: Intentar obtener del Assembly (es la fuente de verdad - viene del .csproj)
+        try
+        {
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var version = assembly.GetName().Version;
+            if (version != null)
+            {
+                return $"{version.Major}.{version.Minor}.{version.Build}";
+            }
+        }
+        catch { }
+        
+        // FALLBACK: Intentar obtener del appsettings.json (por compatibilidad)
         Load();
         
         try
@@ -90,18 +104,6 @@ public static class AppSettings
                 {
                     return versionElement.GetString() ?? "1.0.0";
                 }
-            }
-        }
-        catch { }
-        
-        // Intentar obtener de la asamblea
-        try
-        {
-            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-            var version = assembly.GetName().Version;
-            if (version != null)
-            {
-                return $"{version.Major}.{version.Minor}.{version.Build}";
             }
         }
         catch { }
