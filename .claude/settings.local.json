@@ -12,7 +12,10 @@
       "Bash(dotnet publish:*)",
       "Bash(where /R \"C:\\Users\\evert\\Documents\\rrhh\\src\\SGRRHH.WPF\" SGRRHH.Updater.exe)",
       "Bash(powershell -ExecutionPolicy Bypass -File \".\\Build-Installer.ps1\" -CreateZip)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git tag:*)"
     ],
     "deny": [],
     "ask": []

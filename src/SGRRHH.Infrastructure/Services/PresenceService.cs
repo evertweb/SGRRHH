@@ -96,24 +96,25 @@ public class PresenceService : IPresenceService, IDisposable
     /// </summary>
     public async Task StopAsync()
     {
-        if (!IsActive || CurrentUser == null)
+        // Evitar que se llame más de una vez
+        if (_disposed || !IsActive || CurrentUser == null)
             return;
-        
+
         try
         {
             // Detener timers
             _heartbeatTimer?.Stop();
             _cleanupTimer?.Stop();
-            
+
             // Detener listener
             _onlineUsersListener?.Dispose();
             _onlineUsersListener = null;
-            
+
             // Marcar como offline
             await _presenceRepository.UpdateOnlineStatusAsync(CurrentUser.Id, false);
-            
+
             IsActive = false;
-            
+
             _logger?.LogInformation("Servicio de presencia detenido para usuario {Username}", CurrentUser.Username);
         }
         catch (Exception ex)
