@@ -1,282 +1,186 @@
 # Sistema de Actualizaciones SGRRHH
 
-## Resumen de Mejoras Implementadas
+## Resumen del Sistema
 
- **Problema resuelto**: Error "No se pudo preparar la instalaci�n"
- **Nueva funcionalidad**: Validaci�n SHA256 de descargas
- **Nueva funcionalidad**: Opci�n "Instalar al cerrar"
- **Automatizaci�n**: Generaci�n de checksum en build
+El sistema de actualizaciones utiliza **GitHub Releases** para distribuir nuevas versiones automáticamente. Cuando el usuario abre la aplicación, se verifica si hay una versión más reciente disponible.
+
+---
+
+## Arquitectura
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│              FLUJO DE ACTUALIZACIÓN                                  │
+└─────────────────────────────────────────────────────────────────────┘
+
+   Desarrollador                    GitHub                      Usuario
+   ────────────                    ──────                      ───────
+        │                              │                           │
+        │  1. Push + Tag (v1.1.x)      │                           │
+        ├─────────────────────────────►│                           │
+        │                              │                           │
+        │  2. GitHub Actions compila   │                           │
+        │     y publica release        │                           │
+        │                              │                           │
+        │                              │  3. Al abrir SGRRHH.exe   │
+        │                              │◄──────────────────────────┤
+        │                              │     GET /releases/latest  │
+        │                              │                           │
+        │                              │  4. Responde versión      │
+        │                              ├──────────────────────────►│
+        │                              │                           │
+        │                              │  5. Descarga ZIP si hay   │
+        │                              │     nueva versión         │
+        │                              │◄──────────────────────────┤
+        │                              │                           │
+        │                              │  6. Updater.exe aplica    │
+        │                              │     la actualización      │
+        │                              ├──────────────────────────►│
+```
 
 ---
 
 ## Componentes del Sistema
 
 ### 1. **GithubUpdateService** (`Infrastructure/Services/GithubUpdateService.cs`)
-- Verifica releases en GitHub API (`/repos/evertweb/SGRRHH/releases/latest`)
-- Descarga archivos ZIP con barra de progreso
-- **( NUEVO**: Valida integridad con SHA256
-- **( MEJORADO**: Mejor manejo de errores con logging detallado
-- Lanza el Updater.exe
 
-### 2. **SGRRHH.Updater** (`src/SGRRHH.Updater/`)
-- Proceso separado que actualiza archivos
-- Espera a que la app principal cierre
-- Crea backup antes de copiar (`backup_YYYYMMDD_HHmmss/`)
-- Reinicia la aplicaci�n autom�ticamente
-- **( MEJORADO**: Ahora se compila y copia autom�ticamente en cada build
+Servicio principal que:
+- Consulta la API de GitHub (`/repos/evertweb/SGRRHH/releases/latest`)
+- Compara versiones (local vs GitHub)
+- Descarga el ZIP con barra de progreso
+- Extrae archivos a carpeta temporal
+- Lanza el `SGRRHH.Updater.exe`
+
+### 2. **SGRRHH.Updater** (`src/SGRRHH.Updater/Program.cs`)
+
+Proceso externo que aplica la actualización:
+- **Mata todos los procesos SGRRHH** agresivamente
+- **Excluye sus propios archivos** (SGRRHH.Updater.*) para evitar "archivo en uso"
+- Copia archivos desde la carpeta temporal a la carpeta de instalación
+- **Retry con delay incremental** si encuentra archivos bloqueados
+- Reinicia la aplicación automáticamente
+- **Logging detallado** en `updater_log.txt`
 
 ### 3. **UpdateDialog** (`WPF/Views/UpdateDialog.xaml`)
-- Interfaz para notificar actualizaciones
-- **( NUEVO**: 3 opciones disponibles:
-  - **Actualizar ahora** - Descarga, cierra e instala inmediatamente
-  - **Instalar al cerrar** - Descarga ahora, instala cuando cierres
-  - **Recordar despu�s** - Pregunta en pr�ximo inicio
-- Muestra progreso de descarga y verificaci�n
-- Visualiza notas de versi�n (Release Notes)
+
+Interfaz de usuario que muestra:
+- Versión actual vs nueva versión
+- Notas de la versión (Release Notes)
+- Barra de progreso de descarga
+- Dos botones: **"Actualizar ahora"** y **"Recordar después"**
+
+### 4. **GitHub Actions** (`.github/workflows/release.yml`)
+
+Workflow automático que:
+- Se activa al crear un tag (`v*`)
+- Compila con `dotnet publish --self-contained false`
+- Crea ZIP (~12 MB)
+- Publica GitHub Release con el ZIP adjunto
 
 ---
 
-## C�mo Publicar una Nueva Versi�n
+## Cómo Publicar una Nueva Versión
 
-### Paso 1: Incrementar Versi�n
+### Método 1: Automático con GitHub Actions (Recomendado)
 
-Edita `src/SGRRHH.WPF/SGRRHH.WPF.csproj`:
+```bash
+# 1. Actualizar versión en csproj
+# Editar src/SGRRHH.WPF/SGRRHH.WPF.csproj
+<Version>1.1.5</Version>
+<AssemblyVersion>1.1.5.0</AssemblyVersion>
+<FileVersion>1.1.5.0</FileVersion>
 
-```xml
-<Version>1.0.7</Version>
-<AssemblyVersion>1.0.7.0</AssemblyVersion>
-<FileVersion>1.0.7.0</FileVersion>
+# 2. Commit y push
+git add .
+git commit -m "Release v1.1.5: descripción de cambios"
+git push
+
+# 3. Crear y push tag
+git tag v1.1.5
+git push origin v1.1.5
+
+# GitHub Actions hace el resto automáticamente
 ```
 
-### Paso 2: Generar el ZIP con Checksum
+### Método 2: Manual (para distribución inicial o emergencias)
 
 ```powershell
-cd installer
-.\Build-Installer.ps1 -CreateZip
+# En VS Code, usar las tareas predefinidas:
+# Ctrl+Shift+P → "Tasks: Run Task"
+
+# Opción A: Solo compilar y actualizar local
+Task: "1. Build + Actualizar Local"
+
+# Opción B: Publicar a GitHub y actualizar local
+Task: "2b. Publicar TODO (Firebase + Local)"
 ```
 
-**Salida esperada:**
-```
- Creando version portable (ZIP)...
-    ZIP creado: installer/output/SGRRHH_Portable_1.0.7.zip
-    Tamano del ZIP: 45.3 MB
+---
 
- Calculando checksum SHA256...
-    SHA256: a1b2c3d4e5f6abc123def456789...
-    Checksum guardado en: installer/output/SGRRHH_Portable_1.0.7.sha256
+## Flujo de Actualización para el Usuario
 
-=== INSTRUCCIONES PARA GITHUB RELEASE ===
-1. Crea un nuevo Release en GitHub
-2. Adjunta el archivo: SGRRHH_Portable_1.0.7.zip
-3. En las notas de version (body), incluye esta linea:
+1. **Usuario abre SGRRHH.exe**
+2. La app consulta GitHub API en segundo plano
+3. Si hay nueva versión, aparece el diálogo:
 
-   SHA256: a1b2c3d4e5f6abc123def456789...
-
-4. La aplicacion verificara automaticamente la integridad del archivo
-=========================================
-```
-
-### Paso 3: Crear GitHub Release
-
-1. Ve a https://github.com/evertweb/SGRRHH/releases/new
-2. **Tag version**: `v1.0.7`
-3. **Release title**: `v1.0.7 - Descripci�n breve`
-4. **Descripci�n (body)** - **IMPORTANTE: Incluye el SHA256**:
-
-   ```markdown
-   ## Cambios en esta versi�n
-
-   ### Nuevas caracter�sticas
-   - ( Feature 1
-   - ( Feature 2
-
-   ### Correcciones
-   - = Fix 1
-   - = Fix 2
-
-   ### Mejoras t�cnicas
-   - � Optimizaci�n 1
-
-   ---
-
-   **Verificaci�n de integridad:**
-
-   SHA256: a1b2c3d4e5f6abc123def456789...
+   ```
+   ┌─────────────────────────────────────┐
+   │ 🚀 Nueva Versión Disponible         │
+   │                                      │
+   │ Versión actual: 1.1.2               │
+   │ Nueva versión: 1.1.4                │
+   │                                      │
+   │ ## Cambios:                         │
+   │ - Nueva funcionalidad X             │
+   │ - Corrección de bug Y               │
+   │                                      │
+   │ [Actualizar ahora] [Recordar después]│
+   └─────────────────────────────────────┘
    ```
 
-5. **Adjuntar archivo**: Sube `SGRRHH_Portable_1.0.7.zip`
-6. Clic en **Publish release**
-
-### Paso 4: Verificar
-
-1. Los clientes recibir�n notificaci�n al abrir la app
-2. La app descargar� y verificar� el SHA256 autom�ticamente
-3.  Si coincide � Instala
-4. L Si no coincide � Rechaza con error de integridad
+4. Si el usuario hace clic en **"Actualizar ahora"**:
+   - Se descarga el ZIP (~12 MB)
+   - Se extrae en carpeta temporal
+   - Se lanza SGRRHH.Updater.exe
+   - La app se cierra
+   - Updater copia los archivos
+   - La app se reinicia con la nueva versión
 
 ---
 
-## Opciones de Actualizaci�n para Usuarios
+## Logs y Diagnóstico
 
-### =� Opci�n 1: Actualizar Ahora
-- Descarga inmediatamente
-- Cierra la aplicaci�n
-- Instala y reinicia autom�ticamente
-- **Recomendado para:** Actualizaciones cr�ticas/urgentes
+### Log de la Aplicación
 
-### =� Opci�n 2: Instalar al Cerrar (NUEVO)
-- Descarga en segundo plano
-- Usuario contin�a trabajando normalmente
-- Instala cuando cierre la app (OnExit)
-- **Recomendado para:** Actualizaciones normales
+**Ubicación:** `C:\SGRRHH\data\logs\error_YYYY-MM-DD.log`
 
-### � Opci�n 3: Recordar Despu�s
-- No descarga nada
-- Pregunta nuevamente en el pr�ximo inicio
-- **Recomendado para:** Usuario ocupado
-
----
-
-## Soluci�n al Problema "No se pudo preparar la instalaci�n"
-
-### Causa del Problema (Antes)
-
-El `SGRRHH.Updater.exe` **NO se estaba compilando junto con la aplicaci�n principal**, por lo que cuando el sistema intentaba lanzarlo, no exist�a en la carpeta de instalaci�n.
-
-### Soluci�n Implementada
-
-**1. Referencia autom�tica en el .csproj**
-
-```xml
-<ItemGroup>
-  <ProjectReference Include="..\SGRRHH.Updater\SGRRHH.Updater.csproj">
-    <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-  </ProjectReference>
-</ItemGroup>
-```
-
-**2. Target de compilaci�n autom�tica**
-
-```xml
-<Target Name="CopyUpdater" AfterTargets="Build">
-  <MSBuild Projects="..\SGRRHH.Updater\SGRRHH.Updater.csproj"
-           Targets="Build" />
-  <Copy SourceFiles="@(UpdaterFiles)"
-        DestinationFolder="$(OutDir)" />
-</Target>
-```
-
-**3. L�gica mejorada en ApplyUpdateAsync**
-
-```csharp
-// Ahora busca el updater primero en la descarga (m�s confiable)
-string downloadedUpdater = Path.Combine(sourceDir, "SGRRHH.Updater.exe");
-string updaterPath = Path.Combine(_installPath, "SGRRHH.Updater.exe");
-
-// Lo copia SIEMPRE desde la descarga (asegura versi�n actualizada)
-File.Copy(downloadedUpdater, updaterPath, overwrite: true);
-
-// Logging detallado para diagn�stico
-_logger?.LogInformation($"Buscando updater en descarga: {downloadedUpdater}");
-_logger?.LogInformation($"Copiando updater a: {updaterPath}");
-```
-
-**Resultado:**  El updater SIEMPRE estar� disponible y actualizado
-
----
-
-## Validaci�n SHA256 (Seguridad)
-
-### �Por qu� SHA256?
-
-- Verifica que el archivo descargado NO fue modificado
-- Detecta corrupci�n durante la descarga
-- Previene instalaci�n de archivos maliciosos
-
-### C�mo Funciona
-
-1. **Al publicar**: El script `Build-Installer.ps1` calcula el hash
-2. **En GitHub Release**: Incluyes el hash en las notas
-3. **Al descargar**: La app recalcula el hash
-4. **Comparaci�n**: Si no coinciden � RECHAZA la instalaci�n
-
-### Implementaci�n
-
-```csharp
-// Calcular hash del archivo descargado
-var checksum = CalculateFileSha256(zipPath);
-
-// Buscar hash en las Release Notes
-var checksumMatch = Regex.Match(
-    releaseBody,
-    @"SHA256:\s*([a-fA-F0-9]{64})",
-    RegexOptions.IgnoreCase
-);
-
-if (checksumMatch.Success)
-{
-    var expectedChecksum = checksumMatch.Groups[1].Value;
-    if (!VerifyFileIntegrity(zipPath, expectedChecksum))
-    {
-        // RECHAZAR actualizaci�n
-        return false;
-    }
-}
-```
-
-**Ejemplo de error:**
-```
- Checksum no coincide!
-  Esperado: a1b2c3d4e5f6...
-  Obtenido: x9y8z7w6v5u4...
-```
-
----
-
-## Logs y Diagn�stico
-
-### Logs de la Aplicaci�n
-
-**Ubicaci�n:** `data/logs/error_YYYY-MM-DD.log`
-
-**Ejemplo de actualizaci�n exitosa:**
 ```
 [2025-01-28 10:15:32] INFO - Verificando actualizaciones en GitHub...
-[2025-01-28 10:15:33] INFO - Versi�n actual: 1.0.6, Versi�n GitHub: 1.0.7
-[2025-01-28 10:15:45] INFO - Descargando actualizaci�n...
-[2025-01-28 10:16:12] INFO - SHA256 del archivo descargado: a1b2c3d4e5f6...
-[2025-01-28 10:16:13] INFO -  Integridad verificada
-[2025-01-28 10:16:15] INFO - Archivos extra�dos: 127 archivos
-[2025-01-28 10:16:16] INFO - Buscando updater en descarga: C:\...\extracted\SGRRHH.Updater.exe
-[2025-01-28 10:16:16] INFO - Copiando updater a: C:\...\SGRRHH.Updater.exe
-[2025-01-28 10:16:16] INFO - Updater copiado exitosamente
-[2025-01-28 10:16:17] INFO - Lanzando updater: C:\...\SGRRHH.Updater.exe
-[2025-01-28 10:16:17] INFO - Updater lanzado exitosamente (PID: 8472)
+[2025-01-28 10:15:33] INFO - Versión actual: 1.1.2, Versión GitHub: 1.1.4
+[2025-01-28 10:15:45] INFO - Descargando actualización...
+[2025-01-28 10:16:12] INFO - Archivos extraídos correctamente
+[2025-01-28 10:16:15] INFO - Lanzando SGRRHH.Updater.exe...
 ```
 
-### Logs del Updater
+### Log del Updater
 
-**Ubicaci�n:** `updater_log.txt` (en carpeta de instalaci�n)
+**Ubicación:** `C:\SGRRHH\updater_log.txt`
 
-**Ejemplo:**
 ```
-[2025-01-28 10:16:20] Iniciando actualizador...
-[2025-01-28 10:16:20] Target: C:\Program Files\SGRRHH
-[2025-01-28 10:16:20] Source: C:\Users\...\SGRRHH_update_temp\extracted
-[2025-01-28 10:16:20] Esperando a que termine el proceso 12345...
-[2025-01-28 10:16:22] Creando backup en C:\...\backup_20250128_101622...
-[2025-01-28 10:16:35] Copiando nuevos archivos...
-[2025-01-28 10:16:58] Archivos copiados exitosamente.
-[2025-01-28 10:16:59] Reiniciando SGRRHH.exe...
+[2025-01-28 10:16:20] Iniciando actualización...
+[2025-01-28 10:16:20] Target: C:\SGRRHH
+[2025-01-28 10:16:20] Source: C:\Users\...\Temp\SGRRHH_update_temp\extracted
+[2025-01-28 10:16:21] Matando procesos SGRRHH...
+[2025-01-28 10:16:22] Copiando archivos (excluyendo SGRRHH.Updater.*)...
+[2025-01-28 10:16:35] 127 archivos copiados exitosamente
+[2025-01-28 10:16:36] Reiniciando aplicación...
 ```
 
 ---
 
-## Configuraci�n
+## Configuración
 
-### Habilitar/Deshabilitar Actualizaciones
-
-Edita `src/SGRRHH.WPF/appsettings.json`:
+### appsettings.json
 
 ```json
 {
@@ -288,51 +192,79 @@ Edita `src/SGRRHH.WPF/appsettings.json`:
 }
 ```
 
----
-
-## Pr�ximas Mejoras (Opcional)
-
-### Squirrel.Windows - Actualizaciones Delta
-
-**Ventajas:**
-- Solo descarga archivos modificados
-- Reduce tama�o de descarga de ~45 MB a ~5-10 MB
-- Actualizaciones m�s r�pidas
-
-**Implementaci�n estimada:** 4-6 horas
-
-**�Cu�ndo implementar?**
-- Si tienes >10 usuarios
-- Si actualizas frecuentemente (>2 veces/mes)
-- Si el ancho de banda es limitado
-
-**Estado actual:**  Sistema actual es suficiente para 3 usuarios
+| Propiedad | Descripción |
+|-----------|-------------|
+| `Enabled` | `true` para habilitar actualizaciones automáticas |
+| `CheckOnStartup` | `true` para verificar al iniciar la app |
+| `Repository` | Repositorio GitHub en formato `owner/repo` |
 
 ---
 
-## Resumen de Cambios
+## Características Técnicas
 
-| Antes | Despu�s |
-|-------|---------|
-| L Error "No se pudo preparar la instalaci�n" |  Updater.exe se compila autom�ticamente |
-| � Sin validaci�n de integridad |  Validaci�n SHA256 obligatoria |
-| = Solo opci�n: Actualizar ahora |  3 opciones (incluye "Instalar al cerrar") |
-| =� Checksum manual |  Generaci�n autom�tica en script |
-| S Diagn�stico dif�cil |  Logging detallado en cada paso |
-| =� Tama�o: ~45 MB siempre | =. Futuro: ~5-10 MB con Squirrel |
+### Non-Self-Contained
+
+El sistema usa compilación **non-self-contained** para reducir el tamaño del ZIP:
+
+| Tipo | Tamaño | Requisito |
+|------|--------|-----------|
+| Non-self-contained | ~12 MB | .NET 8 Runtime debe estar instalado |
+| Self-contained (antiguo) | ~82 MB | Sin requisitos adicionales |
+
+### Exclusión de Archivos del Updater
+
+El `SGRRHH.Updater.exe` **excluye sus propios archivos** al copiar para evitar el error "archivo en uso":
+
+```csharp
+// SGRRHH.Updater/Program.cs
+var excludePatterns = new[] { "SGRRHH.Updater.exe", "SGRRHH.Updater.dll", 
+                               "SGRRHH.Updater.deps.json", "SGRRHH.Updater.runtimeconfig.json" };
+
+foreach (var file in sourceFiles)
+{
+    if (excludePatterns.Any(p => file.Name.Equals(p, StringComparison.OrdinalIgnoreCase)))
+        continue; // No copiar archivos del propio updater
+    
+    // Copiar el resto...
+}
+```
 
 ---
 
-## Soporte
+## Distribución Manual
 
-Para reportar problemas con las actualizaciones:
+Para distribuir la aplicación en nuevos equipos (sin actualización previa):
 
-1. Revisa los logs en `data/logs/error_YYYY-MM-DD.log`
-2. Revisa `updater_log.txt` en la carpeta de instalaci�n
-3. Abre un issue en GitHub con los logs adjuntos
+1. Descargar el ZIP de GitHub Releases
+2. Descomprimir en `C:\SGRRHH`
+3. Instalar .NET 8 Runtime si no está instalado
+4. Configurar `appsettings.json` con credenciales Firebase
+5. Crear acceso directo en el escritorio
+6. Las actualizaciones futuras serán automáticas
 
 ---
 
-**Autor:** Sistema de actualizaciones mejorado para SGRRHH
-**Fecha:** Enero 2025
-**Versi�n:** 1.0.6+
+## Solución de Problemas
+
+### "La actualización no se aplica"
+
+1. Verificar que no haya procesos SGRRHH ejecutándose (Task Manager)
+2. Revisar `updater_log.txt` para ver el error
+3. Ejecutar manualmente como administrador
+
+### "Error al descargar"
+
+1. Verificar conexión a internet
+2. Verificar que el repositorio GitHub sea accesible
+3. Revisar los logs en `data/logs/`
+
+### "El updater no puede copiar archivos"
+
+El updater tiene retry automático con delay incremental. Si persiste:
+1. Cerrar cualquier explorador de archivos apuntando a C:\SGRRHH
+2. Reiniciar el PC y volver a intentar
+
+---
+
+*Última actualización: Enero 2025*
+*Versión del sistema: 1.1.x*

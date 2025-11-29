@@ -8,113 +8,65 @@ Esta guía te permite instalar SGRRHH en los 3 PCs de manera sencilla.
 
 ### Requisitos:
 - ✅ Windows 10 o superior
-- ✅ Todos los PCs en la **misma red WiFi**
-- ✅ El servidor debe estar **encendido** mientras los otros PCs usen la app
+- ✅ Conexión a internet (para Firebase y actualizaciones)
+- ✅ .NET 8 Runtime instalado ([Descargar aquí](https://dotnet.microsoft.com/download/dotnet/8.0))
 
-### Orden de Instalación:
-1. **Primero:** PC Servidor (tu PC)
-2. **Después:** PC Ingeniera y PC Secretaria (pueden ser en paralelo)
+### Archivos necesarios:
+- ZIP de distribución (`SGRRHH_v1.1.x_Distribucion.zip`)
+- Credenciales Firebase (`firebase-credentials.json`)
 
 ---
 
-## 🖥️ INSTALACIÓN EN PC SERVIDOR (Tu PC)
+## 🖥️ INSTALACIÓN EN CUALQUIER PC
 
-### Paso 1: Crear la carpeta de datos
+### Paso 1: Instalar .NET 8 Runtime
 
-Abre PowerShell como Administrador y ejecuta:
+Si no está instalado, descarga e instala desde:
+https://dotnet.microsoft.com/download/dotnet/8.0
 
-```powershell
-# Crear estructura de carpetas
-New-Item -Path "C:\SGRRHH_Data" -ItemType Directory -Force
-New-Item -Path "C:\SGRRHH_Data\fotos" -ItemType Directory -Force
-New-Item -Path "C:\SGRRHH_Data\documentos" -ItemType Directory -Force
-New-Item -Path "C:\SGRRHH_Data\backups" -ItemType Directory -Force
-New-Item -Path "C:\SGRRHH_Data\config" -ItemType Directory -Force
-New-Item -Path "C:\SGRRHH_Data\logs" -ItemType Directory -Force
-New-Item -Path "C:\SGRRHH_Data\updates" -ItemType Directory -Force
-New-Item -Path "C:\SGRRHH_Data\updates\latest" -ItemType Directory -Force
-```
+Descarga **".NET Desktop Runtime 8.x"** (no el SDK completo).
 
-### Paso 2: Compartir la carpeta en red
-
-**Método GUI (más fácil):**
-1. Abre **Explorador de archivos** → `C:\SGRRHH_Data`
-2. Clic derecho → **Propiedades** → pestaña **Compartir**
-3. Clic en **Uso compartido avanzado...**
-4. ☑️ Marcar **"Compartir esta carpeta"**
-5. Nombre del recurso: `SGRRHH`
-6. Clic en **Permisos** → **Todos** → marcar **Control total**
-7. **Aceptar** todo
-
-**O método PowerShell (automático):**
-```powershell
-# Compartir carpeta (requiere admin)
-New-SmbShare -Name "SGRRHH" -Path "C:\SGRRHH_Data" -FullAccess "Everyone"
-
-# Verificar que se compartió
-Get-SmbShare -Name "SGRRHH"
-```
-
-### Paso 3: Obtener IP y nombre del PC
+### Paso 2: Crear carpeta de instalación
 
 ```powershell
-# Ver nombre del PC
-hostname
-
-# Ver IP (buscar la de WiFi o Ethernet)
-Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -match 'Wi-Fi|Ethernet' } | Select-Object IPAddress, InterfaceAlias
-```
-
-**Anota estos datos** (los necesitarás para las otras PCs):
-- Nombre del PC: `_____________________`
-- IP del PC: `_____________________`
-
-### Paso 4: Instalar SGRRHH
-
-**Opción A - Versión Portable:**
-```powershell
-# Crear carpeta de instalación
+# Crear carpeta
 New-Item -Path "C:\SGRRHH" -ItemType Directory -Force
-
-# Copiar archivos publicados
-Copy-Item -Path "C:\Users\evert\Documents\rrhh\src\publish\SGRRHH\*" -Destination "C:\SGRRHH" -Recurse -Force
 ```
 
-**Opción B - Usar el instalador (si lo tienes):**
-```powershell
-# Ejecutar instalador
-Start-Process "C:\Users\evert\Documents\rrhh\installer\output\SGRRHH_Setup_1.0.0.exe"
-```
+### Paso 3: Descomprimir la aplicación
 
-### Paso 5: Configurar appsettings.json
+1. Descomprime el ZIP de distribución en `C:\SGRRHH`
+2. Verifica que existan estos archivos:
+   - `SGRRHH.exe`
+   - `SGRRHH.dll`
+   - `appsettings.json`
+   - `SGRRHH.Updater.exe`
 
-Crea/edita el archivo `C:\SGRRHH\appsettings.json`:
+### Paso 4: Configurar credenciales Firebase
+
+1. Copia `firebase-credentials.json` a `C:\SGRRHH\`
+2. Verifica que `appsettings.json` tenga la ruta correcta:
 
 ```json
 {
-  "Database": {
-    "Path": "C:\\SGRRHH_Data\\sgrrhh.db",
-    "EnableWalMode": true,
-    "BusyTimeout": 30000
+  "Firebase": {
+    "ProjectId": "sgrrhh-xxxxx",
+    "CredentialsPath": "firebase-credentials.json"
   },
-  "Network": {
-    "IsNetworkMode": true,
-    "SharedFolder": "C:\\SGRRHH_Data"
+  "Application": {
+    "Name": "SGRRHH",
+    "Version": "1.1.3",
+    "Company": "Mi Empresa"
   },
   "Updates": {
     "Enabled": true,
     "CheckOnStartup": true,
-    "UpdatesPath": "C:\\SGRRHH_Data\\updates"
-  },
-  "Application": {
-    "Name": "SGRRHH",
-    "Version": "1.0.0",
-    "Company": "Mi Empresa"
+    "Repository": "evertweb/SGRRHH"
   }
 }
 ```
 
-### Paso 6: Crear acceso directo
+### Paso 5: Crear acceso directo
 
 ```powershell
 $WshShell = New-Object -comObject WScript.Shell
@@ -124,94 +76,34 @@ $Shortcut.WorkingDirectory = "C:\SGRRHH"
 $Shortcut.Save()
 ```
 
-### Paso 7: Primera ejecución
+### Paso 6: Primera ejecución
 
 1. Ejecuta **SGRRHH.exe**
-2. Inicia sesión con: `admin` / `admin123`
-3. ✅ Si ves el Dashboard, ¡está funcionando!
+2. Si hay una actualización disponible, se mostrará un diálogo
+3. Inicia sesión con el usuario correspondiente:
+
+| PC | Usuario | Contraseña |
+|----|---------|------------|
+| Servidor | `admin` | `admin123` |
+| Ingeniera | `ingeniera` | `ingeniera123` |
+| Secretaria | `secretaria` | `secretaria123` |
+
+⚠️ **Importante:** Cambia las contraseñas por defecto después del primer inicio.
 
 ---
 
-## 👩‍💼 INSTALACIÓN EN PC INGENIERA
+## 🔄 Actualizaciones Automáticas
 
-### Paso 1: Verificar conexión al servidor
+A partir de la instalación inicial, las actualizaciones son **completamente automáticas**:
 
-Abre el **Explorador de archivos** y escribe en la barra de direcciones:
-```
-\\NOMBRE_PC_SERVIDOR\SGRRHH
-```
-Por ejemplo: `\\ELITEBOOK-EVERT\SGRRHH` o `\\192.168.1.76\SGRRHH`
+1. Al abrir la app, verifica si hay nueva versión en GitHub
+2. Si hay actualización, muestra un diálogo con las opciones:
+   - **Actualizar ahora** - Descarga e instala inmediatamente
+   - **Recordar después** - Pregunta en el próximo inicio
+3. La actualización se descarga (~12 MB) y se aplica automáticamente
+4. La app se reinicia con la nueva versión
 
-Si ves las carpetas (backups, config, documentos, etc.), ¡la conexión funciona!
-
-### Paso 2: Instalar SGRRHH
-
-**Opción más fácil - Copiar desde servidor:**
-```powershell
-# Crear carpeta local
-New-Item -Path "C:\SGRRHH" -ItemType Directory -Force
-
-# Copiar desde el servidor (ajustar nombre/IP del servidor)
-Copy-Item -Path "\\ELITEBOOK-EVERT\SGRRHH\..\SGRRHH_App\*" -Destination "C:\SGRRHH" -Recurse -Force
-```
-
-**O copiar manualmente** el contenido de la carpeta SGRRHH desde USB.
-
-### Paso 3: Configurar appsettings.json
-
-Crea el archivo `C:\SGRRHH\appsettings.json`:
-
-```json
-{
-  "Database": {
-    "Path": "\\\\ELITEBOOK-EVERT\\SGRRHH\\sgrrhh.db",
-    "EnableWalMode": true,
-    "BusyTimeout": 30000
-  },
-  "Network": {
-    "IsNetworkMode": true,
-    "SharedFolder": "\\\\ELITEBOOK-EVERT\\SGRRHH"
-  },
-  "Updates": {
-    "Enabled": true,
-    "CheckOnStartup": true,
-    "UpdatesPath": "\\\\ELITEBOOK-EVERT\\SGRRHH\\updates"
-  },
-  "Application": {
-    "Name": "SGRRHH",
-    "Version": "1.0.0",
-    "Company": "Mi Empresa"
-  }
-}
-```
-
-⚠️ **Importante:** Reemplaza `ELITEBOOK-EVERT` con el nombre o IP real del servidor.
-
-### Paso 4: Crear acceso directo
-
-```powershell
-$WshShell = New-Object -comObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\Desktop\SGRRHH.lnk")
-$Shortcut.TargetPath = "C:\SGRRHH\SGRRHH.exe"
-$Shortcut.WorkingDirectory = "C:\SGRRHH"
-$Shortcut.Save()
-```
-
-### Paso 5: Iniciar sesión
-
-- **Usuario:** `ingeniera`
-- **Contraseña:** `ingeniera123`
-
----
-
-## 👩‍💻 INSTALACIÓN EN PC SECRETARIA
-
-Sigue **exactamente los mismos pasos que PC Ingeniera**, pero usa estas credenciales:
-
-- **Usuario:** `secretaria`
-- **Contraseña:** `secretaria123`
-
-El archivo `appsettings.json` es idéntico al de la ingeniera.
+**No necesitas hacer nada manualmente** - las actualizaciones llegan solas.
 
 ---
 
@@ -219,95 +111,41 @@ El archivo `appsettings.json` es idéntico al de la ingeniera.
 
 ### Lista de verificación:
 
-| Verificación | Servidor | Ingeniera | Secretaria |
-|--------------|:--------:|:---------:|:----------:|
-| SGRRHH.exe instalado | ☐ | ☐ | ☐ |
-| appsettings.json configurado | ☐ | ☐ | ☐ |
-| Puede iniciar sesión | ☐ | ☐ | ☐ |
-| Ve el Dashboard | ☐ | ☐ | ☐ |
-| Puede crear/ver empleados | ☐ | ☐ | ☐ |
-
-### Prueba de concurrencia:
-
-1. En **PC Secretaria**: Crea un empleado nuevo
-2. En **PC Ingeniera**: Refresca la lista de empleados
-3. ✅ El nuevo empleado debe aparecer inmediatamente
+| Verificación | ☐ |
+|--------------|---|
+| .NET 8 Runtime instalado | ☐ |
+| Archivos copiados en C:\SGRRHH | ☐ |
+| firebase-credentials.json presente | ☐ |
+| Acceso directo creado | ☐ |
+| Puede iniciar sesión | ☐ |
+| Ve el Dashboard | ☐ |
 
 ---
 
 ## 🆘 Solución de Problemas Rápida
 
-### "No puedo acceder a \\SERVIDOR\SGRRHH"
+### "La aplicación no inicia"
 
-1. Verifica que el servidor está encendido
-2. Verifica que están en la misma red WiFi
-3. En el servidor, ejecuta: `Get-SmbShare -Name "SGRRHH"`
-4. Prueba con IP en vez del nombre: `\\192.168.1.x\SGRRHH`
+1. Verifica que .NET 8 Runtime esté instalado:
+   ```powershell
+   dotnet --list-runtimes
+   ```
+   Debe mostrar `Microsoft.NETCore.App 8.x.x`
 
-### "La base de datos está bloqueada"
+2. Verifica los archivos en C:\SGRRHH
 
-- Espera 5 segundos e intenta de nuevo
-- Es normal si otro usuario está guardando cambios
+### "Error de Firebase / No se puede conectar"
 
-### "Error de conexión a la base de datos"
+1. Verifica conexión a internet
+2. Verifica que `firebase-credentials.json` exista
+3. Verifica que `appsettings.json` tenga el `ProjectId` correcto
 
-- Verifica el archivo `appsettings.json`
-- Asegúrate de usar **4 barras invertidas** (`\\\\`) para rutas de red
-- Verifica que el archivo `sgrrhh.db` existe en el servidor
+### "La actualización falla"
 
-### "La app no inicia"
-
-1. Abre PowerShell en la carpeta de SGRRHH
-2. Ejecuta: `.\SGRRHH.exe`
-3. Lee el mensaje de error que aparece
+1. Cierra todas las instancias de SGRRHH
+2. Revisa `C:\SGRRHH\updater_log.txt` para ver el error
+3. Si persiste, descarga el ZIP manualmente de GitHub Releases
 
 ---
 
-## 📦 Paquete de Instalación para Clientes
-
-Para facilitar la instalación en las PCs de Ingeniera y Secretaria, puedes crear un paquete:
-
-### Crear paquete de instalación:
-
-```powershell
-# En el servidor, crear carpeta con todo lo necesario
-$packagePath = "C:\SGRRHH_Data\SGRRHH_Instalacion"
-New-Item -Path $packagePath -ItemType Directory -Force
-
-# Copiar archivos de la app
-Copy-Item -Path "C:\SGRRHH\*" -Destination $packagePath -Recurse -Force
-
-# Crear script de instalación
-@"
-# Script de instalación para PC cliente
-# Ejecutar como Administrador
-
-# Crear carpeta
-New-Item -Path "C:\SGRRHH" -ItemType Directory -Force
-
-# Copiar archivos
-Copy-Item -Path ".\*" -Destination "C:\SGRRHH" -Recurse -Force
-
-# Crear acceso directo
-`$WshShell = New-Object -comObject WScript.Shell
-`$Shortcut = `$WshShell.CreateShortcut("`$env:USERPROFILE\Desktop\SGRRHH.lnk")
-`$Shortcut.TargetPath = "C:\SGRRHH\SGRRHH.exe"
-`$Shortcut.WorkingDirectory = "C:\SGRRHH"
-`$Shortcut.Save()
-
-Write-Host "✅ Instalación completada. Edita C:\SGRRHH\appsettings.json para configurar la conexión al servidor."
-"@ | Out-File -FilePath "$packagePath\Instalar.ps1" -Encoding UTF8
-```
-
-Luego, desde las otras PCs:
-```powershell
-# Acceder al paquete desde red
-cd "\\ELITEBOOK-EVERT\SGRRHH\SGRRHH_Instalacion"
-
-# Ejecutar instalador
-powershell -ExecutionPolicy Bypass -File .\Instalar.ps1
-```
-
----
-
-*Última actualización: Noviembre 2025*
+*Última actualización: Enero 2025*

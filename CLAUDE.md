@@ -14,10 +14,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Clean Architecture with MVVM pattern
 
 **Deployment:**
-- Self-contained Windows executable (includes .NET runtime)
-- Multi-PC network sharing via shared folder
+- Non-self-contained Windows executable (~12 MB ZIP)
+- Requires .NET 8 Runtime installed on user machines
+- Auto-updates via GitHub Releases
+- Firebase backend (Firestore + Storage + Auth)
 - ~20 employees, 3 concurrent users
-- 100% offline/local (no internet required)
 
 ## Build Commands
 
@@ -37,20 +38,31 @@ cd src
 dotnet test SGRRHH.Tests/SGRRHH.Tests.csproj
 ```
 
-### Publishing & Installation
-```bash
-# Publish self-contained application (from src/SGRRHH.WPF)
-cd src/SGRRHH.WPF
-dotnet publish --configuration Release --runtime win-x64 --self-contained true
+### Publishing & Updates
 
-# Build installer (requires Inno Setup 6)
-cd installer
-.\Build-Installer.ps1                    # Full build + installer
-.\Build-Installer.ps1 -SkipPublish       # Skip publish step
-.\Build-Installer.ps1 -CreateZip         # Also create portable ZIP
+The system uses GitHub Releases for automatic updates:
+
+```bash
+# Method 1: Automatic via GitHub Actions (recommended)
+# 1. Update version in csproj
+# 2. Commit and push
+# 3. Create and push tag
+git tag v1.1.5
+git push origin v1.1.5
+# GitHub Actions builds and publishes automatically
+
+# Method 2: Manual via VS Code tasks
+# Task: "1. Build + Actualizar Local" - Compile and copy to C:\SGRRHH
+# Task: "2b. Publicar TODO" - Upload to GitHub + update local
 ```
 
-**Note:** Published app goes to `src/publish/SGRRHH/`. The installer is created in `installer/output/`.
+**Update Components:**
+- `GithubUpdateService.cs` - Checks GitHub API for new releases
+- `SGRRHH.Updater/` - External process that applies updates
+- `UpdateDialog.xaml` - UI for update notification
+- `.github/workflows/release.yml` - Automated build and release
+
+**Note:** ZIP size is ~12 MB (non-self-contained). Requires .NET 8 Runtime.
 
 ## Architecture
 
@@ -264,25 +276,36 @@ dotnet test SGRRHH.Tests/SGRRHH.Tests.csproj --verbosity normal
 
 ## Network Deployment
 
-**Setup for 3 PCs:**
-1. Share `data/` folder from main PC with read/write permissions
-2. Update `appsettings.json` on each PC with UNC path: `\\SERVER\ShareName\data\sgrrhh.db`
-3. SQLite WAL mode handles concurrent access (up to ~10 concurrent users safely)
+**Current Setup:** Firebase-based (cloud)
 
-**Configuration File:** `SGRRHH.WPF/appsettings.json` (optional, falls back to local path)
+All PCs connect directly to Firebase (Firestore + Storage). No local network sharing required.
 
-## Data Folders
+**Configuration:** Each PC has its own `C:\SGRRHH\` folder with:
+- `appsettings.json` - Firebase project settings, app version
+- `firebase-credentials.json` - Service account credentials
 
-Created automatically on first run:
+**Auto-Updates:** Handled via GitHub Releases. See `docs/ACTUALIZACIONES.md` for details.
+
+## Data Storage
+
+**Firebase Firestore** - All data stored in cloud:
+- Empleados, Permisos, Contratos, etc.
+- Real-time synchronization across PCs
+
+**Firebase Storage** - Files:
+- Employee photos
+- Document attachments
+
+**Local folder (C:\SGRRHH\):**
 ```
-data/
-├── sgrrhh.db           # SQLite database
-├── backups/            # Database backups (from Configuración module)
-├── logs/               # Error logs (error_YYYY-MM-DD.log)
-├── fotos/              # Employee photos
-├── documentos/         # Generated PDFs
-└── config/
-    └── logo.png        # Company logo (optional)
+C:\SGRRHH\
+├── SGRRHH.exe           # Main executable
+├── appsettings.json     # Configuration
+├── firebase-credentials.json
+├── SGRRHH.Updater.exe   # Update applier
+├── updater_log.txt      # Update process log
+└── data/
+    └── logs/            # Error logs
 ```
 
 ## Development Tips

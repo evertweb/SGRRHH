@@ -286,11 +286,17 @@ public class ChatMessageFirestoreRepository : FirestoreRepository<ChatMessage>, 
     {
         var conversationId = ChatMessage.GenerateConversationId(userId1, userId2);
         
-        // Escuchar mensajes posteriores a la fecha indicada
+        // Buffer adicional de seguridad para evitar perder mensajes por desfases de reloj
+        var safeAfterDate = afterDate.AddSeconds(-5);
+        
+        // Escuchar mensajes posteriores a la fecha indicada (con buffer)
         var query = Collection
             .WhereEqualTo("conversationId", conversationId)
-            .WhereGreaterThan("sentAt", Timestamp.FromDateTime(afterDate.ToUniversalTime()))
+            .WhereGreaterThan("sentAt", Timestamp.FromDateTime(safeAfterDate.ToUniversalTime()))
             .OrderBy("sentAt");
+        
+        // Usar HashSet para evitar procesar mensajes duplicados
+        var processedMessageIds = new HashSet<string>();
         
         var listener = query.Listen(snapshot =>
         {
@@ -298,6 +304,12 @@ public class ChatMessageFirestoreRepository : FirestoreRepository<ChatMessage>, 
             {
                 if (change.ChangeType == DocumentChange.Type.Added)
                 {
+                    // Evitar procesar el mismo mensaje múltiples veces
+                    var docId = change.Document.Id;
+                    if (processedMessageIds.Contains(docId))
+                        continue;
+                    
+                    processedMessageIds.Add(docId);
                     var message = DocumentToEntity(change.Document);
                     onNewMessage(message);
                 }
@@ -312,12 +324,17 @@ public class ChatMessageFirestoreRepository : FirestoreRepository<ChatMessage>, 
     /// </summary>
     public IDisposable ListenToUserMessages(int userId, Action<ChatMessage> onNewMessage)
     {
-        // Solo escuchar mensajes nuevos (llegados después de ahora)
-        // Esto evita procesar todo el historial de mensajes
+        // Buffer de seguridad de 10 segundos para evitar perder mensajes por desfases de reloj
+        // entre el cliente y Firebase. Usamos 10 segundos para dar margen suficiente.
+        var startTime = DateTime.UtcNow.AddSeconds(-10);
+        
         var query = Collection
             .WhereEqualTo("receiverId", userId)
-            .WhereGreaterThan("sentAt", Timestamp.FromDateTime(DateTime.UtcNow))
-            .OrderBy("sentAt"); // Necesario para el WhereGreaterThan
+            .WhereGreaterThan("sentAt", Timestamp.FromDateTime(startTime))
+            .OrderBy("sentAt");
+        
+        // Usar HashSet para evitar procesar mensajes duplicados (ya que incluimos mensajes históricos)
+        var processedMessageIds = new HashSet<string>();
         
         var listener = query.Listen(snapshot =>
         {
@@ -325,6 +342,12 @@ public class ChatMessageFirestoreRepository : FirestoreRepository<ChatMessage>, 
             {
                 if (change.ChangeType == DocumentChange.Type.Added)
                 {
+                    // Evitar procesar el mismo mensaje múltiples veces
+                    var docId = change.Document.Id;
+                    if (processedMessageIds.Contains(docId))
+                        continue;
+                    
+                    processedMessageIds.Add(docId);
                     var message = DocumentToEntity(change.Document);
                     onNewMessage(message);
                 }
