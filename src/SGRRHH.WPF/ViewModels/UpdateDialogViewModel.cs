@@ -53,6 +53,11 @@ public partial class UpdateDialogViewModel : ObservableObject
     /// Resultado del diálogo: true = actualizar ahora, false = más tarde, null = omitir versión
     /// </summary>
     public bool? DialogResult { get; private set; }
+
+    /// <summary>
+    /// Indica si se debe instalar al cerrar la aplicación
+    /// </summary>
+    public bool InstallOnExit { get; private set; }
     
     /// <summary>
     /// Acción para cerrar el diálogo
@@ -161,6 +166,61 @@ public partial class UpdateDialogViewModel : ObservableObject
     private void RestartNow()
     {
         DialogResult = true;
+        InstallOnExit = false;
         CloseDialog?.Invoke();
+    }
+
+    [RelayCommand]
+    private async Task InstallOnExitAsync()
+    {
+        try
+        {
+            IsDownloading = true;
+            HasError = false;
+            StatusMessage = "Preparando descarga...";
+
+            var progress = new Progress<UpdateProgress>(p =>
+            {
+                DownloadProgress = p.Percentage;
+                StatusMessage = p.Message;
+
+                if (p.Phase == UpdatePhase.Error)
+                {
+                    HasError = true;
+                    ErrorMessage = p.Message;
+                }
+            });
+
+            var success = await _updateService.DownloadUpdateAsync(progress);
+
+            if (success)
+            {
+                DownloadCompleted = true;
+                InstallOnExit = true;
+                StatusMessage = "La actualización se instalará cuando cierre la aplicación.";
+                DialogResult = false; // No reiniciar ahora
+
+                // Cerrar el diálogo después de 2 segundos
+                await Task.Delay(2000);
+                CloseDialog?.Invoke();
+            }
+            else
+            {
+                HasError = true;
+                if (string.IsNullOrEmpty(ErrorMessage))
+                {
+                    ErrorMessage = "Error durante la descarga.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            IsDownloading = false;
+        }
     }
 }

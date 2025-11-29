@@ -3,6 +3,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -155,17 +157,60 @@ public class GithubUpdateService : IUpdateService
                 }
             }
 
+            // Verificar integridad del archivo descargado
+            progress?.Report(new UpdateProgress { Phase = UpdatePhase.Verifying, Percentage = 0, Message = "Verificando integridad del archivo..." });
+
+            var checksum = CalculateFileSha256(zipPath);
+            _logger?.LogInformation($"SHA256 del archivo descargado: {checksum}");
+
+            // Si hay un checksum esperado en el VersionInfo, verificarlo
+            if (_pendingUpdate != null && !string.IsNullOrEmpty(_pendingUpdate.Body))
+            {
+                // Buscar checksum en las notas de versión (formato: SHA256: xxxxx)
+                var checksumMatch = System.Text.RegularExpressions.Regex.Match(
+                    _pendingUpdate.Body,
+                    @"SHA256:\s*([a-fA-F0-9]{64})",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                );
+
+                if (checksumMatch.Success)
+                {
+                    var expectedChecksum = checksumMatch.Groups[1].Value.ToLowerInvariant();
+                    if (!VerifyFileIntegrity(zipPath, expectedChecksum))
+                    {
+                        _logger?.LogError("La verificación de integridad falló. El archivo puede estar corrupto o modificado.");
+                        progress?.Report(new UpdateProgress
+                        {
+                            Phase = UpdatePhase.Error,
+                            Percentage = 0,
+                            Message = "Error de integridad: el archivo descargado no es válido"
+                        });
+                        return false;
+                    }
+                }
+                else
+                {
+                    _logger?.LogWarning("No se encontró checksum en las notas de versión");
+                }
+            }
+
             // Extraer
-            progress?.Report(new UpdateProgress { Phase = UpdatePhase.Verifying, Percentage = 0, Message = "Extrayendo archivos..." });
+            progress?.Report(new UpdateProgress { Phase = UpdatePhase.Verifying, Percentage = 50, Message = "Extrayendo archivos..." });
             string extractPath = Path.Combine(_tempUpdatePath, "extracted");
+
+            // Limpiar carpeta si existe
+            if (Directory.Exists(extractPath))
+            {
+                Directory.Delete(extractPath, true);
+            }
             Directory.CreateDirectory(extractPath);
-            
+
             System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extractPath);
-            
-            // Mover archivos extraídos a la raíz de temp si están dentro de una carpeta (común en zips de github source, pero aquí es release asset)
-            // Asumimos que el zip tiene los archivos planos o estructura correcta.
-            
-            progress?.Report(new UpdateProgress { Phase = UpdatePhase.Completed, Percentage = 100, Message = "Listo para instalar" });
+
+            _logger?.LogInformation($"Archivos extraídos en: {extractPath}");
+            _logger?.LogInformation($"Total de archivos: {Directory.GetFiles(extractPath, "*.*", SearchOption.AllDirectories).Length}");
+
+            progress?.Report(new UpdateProgress { Phase = UpdatePhase.Completed, Percentage = 100, Message = "Descarga completada y verificada" });
             return true;
         }
         catch (Exception ex)
@@ -179,23 +224,42 @@ public class GithubUpdateService : IUpdateService
     {
         try
         {
-            string updaterPath = Path.Combine(_installPath, "SGRRHH.Updater.exe");
-            if (!File.Exists(updaterPath))
+            string sourceDir = Path.Combine(_tempUpdatePath, "extracted");
+
+            // Verificar que exista la carpeta de actualización
+            if (!Directory.Exists(sourceDir))
             {
-                // Intentar buscarlo en la actualización descargada si no existe en la instalación actual (primera vez)
-                string downloadedUpdater = Path.Combine(_tempUpdatePath, "extracted", "SGRRHH.Updater.exe");
-                if (File.Exists(downloadedUpdater))
-                {
-                    File.Copy(downloadedUpdater, updaterPath, true);
-                }
-                else
-                {
-                    _logger?.LogError("No se encuentra SGRRHH.Updater.exe");
-                    return false;
-                }
+                _logger?.LogError($"No existe el directorio de actualización: {sourceDir}");
+                return false;
             }
 
-            string sourceDir = Path.Combine(_tempUpdatePath, "extracted");
+            // Buscar el updater primero en la descarga (más confiable)
+            string downloadedUpdater = Path.Combine(sourceDir, "SGRRHH.Updater.exe");
+            string updaterPath = Path.Combine(_installPath, "SGRRHH.Updater.exe");
+
+            _logger?.LogInformation($"Buscando updater en descarga: {downloadedUpdater}");
+            _logger?.LogInformation($"Ruta de instalación: {updaterPath}");
+
+            if (!File.Exists(downloadedUpdater))
+            {
+                _logger?.LogError($"No se encuentra SGRRHH.Updater.exe en la descarga: {downloadedUpdater}");
+                _logger?.LogError($"Archivos en extracted: {string.Join(", ", Directory.GetFiles(sourceDir).Select(Path.GetFileName))}");
+                return false;
+            }
+
+            // Copiar el updater a la instalación actual (sobrescribir si existe)
+            try
+            {
+                _logger?.LogInformation($"Copiando updater desde {downloadedUpdater} a {updaterPath}");
+                File.Copy(downloadedUpdater, updaterPath, overwrite: true);
+                _logger?.LogInformation("Updater copiado exitosamente");
+            }
+            catch (Exception copyEx)
+            {
+                _logger?.LogError(copyEx, $"Error copiando updater: {copyEx.Message}");
+                return false;
+            }
+
             int pid = Process.GetCurrentProcess().Id;
             string exeName = "SGRRHH.exe"; // Nombre del ejecutable principal
 
@@ -203,15 +267,26 @@ public class GithubUpdateService : IUpdateService
             {
                 FileName = updaterPath,
                 Arguments = $"\"{_installPath}\" \"{sourceDir}\" \"{exeName}\" {pid}",
-                UseShellExecute = true
+                UseShellExecute = true,
+                WorkingDirectory = _installPath
             };
 
-            Process.Start(startInfo);
+            _logger?.LogInformation($"Lanzando updater: {updaterPath}");
+            _logger?.LogInformation($"Argumentos: {startInfo.Arguments}");
+
+            var process = Process.Start(startInfo);
+            if (process == null)
+            {
+                _logger?.LogError("No se pudo iniciar el proceso del updater");
+                return false;
+            }
+
+            _logger?.LogInformation($"Updater lanzado exitosamente (PID: {process.Id})");
             return true;
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error aplicando actualización");
+            _logger?.LogError(ex, $"Error aplicando actualización: {ex.Message}");
             return false;
         }
     }
@@ -221,6 +296,53 @@ public class GithubUpdateService : IUpdateService
         if (string.IsNullOrWhiteSpace(versionString)) return new Version(0, 0, 0);
         var cleaned = versionString.TrimStart('v', 'V').Split('-')[0];
         return Version.TryParse(cleaned, out var v) ? v : new Version(0, 0, 0);
+    }
+
+    /// <summary>
+    /// Calcula el hash SHA256 de un archivo
+    /// </summary>
+    private string CalculateFileSha256(string filePath)
+    {
+        using var sha256 = SHA256.Create();
+        using var stream = File.OpenRead(filePath);
+        var hash = sha256.ComputeHash(stream);
+        return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Verifica la integridad del archivo descargado contra un checksum esperado
+    /// </summary>
+    private bool VerifyFileIntegrity(string filePath, string? expectedChecksum)
+    {
+        if (string.IsNullOrWhiteSpace(expectedChecksum))
+        {
+            _logger?.LogWarning("No hay checksum para verificar, omitiendo validación de integridad");
+            return true; // No hay checksum que verificar
+        }
+
+        try
+        {
+            var actualChecksum = CalculateFileSha256(filePath);
+            var isValid = actualChecksum.Equals(expectedChecksum, StringComparison.OrdinalIgnoreCase);
+
+            if (isValid)
+            {
+                _logger?.LogInformation($"✓ Integridad verificada: {actualChecksum}");
+            }
+            else
+            {
+                _logger?.LogError($"✗ Checksum no coincide!");
+                _logger?.LogError($"  Esperado: {expectedChecksum}");
+                _logger?.LogError($"  Obtenido: {actualChecksum}");
+            }
+
+            return isValid;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error verificando integridad del archivo");
+            return false;
+        }
     }
 
     // Clases para deserializar respuesta de GitHub

@@ -156,7 +156,16 @@
                     Command="{Binding RemindLaterCommand}"
                     Visibility="{Binding IsMandatory, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"
                     IsEnabled="{Binding IsDownloading, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
-            
+
+            <!-- Botón Instalar al cerrar (solo si no está descargando y no es obligatoria) -->
+            <Button Content="📥 Instalar al cerrar"
+                    Margin="0,0,10,0"
+                    Padding="15,8"
+                    Command="{Binding InstallOnExitCommand}"
+                    Visibility="{Binding IsMandatory, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"
+                    IsEnabled="{Binding IsDownloading, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"
+                    ToolTip="Descarga la actualización ahora e instala cuando cierre la aplicación"/>
+
             <!-- Botón Actualizar ahora / Reiniciar -->
             <Button Padding="20,8"
                     IsEnabled="{Binding IsDownloading, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">

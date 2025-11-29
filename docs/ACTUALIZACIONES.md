@@ -1,386 +1,338 @@
-# 🔄 Sistema de Actualizaciones SGRRHH - Guía Completa
+# Sistema de Actualizaciones SGRRHH
 
-> **Este es el documento único y oficial** para todo lo relacionado con actualizaciones.
-> Documentos obsoletos: `12_SISTEMA_ACTUALIZACIONES.md`, `14_ACTUALIZACIONES_FIREBASE.md`, `15_GUIA_PUBLICACION.md`
+## Resumen de Mejoras Implementadas
 
----
-
-## 📋 Índice
-
-1. [Resumen del Sistema](#resumen-del-sistema)
-2. [Flujo de Trabajo Recomendado](#flujo-de-trabajo-recomendado)
-3. [Scripts Disponibles](#scripts-disponibles)
-4. [Tasks de VS Code](#tasks-de-vs-code)
-5. [Estructura de Directorios](#estructura-de-directorios)
-6. [Cómo Funciona la Detección de Actualizaciones](#cómo-funciona-la-detección-de-actualizaciones)
-7. [Configuración](#configuración)
-8. [Solución de Problemas](#solución-de-problemas)
-9. [Comandos Útiles](#comandos-útiles)
+ **Problema resuelto**: Error "No se pudo preparar la instalaci�n"
+ **Nueva funcionalidad**: Validaci�n SHA256 de descargas
+ **Nueva funcionalidad**: Opci�n "Instalar al cerrar"
+ **Automatizaci�n**: Generaci�n de checksum en build
 
 ---
 
-## 📍 Resumen del Sistema
+## Componentes del Sistema
 
-### Dos Modos de Actualización
+### 1. **GithubUpdateService** (`Infrastructure/Services/GithubUpdateService.cs`)
+- Verifica releases en GitHub API (`/repos/evertweb/SGRRHH/releases/latest`)
+- Descarga archivos ZIP con barra de progreso
+- **( NUEVO**: Valida integridad con SHA256
+- **( MEJORADO**: Mejor manejo de errores con logging detallado
+- Lanza el Updater.exe
 
-| Modo | Cuándo se usa | Disponibilidad |
-|------|---------------|----------------|
-| **Firebase Storage** | `DataMode: "Firebase"` | 24/7 (internet) |
-| **Carpeta Compartida** | `DataMode: "SQLite"` | Solo cuando servidor está encendido |
+### 2. **SGRRHH.Updater** (`src/SGRRHH.Updater/`)
+- Proceso separado que actualiza archivos
+- Espera a que la app principal cierre
+- Crea backup antes de copiar (`backup_YYYYMMDD_HHmmss/`)
+- Reinicia la aplicaci�n autom�ticamente
+- **( MEJORADO**: Ahora se compila y copia autom�ticamente en cada build
 
-### Tres Ubicaciones de Versión
+### 3. **UpdateDialog** (`WPF/Views/UpdateDialog.xaml`)
+- Interfaz para notificar actualizaciones
+- **( NUEVO**: 3 opciones disponibles:
+  - **Actualizar ahora** - Descarga, cierra e instala inmediatamente
+  - **Instalar al cerrar** - Descarga ahora, instala cuando cierres
+  - **Recordar despu�s** - Pregunta en pr�ximo inicio
+- Muestra progreso de descarga y verificaci�n
+- Visualiza notas de versi�n (Release Notes)
 
-Estas **deben estar sincronizadas** para que todo funcione:
+---
 
-| Ubicación | Archivo | Qué contiene |
-|-----------|---------|--------------|
-| **Proyecto** | `src/SGRRHH.WPF/SGRRHH.WPF.csproj` | `<Version>X.Y.Z</Version>` |
-| **Local** | `C:\SGRRHH\appsettings.json` | `Application.Version` |
-| **Firebase** | `gs://bucket/updates/version.json` | `version` |
+## C�mo Publicar una Nueva Versi�n
 
-### Flujo General
+### Paso 1: Incrementar Versi�n
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ PUBLICAR ACTUALIZACIÓN                                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. Haces cambios en el código                                  │
-│                     ↓                                           │
-│  2. Ejecutas: Publish-All.ps1 -Version "X.Y.Z"                 │
-│                     ↓                                           │
-│  3. El script automáticamente:                                  │
-│     ✓ Actualiza versión en proyecto                            │
-│     ✓ Compila la aplicación                                    │
-│     ✓ Sube a Firebase Storage                                  │
-│     ✓ Actualiza C:\SGRRHH                                      │
-│     ✓ Sincroniza todas las versiones                           │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Edita `src/SGRRHH.WPF/SGRRHH.WPF.csproj`:
 
-┌─────────────────────────────────────────────────────────────────┐
-│ USUARIOS REMOTOS                                                │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. Abren SGRRHH                                                │
-│                     ↓                                           │
-│  2. App descarga version.json de Firebase                       │
-│                     ↓                                           │
-│  3. Compara: versión local < versión Firebase?                  │
-│                     ↓                                           │
-│  4. Si hay nueva versión → Muestra diálogo                     │
-│                     ↓                                           │
-│  5. Usuario acepta → Descarga, cierra, actualiza, reinicia     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+```xml
+<Version>1.0.7</Version>
+<AssemblyVersion>1.0.7.0</AssemblyVersion>
+<FileVersion>1.0.7.0</FileVersion>
 ```
 
----
-
-## 🎯 Flujo de Trabajo Recomendado
-
-### Para Publicar una Actualización Completa
+### Paso 2: Generar el ZIP con Checksum
 
 ```powershell
-# Un solo comando que hace TODO
-cd c:\Users\evert\Documents\rrhh\scripts
-.\Publish-All.ps1 -Version "1.0.4" -ReleaseNotes "Descripción de cambios" -Incremental
+cd installer
+.\Build-Installer.ps1 -CreateZip
 ```
 
-**Esto hace automáticamente:**
-1. ✅ Actualiza versión en `.csproj` y `appsettings.json`
-2. ✅ Compila la aplicación (Release, self-contained)
-3. ✅ Sube a Firebase Storage (modo incremental = solo archivos que cambiaron)
-4. ✅ Copia a `C:\SGRRHH` (tu instalación local)
-5. ✅ Sincroniza todas las versiones
+**Salida esperada:**
+```
+ Creando version portable (ZIP)...
+    ZIP creado: installer/output/SGRRHH_Portable_1.0.7.zip
+    Tamano del ZIP: 45.3 MB
 
-### Solo para Desarrollo Local
+ Calculando checksum SHA256...
+    SHA256: a1b2c3d4e5f6abc123def456789...
+    Checksum guardado en: installer/output/SGRRHH_Portable_1.0.7.sha256
 
-```powershell
-# Si solo quieres probar cambios sin publicar a Firebase
-.\Publish-Local.ps1 -Release
+=== INSTRUCCIONES PARA GITHUB RELEASE ===
+1. Crea un nuevo Release en GitHub
+2. Adjunta el archivo: SGRRHH_Portable_1.0.7.zip
+3. En las notas de version (body), incluye esta linea:
+
+   SHA256: a1b2c3d4e5f6abc123def456789...
+
+4. La aplicacion verificara automaticamente la integridad del archivo
+=========================================
 ```
 
-### Solo Publicar a Firebase (sin actualizar local)
+### Paso 3: Crear GitHub Release
 
-```powershell
-.\Publish-All.ps1 -Version "1.0.4" -ReleaseNotes "..." -SkipLocal -Incremental
-```
+1. Ve a https://github.com/evertweb/SGRRHH/releases/new
+2. **Tag version**: `v1.0.7`
+3. **Release title**: `v1.0.7 - Descripci�n breve`
+4. **Descripci�n (body)** - **IMPORTANTE: Incluye el SHA256**:
+
+   ```markdown
+   ## Cambios en esta versi�n
+
+   ### Nuevas caracter�sticas
+   - ( Feature 1
+   - ( Feature 2
+
+   ### Correcciones
+   - = Fix 1
+   - = Fix 2
+
+   ### Mejoras t�cnicas
+   - � Optimizaci�n 1
+
+   ---
+
+   **Verificaci�n de integridad:**
+
+   SHA256: a1b2c3d4e5f6abc123def456789...
+   ```
+
+5. **Adjuntar archivo**: Sube `SGRRHH_Portable_1.0.7.zip`
+6. Clic en **Publish release**
+
+### Paso 4: Verificar
+
+1. Los clientes recibir�n notificaci�n al abrir la app
+2. La app descargar� y verificar� el SHA256 autom�ticamente
+3.  Si coincide � Instala
+4. L Si no coincide � Rechaza con error de integridad
 
 ---
 
-## 📜 Scripts Disponibles
+## Opciones de Actualizaci�n para Usuarios
 
-### `Publish-All.ps1` ⭐ (Recomendado)
+### =� Opci�n 1: Actualizar Ahora
+- Descarga inmediatamente
+- Cierra la aplicaci�n
+- Instala y reinicia autom�ticamente
+- **Recomendado para:** Actualizaciones cr�ticas/urgentes
 
-Script unificado que hace todo en un paso.
+### =� Opci�n 2: Instalar al Cerrar (NUEVO)
+- Descarga en segundo plano
+- Usuario contin�a trabajando normalmente
+- Instala cuando cierre la app (OnExit)
+- **Recomendado para:** Actualizaciones normales
 
-```powershell
-.\Publish-All.ps1 
-    -Version "1.0.4"           # Obligatorio: número de versión
-    -ReleaseNotes "Cambios..." # Opcional: descripción
-    -Incremental               # Opcional: solo sube archivos modificados
-    -Mandatory $true           # Opcional: actualización obligatoria
-    -SkipFirebase              # Opcional: no subir a Firebase
-    -SkipLocal                 # Opcional: no actualizar C:\SGRRHH
-```
-
-### `Publish-Local.ps1`
-
-Solo compila y copia a `C:\SGRRHH`. Útil para desarrollo.
-
-```powershell
-.\Publish-Local.ps1 -Release   # Compilación Release
-.\Publish-Local.ps1            # Compilación Debug (más rápido)
-.\Publish-Local.ps1 -NoBuild   # Solo copiar, no compilar
-```
-
-### `Publish-Firebase-Update.ps1`
-
-Solo sube a Firebase (no actualiza local). **Usar `Publish-All.ps1` en su lugar.**
+### � Opci�n 3: Recordar Despu�s
+- No descarga nada
+- Pregunta nuevamente en el pr�ximo inicio
+- **Recomendado para:** Usuario ocupado
 
 ---
 
-## 🖥️ Tasks de VS Code
+## Soluci�n al Problema "No se pudo preparar la instalaci�n"
 
-Presiona `Ctrl+Shift+B` o usa Terminal > Run Task:
+### Causa del Problema (Antes)
 
-| Task | Descripción |
-|------|-------------|
-| **1. Build + Actualizar Local** | Compila y copia a `C:\SGRRHH` |
-| **2. Publicar a Firebase** | Solo sube a Firebase |
-| **2b. Publicar TODO** ⭐ | Firebase + Local (RECOMENDADO) |
-| **3. Ejecutar SGRRHH** | Abre la app |
-| **4. Ver Versiones** | Muestra versiones actuales |
+El `SGRRHH.Updater.exe` **NO se estaba compilando junto con la aplicaci�n principal**, por lo que cuando el sistema intentaba lanzarlo, no exist�a en la carpeta de instalaci�n.
 
----
+### Soluci�n Implementada
 
-## 📁 Estructura de Directorios
+**1. Referencia autom�tica en el .csproj**
 
-```
-📦 Proyecto (c:\Users\evert\Documents\rrhh\)
-├── 📁 src/
-│   ├── 📁 SGRRHH.WPF/
-│   │   ├── SGRRHH.WPF.csproj      ← <Version>X.Y.Z</Version>
-│   │   └── appsettings.json       ← Application.Version (default)
-│   └── 📁 publish/
-│       ├── version.json           ← Metadata para Firebase
-│       └── 📁 SGRRHH/             ← Archivos compilados
-│
-├── 📁 scripts/
-│   ├── Publish-All.ps1            ← ⭐ Script principal
-│   ├── Publish-Local.ps1
-│   └── Publish-Firebase-Update.ps1
-│
-📦 Instalación Local (C:\SGRRHH\)
-├── SGRRHH.exe
-├── appsettings.json               ← Application.Version (local)
-├── firebase-credentials.json
-└── 📁 data/                       ← Datos locales
-│
-☁️ Firebase Storage (gs://rrhh-forestech.firebasestorage.app/)
-└── 📁 updates/
-    ├── version.json               ← Lo que ven los clientes
-    └── 📁 latest/                 ← Archivos para descargar
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\SGRRHH.Updater\SGRRHH.Updater.csproj">
+    <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+  </ProjectReference>
+</ItemGroup>
 ```
 
----
+**2. Target de compilaci�n autom�tica**
 
-## 🔍 Cómo Funciona la Detección de Actualizaciones
+```xml
+<Target Name="CopyUpdater" AfterTargets="Build">
+  <MSBuild Projects="..\SGRRHH.Updater\SGRRHH.Updater.csproj"
+           Targets="Build" />
+  <Copy SourceFiles="@(UpdaterFiles)"
+        DestinationFolder="$(OutDir)" />
+</Target>
+```
 
-### En el Código (`FirebaseUpdateService.cs`)
+**3. L�gica mejorada en ApplyUpdateAsync**
 
 ```csharp
-public async Task<UpdateCheckResult> CheckForUpdatesAsync()
+// Ahora busca el updater primero en la descarga (m�s confiable)
+string downloadedUpdater = Path.Combine(sourceDir, "SGRRHH.Updater.exe");
+string updaterPath = Path.Combine(_installPath, "SGRRHH.Updater.exe");
+
+// Lo copia SIEMPRE desde la descarga (asegura versi�n actualizada)
+File.Copy(downloadedUpdater, updaterPath, overwrite: true);
+
+// Logging detallado para diagn�stico
+_logger?.LogInformation($"Buscando updater en descarga: {downloadedUpdater}");
+_logger?.LogInformation($"Copiando updater a: {updaterPath}");
+```
+
+**Resultado:**  El updater SIEMPRE estar� disponible y actualizado
+
+---
+
+## Validaci�n SHA256 (Seguridad)
+
+### �Por qu� SHA256?
+
+- Verifica que el archivo descargado NO fue modificado
+- Detecta corrupci�n durante la descarga
+- Previene instalaci�n de archivos maliciosos
+
+### C�mo Funciona
+
+1. **Al publicar**: El script `Build-Installer.ps1` calcula el hash
+2. **En GitHub Release**: Incluyes el hash en las notas
+3. **Al descargar**: La app recalcula el hash
+4. **Comparaci�n**: Si no coinciden � RECHAZA la instalaci�n
+
+### Implementaci�n
+
+```csharp
+// Calcular hash del archivo descargado
+var checksum = CalculateFileSha256(zipPath);
+
+// Buscar hash en las Release Notes
+var checksumMatch = Regex.Match(
+    releaseBody,
+    @"SHA256:\s*([a-fA-F0-9]{64})",
+    RegexOptions.IgnoreCase
+);
+
+if (checksumMatch.Success)
 {
-    // 1. Lee version.json de Firebase Storage
-    var serverVersion = await GetRemoteVersionInfoAsync();
-    
-    // 2. Lee versión local de appsettings.json
-    var currentVer = ParseVersion(_currentVersion);  // Ej: "1.0.3"
-    var serverVer = ParseVersion(serverVersion.Version);  // Ej: "1.0.4"
-    
-    // 3. Compara
-    if (serverVer > currentVer) {
-        // HAY ACTUALIZACIÓN
-        result.UpdateAvailable = true;
+    var expectedChecksum = checksumMatch.Groups[1].Value;
+    if (!VerifyFileIntegrity(zipPath, expectedChecksum))
+    {
+        // RECHAZAR actualizaci�n
+        return false;
     }
 }
 ```
 
-### ¿Por qué no detecta mi actualización?
-
-| Causa | Solución |
-|-------|----------|
-| Versión local = versión Firebase | Incrementa la versión al publicar |
-| `appsettings.json` local no actualizado | Usa `Publish-All.ps1` que sincroniza |
-| Firebase no actualizado | Verifica con `gcloud storage cat gs://bucket/updates/version.json` |
+**Ejemplo de error:**
+```
+ Checksum no coincide!
+  Esperado: a1b2c3d4e5f6...
+  Obtenido: x9y8z7w6v5u4...
+```
 
 ---
 
-## ⚙️ Configuración
+## Logs y Diagn�stico
 
-### appsettings.json (en cada PC)
+### Logs de la Aplicaci�n
+
+**Ubicaci�n:** `data/logs/error_YYYY-MM-DD.log`
+
+**Ejemplo de actualizaci�n exitosa:**
+```
+[2025-01-28 10:15:32] INFO - Verificando actualizaciones en GitHub...
+[2025-01-28 10:15:33] INFO - Versi�n actual: 1.0.6, Versi�n GitHub: 1.0.7
+[2025-01-28 10:15:45] INFO - Descargando actualizaci�n...
+[2025-01-28 10:16:12] INFO - SHA256 del archivo descargado: a1b2c3d4e5f6...
+[2025-01-28 10:16:13] INFO -  Integridad verificada
+[2025-01-28 10:16:15] INFO - Archivos extra�dos: 127 archivos
+[2025-01-28 10:16:16] INFO - Buscando updater en descarga: C:\...\extracted\SGRRHH.Updater.exe
+[2025-01-28 10:16:16] INFO - Copiando updater a: C:\...\SGRRHH.Updater.exe
+[2025-01-28 10:16:16] INFO - Updater copiado exitosamente
+[2025-01-28 10:16:17] INFO - Lanzando updater: C:\...\SGRRHH.Updater.exe
+[2025-01-28 10:16:17] INFO - Updater lanzado exitosamente (PID: 8472)
+```
+
+### Logs del Updater
+
+**Ubicaci�n:** `updater_log.txt` (en carpeta de instalaci�n)
+
+**Ejemplo:**
+```
+[2025-01-28 10:16:20] Iniciando actualizador...
+[2025-01-28 10:16:20] Target: C:\Program Files\SGRRHH
+[2025-01-28 10:16:20] Source: C:\Users\...\SGRRHH_update_temp\extracted
+[2025-01-28 10:16:20] Esperando a que termine el proceso 12345...
+[2025-01-28 10:16:22] Creando backup en C:\...\backup_20250128_101622...
+[2025-01-28 10:16:35] Copiando nuevos archivos...
+[2025-01-28 10:16:58] Archivos copiados exitosamente.
+[2025-01-28 10:16:59] Reiniciando SGRRHH.exe...
+```
+
+---
+
+## Configuraci�n
+
+### Habilitar/Deshabilitar Actualizaciones
+
+Edita `src/SGRRHH.WPF/appsettings.json`:
 
 ```json
 {
-  "Firebase": {
-    "Enabled": true,
-    "ProjectId": "rrhh-forestech",
-    "StorageBucket": "rrhh-forestech.firebasestorage.app",
-    "CredentialsPath": "firebase-credentials.json"
-  },
-  
   "Updates": {
     "Enabled": true,
-    "CheckOnStartup": true
-  },
-  
-  "Application": {
-    "Name": "SGRRHH",
-    "Version": "1.0.3",    // ← IMPORTANTE: debe ser menor que Firebase para actualizar
-    "Company": "Forestech"
+    "CheckOnStartup": true,
+    "Repository": "evertweb/SGRRHH"
   }
 }
 ```
 
-### version.json (en Firebase)
+---
 
-```json
-{
-  "version": "1.0.4",
-  "releaseDate": "2025-11-28T10:30:00Z",
-  "mandatory": false,
-  "minimumVersion": "1.0.0",
-  "releaseNotes": "Cambios en esta versión...",
-  "checksum": "sha256:...",
-  "downloadSize": 45678900,
-  "files": [
-    {"name": "SGRRHH.exe", "checksum": "sha256:...", "size": 12345}
-  ]
-}
-```
+## Pr�ximas Mejoras (Opcional)
+
+### Squirrel.Windows - Actualizaciones Delta
+
+**Ventajas:**
+- Solo descarga archivos modificados
+- Reduce tama�o de descarga de ~45 MB a ~5-10 MB
+- Actualizaciones m�s r�pidas
+
+**Implementaci�n estimada:** 4-6 horas
+
+**�Cu�ndo implementar?**
+- Si tienes >10 usuarios
+- Si actualizas frecuentemente (>2 veces/mes)
+- Si el ancho de banda es limitado
+
+**Estado actual:**  Sistema actual es suficiente para 3 usuarios
 
 ---
 
-## 🐛 Solución de Problemas
+## Resumen de Cambios
 
-### Mi app local no se actualiza después de publicar
-
-**Causa:** Usaste solo `Publish-Firebase-Update.ps1` que no actualiza `C:\SGRRHH`
-
-**Solución:** 
-```powershell
-# Usa el script unificado
-.\Publish-All.ps1 -Version "1.0.4" -ReleaseNotes "..." -Incremental
-```
-
-### Las versiones están desincronizadas
-
-**Verificar:**
-```powershell
-# Ejecuta la task "4. Ver Versiones" o:
-Write-Host "Proyecto:"; (Get-Content "src\SGRRHH.WPF\SGRRHH.WPF.csproj" -Raw) -match '<Version>([^<]+)</Version>'; $matches[1]
-Write-Host "Local:"; (Get-Content "C:\SGRRHH\appsettings.json" | ConvertFrom-Json).Application.Version
-Write-Host "Firebase:"; (Get-Content "src\publish\version.json" | ConvertFrom-Json).version
-```
-
-**Solución:** Publica con `Publish-All.ps1` para sincronizar todo.
-
-### PCs remotas no detectan la actualización
-
-**Verificar:**
-1. ¿La versión en Firebase es MAYOR que la local del cliente?
-2. ¿El cliente tiene conexión a internet?
-3. ¿`Updates.Enabled = true` en su appsettings.json?
-4. ¿`firebase-credentials.json` existe?
-
-### Error al subir a Firebase
-
-```powershell
-# Verificar autenticación
-gcloud auth list
-
-# Re-autenticar si es necesario
-gcloud auth activate-service-account --key-file="src\SGRRHH.WPF\firebase-credentials.json"
-```
-
-### La actualización falla al aplicarse
-
-1. Cierra todas las instancias de SGRRHH
-2. Elimina carpeta temporal:
-   ```powershell
-   Remove-Item "$env:TEMP\SGRRHH_update_temp" -Recurse -Force
-   ```
-3. Reinicia la aplicación
+| Antes | Despu�s |
+|-------|---------|
+| L Error "No se pudo preparar la instalaci�n" |  Updater.exe se compila autom�ticamente |
+| � Sin validaci�n de integridad |  Validaci�n SHA256 obligatoria |
+| = Solo opci�n: Actualizar ahora |  3 opciones (incluye "Instalar al cerrar") |
+| =� Checksum manual |  Generaci�n autom�tica en script |
+| S Diagn�stico dif�cil |  Logging detallado en cada paso |
+| =� Tama�o: ~45 MB siempre | =. Futuro: ~5-10 MB con Squirrel |
 
 ---
 
-## 🛠️ Comandos Útiles
+## Soporte
 
-### Ver versiones actuales
+Para reportar problemas con las actualizaciones:
 
-```powershell
-# Via task de VS Code
-Ctrl+Shift+B → "4. Ver Versiones"
-
-# O manualmente
-(Get-Content "C:\SGRRHH\appsettings.json" | ConvertFrom-Json).Application.Version
-```
-
-### Publicación rápida
-
-```powershell
-cd c:\Users\evert\Documents\rrhh\scripts
-.\Publish-All.ps1 -Version "1.0.4" -ReleaseNotes "Fix de bugs" -Incremental
-```
-
-### Ver qué hay en Firebase
-
-```powershell
-gcloud storage cat gs://rrhh-forestech.firebasestorage.app/updates/version.json
-gcloud storage ls gs://rrhh-forestech.firebasestorage.app/updates/latest/
-```
-
-### Forzar actualización en cliente
-
-Si un cliente tiene problemas, actualizar manualmente:
-
-```powershell
-# En la PC cliente (como admin)
-Stop-Process -Name "SGRRHH" -Force -ErrorAction SilentlyContinue
-
-# Copiar desde servidor o descargar
-# ... luego iniciar
-Start-Process "C:\SGRRHH\SGRRHH.exe"
-```
+1. Revisa los logs en `data/logs/error_YYYY-MM-DD.log`
+2. Revisa `updater_log.txt` en la carpeta de instalaci�n
+3. Abre un issue en GitHub con los logs adjuntos
 
 ---
 
-## ✅ Checklist de Publicación
-
-- [ ] Realizar cambios en el código
-- [ ] Probar que funcione localmente
-- [ ] Decidir número de versión (MAJOR.MINOR.PATCH)
-- [ ] Escribir notas de versión claras
-- [ ] Ejecutar: `.\Publish-All.ps1 -Version "X.Y.Z" -ReleaseNotes "..." -Incremental`
-- [ ] Verificar que todas las versiones coincidan (task "4. Ver Versiones")
-- [ ] Probar la app localmente
-- [ ] (Opcional) Probar actualización en una PC cliente
-
----
-
-## 📚 Archivos Relacionados
-
-| Archivo | Descripción |
-|---------|-------------|
-| `scripts/Publish-All.ps1` | ⭐ Script principal de publicación |
-| `scripts/Publish-Local.ps1` | Solo actualiza local |
-| `scripts/Publish-Firebase-Update.ps1` | Solo sube a Firebase |
-| `src/SGRRHH.Infrastructure/Firebase/FirebaseUpdateService.cs` | Lógica de actualizaciones |
-| `src/SGRRHH.Core/Interfaces/IFirebaseUpdateService.cs` | Interfaz del servicio |
-| `.vscode/tasks.json` | Tasks de VS Code |
-
----
-
-*Última actualización: 28 de Noviembre 2025*
+**Autor:** Sistema de actualizaciones mejorado para SGRRHH
+**Fecha:** Enero 2025
+**Versi�n:** 1.0.6+

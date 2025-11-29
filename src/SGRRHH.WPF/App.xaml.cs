@@ -63,12 +63,23 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         base.OnExit(e);
-        
+
         // Liberar recursos de Firebase
         _firebaseInitializer?.Dispose();
-        
-        // Si hay actualización pendiente, el Updater.exe ya debería estar corriendo esperando nuestro cierre
-        // No es necesario hacer nada extra aquí para GithubUpdateService
+
+        // Si hay actualización pendiente, aplicarla ahora
+        if (_shouldRestartForUpdate && _updateService != null)
+        {
+            try
+            {
+                // Aplicar actualización (lanza el Updater.exe que esperará a que este proceso termine)
+                _updateService.ApplyUpdateAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                LogException("ApplyUpdateOnExit", ex);
+            }
+        }
     }
     
     /// <summary>
@@ -211,12 +222,17 @@ public partial class App : Application
                 var dialog = new UpdateDialog(viewModel);
                 
                 var dialogResult = dialog.ShowDialog();
-                
-                if (dialogResult == true && viewModel.DownloadCompleted)
+
+                if (viewModel.InstallOnExit && viewModel.DownloadCompleted)
                 {
-                    // Marcar para reinicio con actualización
+                    // Usuario eligió "Instalar al cerrar" - solo marcar para instalar en OnExit
                     _shouldRestartForUpdate = true;
-                    
+                }
+                else if (dialogResult == true && viewModel.DownloadCompleted)
+                {
+                    // Usuario eligió "Actualizar ahora" - cerrar inmediatamente
+                    _shouldRestartForUpdate = true;
+
                     // Cerrar la aplicación para aplicar la actualización
                     Shutdown();
                 }

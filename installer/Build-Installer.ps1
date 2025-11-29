@@ -81,7 +81,7 @@ if (-not $SkipPublish) {
 # Paso 4: Crear versión portable (ZIP)
 if ($CreateZip) {
     Write-Step "Creando version portable (ZIP)..."
-    $zipPath = Join-Path $outputDir "SGRRHH_Portable_1.0.0.zip"
+    $zipPath = Join-Path $outputDir "SGRRHH_v1.0.8.zip"
     if (Test-Path $zipPath) {
         Remove-Item $zipPath -Force
     }
@@ -89,6 +89,28 @@ if ($CreateZip) {
     $zipSize = (Get-Item $zipPath).Length / 1MB
     Write-Info "ZIP creado: $zipPath"
     Write-Info "Tamano del ZIP: $([math]::Round($zipSize, 2)) MB"
+
+    # Paso 4.1: Calcular SHA256 del ZIP
+    Write-Step "Calculando checksum SHA256..."
+    $hash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLower()
+    $checksumFile = Join-Path $outputDir "SGRRHH_v1.0.8.sha256"
+
+    # Guardar checksum en formato estándar
+    "$hash *SGRRHH_v1.0.8.zip" | Out-File -FilePath $checksumFile -Encoding ASCII
+
+    Write-Info "SHA256: $hash"
+    Write-Info "Checksum guardado en: $checksumFile"
+    Write-Host ""
+    Write-Host "=== INSTRUCCIONES PARA GITHUB RELEASE ===" -ForegroundColor Yellow
+    Write-Host "1. Crea un nuevo Release en GitHub" -ForegroundColor Cyan
+    Write-Host "2. Adjunta el archivo: SGRRHH_v1.0.8.zip" -ForegroundColor Cyan
+    Write-Host "3. En las notas de version (body), incluye esta linea:" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "   SHA256: $hash" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "4. La aplicacion verificara automaticamente la integridad del archivo" -ForegroundColor Cyan
+    Write-Host "=========================================" -ForegroundColor Yellow
+    Write-Host ""
 }
 
 # Paso 5: Crear instalador con Inno Setup
@@ -120,7 +142,7 @@ if (-not $SkipInstaller) {
             exit 1
         }
         
-        $installerPath = Join-Path $outputDir "SGRRHH_Setup_1.0.0.exe"
+        $installerPath = Join-Path $outputDir "SGRRHH_Setup_1.0.8.exe"
         if (Test-Path $installerPath) {
             $installerSize = (Get-Item $installerPath).Length / 1MB
             Write-Info "Instalador creado: $installerPath"

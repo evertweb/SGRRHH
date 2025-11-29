@@ -9,7 +9,10 @@
       "Bash(findstr:*)",
       "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\Users\\evert\\Documents\\rrhh\\crear_acceso_directo.ps1\")",
       "Bash(cat:*)",
-      "Bash(dotnet publish:*)"
+      "Bash(dotnet publish:*)",
+      "Bash(where /R \"C:\\Users\\evert\\Documents\\rrhh\\src\\SGRRHH.WPF\" SGRRHH.Updater.exe)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \".\\Build-Installer.ps1\" -CreateZip)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
