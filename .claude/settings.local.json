@@ -24,7 +24,8 @@
       "Bash(powershell -ExecutionPolicy Bypass -File \".\\Build-Installer.ps1\" -SkipPublish -CreateZip)",
       "Bash(powershell -ExecutionPolicy Bypass -File \".\\Build-Installer.ps1\" -CreateZip -SkipInstaller)",
       "Bash(powershell -ExecutionPolicy Bypass -File \".\\Build-Installer.ps1\" -SkipPublish -CreateZip -SkipInstaller)",
-      "Bash(gh release delete:*)"
+      "Bash(gh release delete:*)",
+      "Bash(gh run list:*)"
     ],
     "deny": [],
     "ask": []

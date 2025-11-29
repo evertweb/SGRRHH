@@ -8,6 +8,7 @@ namespace SGRRHH.WPF.ViewModels;
 
 /// <summary>
 /// ViewModel para el diálogo de actualización
+/// Flujo simplificado: siempre en primer plano, sin opción de instalar al cerrar
 /// </summary>
 public partial class UpdateDialogViewModel : ObservableObject
 {
@@ -48,6 +49,9 @@ public partial class UpdateDialogViewModel : ObservableObject
     
     [ObservableProperty]
     private string _errorMessage = "";
+
+    [ObservableProperty]
+    private bool _canClose = true;
     
     /// <summary>
     /// Resultado del diálogo: true = actualizar ahora, false = más tarde, null = omitir versión
@@ -55,9 +59,9 @@ public partial class UpdateDialogViewModel : ObservableObject
     public bool? DialogResult { get; private set; }
 
     /// <summary>
-    /// Indica si se debe instalar al cerrar la aplicación
+    /// Indica si se debe instalar al cerrar la aplicación (siempre false en flujo simplificado)
     /// </summary>
-    public bool InstallOnExit { get; private set; }
+    public bool InstallOnExit { get; private set; } = false;
     
     /// <summary>
     /// Acción para cerrar el diálogo
@@ -84,23 +88,36 @@ public partial class UpdateDialogViewModel : ObservableObject
         }
         else
         {
-            DownloadSize = "Desconocido";
+            DownloadSize = "~12 MB";
         }
     }
     
+    /// <summary>
+    /// Actualizar ahora: descarga, muestra progreso, y cuando termina cierra la app para instalar
+    /// </summary>
     [RelayCommand]
     private async Task UpdateNowAsync()
     {
         try
         {
             IsDownloading = true;
+            CanClose = false;
             HasError = false;
-            StatusMessage = "Preparando descarga...";
+            StatusMessage = "Conectando al servidor...";
             
             var progress = new Progress<UpdateProgress>(p =>
             {
                 DownloadProgress = p.Percentage;
-                StatusMessage = p.Message;
+                
+                // Mensajes más descriptivos según la fase
+                StatusMessage = p.Phase switch
+                {
+                    UpdatePhase.Downloading => $"Descargando actualización... {p.Percentage}%",
+                    UpdatePhase.Verifying => "Verificando integridad del archivo...",
+                    UpdatePhase.Completed => "¡Descarga completada!",
+                    UpdatePhase.Error => p.Message,
+                    _ => p.Message ?? "Procesando..."
+                };
                 
                 if (p.Phase == UpdatePhase.Error)
                 {
@@ -113,34 +130,25 @@ public partial class UpdateDialogViewModel : ObservableObject
             
             if (success)
             {
-                StatusMessage = "Preparando instalación...";
-                var applyResult = await _updateService.ApplyUpdateAsync();
-                
-                if (applyResult)
-                {
-                    DownloadCompleted = true;
-                    StatusMessage = "Actualización lista. La aplicación se reiniciará para completar la instalación.";
-                    DialogResult = true;
-                }
-                else
-                {
-                    HasError = true;
-                    ErrorMessage = "No se pudo preparar la instalación.";
-                }
+                DownloadCompleted = true;
+                StatusMessage = "✅ Actualización descargada correctamente.\n\nAl hacer clic en 'Instalar y reiniciar', la aplicación se cerrará y se instalará la actualización automáticamente.";
+                CanClose = true;
             }
             else
             {
                 HasError = true;
+                CanClose = true;
                 if (string.IsNullOrEmpty(ErrorMessage))
                 {
-                    ErrorMessage = "Error durante la descarga.";
+                    ErrorMessage = "Error durante la descarga. Verifique su conexión a internet e intente de nuevo.";
                 }
             }
         }
         catch (Exception ex)
         {
             HasError = true;
-            ErrorMessage = $"Error: {ex.Message}";
+            CanClose = true;
+            ErrorMessage = $"Error inesperado: {ex.Message}";
         }
         finally
         {
@@ -148,79 +156,62 @@ public partial class UpdateDialogViewModel : ObservableObject
         }
     }
     
+    /// <summary>
+    /// Recordar después: cierra el diálogo sin hacer nada
+    /// </summary>
     [RelayCommand]
     private void RemindLater()
     {
+        if (!CanClose) return;
         DialogResult = false;
         CloseDialog?.Invoke();
     }
     
+    /// <summary>
+    /// Omitir esta versión: cierra el diálogo sin hacer nada
+    /// </summary>
     [RelayCommand]
     private void SkipVersion()
     {
+        if (!CanClose) return;
         DialogResult = null;
         CloseDialog?.Invoke();
     }
     
+    /// <summary>
+    /// Instalar y reiniciar: lanza el updater y cierra la aplicación
+    /// </summary>
     [RelayCommand]
-    private void RestartNow()
+    private async Task InstallAndRestartAsync()
     {
-        DialogResult = true;
-        InstallOnExit = false;
-        CloseDialog?.Invoke();
-    }
-
-    [RelayCommand]
-    private async Task InstallOnExitAsync()
-    {
+        if (!DownloadCompleted) return;
+        
         try
         {
-            IsDownloading = true;
-            HasError = false;
-            StatusMessage = "Preparando descarga...";
-
-            var progress = new Progress<UpdateProgress>(p =>
+            StatusMessage = "Preparando instalación...";
+            CanClose = false;
+            
+            // Lanzar el proceso de actualización (updater.exe)
+            var applyResult = await _updateService.ApplyUpdateAsync();
+            
+            if (applyResult)
             {
-                DownloadProgress = p.Percentage;
-                StatusMessage = p.Message;
-
-                if (p.Phase == UpdatePhase.Error)
-                {
-                    HasError = true;
-                    ErrorMessage = p.Message;
-                }
-            });
-
-            var success = await _updateService.DownloadUpdateAsync(progress);
-
-            if (success)
-            {
-                DownloadCompleted = true;
-                InstallOnExit = true;
-                StatusMessage = "La actualización se instalará cuando cierre la aplicación.";
-                DialogResult = false; // No reiniciar ahora
-
-                // Cerrar el diálogo después de 2 segundos
-                await Task.Delay(2000);
+                DialogResult = true;
                 CloseDialog?.Invoke();
+                // La aplicación se cerrará desde App.xaml.cs
             }
             else
             {
                 HasError = true;
-                if (string.IsNullOrEmpty(ErrorMessage))
-                {
-                    ErrorMessage = "Error durante la descarga.";
-                }
+                ErrorMessage = "No se pudo iniciar el instalador. Por favor, cierre la aplicación manualmente e intente de nuevo.";
+                CanClose = true;
             }
         }
         catch (Exception ex)
         {
             HasError = true;
-            ErrorMessage = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            IsDownloading = false;
+            ErrorMessage = $"Error al preparar instalación: {ex.Message}";
+            CanClose = true;
         }
     }
 }

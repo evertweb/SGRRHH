@@ -126,13 +126,14 @@
                 Padding="15"
                 Margin="0,0,0,15">
             <StackPanel>
-                <TextBlock Text="✅ Actualización lista para instalar"
+                <TextBlock Text="✅ ¡Descarga completada!"
                            FontWeight="Bold"
+                           FontSize="14"
                            Foreground="#2E7D32"/>
-                <TextBlock Text="La aplicación se cerrará y reiniciará automáticamente para completar la instalación."
+                <TextBlock Text="{Binding StatusMessage}"
                            Foreground="#2E7D32"
                            TextWrapping="Wrap"
-                           Margin="0,5,0,0"/>
+                           Margin="0,8,0,0"/>
             </StackPanel>
         </Border>
         
@@ -141,49 +142,78 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right">
             
-            <!-- Botón Omitir (solo si no es obligatoria y no hay descarga) -->
+            <!-- Botón Omitir (solo si no es obligatoria, no hay descarga completada y puede cerrar) -->
             <Button Content="Omitir esta versión"
                     Margin="0,0,10,0"
                     Padding="15,8"
                     Command="{Binding SkipVersionCommand}"
-                    Visibility="{Binding IsMandatory, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"
-                    IsEnabled="{Binding IsDownloading, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
-            
-            <!-- Botón Recordar después (solo si no es obligatoria) -->
-            <Button Content="Recordar después"
-                    Margin="0,0,10,0"
-                    Padding="15,8"
-                    Command="{Binding RemindLaterCommand}"
-                    Visibility="{Binding IsMandatory, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"
-                    IsEnabled="{Binding IsDownloading, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"/>
-
-            <!-- Botón Instalar al cerrar (solo si no está descargando y no es obligatoria) -->
-            <Button Content="📥 Instalar al cerrar"
-                    Margin="0,0,10,0"
-                    Padding="15,8"
-                    Command="{Binding InstallOnExitCommand}"
-                    Visibility="{Binding IsMandatory, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"
-                    IsEnabled="{Binding IsDownloading, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}"
-                    ToolTip="Descarga la actualización ahora e instala cuando cierre la aplicación"/>
-
-            <!-- Botón Actualizar ahora / Reiniciar -->
-            <Button Padding="20,8"
-                    IsEnabled="{Binding IsDownloading, Converter={StaticResource BoolToVis}, ConverterParameter=Inverse}">
+                    IsEnabled="{Binding CanClose}">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                        <Setter Property="Content" Value="🔄 Actualizar ahora"/>
-                        <Setter Property="Command" Value="{Binding UpdateNowCommand}"/>
-                        <Setter Property="Background" Value="#1976D2"/>
-                        <Setter Property="Foreground" Value="White"/>
                         <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMandatory}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
                             <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
-                                <Setter Property="Content" Value="🚀 Reiniciar ahora"/>
-                                <Setter Property="Command" Value="{Binding RestartNowCommand}"/>
+                                <Setter Property="Visibility" Value="Collapsed"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Button.Style>
             </Button>
+            
+            <!-- Botón Recordar después (solo si no es obligatoria, no hay descarga completada) -->
+            <Button Content="Recordar después"
+                    Margin="0,0,10,0"
+                    Padding="15,8"
+                    Command="{Binding RemindLaterCommand}"
+                    IsEnabled="{Binding CanClose}">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMandatory}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <!-- Botón Actualizar ahora (antes de descargar) -->
+            <Button Padding="20,8"
+                    Content="🔄 Descargar actualización"
+                    Command="{Binding UpdateNowCommand}"
+                    Background="#1976D2"
+                    Foreground="White"
+                    IsEnabled="{Binding CanClose}">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Setter Property="Background" Value="#1976D2"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsDownloading}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <!-- Botón Instalar y Reiniciar (después de descargar) -->
+            <Button Padding="20,8"
+                    Content="🚀 Instalar y reiniciar"
+                    Command="{Binding InstallAndRestartCommand}"
+                    Background="#4CAF50"
+                    Foreground="White"
+                    FontWeight="Bold"
+                    Visibility="{Binding DownloadCompleted, Converter={StaticResource BoolToVis}}"
+                    IsEnabled="{Binding CanClose}"/>
         </StackPanel>
     </Grid>
 </Window>

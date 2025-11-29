@@ -29,17 +29,17 @@
     <Company>Forestech</Company>
     <Authors>Forestech</Authors>
     <Copyright>Copyright © 2025 Forestech</Copyright>
-    <Version>1.0.9</Version>
-    <AssemblyVersion>1.0.9.0</AssemblyVersion>
-    <FileVersion>1.0.9.0</FileVersion>
+    <Version>1.1.1</Version>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <FileVersion>1.1.1.0</FileVersion>
     <Description>Sistema de Gestión de Recursos Humanos - Gestión de empleados, permisos, vacaciones y contratos</Description>
     <PackageProjectUrl>https://forestech.com</PackageProjectUrl>
     <RepositoryUrl>https://forestech.com</RepositoryUrl>
     
-    <!-- Configuraci�n de publicaci�n -->
+    <!-- Configuración de publicación -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PublishSingleFile>false</PublishSingleFile>
-    <SelfContained>true</SelfContained>
+    <SelfContained>false</SelfContained>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     

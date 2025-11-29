@@ -20,7 +20,6 @@ public partial class App : Application
     private IServiceProvider? _serviceProvider;
     private Usuario? _currentUser;
     private IUpdateService? _updateService;
-    private bool _shouldRestartForUpdate;
     private FirebaseInitializer? _firebaseInitializer;
     
     /// <summary>
@@ -64,25 +63,11 @@ public partial class App : Application
     {
         base.OnExit(e);
 
-        // Liberar recursos de Firebase primero
+        // Liberar recursos de Firebase
         _firebaseInitializer?.Dispose();
 
         // Dar tiempo para que los recursos se liberen completamente
         System.Threading.Thread.Sleep(500);
-
-        // Si hay actualización pendiente (opción "Instalar al cerrar"), aplicarla ahora
-        if (_shouldRestartForUpdate && _updateService != null)
-        {
-            try
-            {
-                // Aplicar actualización (lanza el Updater.exe que esperará a que este proceso termine)
-                _updateService.ApplyUpdateAsync().GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                LogException("ApplyUpdateOnExit", ex);
-            }
-        }
     }
     
     /// <summary>
@@ -226,26 +211,11 @@ public partial class App : Application
                 
                 var dialogResult = dialog.ShowDialog();
 
-                if (viewModel.InstallOnExit && viewModel.DownloadCompleted)
+                // Si el usuario completó la descarga y eligió instalar
+                if (dialogResult == true && viewModel.DownloadCompleted)
                 {
-                    // Usuario eligió "Instalar al cerrar" - marcar para instalar cuando cierre
-                    _shouldRestartForUpdate = true;
-                    // En este caso NO lanzamos el updater ahora, sino en OnExit
-                }
-                else if (dialogResult == true && viewModel.DownloadCompleted)
-                {
-                    // Usuario eligió "Actualizar ahora" - lanzar updater y cerrar
-                    try
-                    {
-                        // Lanzar el updater ANTES de cerrar la app
-                        await _updateService.ApplyUpdateAsync();
-                    }
-                    catch (Exception applyEx)
-                    {
-                        LogException("ApplyUpdateBeforeShutdown", applyEx);
-                    }
-
-                    // Cerrar la aplicación (el updater esperará a que termine)
+                    // El updater ya fue lanzado desde InstallAndRestartCommand
+                    // Solo cerramos la aplicación
                     Shutdown();
                 }
             }

@@ -23,11 +23,11 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore src/SGRRHH.sln
 
-    - name: Publish WPF App (Self-Contained)
-      run: dotnet publish src/SGRRHH.WPF/SGRRHH.WPF.csproj -c Release -r win-x64 --self-contained true -o publish/SGRRHH
+    - name: Publish WPF App (Framework-Dependent)
+      run: dotnet publish src/SGRRHH.WPF/SGRRHH.WPF.csproj -c Release -r win-x64 --self-contained false -o publish/SGRRHH
 
-    - name: Publish Updater (Self-Contained)
-      run: dotnet publish src/SGRRHH.Updater/SGRRHH.Updater.csproj -c Release -r win-x64 --self-contained true -o publish/Updater
+    - name: Publish Updater (Framework-Dependent)
+      run: dotnet publish src/SGRRHH.Updater/SGRRHH.Updater.csproj -c Release -r win-x64 --self-contained false -o publish/Updater
 
     - name: Copy Updater to Main Folder
       run: copy publish/Updater/SGRRHH.Updater.* publish/SGRRHH/
