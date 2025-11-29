@@ -53,6 +53,7 @@ public class ChatService : IChatService, IDisposable
             var message = new ChatMessage
             {
                 SenderId = CurrentUser.Id,
+                SenderFirebaseUid = CurrentUser.FirebaseUid,
                 SenderName = CurrentUser.NombreCompleto,
                 ReceiverId = receiverId,
                 ReceiverName = receiverName,

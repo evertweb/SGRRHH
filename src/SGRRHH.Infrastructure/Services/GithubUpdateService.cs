@@ -34,7 +34,7 @@ public class GithubUpdateService : IUpdateService
     {
         _currentVersion = currentVersion;
         _logger = logger;
-        _installPath = AppDomain.CurrentDomain.BaseDirectory;
+        _installPath = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         _tempUpdatePath = Path.Combine(Path.GetTempPath(), "SGRRHH_update_temp");
         
         _httpClient = new HttpClient();

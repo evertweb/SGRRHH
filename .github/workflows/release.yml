@@ -30,7 +30,7 @@ jobs:
       run: dotnet publish src/SGRRHH.Updater/SGRRHH.Updater.csproj -c Release -r win-x64 --self-contained false -o publish/Updater
 
     - name: Copy Updater to Main Folder
-      run: copy publish/Updater/SGRRHH.Updater.exe publish/SGRRHH/
+      run: copy publish/Updater/SGRRHH.Updater.* publish/SGRRHH/
 
     - name: Create ZIP
       run: Compress-Archive -Path publish/SGRRHH/* -DestinationPath SGRRHH.zip

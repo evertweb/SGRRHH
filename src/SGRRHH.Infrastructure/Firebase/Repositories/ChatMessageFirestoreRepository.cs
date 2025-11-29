@@ -27,6 +27,7 @@ public class ChatMessageFirestoreRepository : FirestoreRepository<ChatMessage>, 
         var doc = base.EntityToDocument(entity);
         
         doc["senderId"] = entity.SenderId;
+        doc["senderFirebaseUid"] = entity.SenderFirebaseUid;
         doc["senderName"] = entity.SenderName;
         doc["receiverId"] = entity.ReceiverId;
         doc["receiverName"] = entity.ReceiverName;
@@ -47,6 +48,9 @@ public class ChatMessageFirestoreRepository : FirestoreRepository<ChatMessage>, 
         
         if (document.TryGetValue<int>("senderId", out var senderId))
             entity.SenderId = senderId;
+
+        if (document.TryGetValue<string>("senderFirebaseUid", out var senderFirebaseUid))
+            entity.SenderFirebaseUid = senderFirebaseUid;
         
         if (document.TryGetValue<string>("senderName", out var senderName))
             entity.SenderName = senderName ?? string.Empty;

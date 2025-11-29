@@ -10,6 +10,11 @@ public class ChatMessage : EntidadBase
     /// ID del usuario que envía el mensaje
     /// </summary>
     public int SenderId { get; set; }
+
+    /// <summary>
+    /// Firebase UID del usuario que envía (para identificación única confiable)
+    /// </summary>
+    public string? SenderFirebaseUid { get; set; }
     
     /// <summary>
     /// Nombre del usuario que envía (para mostrar sin consultas adicionales)

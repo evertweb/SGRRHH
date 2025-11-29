@@ -373,7 +373,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
             Content = msg.Content,
             SentAt = msg.SentAt,
             SenderName = msg.SenderName,
-            IsMine = msg.SenderId == currentUserId,
+            IsMine = IsMessageMine(msg),
             IsRead = msg.IsRead
         };
     }
@@ -452,8 +452,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         Application.Current.Dispatcher.Invoke(async () =>
         {
             // Si es un mensaje nuevo en la conversación actual (no enviado por mí)
-            var currentUserId = App.CurrentUser?.Id ?? 0;
-            if (message.SenderId != currentUserId)
+            if (!IsMessageMine(message))
             {
                 // Verificar que no esté ya en la lista
                 if (!Messages.Any(m => m.Id == message.Id))
@@ -600,6 +599,26 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         }
         
         _disposed = true;
+    }
+    private bool IsMessageMine(ChatMessage msg)
+    {
+        var currentUser = App.CurrentUser;
+        if (currentUser == null) return false;
+
+        // Priorizar FirebaseUid si está disponible en ambos
+        if (!string.IsNullOrEmpty(currentUser.FirebaseUid) && !string.IsNullOrEmpty(msg.SenderFirebaseUid))
+        {
+            return currentUser.FirebaseUid == msg.SenderFirebaseUid;
+        }
+
+        // Fallback a ID numérico (solo si son válidos > 0)
+        if (currentUser.Id > 0 && msg.SenderId > 0)
+        {
+            return currentUser.Id == msg.SenderId;
+        }
+
+        // Si no hay forma confiable de comparar, asumir falso para evitar mostrar como propio
+        return false;
     }
 }
 

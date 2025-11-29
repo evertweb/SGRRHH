@@ -50,7 +50,7 @@ echo      Completado.
 echo.
 
 echo [4/6] Copiando SGRRHH.Updater.exe a la carpeta principal...
-copy "%UPDATER_DIR%\SGRRHH.Updater.exe" "%PUBLISH_DIR%\"
+copy "%UPDATER_DIR%\SGRRHH.Updater.*" "%PUBLISH_DIR%\"
 if errorlevel 1 (
     echo ERROR: Fallo la copia de SGRRHH.Updater.exe
     pause
