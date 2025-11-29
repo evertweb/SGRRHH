@@ -18,7 +18,13 @@
       "Bash(git tag:*)",
       "Bash(where /R \"C:\\Users\\evert\\Documents\\rrhh\\src\" updater_log.txt)",
       "Bash(where /R \"C:\\Users\\evert\\AppData\\Local\\Temp\" updater_log.txt)",
-      "Bash(powershell -ExecutionPolicy Bypass -Command \"cd ''C:\\SGRRHH\\SGRRHH-Install''; & ''.\\SGRRHH.Updater.exe'' ''C:\\SGRRHH\\SGRRHH-Install'' ''C:\\Users\\evert\\AppData\\Local\\Temp\\SGRRHH_update_temp\\extracted'' ''SGRRHH.exe'' 0; Write-Host ''Exit Code:'' $LASTEXITCODE\")"
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"cd ''C:\\SGRRHH\\SGRRHH-Install''; & ''.\\SGRRHH.Updater.exe'' ''C:\\SGRRHH\\SGRRHH-Install'' ''C:\\Users\\evert\\AppData\\Local\\Temp\\SGRRHH_update_temp\\extracted'' ''SGRRHH.exe'' 0; Write-Host ''Exit Code:'' $LASTEXITCODE\")",
+      "Bash(gh release view:*)",
+      "Bash(gh release download:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \".\\Build-Installer.ps1\" -SkipPublish -CreateZip)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \".\\Build-Installer.ps1\" -CreateZip -SkipInstaller)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \".\\Build-Installer.ps1\" -SkipPublish -CreateZip -SkipInstaller)",
+      "Bash(gh release delete:*)"
     ],
     "deny": [],
     "ask": []

@@ -81,7 +81,7 @@ if (-not $SkipPublish) {
 # Paso 4: Crear versión portable (ZIP)
 if ($CreateZip) {
     Write-Step "Creando version portable (ZIP)..."
-    $zipPath = Join-Path $outputDir "SGRRHH_v1.0.8.zip"
+    $zipPath = Join-Path $outputDir "SGRRHH_v1.0.9.zip"
     if (Test-Path $zipPath) {
         Remove-Item $zipPath -Force
     }
@@ -93,10 +93,10 @@ if ($CreateZip) {
     # Paso 4.1: Calcular SHA256 del ZIP
     Write-Step "Calculando checksum SHA256..."
     $hash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash.ToLower()
-    $checksumFile = Join-Path $outputDir "SGRRHH_v1.0.8.sha256"
+    $checksumFile = Join-Path $outputDir "SGRRHH_v1.0.9.sha256"
 
     # Guardar checksum en formato estándar
-    "$hash *SGRRHH_v1.0.8.zip" | Out-File -FilePath $checksumFile -Encoding ASCII
+    "$hash *SGRRHH_v1.0.9.zip" | Out-File -FilePath $checksumFile -Encoding ASCII
 
     Write-Info "SHA256: $hash"
     Write-Info "Checksum guardado en: $checksumFile"
