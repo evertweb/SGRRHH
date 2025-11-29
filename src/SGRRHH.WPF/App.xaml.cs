@@ -64,10 +64,13 @@ public partial class App : Application
     {
         base.OnExit(e);
 
-        // Liberar recursos de Firebase
+        // Liberar recursos de Firebase primero
         _firebaseInitializer?.Dispose();
 
-        // Si hay actualización pendiente, aplicarla ahora
+        // Dar tiempo para que los recursos se liberen completamente
+        System.Threading.Thread.Sleep(500);
+
+        // Si hay actualización pendiente (opción "Instalar al cerrar"), aplicarla ahora
         if (_shouldRestartForUpdate && _updateService != null)
         {
             try
@@ -225,15 +228,24 @@ public partial class App : Application
 
                 if (viewModel.InstallOnExit && viewModel.DownloadCompleted)
                 {
-                    // Usuario eligió "Instalar al cerrar" - solo marcar para instalar en OnExit
+                    // Usuario eligió "Instalar al cerrar" - marcar para instalar cuando cierre
                     _shouldRestartForUpdate = true;
+                    // En este caso NO lanzamos el updater ahora, sino en OnExit
                 }
                 else if (dialogResult == true && viewModel.DownloadCompleted)
                 {
-                    // Usuario eligió "Actualizar ahora" - cerrar inmediatamente
-                    _shouldRestartForUpdate = true;
+                    // Usuario eligió "Actualizar ahora" - lanzar updater y cerrar
+                    try
+                    {
+                        // Lanzar el updater ANTES de cerrar la app
+                        await _updateService.ApplyUpdateAsync();
+                    }
+                    catch (Exception applyEx)
+                    {
+                        LogException("ApplyUpdateBeforeShutdown", applyEx);
+                    }
 
-                    // Cerrar la aplicación para aplicar la actualización
+                    // Cerrar la aplicación (el updater esperará a que termine)
                     Shutdown();
                 }
             }

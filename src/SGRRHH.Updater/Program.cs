@@ -57,8 +57,9 @@ class Program
                 }
             }
 
-            // Espera extra por seguridad
-            Thread.Sleep(2000);
+            // Espera extra para asegurar que .NET libere todos los recursos (DLLs, etc.)
+            Log(logFile, "Esperando 5 segundos adicionales para que se liberen todos los archivos...");
+            Thread.Sleep(5000);
 
             // 2. Crear Backup
             string backupDir = Path.Combine(targetDir, $"backup_{DateTime.Now:yyyyMMdd_HHmmss}");
@@ -157,7 +158,22 @@ class Program
         foreach (FileInfo file in dir.GetFiles())
         {
             string targetFilePath = Path.Combine(destDir, file.Name);
-            file.CopyTo(targetFilePath, true);
+
+            // Reintentar hasta 3 veces si el archivo está bloqueado
+            int retries = 3;
+            for (int i = 0; i < retries; i++)
+            {
+                try
+                {
+                    file.CopyTo(targetFilePath, true);
+                    break; // Éxito, salir del loop
+                }
+                catch (IOException) when (i < retries - 1)
+                {
+                    // Archivo bloqueado, esperar y reintentar
+                    Thread.Sleep(1000);
+                }
+            }
         }
 
         if (recursive)
