@@ -626,35 +626,8 @@ public partial class MainViewModel : ObservableObject
     
     private void LoadAppVersion()
     {
-        try
-        {
-            var appSettingsPath = System.IO.Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-            
-            if (System.IO.File.Exists(appSettingsPath))
-            {
-                var json = System.IO.File.ReadAllText(appSettingsPath);
-                using var doc = System.Text.Json.JsonDocument.Parse(json);
-                
-                if (doc.RootElement.TryGetProperty("Application", out var appSection) &&
-                    appSection.TryGetProperty("Version", out var versionProp))
-                {
-                    AppVersion = $"v{versionProp.GetString()}";
-                }
-                else
-                {
-                    AppVersion = "v1.0.0";
-                }
-            }
-            else
-            {
-                AppVersion = "v1.0.0";
-            }
-        }
-        catch
-        {
-            AppVersion = "v1.0.0";
-        }
+        // Usar AppSettings.GetAppVersion() que lee del Assembly (fuente de verdad)
+        AppVersion = $"v{Helpers.AppSettings.GetAppVersion()}";
     }
     
     /// <summary>
