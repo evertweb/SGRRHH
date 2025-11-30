@@ -139,10 +139,12 @@ case "Chat":
 - ✅ Nueva conversación con selector de usuarios
 - ✅ Mensajes en tiempo real (polling cada 3 segundos)
 - ✅ Actualización automática de canales (polling cada 10 segundos)
+- ✅ Adjuntar archivos/imágenes (multipart/form-data, límite 25 MB)
+- ✅ Descargar archivos adjuntos
+- ✅ Preview de archivos con iconos según extensión
 
 #### ⚠️ Pendientes (Implementación Futura)
 - ⚠️ Notificaciones de escritura ("typing...") - Requiere webhooks o SDK nativo
-- ⚠️ Adjuntar archivos/imágenes - Estructura preparada, requiere implementación multipart
 - ⚠️ Reacciones a mensajes - Requiere soporte adicional del API
 
 ## Diferencias entre Proveedores
@@ -155,7 +157,7 @@ case "Chat":
 | **Presencia online** | ✅ Sí | ✅ Sí |
 | **Historial de mensajes** | ✅ Sí | ✅ Sí |
 | **Nueva conversación** | ✅ Sí | ✅ Sí (con selector de usuarios) |
-| **Archivos adjuntos** | ✅ Sí | ⚠️ En desarrollo |
+| **Archivos adjuntos** | ✅ Sí | ✅ Sí (límite 25 MB) |
 
 ## Testing
 
@@ -166,17 +168,26 @@ case "Chat":
    - PC 2: Inicia sesión con `secretaria`
 
 2. **Crear conversación:**
-   - Actualmente necesitas usar el dashboard de Sendbird para crear el primer canal
-   - URL: https://dashboard.sendbird.com/
-   - O esperar a que se implemente el botón "Nueva conversación"
+   - Haz clic en el botón "➕ Nueva conversación"
+   - Busca y selecciona el usuario con quien chatear
+   - El canal se creará automáticamente
 
-3. **Enviar mensajes:**
+3. **Enviar mensajes de texto:**
    - Escribe en el input de texto
    - Presiona Enter o clic en "Enviar ➤"
 
-4. **Verificar lag:**
+4. **Adjuntar archivos:**
+   - Haz clic en el botón 📎 (adjuntar)
+   - Selecciona archivo (máx 25 MB)
+   - El archivo se envía automáticamente con preview
+
+5. **Descargar archivos:**
+   - Haz clic en "⬇ Descargar" en el mensaje de archivo
+   - Elige ubicación de descarga
+
+6. **Verificar lag:**
    - Compara la velocidad de entrega con Firebase
-   - Los mensajes deberían aparecer casi instantáneamente
+   - Los mensajes deberían aparecer en ~3 segundos (polling)
 
 ### Problemas Conocidos
 
@@ -199,10 +210,11 @@ case "Chat":
 1. ✅ Testear con usuarios reales
 2. ✅ Implementar polling para mensajes en tiempo real
 3. ✅ Implementar selector de usuarios para nueva conversación
-4. ⚠️ Agregar manejo de errores robusto
-5. ⚠️ Configurar límites de rate limiting
-6. ⚠️ Implementar retry logic para requests fallidos
-7. ⚠️ Considerar migrar a webhooks para mejor rendimiento (opcional)
+4. ✅ Implementar adjuntar y descargar archivos
+5. ⚠️ Agregar manejo de errores robusto
+6. ⚠️ Configurar límites de rate limiting
+7. ⚠️ Implementar retry logic para requests fallidos
+8. ⚠️ Considerar migrar a webhooks para mejor rendimiento (opcional)
 
 ### Mejoras Opcionales
 - Typing indicators ("Usuario está escribiendo...")
@@ -222,10 +234,16 @@ POST   /v3/users                              # Crear/actualizar usuario
 GET    /v3/users/{user_id}/my_group_channels  # Listar canales del usuario
 POST   /v3/group_channels                     # Crear canal
 GET    /v3/group_channels/{channel_url}/messages  # Obtener mensajes
-POST   /v3/group_channels/{channel_url}/messages  # Enviar mensaje
+POST   /v3/group_channels/{channel_url}/messages  # Enviar mensaje (texto o archivo)
 PUT    /v3/group_channels/{channel_url}/messages/mark_as_read  # Marcar como leído
 GET    /v3/users/{user_id}/unread_message_count  # Contador de no leídos
 ```
+
+**Nota sobre archivos:**
+- El endpoint POST `/messages` acepta `multipart/form-data` para archivos
+- Límite de tamaño: 25 MB por archivo
+- Almacenamiento: Sendbird Storage (10 GB/mes en plan free)
+- Tipos soportados: Todos los tipos MIME comunes
 
 ### Autenticación
 
