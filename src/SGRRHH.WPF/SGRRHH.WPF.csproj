@@ -29,9 +29,9 @@
     <Company>Forestech</Company>
     <Authors>Forestech</Authors>
     <Copyright>Copyright © 2025 Forestech</Copyright>
-    <Version>1.1.8</Version>
-    <AssemblyVersion>1.1.8.0</AssemblyVersion>
-    <FileVersion>1.1.8.0</FileVersion>
+    <Version>1.1.9</Version>
+    <AssemblyVersion>1.1.9.0</AssemblyVersion>
+    <FileVersion>1.1.9.0</FileVersion>
     <Description>Sistema de Gestión de Recursos Humanos - Gestión de empleados, permisos, vacaciones y contratos</Description>
     <PackageProjectUrl>https://forestech.com</PackageProjectUrl>
     <RepositoryUrl>https://forestech.com</RepositoryUrl>

@@ -124,7 +124,7 @@
                                                    FontWeight="Bold"
                                                    FontSize="16"
                                                    Foreground="White"
-                                                   Text="{Binding NombreCompleto, Converter={StaticResource InitialsConverter}}"/>
+                                                   Text="{Binding NombreCompleto, Mode=OneWay, Converter={StaticResource InitialsConverter}}"/>
                                     </Border>
                                     <!-- Indicador de estado online -->
                                     <Ellipse Width="14" Height="14"
@@ -132,13 +132,13 @@
                                              VerticalAlignment="Bottom"
                                              Stroke="#1E1E1E"
                                              StrokeThickness="3"
-                                             Fill="{Binding StatusColor}"/>
+                                             Fill="{Binding StatusColor, Mode=OneWay}"/>
                                 </Grid>
 
                                 <!-- Nombre, username y estado -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding NombreCompleto}"
+                                        <TextBlock Text="{Binding NombreCompleto, Mode=OneWay}"
                                                    FontWeight="SemiBold"
                                                    FontSize="14"
                                                    Foreground="#FFFFFF"
@@ -148,7 +148,7 @@
                                                 CornerRadius="3" 
                                                 Padding="6,2" 
                                                 Margin="8,0,0,0"
-                                                Visibility="{Binding IsOnline, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                Visibility="{Binding IsOnline, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <TextBlock Text="EN LÍNEA" 
                                                        FontSize="9" 
                                                        FontWeight="Bold" 
@@ -159,9 +159,9 @@
                                                Foreground="#72767D"
                                                TextTrimming="CharacterEllipsis"
                                                Margin="0,2,0,0">
-                                        <Run Text="@"/><Run Text="{Binding Username}"/>
+                                        <Run Text="@"/><Run Text="{Binding Username, Mode=OneWay}"/>
                                         <Run Text=" · "/>
-                                        <Run Text="{Binding StatusText}"/>
+                                        <Run Text="{Binding StatusText, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
 

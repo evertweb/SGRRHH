@@ -252,7 +252,7 @@ public partial class App : Application
         }
     }
     
-    private Task ShowLoginAsync()
+    private async Task ShowLoginAsync()
     {
         bool authenticated = false;
         
@@ -270,12 +270,16 @@ public partial class App : Application
                 CurrentUser = _currentUser;
                 authenticated = true;
                 
+                // Conectar a Sendbird automáticamente después del login
+                await ConnectToSendbirdAsync();
+                
                 // Mostrar ventana principal
                 var shouldContinue = ShowMainWindow();
                 
                 if (!shouldContinue)
                 {
-                    // El usuario cerró sesión, volver a mostrar login
+                    // El usuario cerró sesión, desconectar de Sendbird y volver a mostrar login
+                    await DisconnectFromSendbirdAsync();
                     authenticated = false;
                     _currentUser = null;
                     CurrentUser = null;
@@ -285,11 +289,57 @@ public partial class App : Application
             {
                 // Usuario cerró la ventana de login
                 Shutdown();
-                return Task.CompletedTask;
+                return;
             }
         }
+    }
+    
+    /// <summary>
+    /// Conecta al usuario actual a Sendbird para mantener el estado online
+    /// </summary>
+    private async Task ConnectToSendbirdAsync()
+    {
+        if (_currentUser == null || _serviceProvider == null) return;
         
-        return Task.CompletedTask;
+        try
+        {
+            var chatProvider = Helpers.AppSettings.GetChatProvider();
+            if (chatProvider != "Sendbird") return;
+            
+            var sendbirdService = _serviceProvider.GetService<ISendbirdChatService>();
+            if (sendbirdService != null)
+            {
+                await sendbirdService.ConnectAsync(_currentUser);
+                System.Diagnostics.Debug.WriteLine($"Usuario {_currentUser.Username} conectado a Sendbird al iniciar sesión");
+            }
+        }
+        catch (Exception ex)
+        {
+            // No bloquear el inicio si falla la conexión a Sendbird
+            System.Diagnostics.Debug.WriteLine($"Error al conectar a Sendbird: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// Desconecta al usuario de Sendbird al cerrar sesión
+    /// </summary>
+    private async Task DisconnectFromSendbirdAsync()
+    {
+        if (_serviceProvider == null) return;
+        
+        try
+        {
+            var sendbirdService = _serviceProvider.GetService<ISendbirdChatService>();
+            if (sendbirdService != null)
+            {
+                await sendbirdService.DisconnectAsync();
+                System.Diagnostics.Debug.WriteLine("Usuario desconectado de Sendbird");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error al desconectar de Sendbird: {ex.Message}");
+        }
     }
     
     private bool ShowMainWindow()
