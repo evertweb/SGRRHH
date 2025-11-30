@@ -292,6 +292,18 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
     }
 
     /// <summary>
+    /// Envía un archivo a un canal
+    /// </summary>
+    public async Task<SendbirdMessage?> SendFileAsync(string channelUrl, string filePath)
+    {
+        // TODO: Implementar envío de archivos con multipart/form-data
+        // Por ahora retorna null (no implementado)
+        _logger?.LogWarning("SendFileAsync no está implementado aún");
+        await Task.CompletedTask;
+        return null;
+    }
+
+    /// <summary>
     /// Obtiene el total de mensajes no leídos
     /// </summary>
     public async Task<int> GetTotalUnreadCountAsync()

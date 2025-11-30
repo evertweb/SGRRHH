@@ -15,8 +15,8 @@ public partial class ChatViewModel : ObservableObject, IDisposable
 {
     private readonly ISendbirdChatService _sendbirdService;
     private readonly IUsuarioService _usuarioService;
-    private readonly Timer _pollingTimer;
-    private readonly Timer _channelsRefreshTimer;
+    private readonly System.Timers.Timer _pollingTimer;
+    private readonly System.Timers.Timer _channelsRefreshTimer;
     private bool _disposed;
     private bool _isPolling = false;
 
@@ -113,12 +113,12 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         _sendbirdService.UnreadCountChanged += OnUnreadCountChanged;
 
         // Configurar timer de polling para mensajes (cada 3 segundos)
-        _pollingTimer = new Timer(3000);
+        _pollingTimer = new System.Timers.Timer(3000);
         _pollingTimer.Elapsed += OnPollingTimerElapsed;
         _pollingTimer.AutoReset = true;
 
         // Configurar timer para refrescar lista de canales (cada 10 segundos)
-        _channelsRefreshTimer = new Timer(10000);
+        _channelsRefreshTimer = new System.Timers.Timer(10000);
         _channelsRefreshTimer.Elapsed += OnChannelsRefreshTimerElapsed;
         _channelsRefreshTimer.AutoReset = true;
     }
