@@ -42,7 +42,8 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
 
         // Configurar HTTP client
         _httpClient = new HttpClient();
-        _httpClient.BaseAddress = new Uri("https://api-" + _settings.ApplicationId + ".sendbird.com/");
+        var baseUrl = $"https://api-{_settings.ApplicationId}.sendbird.com/";
+        _httpClient.BaseAddress = new Uri(baseUrl);
         _httpClient.DefaultRequestHeaders.Add("Api-Token", _settings.ApiToken ?? "");
     }
 
@@ -56,6 +57,19 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
 
         try
         {
+            // Validar configuración antes de intentar conectar
+            if (string.IsNullOrWhiteSpace(_settings.ApplicationId))
+            {
+                _logger?.LogError("Sendbird ApplicationId no está configurado");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(_settings.ApiToken))
+            {
+                _logger?.LogError("Sendbird ApiToken no está configurado");
+                return false;
+            }
+
             CurrentUser = user;
             _currentUserId = !string.IsNullOrEmpty(user.FirebaseUid) ? user.FirebaseUid : user.Username;
 
@@ -73,8 +87,31 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
                 "application/json");
 
             var response = await _httpClient.PostAsync("v3/users", content);
+            var responseContent = await response.Content.ReadAsStringAsync();
 
-            if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            // Verificar si fue exitoso o si el usuario ya existe
+            var isSuccess = response.IsSuccessStatusCode;
+            var isConflict = response.StatusCode == System.Net.HttpStatusCode.Conflict;
+            var isUserExists = false;
+
+            // Verificar si es error 400202 (usuario ya existe - unique constraint violation)
+            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                try
+                {
+                    var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseContent);
+                    if (errorResponse != null && 
+                        errorResponse.RootElement.TryGetProperty("code", out var codeElement) &&
+                        codeElement.GetInt32() == 400202)
+                    {
+                        isUserExists = true;
+                        _logger?.LogDebug("Usuario {Username} ya existe en Sendbird", user.Username);
+                    }
+                }
+                catch { }
+            }
+
+            if (isSuccess || isConflict || isUserExists)
             {
                 _logger?.LogInformation("Usuario {Username} conectado a Sendbird", user.Username);
 
@@ -84,7 +121,8 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
                 return true;
             }
 
-            _logger?.LogError("Error al crear usuario en Sendbird: {StatusCode}", response.StatusCode);
+            _logger?.LogError("Error al crear usuario en Sendbird: {StatusCode} - {Response}", 
+                response.StatusCode, responseContent);
             return false;
         }
         catch (Exception ex)
