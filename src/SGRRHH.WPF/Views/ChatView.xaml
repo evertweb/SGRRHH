@@ -122,6 +122,74 @@
             </Grid>
         </DataTemplate>
 
+        <!-- Template para mensaje de archivo -->
+        <DataTemplate x:Key="FileMessageTemplate">
+            <Grid Margin="16,4,80,4" HorizontalAlignment="{Binding IsMyMessage, Converter={StaticResource BoolToAlignment}}">
+                <Border Background="#2B2D31" CornerRadius="8" Padding="12" MaxWidth="350">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Icono del archivo -->
+                            <Border Grid.Column="0"
+                                    Width="48" Height="48"
+                                    Background="#404249"
+                                    CornerRadius="8"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Top">
+                                <TextBlock Text="{Binding FileName, Converter={StaticResource FileIconConverter}}"
+                                           FontSize="28"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+
+                            <!-- Info del archivo -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding FileName}"
+                                           Foreground="White"
+                                           FontWeight="SemiBold"
+                                           FontSize="13"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding FileSize, Converter={StaticResource FileSizeConverter}}"
+                                           Foreground="#72767D"
+                                           FontSize="11"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Botón descargar -->
+                        <Button Content="⬇ Descargar"
+                                Command="{Binding DataContext.DownloadFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Margin="0,12,0,0"
+                                Padding="10,6"
+                                HorizontalAlignment="Stretch">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
+                                    <Setter Property="Background" Value="#5865F2"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#4752C4"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Timestamp -->
+                        <TextBlock Text="{Binding CreatedAt, StringFormat='HH:mm'}"
+                                   Foreground="#72767D"
+                                   FontSize="11"
+                                   HorizontalAlignment="Right"
+                                   Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+
         <!-- Selector de template -->
         <DataTemplateSelector x:Key="MessageTemplateSelector"/>
 
@@ -361,12 +429,25 @@
                                 <ContentControl.Style>
                                     <Style TargetType="ContentControl">
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsMyMessage}" Value="True">
+                                            <!-- Prioridad: archivos primero -->
+                                            <DataTrigger Binding="{Binding IsFileMessage}" Value="True">
+                                                <Setter Property="ContentTemplate" Value="{StaticResource FileMessageTemplate}"/>
+                                            </DataTrigger>
+                                            <!-- Luego mensajes normales -->
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsFileMessage}" Value="False"/>
+                                                    <Condition Binding="{Binding IsMyMessage}" Value="True"/>
+                                                </MultiDataTrigger.Conditions>
                                                 <Setter Property="ContentTemplate" Value="{StaticResource MyMessageTemplate}"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding IsMyMessage}" Value="False">
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsFileMessage}" Value="False"/>
+                                                    <Condition Binding="{Binding IsMyMessage}" Value="False"/>
+                                                </MultiDataTrigger.Conditions>
                                                 <Setter Property="ContentTemplate" Value="{StaticResource ReceivedMessageTemplate}"/>
-                                            </DataTrigger>
+                                            </MultiDataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </ContentControl.Style>
@@ -386,6 +467,7 @@
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
@@ -409,12 +491,35 @@
                         </TextBox>
                     </Border>
 
-                    <!-- Botón enviar -->
+                    <!-- Botón adjuntar -->
                     <Button Grid.Column="1"
+                            Content="📎"
+                            FontSize="20"
+                            Padding="12,10"
+                            Margin="12,0,0,0"
+                            ToolTip="Adjuntar archivo"
+                            Command="{Binding AttachFileCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
+                                <Setter Property="Background" Value="#2B2D31"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#404249"/>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter Property="Background" Value="#4E5058"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+
+                    <!-- Botón enviar -->
+                    <Button Grid.Column="2"
                             Content="Enviar ➤"
                             Foreground="White"
                             Padding="20,10"
-                            Margin="12,0,0,0"
+                            Margin="8,0,0,0"
                             FontWeight="SemiBold"
                             Command="{Binding SendMessageCommand}">
                         <Button.Style>

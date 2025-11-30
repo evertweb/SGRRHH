@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -239,6 +240,66 @@ public class InitialsConverter : IValueConverter
             }
         }
         return "?";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Convierte el nombre de archivo a un icono emoji según la extensión
+/// </summary>
+public class FileIconConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is string fileName && !string.IsNullOrWhiteSpace(fileName))
+        {
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            return extension switch
+            {
+                ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" => "🖼️",
+                ".pdf" => "📄",
+                ".doc" or ".docx" => "📝",
+                ".xls" or ".xlsx" => "📊",
+                ".ppt" or ".pptx" => "📎",
+                ".txt" => "📃",
+                ".zip" or ".rar" or ".7z" => "📦",
+                ".mp3" or ".wav" or ".m4a" => "🎵",
+                ".mp4" or ".avi" or ".mkv" => "🎬",
+                _ => "📎"
+            };
+        }
+        return "📎";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Convierte bytes a formato legible (KB, MB, GB)
+/// </summary>
+public class FileSizeConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is long bytes)
+        {
+            if (bytes < 1024)
+                return $"{bytes} B";
+            else if (bytes < 1024 * 1024)
+                return $"{bytes / 1024.0:F1} KB";
+            else if (bytes < 1024 * 1024 * 1024)
+                return $"{bytes / (1024.0 * 1024.0):F1} MB";
+            else
+                return $"{bytes / (1024.0 * 1024.0 * 1024.0):F1} GB";
+        }
+        return "0 B";
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

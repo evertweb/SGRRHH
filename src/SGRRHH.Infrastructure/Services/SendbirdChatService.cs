@@ -296,11 +296,90 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
     /// </summary>
     public async Task<SendbirdMessage?> SendFileAsync(string channelUrl, string filePath)
     {
-        // TODO: Implementar envío de archivos con multipart/form-data
-        // Por ahora retorna null (no implementado)
-        _logger?.LogWarning("SendFileAsync no está implementado aún");
-        await Task.CompletedTask;
-        return null;
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            throw new ArgumentException("El archivo no existe", nameof(filePath));
+
+        try
+        {
+            // 1. Leer archivo
+            var fileInfo = new FileInfo(filePath);
+            var fileName = fileInfo.Name;
+            var fileBytes = await File.ReadAllBytesAsync(filePath);
+
+            // Validar tamaño (25 MB límite de Sendbird)
+            if (fileBytes.Length > 25 * 1024 * 1024)
+            {
+                _logger?.LogError("Archivo demasiado grande: {Size} bytes", fileBytes.Length);
+                return null;
+            }
+
+            // 2. Preparar multipart/form-data
+            using var content = new MultipartFormDataContent();
+
+            // Archivo
+            var fileContent = new ByteArrayContent(fileBytes);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+                GetMimeType(fileName));
+            content.Add(fileContent, "file", fileName);
+
+            // Metadata
+            content.Add(new StringContent(_currentUserId), "user_id");
+            content.Add(new StringContent("FILE"), "message_type");
+
+            // 3. Enviar a Sendbird
+            var response = await _httpClient.PostAsync(
+                $"v3/group_channels/{Uri.EscapeDataString(channelUrl)}/messages",
+                content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger?.LogError("Error al enviar archivo: {StatusCode}", response.StatusCode);
+                return null;
+            }
+
+            // 4. Parsear respuesta
+            var result = await response.Content.ReadFromJsonAsync<JsonDocument>();
+
+            if (result != null)
+            {
+                return ParseMessage(channelUrl, result.RootElement);
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al enviar archivo al canal {ChannelUrl}", channelUrl);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el MIME type según la extensión del archivo
+    /// </summary>
+    private string GetMimeType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".bmp" => "image/bmp",
+            ".webp" => "image/webp",
+            ".pdf" => "application/pdf",
+            ".doc" => "application/msword",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".xls" => "application/vnd.ms-excel",
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".ppt" => "application/vnd.ms-powerpoint",
+            ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            ".txt" => "text/plain",
+            ".csv" => "text/csv",
+            ".zip" => "application/zip",
+            ".rar" => "application/x-rar-compressed",
+            _ => "application/octet-stream"
+        };
     }
 
     /// <summary>
@@ -417,6 +496,27 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
                     : DateTime.UtcNow,
                 IsMyMessage = false
             };
+
+            // Detectar si es mensaje de archivo
+            if (element.TryGetProperty("type", out var typeElement) && typeElement.GetString() == "file")
+            {
+                message.IsFileMessage = true;
+
+                // Extraer información del archivo
+                if (element.TryGetProperty("file", out var fileObj))
+                {
+                    message.FileUrl = fileObj.TryGetProperty("url", out var url) ? url.GetString() : null;
+                    message.FileName = fileObj.TryGetProperty("name", out var name) ? name.GetString() : null;
+                    message.FileType = fileObj.TryGetProperty("type", out var type) ? type.GetString() : null;
+                    message.FileSize = fileObj.TryGetProperty("size", out var size) ? size.GetInt64() : 0;
+                }
+
+                // Si no hay texto en el mensaje, usar el nombre del archivo
+                if (string.IsNullOrEmpty(message.Message) && !string.IsNullOrEmpty(message.FileName))
+                {
+                    message.Message = $"📎 {message.FileName}";
+                }
+            }
 
             message.IsMyMessage = message.SenderId == _currentUserId;
 

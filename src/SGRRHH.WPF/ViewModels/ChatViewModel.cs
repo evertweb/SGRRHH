@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Timers;
 using System.Windows;
 
@@ -461,9 +462,147 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task NewConversationAsync()
     {
-        // TODO: Implementar diálogo para seleccionar usuario y crear conversación
-        MessageBox.Show("Funcionalidad en desarrollo",
-            "Nueva conversación", MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            // Mostrar diálogo de selección de usuario
+            var dialog = new Views.NewConversationDialog(_usuarioService)
+            {
+                Owner = Application.Current.MainWindow
+            };
+
+            if (dialog.ShowDialog() == true && dialog.SelectedUser != null)
+            {
+                IsLoading = true;
+                LoadingMessage = "Creando conversación...";
+
+                // Obtener el ID del usuario seleccionado para Sendbird
+                var otherUserId = !string.IsNullOrEmpty(dialog.SelectedUser.FirebaseUid)
+                    ? dialog.SelectedUser.FirebaseUid
+                    : dialog.SelectedUser.Username;
+
+                // Crear o obtener canal directo
+                var channel = await _sendbirdService.CreateOrGetDirectChannelAsync(
+                    otherUserId,
+                    dialog.SelectedUser.NombreCompleto);
+
+                if (channel != null)
+                {
+                    // Recargar lista de canales
+                    await LoadChannelsAsync();
+
+                    // Seleccionar el nuevo canal
+                    var channelVm = Channels.FirstOrDefault(c => c.Url == channel.Url);
+                    if (channelVm != null)
+                    {
+                        SelectedChannel = channelVm;
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("No se pudo crear la conversación. Intente nuevamente.",
+                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error al crear conversación: {ex.Message}");
+            MessageBox.Show("Error al crear la conversación. Intente nuevamente.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task AttachFileAsync()
+    {
+        if (SelectedChannel == null)
+            return;
+
+        try
+        {
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Seleccionar archivo",
+                Filter = "Todos los archivos (*.*)|*.*|" +
+                         "Imágenes (*.jpg;*.png;*.gif)|*.jpg;*.png;*.gif|" +
+                         "Documentos (*.pdf;*.docx;*.xlsx)|*.pdf;*.docx;*.xlsx",
+                Multiselect = false
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                IsLoading = true;
+                LoadingMessage = "Enviando archivo...";
+
+                var sentMessage = await _sendbirdService.SendFileAsync(
+                    SelectedChannel.Url,
+                    openFileDialog.FileName);
+
+                if (sentMessage != null)
+                {
+                    Messages.Add(sentMessage);
+                    ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
+                }
+                else
+                {
+                    MessageBox.Show("No se pudo enviar el archivo. Verifique el tamaño (máx 25 MB).",
+                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error al adjuntar archivo: {ex.Message}");
+            MessageBox.Show("Error al enviar el archivo. Intente nuevamente.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadFileAsync(SendbirdMessage message)
+    {
+        if (string.IsNullOrEmpty(message.FileUrl) || string.IsNullOrEmpty(message.FileName))
+            return;
+
+        try
+        {
+            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                FileName = message.FileName,
+                DefaultExt = Path.GetExtension(message.FileName)
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                IsLoading = true;
+                LoadingMessage = "Descargando archivo...";
+
+                using var client = new System.Net.Http.HttpClient();
+                var bytes = await client.GetByteArrayAsync(message.FileUrl);
+                await File.WriteAllBytesAsync(saveFileDialog.FileName, bytes);
+
+                MessageBox.Show("Archivo descargado correctamente",
+                    "Descarga completa", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error al descargar archivo: {ex.Message}");
+            MessageBox.Show("Error al descargar el archivo. Intente nuevamente.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private void OnMessageReceived(object? sender, SendbirdMessage message)

@@ -27,5 +27,7 @@
         <converters:PercentToWidthConverter x:Key="PercentToWidthConverter"/>
         <converters:HexToColorConverter x:Key="HexToColorConverter"/>
         <converters:InitialsConverter x:Key="InitialsConverter"/>
+        <converters:FileIconConverter x:Key="FileIconConverter"/>
+        <converters:FileSizeConverter x:Key="FileSizeConverter"/>
     </Application.Resources>
 </Application>
