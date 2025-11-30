@@ -56,40 +56,59 @@ public partial class NewConversationDialog : Window
         {
             _allUsers.Clear();
 
+            // SIEMPRE obtener usuarios de Firebase (fuente de verdad)
+            var firebaseUsers = await _usuarioService.GetAllActiveAsync();
+            
+            // Excluir al usuario actual
+            var currentUserId = App.CurrentUser?.Id;
+            var currentFirebaseUid = App.CurrentUser?.FirebaseUid;
+            var otherUsers = firebaseUsers.Where(u => u.Id != currentUserId).ToList();
+
+            // Obtener estados online de Sendbird si está disponible
+            Dictionary<string, SendbirdUser> sendbirdUserStates = new();
             if (_sendbirdService != null)
             {
-                // Modo Sendbird: obtener usuarios de Sendbird con estado online
-                var sendbirdUsers = await _sendbirdService.GetUsersAsync(onlineOnly: false);
-                
-                foreach (var sbUser in sendbirdUsers)
+                try
                 {
-                    _allUsers.Add(new UserListItem
+                    var sbUsers = await _sendbirdService.GetUsersAsync(onlineOnly: false);
+                    foreach (var sbUser in sbUsers)
                     {
-                        UserId = sbUser.UserId,
-                        NombreCompleto = sbUser.Nickname,
-                        Username = sbUser.UserId,
-                        IsOnline = sbUser.IsOnline,
-                        LastSeenAt = sbUser.LastSeenAt,
-                        SendbirdUser = sbUser
-                    });
+                        sendbirdUserStates[sbUser.UserId] = sbUser;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error al obtener estados de Sendbird: {ex.Message}");
                 }
             }
-            else
+
+            // Crear lista combinando datos de Firebase con estado de Sendbird
+            foreach (var user in otherUsers)
             {
-                // Modo legacy: obtener usuarios de la base de datos
-                var allUsers = await _usuarioService.GetAllActiveAsync();
-                
-                foreach (var user in allUsers.Where(u => u.Id != App.CurrentUser?.Id))
+                // El ID de Sendbird es el FirebaseUid del usuario
+                var sendbirdUserId = user.FirebaseUid ?? user.Username;
+                var isOnline = false;
+                DateTime? lastSeenAt = null;
+                SendbirdUser? sbUser = null;
+
+                // Buscar estado en Sendbird
+                if (sendbirdUserStates.TryGetValue(sendbirdUserId, out var foundSbUser))
                 {
-                    _allUsers.Add(new UserListItem
-                    {
-                        UserId = user.FirebaseUid ?? user.Username,
-                        NombreCompleto = user.NombreCompleto,
-                        Username = user.Username,
-                        IsOnline = false,
-                        Usuario = user
-                    });
+                    isOnline = foundSbUser.IsOnline;
+                    lastSeenAt = foundSbUser.LastSeenAt;
+                    sbUser = foundSbUser;
                 }
+
+                _allUsers.Add(new UserListItem
+                {
+                    UserId = sendbirdUserId,
+                    NombreCompleto = user.NombreCompleto,
+                    Username = user.Username,
+                    IsOnline = isOnline,
+                    LastSeenAt = lastSeenAt,
+                    Usuario = user,
+                    SendbirdUser = sbUser
+                });
             }
 
             // Ordenar: online primero, luego por nombre
