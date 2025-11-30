@@ -154,4 +154,54 @@ public static class AppSettings
         
         return config;
     }
+
+    /// <summary>
+    /// Obtiene la configuración de Sendbird
+    /// </summary>
+    public static SGRRHH.Core.Models.SendbirdSettings GetSendbirdSettings()
+    {
+        Load();
+
+        var settings = new SGRRHH.Core.Models.SendbirdSettings();
+
+        try
+        {
+            if (_settings?.RootElement.TryGetProperty("Sendbird", out var sbSection) == true)
+            {
+                if (sbSection.TryGetProperty("Enabled", out var enabledElement))
+                    settings.Enabled = enabledElement.GetBoolean();
+
+                if (sbSection.TryGetProperty("ApplicationId", out var appIdElement))
+                    settings.ApplicationId = appIdElement.GetString() ?? "";
+
+                if (sbSection.TryGetProperty("ApiToken", out var apiTokenElement))
+                    settings.ApiToken = apiTokenElement.GetString();
+
+                if (sbSection.TryGetProperty("Region", out var regionElement))
+                    settings.Region = regionElement.GetString();
+            }
+        }
+        catch { }
+
+        return settings;
+    }
+
+    /// <summary>
+    /// Obtiene el proveedor de chat configurado ("Firebase" o "Sendbird")
+    /// </summary>
+    public static string GetChatProvider()
+    {
+        Load();
+
+        try
+        {
+            if (_settings?.RootElement.TryGetProperty("ChatProvider", out var providerElement) == true)
+            {
+                return providerElement.GetString() ?? "Firebase";
+            }
+        }
+        catch { }
+
+        return "Firebase"; // Por defecto Firebase
+    }
 }

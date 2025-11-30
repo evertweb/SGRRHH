@@ -3,473 +3,503 @@ using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
 using System.Collections.ObjectModel;
+using System.Timers;
 using System.Windows;
-using System.Windows.Threading;
 
 namespace SGRRHH.WPF.ViewModels;
 
 /// <summary>
-/// ViewModel para la vista de Chat y usuarios activos.
-/// Combina la funcionalidad de ver usuarios online y enviar/recibir mensajes.
+/// ViewModel para el chat moderno usando Sendbird
 /// </summary>
 public partial class ChatViewModel : ObservableObject, IDisposable
 {
-    private readonly IPresenceService _presenceService;
-    private readonly IChatService _chatService;
+    private readonly ISendbirdChatService _sendbirdService;
     private readonly IUsuarioService _usuarioService;
-    
-    private IDisposable? _onlineUsersListener;
-    private IDisposable? _conversationListener;
-    private IDisposable? _globalMessageListener;
+    private readonly Timer _pollingTimer;
+    private readonly Timer _channelsRefreshTimer;
     private bool _disposed;
-    
+    private bool _isPolling = false;
+
     #region Properties
-    
+
     [ObservableProperty]
     private bool _isLoading;
-    
+
     [ObservableProperty]
-    private string _loadingMessage = "Cargando...";
-    
+    private string _loadingMessage = "Conectando...";
+
     /// <summary>
-    /// Lista de usuarios actualmente online
+    /// Lista de canales (conversaciones)
     /// </summary>
     [ObservableProperty]
-    private ObservableCollection<UserPresenceViewModel> _onlineUsers = new();
-    
+    private ObservableCollection<ChannelViewModel> _channels = new();
+
     /// <summary>
-    /// Lista de todos los usuarios disponibles para chat
+    /// Canal seleccionado
     /// </summary>
     [ObservableProperty]
-    private ObservableCollection<UserPresenceViewModel> _allUsers = new();
-    
+    private ChannelViewModel? _selectedChannel;
+
     /// <summary>
-    /// Usuario seleccionado para chat
+    /// Mensajes del canal actual
     /// </summary>
     [ObservableProperty]
-    private UserPresenceViewModel? _selectedUser;
-    
-    /// <summary>
-    /// Mensajes de la conversación actual
-    /// </summary>
-    [ObservableProperty]
-    private ObservableCollection<ChatMessageViewModel> _messages = new();
-    
+    private ObservableCollection<SendbirdMessage> _messages = new();
+
     /// <summary>
     /// Texto del mensaje a enviar
     /// </summary>
     [ObservableProperty]
     private string _messageText = string.Empty;
-    
+
+    /// <summary>
+    /// Filtro de búsqueda
+    /// </summary>
+    [ObservableProperty]
+    private string _searchFilter = string.Empty;
+
+    /// <summary>
+    /// Indica si hay un canal activo
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasActiveChannel;
+
+    /// <summary>
+    /// Nombre del canal seleccionado
+    /// </summary>
+    [ObservableProperty]
+    private string _selectedChannelName = string.Empty;
+
+    /// <summary>
+    /// Iniciales del otro usuario
+    /// </summary>
+    [ObservableProperty]
+    private string _selectedChannelInitials = string.Empty;
+
+    /// <summary>
+    /// Indica si el otro usuario está online
+    /// </summary>
+    [ObservableProperty]
+    private bool _isOtherUserOnline;
+
+    /// <summary>
+    /// Estado del otro usuario
+    /// </summary>
+    [ObservableProperty]
+    private string _otherUserStatus = "Desconectado";
+
     /// <summary>
     /// Total de mensajes no leídos
     /// </summary>
     [ObservableProperty]
     private int _totalUnreadCount;
-    
-    /// <summary>
-    /// Indica si hay una conversación activa
-    /// </summary>
-    [ObservableProperty]
-    private bool _hasActiveConversation;
-    
-    /// <summary>
-    /// Nombre del usuario con quien se está chateando
-    /// </summary>
-    [ObservableProperty]
-    private string _chatPartnerName = string.Empty;
-    
-    /// <summary>
-    /// Indica si el chat partner está online
-    /// </summary>
-    [ObservableProperty]
-    private bool _isChatPartnerOnline;
-    
-    /// <summary>
-    /// Filtro de búsqueda de usuarios
-    /// </summary>
-    [ObservableProperty]
-    private string _searchFilter = string.Empty;
-    
-    /// <summary>
-    /// Indica si solo se muestran usuarios online
-    /// </summary>
-    [ObservableProperty]
-    private bool _showOnlyOnline = true;
-    
+
     #endregion
-    
+
     /// <summary>
-    /// Evento para solicitar scroll al final de los mensajes
+    /// Evento para solicitar scroll al final
     /// </summary>
     public event EventHandler? ScrollToBottomRequested;
-    
-    /// <summary>
-    /// Evento para notificar nuevo mensaje recibido
-    /// </summary>
-    public event EventHandler<ChatMessage>? NewMessageNotification;
-    
+
     public ChatViewModel(
-        IPresenceService presenceService,
-        IChatService chatService,
+        ISendbirdChatService sendbirdService,
         IUsuarioService usuarioService)
     {
-        _presenceService = presenceService;
-        _chatService = chatService;
+        _sendbirdService = sendbirdService;
         _usuarioService = usuarioService;
+
+        // Suscribirse a eventos
+        _sendbirdService.MessageReceived += OnMessageReceived;
+        _sendbirdService.UnreadCountChanged += OnUnreadCountChanged;
+
+        // Configurar timer de polling para mensajes (cada 3 segundos)
+        _pollingTimer = new Timer(3000);
+        _pollingTimer.Elapsed += OnPollingTimerElapsed;
+        _pollingTimer.AutoReset = true;
+
+        // Configurar timer para refrescar lista de canales (cada 10 segundos)
+        _channelsRefreshTimer = new Timer(10000);
+        _channelsRefreshTimer.Elapsed += OnChannelsRefreshTimerElapsed;
+        _channelsRefreshTimer.AutoReset = true;
     }
-    
+
     /// <summary>
-    /// Inicializa el ViewModel con el usuario actual
+    /// Inicializa el ViewModel
     /// </summary>
     public async Task InitializeAsync()
     {
         if (App.CurrentUser == null)
             return;
-        
+
         IsLoading = true;
-        LoadingMessage = "Iniciando servicios de chat...";
-        
+        LoadingMessage = "Conectando a Sendbird...";
+
         try
         {
-            // Configurar servicios con usuario actual
-            _chatService.SetCurrentUser(App.CurrentUser);
-            
-            // Iniciar servicio de presencia
-            await _presenceService.StartAsync(App.CurrentUser);
-            
-            // Suscribirse a eventos
-            _chatService.NewMessageReceived += OnNewMessageReceived;
-            _chatService.UnreadCountChanged += OnUnreadCountChanged;
-            
-            // Cargar datos iniciales
-            await LoadUsersAsync();
-            await LoadUnreadCountAsync();
-            
-            // Iniciar escucha de mensajes global
-            _globalMessageListener = _chatService.StartListening();
-            
-            // Iniciar escucha de usuarios online
-            _onlineUsersListener = _presenceService.ListenToOnlineUsers(OnOnlineUsersChanged);
+            // Conectar a Sendbird
+            var connected = await _sendbirdService.ConnectAsync(App.CurrentUser);
+
+            if (!connected)
+            {
+                MessageBox.Show("No se pudo conectar al servidor de chat. Por favor, verifica tu conexión.",
+                    "Error de conexión", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            LoadingMessage = "Cargando conversaciones...";
+
+            // Cargar canales
+            await LoadChannelsAsync();
+
+            // Actualizar contador de no leídos
+            await UpdateUnreadCountAsync();
+
+            // Iniciar timers de polling
+            _pollingTimer.Start();
+            _channelsRefreshTimer.Start();
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error al inicializar ChatViewModel: {ex.Message}");
+            MessageBox.Show("Error al inicializar el chat. Intente nuevamente.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
             IsLoading = false;
         }
     }
-    
+
     /// <summary>
-    /// Carga la lista de usuarios disponibles
+    /// Carga la lista de canales
     /// </summary>
-    private async Task LoadUsersAsync()
+    private async Task LoadChannelsAsync()
     {
         try
         {
-            var currentUserId = App.CurrentUser?.Id ?? 0;
-            var currentFirebaseUid = App.CurrentUser?.FirebaseUid ?? string.Empty;
-            
-            System.Diagnostics.Debug.WriteLine($"LoadUsersAsync - CurrentUser: Id={currentUserId}, FirebaseUid={currentFirebaseUid}");
-            
-            // Cargar todos los usuarios activos
-            var usuarios = await _usuarioService.GetAllActiveAsync();
-            System.Diagnostics.Debug.WriteLine($"LoadUsersAsync - Usuarios cargados: {usuarios.Count()}");
-            
-            // Cargar estado de presencia
-            var onlineUsers = await _presenceService.GetOnlineUsersAsync();
-            System.Diagnostics.Debug.WriteLine($"LoadUsersAsync - Usuarios online: {onlineUsers.Count()}");
-            foreach (var ou in onlineUsers)
+            var channels = await _sendbirdService.GetMyChannelsAsync();
+
+            Channels.Clear();
+
+            foreach (var channel in channels)
             {
-                System.Diagnostics.Debug.WriteLine($"  - Online: {ou.Username} (Id={ou.UserId}, FirebaseUid={ou.FirebaseUid})");
-            }
-            
-            // Crear sets para búsqueda rápida - solo incluir IDs válidos (> 0)
-            var onlineUserIds = onlineUsers
-                .Where(u => u.UserId > 0)
-                .Select(u => u.UserId)
-                .ToHashSet();
-            var onlineFirebaseUids = onlineUsers
-                .Where(u => !string.IsNullOrEmpty(u.FirebaseUid))
-                .Select(u => u.FirebaseUid!)
-                .ToHashSet();
-            
-            // Obtener conversaciones recientes para saber mensajes no leídos
-            var conversations = await _chatService.GetRecentConversationsAsync();
-            var unreadByUser = conversations.ToDictionary(c => c.OtherUserId, c => c.UnreadCount);
-            
-            AllUsers.Clear();
-            OnlineUsers.Clear();
-            
-            // Filtrar el usuario actual por FirebaseUid (más confiable que Id)
-            foreach (var usuario in usuarios)
-            {
-                // Excluir usuario actual - priorizar FirebaseUid ya que Id puede ser 0 en Firebase
-                bool isCurrentUser = false;
-                
-                // Comparar por FirebaseUid si está disponible (más confiable)
-                if (!string.IsNullOrEmpty(currentFirebaseUid) && !string.IsNullOrEmpty(usuario.FirebaseUid))
+                var vm = new ChannelViewModel
                 {
-                    isCurrentUser = usuario.FirebaseUid == currentFirebaseUid;
-                }
-                // Fallback a Id solo si ambos son > 0
-                else if (currentUserId > 0 && usuario.Id > 0)
-                {
-                    isCurrentUser = usuario.Id == currentUserId;
-                }
-                
-                if (isCurrentUser)
-                {
-                    System.Diagnostics.Debug.WriteLine($"  - Excluyendo usuario actual: {usuario.Username}");
-                    continue;
-                }
-                
-                // Verificar si está online - priorizar FirebaseUid sobre Id
-                bool isOnline = false;
-                UserPresence? presence = null;
-                
-                // Buscar por FirebaseUid primero (más confiable)
-                if (!string.IsNullOrEmpty(usuario.FirebaseUid))
-                {
-                    isOnline = onlineFirebaseUids.Contains(usuario.FirebaseUid);
-                    presence = onlineUsers.FirstOrDefault(p => 
-                        !string.IsNullOrEmpty(p.FirebaseUid) && p.FirebaseUid == usuario.FirebaseUid);
-                }
-                
-                // Fallback a Id si no se encontró por FirebaseUid y el Id es válido
-                if (!isOnline && usuario.Id > 0)
-                {
-                    isOnline = onlineUserIds.Contains(usuario.Id);
-                    presence ??= onlineUsers.FirstOrDefault(p => p.UserId == usuario.Id);
-                }
-                
-                var unreadCount = unreadByUser.TryGetValue(usuario.Id, out var count) ? count : 0;
-                
-                var vm = new UserPresenceViewModel
-                {
-                    UserId = usuario.Id,
-                    FirebaseUid = usuario.FirebaseUid,
-                    Username = usuario.Username,
-                    NombreCompleto = usuario.NombreCompleto,
-                    IsOnline = isOnline,
-                    Status = presence?.Status ?? "Desconectado",
-                    StatusMessage = presence?.StatusMessage,
-                    UnreadCount = unreadCount
+                    Url = channel.Url,
+                    Name = GetChannelDisplayName(channel),
+                    LastMessagePreview = channel.LastMessage?.Message ?? "Sin mensajes",
+                    UnreadCount = channel.UnreadMessageCount,
+                    HasUnread = channel.UnreadMessageCount > 0,
+                    OtherUserInitials = GetOtherUserInitials(channel),
+                    IsOtherUserOnline = GetIsOtherUserOnline(channel)
                 };
-                
-                AllUsers.Add(vm);
-                System.Diagnostics.Debug.WriteLine($"  - Agregado usuario: {usuario.Username} (Online: {isOnline})");
-                
-                if (isOnline)
-                {
-                    OnlineUsers.Add(vm);
-                }
+
+                Channels.Add(vm);
             }
-            
-            System.Diagnostics.Debug.WriteLine($"LoadUsersAsync - Total en AllUsers: {AllUsers.Count}, OnlineUsers: {OnlineUsers.Count}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error al cargar usuarios: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"StackTrace: {ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"Error al cargar canales: {ex.Message}");
         }
     }
-    
-    private async Task LoadUnreadCountAsync()
+
+    /// <summary>
+    /// Obtiene el nombre a mostrar del canal (nombre del otro usuario)
+    /// </summary>
+    private string GetChannelDisplayName(SendbirdChannel channel)
     {
-        TotalUnreadCount = await _chatService.GetUnreadCountAsync();
+        // En un canal directo, mostrar el nombre del otro usuario
+        var currentUserId = GetCurrentUserId();
+        var otherMember = channel.Members.FirstOrDefault(m => m.UserId != currentUserId);
+        return otherMember?.Nickname ?? channel.Name;
     }
-    
-    partial void OnSelectedUserChanged(UserPresenceViewModel? value)
+
+    /// <summary>
+    /// Obtiene las iniciales del otro usuario
+    /// </summary>
+    private string GetOtherUserInitials(SendbirdChannel channel)
+    {
+        var name = GetChannelDisplayName(channel);
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+
+        if (parts.Length == 1 && parts[0].Length >= 2)
+            return parts[0].Substring(0, 2).ToUpper();
+
+        return name.Length >= 2 ? name.Substring(0, 2).ToUpper() : name.ToUpper();
+    }
+
+    /// <summary>
+    /// Verifica si el otro usuario está online
+    /// </summary>
+    private bool GetIsOtherUserOnline(SendbirdChannel channel)
+    {
+        var currentUserId = GetCurrentUserId();
+        var otherMember = channel.Members.FirstOrDefault(m => m.UserId != currentUserId);
+        return otherMember?.IsOnline ?? false;
+    }
+
+    /// <summary>
+    /// Obtiene el ID del usuario actual para Sendbird
+    /// </summary>
+    private string GetCurrentUserId()
+    {
+        if (App.CurrentUser == null)
+            return string.Empty;
+
+        return !string.IsNullOrEmpty(App.CurrentUser.FirebaseUid)
+            ? App.CurrentUser.FirebaseUid
+            : App.CurrentUser.Username;
+    }
+
+    /// <summary>
+    /// Actualiza el contador de no leídos
+    /// </summary>
+    private async Task UpdateUnreadCountAsync()
+    {
+        TotalUnreadCount = await _sendbirdService.GetTotalUnreadCountAsync();
+    }
+
+    /// <summary>
+    /// Evento del timer de polling - verifica nuevos mensajes en el canal actual
+    /// </summary>
+    private async void OnPollingTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        if (_isPolling || SelectedChannel == null)
+            return;
+
+        try
+        {
+            _isPolling = true;
+
+            // Obtener mensajes actualizados del canal
+            var messages = await _sendbirdService.GetMessagesAsync(SelectedChannel.Url);
+            var newMessages = messages.OrderBy(m => m.CreatedAt).ToList();
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                // Verificar si hay mensajes nuevos
+                foreach (var msg in newMessages)
+                {
+                    if (!Messages.Any(m => m.MessageId == msg.MessageId))
+                    {
+                        // Insertar en orden correcto
+                        var insertIndex = Messages.Count;
+                        for (int i = 0; i < Messages.Count; i++)
+                        {
+                            if (Messages[i].CreatedAt > msg.CreatedAt)
+                            {
+                                insertIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (insertIndex == Messages.Count)
+                            Messages.Add(msg);
+                        else
+                            Messages.Insert(insertIndex, msg);
+
+                        // Si es un mensaje nuevo de otra persona, hacer scroll
+                        if (!msg.IsMyMessage && insertIndex == Messages.Count - 1)
+                        {
+                            ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
+                        }
+                    }
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error en polling: {ex.Message}");
+        }
+        finally
+        {
+            _isPolling = false;
+        }
+    }
+
+    /// <summary>
+    /// Evento del timer de refresco - actualiza la lista de canales
+    /// </summary>
+    private async void OnChannelsRefreshTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        try
+        {
+            var channels = await _sendbirdService.GetMyChannelsAsync();
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                foreach (var channel in channels)
+                {
+                    var existingChannel = Channels.FirstOrDefault(c => c.Url == channel.Url);
+                    if (existingChannel != null)
+                    {
+                        // Actualizar datos del canal existente
+                        existingChannel.UnreadCount = channel.UnreadMessageCount;
+                        existingChannel.HasUnread = channel.UnreadMessageCount > 0;
+
+                        if (channel.LastMessage != null)
+                        {
+                            existingChannel.LastMessagePreview = channel.LastMessage.Message;
+                        }
+                    }
+                }
+
+                // Actualizar contador total de no leídos
+                _ = UpdateUnreadCountAsync();
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error al refrescar canales: {ex.Message}");
+        }
+    }
+
+    partial void OnSelectedChannelChanged(ChannelViewModel? value)
     {
         if (value != null)
         {
-            _ = LoadConversationAsync(value);
+            _ = LoadChannelMessagesAsync(value);
         }
         else
         {
-            HasActiveConversation = false;
-            ChatPartnerName = string.Empty;
+            HasActiveChannel = false;
             Messages.Clear();
-            _conversationListener?.Dispose();
-            _conversationListener = null;
         }
     }
-    
-    partial void OnSearchFilterChanged(string value)
-    {
-        FilterUsers();
-    }
-    
-    partial void OnShowOnlyOnlineChanged(bool value)
-    {
-        FilterUsers();
-    }
-    
-    private void FilterUsers()
-    {
-        // La UI debería filtrar basándose en SearchFilter y ShowOnlyOnline
-        // Esta implementación básica recarga la lista filtrada
-    }
-    
+
     /// <summary>
-    /// Carga la conversación con un usuario
+    /// Carga los mensajes de un canal
     /// </summary>
-    private async Task LoadConversationAsync(UserPresenceViewModel user)
+    private async Task LoadChannelMessagesAsync(ChannelViewModel channel)
     {
         IsLoading = true;
-        LoadingMessage = "Cargando conversación...";
-        
+        LoadingMessage = "Cargando mensajes...";
+
         try
         {
-            HasActiveConversation = true;
-            ChatPartnerName = user.NombreCompleto;
-            IsChatPartnerOnline = user.IsOnline;
-            
-            // Detener listener anterior
-            _conversationListener?.Dispose();
-            
+            HasActiveChannel = true;
+            SelectedChannelName = channel.Name;
+            SelectedChannelInitials = channel.OtherUserInitials;
+            IsOtherUserOnline = channel.IsOtherUserOnline;
+            OtherUserStatus = channel.IsOtherUserOnline ? "En línea" : "Desconectado";
+
             // Cargar mensajes
-            var messages = await _chatService.GetConversationAsync(user.UserId);
-            
+            var messages = await _sendbirdService.GetMessagesAsync(channel.Url);
+
             Messages.Clear();
-            foreach (var msg in messages)
+            foreach (var msg in messages.OrderBy(m => m.CreatedAt))
             {
-                Messages.Add(CreateMessageViewModel(msg));
+                Messages.Add(msg);
             }
-            
-            // Marcar como leídos
-            await _chatService.MarkConversationAsReadAsync(user.UserId);
-            user.UnreadCount = 0;
-            
-            // Iniciar escucha de nuevos mensajes en esta conversación
-            var lastMessageDate = messages.Any() 
-                ? messages.Max(m => m.SentAt) 
-                : DateTime.UtcNow.AddSeconds(-5); // Buffer de seguridad
-                
-            _conversationListener = _chatService.ListenToConversation(user.UserId, lastMessageDate, OnConversationNewMessage);
-            
+
+            // Marcar como leído
+            await _sendbirdService.MarkChannelAsReadAsync(channel.Url);
+            channel.UnreadCount = 0;
+            channel.HasUnread = false;
+
             // Scroll al final
             ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error al cargar conversación: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Error al cargar mensajes del canal: {ex.Message}");
+            MessageBox.Show("Error al cargar los mensajes. Intente nuevamente.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
             IsLoading = false;
         }
     }
-    
-    private ChatMessageViewModel CreateMessageViewModel(ChatMessage msg)
-    {
-        var currentUserId = App.CurrentUser?.Id ?? 0;
-        return new ChatMessageViewModel
-        {
-            Id = msg.Id,
-            Content = msg.Content,
-            SentAt = msg.SentAt,
-            SenderName = msg.SenderName,
-            IsMine = IsMessageMine(msg),
-            IsRead = msg.IsRead
-        };
-    }
-    
+
     [RelayCommand]
     private async Task SendMessageAsync()
     {
-        if (string.IsNullOrWhiteSpace(MessageText) || SelectedUser == null)
+        if (string.IsNullOrWhiteSpace(MessageText) || SelectedChannel == null)
             return;
-        
+
         var messageContent = MessageText.Trim();
         MessageText = string.Empty;
-        
+
         try
         {
-            var sentMessage = await _chatService.SendMessageAsync(
-                SelectedUser.UserId,
-                SelectedUser.NombreCompleto,
-                messageContent);
-            
-            // Agregar mensaje a la UI
-            Messages.Add(CreateMessageViewModel(sentMessage));
-            
-            // Scroll al final
-            ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
+            var sentMessage = await _sendbirdService.SendMessageAsync(SelectedChannel.Url, messageContent);
+
+            if (sentMessage != null)
+            {
+                // Agregar mensaje a la UI
+                Messages.Add(sentMessage);
+
+                // Scroll al final
+                ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
+            }
+            else
+            {
+                MessageBox.Show("No se pudo enviar el mensaje. Intente nuevamente.",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageText = messageContent; // Restaurar el mensaje
+            }
         }
         catch (Exception ex)
         {
             MessageText = messageContent; // Restaurar el mensaje si falla
             System.Diagnostics.Debug.WriteLine($"Error al enviar mensaje: {ex.Message}");
-            MessageBox.Show("Error al enviar el mensaje. Intente nuevamente.", 
+            MessageBox.Show("Error al enviar el mensaje. Intente nuevamente.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
-    
+
     [RelayCommand]
-    private void SelectUser(UserPresenceViewModel user)
+    private void SelectChannel(ChannelViewModel channel)
     {
-        SelectedUser = user;
+        SelectedChannel = channel;
     }
-    
+
     [RelayCommand]
-    private async Task RefreshUsersAsync()
+    private async Task NewConversationAsync()
     {
-        await LoadUsersAsync();
+        // TODO: Implementar diálogo para seleccionar usuario y crear conversación
+        MessageBox.Show("Funcionalidad en desarrollo",
+            "Nueva conversación", MessageBoxButton.OK, MessageBoxImage.Information);
     }
-    
-    [RelayCommand]
-    private async Task UpdateStatusAsync(string status)
-    {
-        await _presenceService.UpdateStatusAsync(status);
-    }
-    
-    private void OnNewMessageReceived(object? sender, ChatMessage message)
+
+    private void OnMessageReceived(object? sender, SendbirdMessage message)
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
-            // Actualizar contador de no leídos del usuario
-            var user = AllUsers.FirstOrDefault(u => u.UserId == message.SenderId);
-            if (user != null)
-            {
-                // Si no estamos en esa conversación, incrementar contador
-                if (SelectedUser?.UserId != message.SenderId)
-                {
-                    user.UnreadCount++;
-                }
-            }
-            
-            // Notificar para mostrar toast/notificación
-            NewMessageNotification?.Invoke(this, message);
-        });
-    }
-    
-    private void OnConversationNewMessage(ChatMessage message)
-    {
-        Application.Current.Dispatcher.Invoke(async () =>
-        {
-            // Si es un mensaje nuevo en la conversación actual (no enviado por mí)
-            if (!IsMessageMine(message))
+            // Si es un mensaje del canal actual, agregarlo
+            if (SelectedChannel != null && message.ChannelUrl == SelectedChannel.Url)
             {
                 // Verificar que no esté ya en la lista
-                if (!Messages.Any(m => m.Id == message.Id))
+                if (!Messages.Any(m => m.MessageId == message.MessageId))
                 {
-                    Messages.Add(CreateMessageViewModel(message));
+                    Messages.Add(message);
                     ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
-                    
-                    // Marcar como leído
-                    if (SelectedUser != null)
+
+                    // Marcar como leído si no es mío
+                    if (!message.IsMyMessage)
                     {
-                        await _chatService.MarkConversationAsReadAsync(SelectedUser.UserId);
+                        _ = _sendbirdService.MarkChannelAsReadAsync(message.ChannelUrl);
                     }
                 }
             }
+            else
+            {
+                // Actualizar contador de no leídos del canal
+                var channel = Channels.FirstOrDefault(c => c.Url == message.ChannelUrl);
+                if (channel != null)
+                {
+                    channel.UnreadCount++;
+                    channel.HasUnread = true;
+                    channel.LastMessagePreview = message.Message;
+                }
+            }
         });
     }
-    
+
     private void OnUnreadCountChanged(object? sender, int count)
     {
         Application.Current.Dispatcher.Invoke(() =>
@@ -477,88 +507,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
             TotalUnreadCount = count;
         });
     }
-    
-    private void OnOnlineUsersChanged(IEnumerable<UserPresence> onlineUsers)
-    {
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            // Usar FirebaseUid como identificador principal (más confiable para múltiples sesiones)
-            var onlineFirebaseUids = onlineUsers
-                .Where(u => !string.IsNullOrEmpty(u.FirebaseUid))
-                .Select(u => u.FirebaseUid!)
-                .ToHashSet();
-            // Solo incluir UserIds válidos (> 0) para evitar falsos positivos
-            var onlineUserIds = onlineUsers
-                .Where(u => u.UserId > 0)
-                .Select(u => u.UserId)
-                .ToHashSet();
-            
-            System.Diagnostics.Debug.WriteLine($"OnOnlineUsersChanged - Usuarios online: {onlineFirebaseUids.Count}");
-            foreach (var uid in onlineFirebaseUids)
-            {
-                System.Diagnostics.Debug.WriteLine($"  - FirebaseUid online: {uid}");
-            }
-            
-            OnlineUsers.Clear();
-            
-            foreach (var user in AllUsers)
-            {
-                // Verificar por FirebaseUid primero (más confiable), luego por UserId solo si es > 0
-                bool isNowOnline = false;
-                UserPresence? presence = null;
-                
-                if (!string.IsNullOrEmpty(user.FirebaseUid))
-                {
-                    isNowOnline = onlineFirebaseUids.Contains(user.FirebaseUid);
-                    presence = onlineUsers.FirstOrDefault(p => 
-                        !string.IsNullOrEmpty(p.FirebaseUid) && p.FirebaseUid == user.FirebaseUid);
-                }
-                
-                // Fallback a UserId solo si no se encontró por FirebaseUid y el Id es válido
-                if (!isNowOnline && user.UserId > 0)
-                {
-                    isNowOnline = onlineUserIds.Contains(user.UserId);
-                    presence ??= onlineUsers.FirstOrDefault(p => p.UserId == user.UserId);
-                }
-                
-                user.IsOnline = isNowOnline;
-                    
-                if (presence != null)
-                {
-                    user.Status = presence.Status;
-                    user.StatusMessage = presence.StatusMessage;
-                }
-                else
-                {
-                    user.Status = "Desconectado";
-                }
-                
-                if (isNowOnline)
-                {
-                    OnlineUsers.Add(user);
-                    System.Diagnostics.Debug.WriteLine($"  - Usuario {user.Username} está online");
-                }
-            }
-            
-            // Actualizar estado del chat partner
-            if (SelectedUser != null)
-            {
-                bool partnerOnline = false;
-                if (!string.IsNullOrEmpty(SelectedUser.FirebaseUid))
-                {
-                    partnerOnline = onlineFirebaseUids.Contains(SelectedUser.FirebaseUid);
-                }
-                if (!partnerOnline && SelectedUser.UserId > 0)
-                {
-                    partnerOnline = onlineUserIds.Contains(SelectedUser.UserId);
-                }
-                IsChatPartnerOnline = partnerOnline;
-            }
-            
-            System.Diagnostics.Debug.WriteLine($"OnOnlineUsersChanged - Total AllUsers: {AllUsers.Count}, OnlineUsers: {OnlineUsers.Count}");
-        });
-    }
-    
+
     /// <summary>
     /// Limpia recursos al cerrar
     /// </summary>
@@ -566,142 +515,68 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     {
         try
         {
-            _chatService.NewMessageReceived -= OnNewMessageReceived;
-            _chatService.UnreadCountChanged -= OnUnreadCountChanged;
-            
-            _onlineUsersListener?.Dispose();
-            _conversationListener?.Dispose();
-            _globalMessageListener?.Dispose();
-            
-            await _presenceService.StopAsync();
+            // Detener timers
+            _pollingTimer?.Stop();
+            _channelsRefreshTimer?.Stop();
+
+            _sendbirdService.MessageReceived -= OnMessageReceived;
+            _sendbirdService.UnreadCountChanged -= OnUnreadCountChanged;
+
+            await _sendbirdService.DisconnectAsync();
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error en cleanup: {ex.Message}");
         }
     }
-    
+
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
-    
+
     protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
-        
+
         if (disposing)
         {
-            _onlineUsersListener?.Dispose();
-            _conversationListener?.Dispose();
-            _globalMessageListener?.Dispose();
+            _pollingTimer?.Dispose();
+            _channelsRefreshTimer?.Dispose();
+            _ = CleanupAsync().ConfigureAwait(false);
         }
-        
+
         _disposed = true;
     }
-    private bool IsMessageMine(ChatMessage msg)
-    {
-        var currentUser = App.CurrentUser;
-        if (currentUser == null) return false;
-
-        // Priorizar FirebaseUid si está disponible en ambos
-        if (!string.IsNullOrEmpty(currentUser.FirebaseUid) && !string.IsNullOrEmpty(msg.SenderFirebaseUid))
-        {
-            return currentUser.FirebaseUid == msg.SenderFirebaseUid;
-        }
-
-        // Fallback a ID numérico (solo si son válidos > 0)
-        if (currentUser.Id > 0 && msg.SenderId > 0)
-        {
-            return currentUser.Id == msg.SenderId;
-        }
-
-        // Si no hay forma confiable de comparar, asumir falso para evitar mostrar como propio
-        return false;
-    }
 }
 
 /// <summary>
-/// ViewModel para representar un usuario en la lista de presencia
+/// ViewModel para representar un canal en la lista
 /// </summary>
-public partial class UserPresenceViewModel : ObservableObject
+public partial class ChannelViewModel : ObservableObject
 {
     [ObservableProperty]
-    private int _userId;
-    
+    private string _url = string.Empty;
+
     [ObservableProperty]
-    private string? _firebaseUid;
-    
+    private string _name = string.Empty;
+
     [ObservableProperty]
-    private string _username = string.Empty;
-    
-    [ObservableProperty]
-    private string _nombreCompleto = string.Empty;
-    
-    [ObservableProperty]
-    private bool _isOnline;
-    
-    [ObservableProperty]
-    private string _status = "Desconectado";
-    
-    [ObservableProperty]
-    private string? _statusMessage;
-    
+    private string _lastMessagePreview = string.Empty;
+
     [ObservableProperty]
     private int _unreadCount;
-    
-    /// <summary>
-    /// Indica si hay mensajes sin leer
-    /// </summary>
-    public bool HasUnread => UnreadCount > 0;
-    
-    partial void OnUnreadCountChanged(int value)
-    {
-        OnPropertyChanged(nameof(HasUnread));
-    }
-}
 
-/// <summary>
-/// ViewModel para representar un mensaje en el chat
-/// </summary>
-public partial class ChatMessageViewModel : ObservableObject
-{
     [ObservableProperty]
-    private int _id;
-    
+    private bool _hasUnread;
+
     [ObservableProperty]
-    private string _content = string.Empty;
-    
+    private string _otherUserInitials = string.Empty;
+
     [ObservableProperty]
-    private DateTime _sentAt;
-    
+    private bool _isOtherUserOnline;
+
     [ObservableProperty]
-    private string _senderName = string.Empty;
-    
-    [ObservableProperty]
-    private bool _isMine;
-    
-    [ObservableProperty]
-    private bool _isRead;
-    
-    /// <summary>
-    /// Hora formateada para mostrar
-    /// </summary>
-    public string FormattedTime => SentAt.ToString("HH:mm");
-    
-    /// <summary>
-    /// Fecha formateada para mostrar (si no es hoy)
-    /// </summary>
-    public string FormattedDate
-    {
-        get
-        {
-            if (SentAt.Date == DateTime.Today)
-                return "Hoy";
-            if (SentAt.Date == DateTime.Today.AddDays(-1))
-                return "Ayer";
-            return SentAt.ToString("dd/MM/yyyy");
-        }
-    }
+    private bool _isSelected;
 }

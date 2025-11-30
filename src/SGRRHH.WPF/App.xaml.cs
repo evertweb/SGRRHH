@@ -39,10 +39,11 @@ public partial class App : Application
         // Configurar manejo global de excepciones
         SetupGlobalExceptionHandling();
         
-        // Configurar servicios Firebase
+        // Configurar servicios
         var services = new ServiceCollection();
         ConfigureFirebaseServices(services);
-        
+        ConfigureSendbirdServices(services);
+
         _serviceProvider = services.BuildServiceProvider();
         Services = _serviceProvider;
         
@@ -98,6 +99,29 @@ public partial class App : Application
         
         // Registrar ViewModels
         RegisterViewModels(services);
+    }
+
+    /// <summary>
+    /// Configura los servicios para Sendbird
+    /// </summary>
+    private void ConfigureSendbirdServices(IServiceCollection services)
+    {
+        // Leer configuración de Sendbird desde appsettings.json
+        var sendbirdSettings = AppSettings.GetSendbirdSettings();
+
+        // Configurar options para SendbirdSettings
+        services.Configure<SendbirdSettings>(options =>
+        {
+            options.Enabled = sendbirdSettings.Enabled;
+            options.ApplicationId = sendbirdSettings.ApplicationId;
+            options.ApiToken = sendbirdSettings.ApiToken;
+            options.Region = sendbirdSettings.Region;
+        });
+
+        // Registrar el servicio de Sendbird
+        services.AddSingleton<ISendbirdChatService, SendbirdChatService>();
+
+        // Nota: El registro del ViewModel se hace en RegisterViewModels
     }
     
     /// <summary>
@@ -182,6 +206,7 @@ public partial class App : Application
         services.AddTransient<CambiarPasswordViewModel>();
         services.AddTransient<CatalogosViewModel>();
         services.AddTransient<DocumentosEmpleadoViewModel>();
+        services.AddTransient<ChatViewModelLegacy>();
         services.AddTransient<ChatViewModel>();
     }
     

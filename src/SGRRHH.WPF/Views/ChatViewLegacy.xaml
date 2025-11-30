@@ -1,0 +1,377 @@
+<UserControl x:Class="SGRRHH.WPF.Views.ChatViewLegacy"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:SGRRHH.WPF.Converters"
+             mc:Ignorable="d" 
+             d:DesignHeight="700" d:DesignWidth="1000"
+             Background="#F5F5F5">
+    
+    <UserControl.Resources>
+        <!-- Converter para iniciales -->
+        <local:InitialsConverter x:Key="InitialsConverter"/>
+        
+        <!-- Estilo para el indicador de online -->
+        <Style x:Key="OnlineIndicatorStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Margin" Value="5,0,0,0"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                    <Setter Property="Fill" Value="#4CAF50"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                    <Setter Property="Fill" Value="#9E9E9E"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        
+        <!-- Template para mensaje enviado (mío) - Estilo WhatsApp mejorado -->
+        <DataTemplate x:Key="MyMessageTemplate">
+            <Grid Margin="60,3,12,3" HorizontalAlignment="Right">
+                <Border CornerRadius="18,18,4,18" Padding="14,10" MaxWidth="450">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Color="#0084FF" Offset="0"/>
+                            <GradientStop Color="#0066CC" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.Effect>
+                        <DropShadowEffect Color="#0084FF" BlurRadius="12" ShadowDepth="2" Opacity="0.3" Direction="270"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Content}" Foreground="White" TextWrapping="Wrap" 
+                                   FontSize="14" LineHeight="20" FontFamily="Segoe UI"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                            <TextBlock Text="{Binding FormattedTime}" Foreground="#E3F2FD" FontSize="11" 
+                                       FontWeight="Light" VerticalAlignment="Center" Opacity="0.9"/>
+                            <!-- Checkmark de leído -->
+                            <TextBlock Text=" ✓✓" Foreground="#4FC3F7" FontSize="11" 
+                                       VerticalAlignment="Center" Margin="3,0,0,0"
+                                       Visibility="{Binding IsRead, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+        
+        <!-- Template para mensaje recibido - Estilo WhatsApp mejorado -->
+        <DataTemplate x:Key="ReceivedMessageTemplate">
+            <Grid Margin="12,3,60,3" HorizontalAlignment="Left">
+                <Border CornerRadius="18,18,18,4" Padding="14,10" MaxWidth="450"
+                        Background="White" BorderBrush="#E8E8E8" BorderThickness="1">
+                    <Border.Effect>
+                        <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="1" Opacity="0.15" Direction="270"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="{Binding SenderName}" Foreground="#0084FF" FontSize="12" 
+                                   FontWeight="SemiBold" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding Content}" Foreground="#303030" TextWrapping="Wrap" 
+                                   FontSize="14" LineHeight="20" Margin="0,2,0,0" FontFamily="Segoe UI"/>
+                        <TextBlock Text="{Binding FormattedTime}" Foreground="#8A8A8A" FontSize="11" 
+                                   FontWeight="Light" HorizontalAlignment="Right" Margin="0,6,0,0" Opacity="0.8"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DataTemplate>
+        
+        <!-- Selector de template para mensajes -->
+        <local:MessageTemplateSelector x:Key="MessageTemplateSelector"
+                                       MyMessageTemplate="{StaticResource MyMessageTemplate}"
+                                       ReceivedMessageTemplate="{StaticResource ReceivedMessageTemplate}"/>
+    </UserControl.Resources>
+    
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="300"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Panel izquierdo: Lista de usuarios -->
+        <Border Grid.Column="0" Background="White" CornerRadius="12" Margin="0,0,10,0"
+                BorderBrush="#E0E0E0" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="0" Opacity="0.1"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Encabezado -->
+                <Border Grid.Row="0" Background="#1976D2" CornerRadius="12,12,0,0" Padding="15">
+                    <StackPanel>
+                        <TextBlock Text="💬 Chat" FontSize="20" FontWeight="Bold" Foreground="White"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                            <Ellipse Width="8" Height="8" Fill="#4CAF50" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding OnlineUsers.Count, StringFormat=' {0} usuarios online'}" 
+                                       Foreground="#B3E5FC" FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Buscador -->
+                <Border Grid.Row="1" Background="#F5F5F5" Padding="10">
+                    <TextBox x:Name="SearchBox" Text="{Binding SearchFilter, UpdateSourceTrigger=PropertyChanged}"
+                             Padding="10,8" Background="White" BorderBrush="#E0E0E0" BorderThickness="1"
+                             ToolTip="Buscar usuario...">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Style.Triggers>
+                                    <Trigger Property="Text" Value="">
+                                        <Setter Property="Background">
+                                            <Setter.Value>
+                                                <VisualBrush Stretch="None" AlignmentX="Left">
+                                                    <VisualBrush.Visual>
+                                                        <TextBlock Text="🔍 Buscar usuario..." Foreground="#9E9E9E" Margin="10,0,0,0"/>
+                                                    </VisualBrush.Visual>
+                                                </VisualBrush>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+                </Border>
+                
+                <!-- Filtro online/todos -->
+                <Border Grid.Row="2" Background="#FAFAFA" Padding="10,5">
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox IsChecked="{Binding ShowOnlyOnline}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Solo usuarios online" FontSize="12" Foreground="#757575" 
+                                   VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Lista de usuarios -->
+                <ListBox Grid.Row="3" ItemsSource="{Binding AllUsers}" 
+                         SelectedItem="{Binding SelectedUser}"
+                         BorderThickness="0" Background="Transparent"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Border" Background="Transparent" 
+                                                BorderThickness="0,0,0,1" BorderBrush="#F0F0F0"
+                                                Padding="15,12" Cursor="Hand">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Border" Property="Background" Value="#E3F2FD"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Border" Property="Background" Value="#BBDEFB"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <!-- Filtro de visibilidad -->
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding DataContext.ShowOnlyOnline, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True"/>
+                                        <Condition Binding="{Binding IsOnline}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- Avatar con indicador online -->
+                                <Grid Grid.Column="0" Margin="0,0,12,0">
+                                    <Border Width="40" Height="40" CornerRadius="20" Background="#E3F2FD">
+                                        <TextBlock Text="{Binding NombreCompleto, Converter={StaticResource InitialsConverter}}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   FontWeight="Bold" FontSize="14" Foreground="#1976D2"/>
+                                    </Border>
+                                    <Ellipse Style="{StaticResource OnlineIndicatorStyle}"
+                                             HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-2">
+                                        <Ellipse.Effect>
+                                            <DropShadowEffect Color="White" BlurRadius="2" ShadowDepth="0"/>
+                                        </Ellipse.Effect>
+                                    </Ellipse>
+                                </Grid>
+                                
+                                <!-- Nombre y estado -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding NombreCompleto}" FontWeight="SemiBold" FontSize="13"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Status}" FontSize="11" Foreground="#757575"/>
+                                </StackPanel>
+                                
+                                <!-- Badge de mensajes no leídos -->
+                                <Border Grid.Column="2" Background="#F44336" CornerRadius="10" 
+                                        Padding="6,2" VerticalAlignment="Center"
+                                        Visibility="{Binding HasUnread, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding UnreadCount}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+        
+        <!-- Panel derecho: Área de chat -->
+        <Border Grid.Column="1" Background="White" CornerRadius="12"
+                BorderBrush="#E0E0E0" BorderThickness="1">
+            <Border.Effect>
+                <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="0" Opacity="0.1"/>
+            </Border.Effect>
+            
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Encabezado del chat (cuando hay conversación activa) -->
+                <Border Grid.Row="0" Background="#FAFAFA" CornerRadius="12,12,0,0" Padding="15"
+                        BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"
+                        Visibility="{Binding HasActiveConversation, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Avatar del chat partner -->
+                        <Grid Grid.Column="0" Margin="0,0,12,0">
+                            <Border Width="45" Height="45" CornerRadius="22" Background="#E3F2FD">
+                                <TextBlock Text="{Binding ChatPartnerName, Converter={StaticResource InitialsConverter}}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           FontWeight="Bold" FontSize="16" Foreground="#1976D2"/>
+                            </Border>
+                        </Grid>
+                        
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ChatPartnerName}" FontWeight="Bold" FontSize="15"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,5,0">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="#9E9E9E"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsChatPartnerOnline}" Value="True">
+                                                    <Setter Property="Fill" Value="#4CAF50"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock FontSize="12" Foreground="#757575">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="Desconectado"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsChatPartnerOnline}" Value="True">
+                                                    <Setter Property="Text" Value="En línea"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                
+                <!-- Área de mensajes -->
+                <Grid Grid.Row="1">
+                    <!-- Estado: Sin conversación seleccionada -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                Visibility="{Binding HasActiveConversation, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <TextBlock Text="💬" FontSize="60" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Selecciona un usuario para iniciar una conversación" 
+                                   FontSize="16" Foreground="#757575" HorizontalAlignment="Center" Margin="0,15,0,0"/>
+                        <TextBlock Text="Puedes ver quién está en línea en la lista de la izquierda" 
+                                   FontSize="13" Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- Lista de mensajes -->
+                    <ScrollViewer x:Name="MessagesScrollViewer" 
+                                  VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding HasActiveConversation, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ScrollViewer.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#ECE5DD" Offset="0"/>
+                                <GradientStop Color="#D9D0C9" Offset="1"/>
+                            </LinearGradientBrush>
+                        </ScrollViewer.Background>
+                        <ItemsControl ItemsSource="{Binding Messages}" 
+                                      ItemTemplateSelector="{StaticResource MessageTemplateSelector}"
+                                      Padding="15">
+                        </ItemsControl>
+                    </ScrollViewer>
+                    
+                    <!-- Indicador de carga -->
+                    <Border Background="#F5F5F5" 
+                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="⏳" FontSize="30" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding LoadingMessage}" FontSize="14" Foreground="#757575" 
+                                       HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+                
+                <!-- Área de entrada de mensaje -->
+                <Border Grid.Row="2" Background="#FAFAFA" Padding="15" 
+                        BorderBrush="#E0E0E0" BorderThickness="0,1,0,0"
+                        Visibility="{Binding HasActiveConversation, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <TextBox x:Name="MessageInput" Grid.Column="0" 
+                                 Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
+                                 Padding="12,10" Background="White" 
+                                 BorderBrush="#E0E0E0" BorderThickness="1"
+                                 FontSize="13" AcceptsReturn="False"
+                                 VerticalContentAlignment="Center">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding SendMessageCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        
+                        <Button Grid.Column="1" Command="{Binding SendMessageCommand}"
+                                Background="#1976D2" Foreground="White" 
+                                Padding="20,10" Margin="10,0,0,0"
+                                BorderThickness="0" Cursor="Hand"
+                                FontWeight="SemiBold"
+                                ToolTip="Enviar mensaje (Enter)">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Enviar" VerticalAlignment="Center"/>
+                                <TextBlock Text=" ➤" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

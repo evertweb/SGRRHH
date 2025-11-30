@@ -341,9 +341,23 @@ public partial class MainViewModel : ObservableObject
                 break;
             
             case "Chat":
-                var chatViewModel = scope.ServiceProvider.GetRequiredService<ChatViewModel>();
-                var chatView = new ChatView(chatViewModel);
-                CurrentView = chatView;
+                // Determinar qué provider de chat usar según configuración
+                var chatProvider = SGRRHH.WPF.Helpers.AppSettings.GetChatProvider();
+
+                if (chatProvider == "Sendbird")
+                {
+                    // Usar nuevo chat con Sendbird
+                    var sendbirdViewModel = scope.ServiceProvider.GetRequiredService<ChatViewModel>();
+                    var sendbirdChatView = new ChatView(sendbirdViewModel);
+                    CurrentView = sendbirdChatView;
+                }
+                else
+                {
+                    // Usar chat legacy con Firebase
+                    var chatViewModel = scope.ServiceProvider.GetRequiredService<ChatViewModelLegacy>();
+                    var chatView = new ChatViewLegacy(chatViewModel);
+                    CurrentView = chatView;
+                }
                 break;
                 
             case "Proyectos":
