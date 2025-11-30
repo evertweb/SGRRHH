@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
         mc:Ignorable="d"
         Title="Nueva Conversación" Height="500" Width="450"
         WindowStartupLocation="CenterOwner"
@@ -10,6 +11,10 @@
         ResizeMode="NoResize">
 
     <Window.Resources>
+        <!-- Converters -->
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:InitialsConverter x:Key="InitialsConverter"/>
+        
         <!-- Botón moderno -->
         <Style x:Key="ModernButton" TargetType="Button">
             <Setter Property="Background" Value="#1E1E1E"/>
@@ -109,38 +114,55 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Avatar -->
-                                <Border Grid.Column="0"
-                                        Width="42" Height="42"
-                                        CornerRadius="21"
-                                        Background="#5865F2"
-                                        Margin="0,0,12,0">
-                                    <TextBlock HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               FontWeight="Bold"
-                                               FontSize="16"
-                                               Foreground="White">
-                                        <TextBlock.Text>
-                                            <MultiBinding StringFormat="{}{0}{1}">
-                                                <Binding Path="NombreCompleto" Converter="{StaticResource FirstLetterConverter}"/>
-                                                <Binding Path="NombreCompleto" Converter="{StaticResource SecondWordFirstLetterConverter}"/>
-                                            </MultiBinding>
-                                        </TextBlock.Text>
-                                    </TextBlock>
-                                </Border>
+                                <!-- Avatar con indicador de estado -->
+                                <Grid Grid.Column="0" Width="42" Height="42" Margin="0,0,12,0">
+                                    <Border Width="42" Height="42"
+                                            CornerRadius="21"
+                                            Background="#5865F2">
+                                        <TextBlock HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   FontWeight="Bold"
+                                                   FontSize="16"
+                                                   Foreground="White"
+                                                   Text="{Binding NombreCompleto, Converter={StaticResource InitialsConverter}}"/>
+                                    </Border>
+                                    <!-- Indicador de estado online -->
+                                    <Ellipse Width="14" Height="14"
+                                             HorizontalAlignment="Right"
+                                             VerticalAlignment="Bottom"
+                                             Stroke="#1E1E1E"
+                                             StrokeThickness="3"
+                                             Fill="{Binding StatusColor}"/>
+                                </Grid>
 
-                                <!-- Nombre y username -->
+                                <!-- Nombre, username y estado -->
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding NombreCompleto}"
-                                               FontWeight="SemiBold"
-                                               FontSize="14"
-                                               Foreground="#FFFFFF"
-                                               TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Username, StringFormat='@{0}'}"
-                                               FontSize="12"
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding NombreCompleto}"
+                                                   FontWeight="SemiBold"
+                                                   FontSize="14"
+                                                   Foreground="#FFFFFF"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <!-- Badge online -->
+                                        <Border Background="#43B581" 
+                                                CornerRadius="3" 
+                                                Padding="6,2" 
+                                                Margin="8,0,0,0"
+                                                Visibility="{Binding IsOnline, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <TextBlock Text="EN LÍNEA" 
+                                                       FontSize="9" 
+                                                       FontWeight="Bold" 
+                                                       Foreground="White"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock FontSize="12"
                                                Foreground="#72767D"
                                                TextTrimming="CharacterEllipsis"
-                                               Margin="0,2,0,0"/>
+                                               Margin="0,2,0,0">
+                                        <Run Text="@"/><Run Text="{Binding Username}"/>
+                                        <Run Text=" · "/>
+                                        <Run Text="{Binding StatusText}"/>
+                                    </TextBlock>
                                 </StackPanel>
 
                                 <!-- Flecha -->

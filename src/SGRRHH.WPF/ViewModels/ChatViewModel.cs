@@ -464,26 +464,44 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     {
         try
         {
-            // Mostrar diálogo de selección de usuario
-            var dialog = new Views.NewConversationDialog(_usuarioService)
+            // Mostrar diálogo de selección de usuario (usa Sendbird para mostrar estado online)
+            var dialog = new Views.NewConversationDialog(_sendbirdService, _usuarioService)
             {
                 Owner = Application.Current.MainWindow
             };
 
-            if (dialog.ShowDialog() == true && dialog.SelectedUser != null)
+            if (dialog.ShowDialog() == true)
             {
                 IsLoading = true;
                 LoadingMessage = "Creando conversación...";
 
-                // Obtener el ID del usuario seleccionado para Sendbird
-                var otherUserId = !string.IsNullOrEmpty(dialog.SelectedUser.FirebaseUid)
-                    ? dialog.SelectedUser.FirebaseUid
-                    : dialog.SelectedUser.Username;
+                string otherUserId;
+                string otherUserName;
+
+                // Obtener datos del usuario seleccionado
+                if (dialog.SelectedSendbirdUser != null)
+                {
+                    // Usuario seleccionado de Sendbird
+                    otherUserId = dialog.SelectedSendbirdUser.UserId;
+                    otherUserName = dialog.SelectedSendbirdUser.Nickname;
+                }
+                else if (dialog.SelectedUser != null)
+                {
+                    // Usuario seleccionado del sistema legacy
+                    otherUserId = !string.IsNullOrEmpty(dialog.SelectedUser.FirebaseUid)
+                        ? dialog.SelectedUser.FirebaseUid
+                        : dialog.SelectedUser.Username;
+                    otherUserName = dialog.SelectedUser.NombreCompleto;
+                }
+                else
+                {
+                    return; // No se seleccionó ningún usuario
+                }
 
                 // Crear o obtener canal directo
                 var channel = await _sendbirdService.CreateOrGetDirectChannelAsync(
                     otherUserId,
-                    dialog.SelectedUser.NombreCompleto);
+                    otherUserName);
 
                 if (channel != null)
                 {

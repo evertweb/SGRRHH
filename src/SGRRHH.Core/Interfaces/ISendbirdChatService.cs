@@ -53,6 +53,11 @@ public interface ISendbirdChatService
     Task<int> GetTotalUnreadCountAsync();
 
     /// <summary>
+    /// Obtiene la lista de usuarios de Sendbird con su estado online
+    /// </summary>
+    Task<IEnumerable<SendbirdUser>> GetUsersAsync(bool onlineOnly = false);
+
+    /// <summary>
     /// Envía un archivo a un canal
     /// </summary>
     Task<SendbirdMessage?> SendFileAsync(string channelUrl, string filePath);
@@ -112,4 +117,18 @@ public class SendbirdMessage
     public string? FileName { get; set; }
     public string? FileType { get; set; }
     public long FileSize { get; set; }
+}
+
+/// <summary>
+/// Representa un usuario de Sendbird con estado de presencia
+/// </summary>
+public class SendbirdUser
+{
+    public string UserId { get; set; } = string.Empty;
+    public string Nickname { get; set; } = string.Empty;
+    public string? ProfileUrl { get; set; }
+    public bool IsOnline { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime? LastSeenAt { get; set; }
+    public DateTime CreatedAt { get; set; }
 }

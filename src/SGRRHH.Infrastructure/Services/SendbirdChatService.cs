@@ -449,6 +449,88 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
     }
 
     /// <summary>
+    /// Obtiene la lista de usuarios de Sendbird con su estado online
+    /// </summary>
+    public async Task<IEnumerable<SendbirdUser>> GetUsersAsync(bool onlineOnly = false)
+    {
+        try
+        {
+            // Obtener todos los usuarios activos de Sendbird
+            var url = "v3/users?limit=100&active_mode=activated";
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger?.LogError("Error al obtener usuarios de Sendbird: {StatusCode}", response.StatusCode);
+                return Enumerable.Empty<SendbirdUser>();
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<JsonDocument>();
+
+            if (result != null && result.RootElement.TryGetProperty("users", out var usersArray))
+            {
+                var users = new List<SendbirdUser>();
+
+                foreach (var userElement in usersArray.EnumerateArray())
+                {
+                    var user = ParseUser(userElement);
+                    if (user != null)
+                    {
+                        // Excluir el usuario actual
+                        if (user.UserId != _currentUserId)
+                        {
+                            // Filtrar solo online si se solicita
+                            if (!onlineOnly || user.IsOnline)
+                            {
+                                users.Add(user);
+                            }
+                        }
+                    }
+                }
+
+                // Ordenar: primero online, luego por nombre
+                return users.OrderByDescending(u => u.IsOnline)
+                            .ThenBy(u => u.Nickname);
+            }
+
+            return Enumerable.Empty<SendbirdUser>();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al obtener usuarios de Sendbird");
+            return Enumerable.Empty<SendbirdUser>();
+        }
+    }
+
+    /// <summary>
+    /// Parsea un usuario de Sendbird desde JSON
+    /// </summary>
+    private SendbirdUser? ParseUser(JsonElement element)
+    {
+        try
+        {
+            return new SendbirdUser
+            {
+                UserId = element.TryGetProperty("user_id", out var userId) ? userId.GetString() ?? "" : "",
+                Nickname = element.TryGetProperty("nickname", out var nickname) ? nickname.GetString() ?? "" : "",
+                ProfileUrl = element.TryGetProperty("profile_url", out var profileUrl) ? profileUrl.GetString() : null,
+                IsOnline = element.TryGetProperty("is_online", out var isOnline) && isOnline.GetBoolean(),
+                IsActive = element.TryGetProperty("is_active", out var isActive) && isActive.GetBoolean(),
+                LastSeenAt = element.TryGetProperty("last_seen_at", out var lastSeen) && lastSeen.GetInt64() > 0
+                    ? DateTimeOffset.FromUnixTimeMilliseconds(lastSeen.GetInt64()).DateTime
+                    : null,
+                CreatedAt = element.TryGetProperty("created_at", out var createdAt)
+                    ? DateTimeOffset.FromUnixTimeSeconds(createdAt.GetInt64()).DateTime
+                    : DateTime.UtcNow
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Actualiza el contador de no leídos y notifica
     /// </summary>
     private async Task UpdateUnreadCountAsync()
