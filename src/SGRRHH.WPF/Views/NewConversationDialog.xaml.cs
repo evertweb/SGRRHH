@@ -64,21 +64,32 @@ public partial class NewConversationDialog : Window
             var currentFirebaseUid = App.CurrentUser?.FirebaseUid;
             var otherUsers = firebaseUsers.Where(u => u.Id != currentUserId).ToList();
 
-            // Obtener estados online de Sendbird si está disponible
+            // Si Sendbird está disponible, sincronizar usuarios de Firebase a Sendbird
+            // y obtener estados online
             Dictionary<string, SendbirdUser> sendbirdUserStates = new();
             if (_sendbirdService != null)
             {
                 try
                 {
+                    // PASO 1: Asegurar que todos los usuarios de Firebase existen en Sendbird
+                    foreach (var user in otherUsers)
+                    {
+                        var sbUserId = user.FirebaseUid ?? user.Username;
+                        await _sendbirdService.EnsureUserExistsAsync(sbUserId, user.NombreCompleto);
+                    }
+                    
+                    // PASO 2: Obtener estados actualizados de Sendbird
                     var sbUsers = await _sendbirdService.GetUsersAsync(onlineOnly: false);
                     foreach (var sbUser in sbUsers)
                     {
                         sendbirdUserStates[sbUser.UserId] = sbUser;
                     }
+                    
+                    System.Diagnostics.Debug.WriteLine($"Sincronizados {otherUsers.Count} usuarios con Sendbird, estados obtenidos: {sendbirdUserStates.Count}");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error al obtener estados de Sendbird: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Error al sincronizar con Sendbird: {ex.Message}");
                 }
             }
 
@@ -118,6 +129,8 @@ public partial class NewConversationDialog : Window
 
             _filteredUsers = new List<UserListItem>(_allUsers);
             UsersListBox.ItemsSource = _filteredUsers;
+            
+            System.Diagnostics.Debug.WriteLine($"Cargados {_allUsers.Count} usuarios en el diálogo");
         }
         catch (Exception ex)
         {

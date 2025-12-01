@@ -87,6 +87,11 @@ public partial class ControlDiarioViewModel : ObservableObject
     [ObservableProperty]
     private bool _requiereProyecto;
     
+    // Protección contra múltiples cargas simultáneas
+    private bool _isLoadingRegistroInProgress = false;
+    private DateTime _lastLoadTime = DateTime.MinValue;
+    private const int MIN_LOAD_INTERVAL_MS = 500; // Mínimo 500ms entre cargas
+    
     public ControlDiarioViewModel(
         IControlDiarioService controlDiarioService,
         IEmpleadoService empleadoService,
@@ -159,6 +164,21 @@ public partial class ControlDiarioViewModel : ObservableObject
             return;
         }
         
+        // PROTECCIÓN: Evitar cargas simultáneas o muy frecuentes
+        if (_isLoadingRegistroInProgress)
+        {
+            return;
+        }
+        
+        var timeSinceLastLoad = (DateTime.Now - _lastLoadTime).TotalMilliseconds;
+        if (timeSinceLastLoad < MIN_LOAD_INTERVAL_MS)
+        {
+            return;
+        }
+        
+        _isLoadingRegistroInProgress = true;
+        _lastLoadTime = DateTime.Now;
+        
         IsLoading = true;
         StatusMessage = "Cargando registro...";
         
@@ -220,6 +240,7 @@ public partial class ControlDiarioViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+            _isLoadingRegistroInProgress = false;
         }
     }
     

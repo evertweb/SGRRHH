@@ -20,8 +20,10 @@ public class PresenceService : IPresenceService, IDisposable
     private IDisposable? _onlineUsersListener;
     private bool _disposed;
     
-    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(2);
+    // OPTIMIZADO: Reducir escrituras de Firestore
+    // Heartbeat cada 5 minutos en lugar de 30 segundos = 96% menos escrituras
+    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan InactivityTimeout = TimeSpan.FromMinutes(15);
     
     public Usuario? CurrentUser { get; private set; }
     public bool IsActive { get; private set; }
@@ -74,11 +76,20 @@ public class PresenceService : IPresenceService, IDisposable
             _heartbeatTimer.AutoReset = true;
             _heartbeatTimer.Start();
             
-            // Iniciar timer de limpieza de usuarios inactivos
-            _cleanupTimer = new System.Timers.Timer(InactivityTimeout.TotalMilliseconds);
-            _cleanupTimer.Elapsed += OnCleanupTimer;
-            _cleanupTimer.AutoReset = true;
-            _cleanupTimer.Start();
+            // OPTIMIZADO: Solo el primer usuario conectado ejecuta el cleanup
+            // Esto evita que múltiples clientes escriban a los mismos documentos
+            // El cleanup se ejecuta solo si no hay otros usuarios online o somos el primero
+            var onlineUsers = await _presenceRepository.GetOnlineUsersAsync();
+            var shouldRunCleanup = !onlineUsers.Any() || onlineUsers.First().UserId == user.Id;
+            
+            if (shouldRunCleanup)
+            {
+                _cleanupTimer = new System.Timers.Timer(InactivityTimeout.TotalMilliseconds);
+                _cleanupTimer.Elapsed += OnCleanupTimer;
+                _cleanupTimer.AutoReset = true;
+                _cleanupTimer.Start();
+                _logger?.LogInformation("Este cliente ejecutará el cleanup de usuarios inactivos");
+            }
             
             IsActive = true;
             

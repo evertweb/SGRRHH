@@ -503,6 +503,67 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
     }
 
     /// <summary>
+    /// Crea o actualiza un usuario en Sendbird (sin conectarlo como usuario actual)
+    /// Útil para sincronizar usuarios de Firebase a Sendbird
+    /// </summary>
+    public async Task<bool> EnsureUserExistsAsync(string userId, string nickname)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            return false;
+
+        try
+        {
+            var userData = new
+            {
+                user_id = userId,
+                nickname = nickname,
+                profile_url = ""
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(userData),
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await _httpClient.PostAsync("v3/users", content);
+
+            // Éxito si se creó o si ya existía (400202 = usuario ya existe)
+            if (response.IsSuccessStatusCode)
+            {
+                _logger?.LogDebug("Usuario {UserId} creado en Sendbird", userId);
+                return true;
+            }
+
+            // Verificar si el error es porque ya existe
+            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                try
+                {
+                    var errorResponse = JsonSerializer.Deserialize<JsonDocument>(responseContent);
+                    if (errorResponse != null && 
+                        errorResponse.RootElement.TryGetProperty("code", out var codeElement) &&
+                        codeElement.GetInt32() == 400202)
+                    {
+                        _logger?.LogDebug("Usuario {UserId} ya existe en Sendbird", userId);
+                        return true;
+                    }
+                }
+                catch { }
+            }
+
+            _logger?.LogWarning("No se pudo crear usuario {UserId} en Sendbird: {StatusCode}", 
+                userId, response.StatusCode);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al asegurar que usuario {UserId} existe en Sendbird", userId);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Parsea un usuario de Sendbird desde JSON
     /// </summary>
     private SendbirdUser? ParseUser(JsonElement element)

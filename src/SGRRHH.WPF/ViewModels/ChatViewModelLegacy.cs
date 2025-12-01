@@ -23,6 +23,10 @@ public partial class ChatViewModelLegacy : ObservableObject, IDisposable
     private IDisposable? _globalMessageListener;
     private bool _disposed;
     
+    // OPTIMIZACIÓN: Debounce para evitar escrituras excesivas de MarkAsRead
+    private DateTime _lastMarkAsReadTime = DateTime.MinValue;
+    private const int MARK_READ_DEBOUNCE_MS = 3000; // 3 segundos entre llamadas
+    
     #region Properties
     
     [ObservableProperty]
@@ -460,10 +464,15 @@ public partial class ChatViewModelLegacy : ObservableObject, IDisposable
                     Messages.Add(CreateMessageViewModel(message));
                     ScrollToBottomRequested?.Invoke(this, EventArgs.Empty);
                     
-                    // Marcar como leído
+                    // OPTIMIZACIÓN: Marcar como leído con debounce para evitar escrituras excesivas
                     if (SelectedUser != null)
                     {
-                        await _chatService.MarkConversationAsReadAsync(SelectedUser.UserId);
+                        var timeSinceLastMark = (DateTime.Now - _lastMarkAsReadTime).TotalMilliseconds;
+                        if (timeSinceLastMark > MARK_READ_DEBOUNCE_MS)
+                        {
+                            _lastMarkAsReadTime = DateTime.Now;
+                            await _chatService.MarkConversationAsReadAsync(SelectedUser.UserId);
+                        }
                     }
                 }
             }

@@ -58,6 +58,12 @@ public interface ISendbirdChatService
     Task<IEnumerable<SendbirdUser>> GetUsersAsync(bool onlineOnly = false);
 
     /// <summary>
+    /// Crea o actualiza un usuario en Sendbird (sin conectarlo)
+    /// Útil para sincronizar usuarios de Firebase a Sendbird
+    /// </summary>
+    Task<bool> EnsureUserExistsAsync(string userId, string nickname);
+
+    /// <summary>
     /// Envía un archivo a un canal
     /// </summary>
     Task<SendbirdMessage?> SendFileAsync(string channelUrl, string filePath);
