@@ -1,0 +1,172 @@
+<Window x:Class="SGRRHH.WPF.Views.SmsVerificationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Verificación WhatsApp"
+        Height="380" Width="400"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize">
+    
+    <Border Background="#FAFAFA" CornerRadius="10" 
+            BorderBrush="#1E88E5" BorderThickness="2">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Barra de título -->
+            <Border Grid.Row="0" Background="#1E88E5" CornerRadius="8,8,0,0" 
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid Margin="15,10">
+                    <TextBlock Text="🔐 Verificación" FontSize="16" FontWeight="Bold" 
+                               Foreground="White" HorizontalAlignment="Left"/>
+                    <Button Content="✕" HorizontalAlignment="Right" 
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="White" FontSize="16" Cursor="Hand"
+                            Click="CancelButton_Click"
+                            Padding="5,0"/>
+                </Grid>
+            </Border>
+            
+            <!-- Contenido -->
+            <StackPanel Grid.Row="1" Margin="30,20" VerticalAlignment="Center">
+                
+                <!-- Icono y mensaje -->
+                <TextBlock Text="�" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                <TextBlock Text="Ingrese el código de verificación" 
+                           FontSize="16" FontWeight="SemiBold" 
+                           Foreground="#37474F" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBlock x:Name="PhoneLabel" Text="Enviado por WhatsApp a +57***907" 
+                           FontSize="13" Foreground="#757575" 
+                           HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                
+                <!-- Campo de código -->
+                <TextBox x:Name="CodeTextBox" 
+                         MaxLength="6"
+                         FontSize="28" FontWeight="Bold"
+                         TextAlignment="Center"
+                         Padding="15,10" Margin="0,0,0,15"
+                         BorderBrush="#BDBDBD" BorderThickness="1"
+                         PreviewTextInput="CodeTextBox_PreviewTextInput"
+                         TextChanged="CodeTextBox_TextChanged">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox">
+                            <Setter Property="Background" Value="White"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsFocused" Value="True">
+                                    <Setter Property="BorderBrush" Value="#1E88E5"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                
+                <!-- Checkbox recordar dispositivo -->
+                <CheckBox x:Name="TrustDeviceCheckbox" 
+                          Content="Recordar este dispositivo por 30 días"
+                          Foreground="#37474F" FontSize="13"
+                          Margin="0,0,0,15" HorizontalAlignment="Center"
+                          IsChecked="True"/>
+                
+                <!-- Mensaje de error -->
+                <Border x:Name="ErrorBorder" Background="#FFEBEE" CornerRadius="5" 
+                        Padding="10" Margin="0,0,0,15" Visibility="Collapsed">
+                    <TextBlock x:Name="ErrorText" Foreground="#E53935" 
+                               TextWrapping="Wrap" FontSize="12" TextAlignment="Center"/>
+                </Border>
+                
+                <!-- Botones -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Reenviar código -->
+                    <Button x:Name="ResendButton" Grid.Column="0"
+                            Content="Reenviar código" 
+                            Click="ResendButton_Click"
+                            Padding="12,10" FontSize="13"
+                            Cursor="Hand">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#E3F2FD"/>
+                                <Setter Property="Foreground" Value="#1E88E5"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" 
+                                                    CornerRadius="5" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" 
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#BBDEFB"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Background" Value="#EEEEEE"/>
+                                        <Setter Property="Foreground" Value="#9E9E9E"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    
+                    <!-- Verificar -->
+                    <Button x:Name="VerifyButton" Grid.Column="2"
+                            Content="Verificar" 
+                            Click="VerifyButton_Click"
+                            IsEnabled="False"
+                            Padding="12,10" FontSize="13" FontWeight="SemiBold"
+                            Cursor="Hand">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Background" Value="#1E88E5"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}" 
+                                                    CornerRadius="5" Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" 
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#1976D2"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Background" Value="#BDBDBD"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                </Grid>
+                
+                <!-- Indicador de carga -->
+                <StackPanel x:Name="LoadingPanel" Orientation="Horizontal" 
+                            HorizontalAlignment="Center" Margin="0,15,0,0"
+                            Visibility="Collapsed">
+                    <TextBlock Text="⏳" FontSize="14"/>
+                    <TextBlock x:Name="LoadingText" Text=" Verificando..." 
+                               Foreground="#757575" FontSize="12"/>
+                </StackPanel>
+                
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

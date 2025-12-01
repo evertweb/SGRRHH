@@ -74,7 +74,10 @@ public partial class NewConversationDialog : Window
                     // PASO 1: Asegurar que todos los usuarios de Firebase existen en Sendbird
                     foreach (var user in otherUsers)
                     {
-                        var sbUserId = user.FirebaseUid ?? user.Username;
+                        // Usar FirebaseUid como ID de Sendbird (único por usuario)
+                        var sbUserId = !string.IsNullOrEmpty(user.FirebaseUid)
+                            ? user.FirebaseUid
+                            : user.Username;
                         await _sendbirdService.EnsureUserExistsAsync(sbUserId, user.NombreCompleto);
                     }
                     
@@ -96,8 +99,11 @@ public partial class NewConversationDialog : Window
             // Crear lista combinando datos de Firebase con estado de Sendbird
             foreach (var user in otherUsers)
             {
-                // El ID de Sendbird es el FirebaseUid del usuario
-                var sendbirdUserId = user.FirebaseUid ?? user.Username;
+                // El ID de Sendbird es el PhoneNumber del usuario (único)
+                // Fallback: FirebaseUid -> Username
+                var sendbirdUserId = !string.IsNullOrEmpty(user.PhoneNumber) 
+                    ? user.PhoneNumber 
+                    : (user.FirebaseUid ?? user.Username);
                 var isOnline = false;
                 DateTime? lastSeenAt = null;
                 SendbirdUser? sbUser = null;

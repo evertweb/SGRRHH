@@ -204,4 +204,80 @@ public static class AppSettings
 
         return "Firebase"; // Por defecto Firebase
     }
+    
+    /// <summary>
+    /// Obtiene la configuración de Twilio SMS
+    /// </summary>
+    public static TwilioSettings GetTwilioSettings()
+    {
+        Load();
+        
+        var settings = new TwilioSettings();
+        
+        try
+        {
+            if (_settings?.RootElement.TryGetProperty("Twilio", out var twilioSection) == true)
+            {
+                if (twilioSection.TryGetProperty("Enabled", out var enabledElement))
+                    settings.Enabled = enabledElement.GetBoolean();
+                
+                if (twilioSection.TryGetProperty("AccountSid", out var accountSidElement))
+                    settings.AccountSid = accountSidElement.GetString() ?? "";
+                
+                if (twilioSection.TryGetProperty("AuthToken", out var authTokenElement))
+                    settings.AuthToken = authTokenElement.GetString() ?? "";
+                
+                if (twilioSection.TryGetProperty("VerifyServiceSid", out var verifySidElement))
+                    settings.VerifyServiceSid = verifySidElement.GetString() ?? "";
+            }
+        }
+        catch { }
+        
+        return settings;
+    }
+    
+    /// <summary>
+    /// Obtiene la configuración de MFA
+    /// </summary>
+    public static MfaSettings GetMfaSettings()
+    {
+        Load();
+        
+        var settings = new MfaSettings();
+        
+        try
+        {
+            if (_settings?.RootElement.TryGetProperty("MFA", out var mfaSection) == true)
+            {
+                if (mfaSection.TryGetProperty("Enabled", out var enabledElement))
+                    settings.Enabled = enabledElement.GetBoolean();
+                
+                if (mfaSection.TryGetProperty("TrustDeviceDays", out var trustDaysElement))
+                    settings.TrustDeviceDays = trustDaysElement.GetInt32();
+            }
+        }
+        catch { }
+        
+        return settings;
+    }
+}
+
+/// <summary>
+/// Configuración de Twilio
+/// </summary>
+public class TwilioSettings
+{
+    public bool Enabled { get; set; }
+    public string AccountSid { get; set; } = string.Empty;
+    public string AuthToken { get; set; } = string.Empty;
+    public string VerifyServiceSid { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Configuración de MFA
+/// </summary>
+public class MfaSettings
+{
+    public bool Enabled { get; set; }
+    public int TrustDeviceDays { get; set; } = 30;
 }

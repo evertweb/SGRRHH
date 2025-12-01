@@ -27,6 +27,27 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
     public event EventHandler<SendbirdMessage>? MessageReceived;
     public event EventHandler<int>? UnreadCountChanged;
 
+    /// <summary>
+    /// Obtiene el ID único de Sendbird para un usuario
+    /// Usa FirebaseUid como identificador primario (único y consistente)
+    /// </summary>
+    private string GetSendbirdUserId(Usuario user)
+    {
+        if (user == null)
+            throw new ArgumentNullException(nameof(user));
+        
+        // IMPORTANTE: Usar FirebaseUid como identificador primario
+        // Esto asegura identificadores únicos y consistentes
+        if (!string.IsNullOrEmpty(user.FirebaseUid))
+            return user.FirebaseUid;
+        
+        // Fallback a Username (solo para usuarios legacy sin FirebaseUid)
+        if (!string.IsNullOrEmpty(user.Username))
+            return user.Username;
+        
+        throw new InvalidOperationException($"Usuario {user.NombreCompleto} no tiene FirebaseUid ni Username");
+    }
+
     public SendbirdChatService(
         IOptions<SendbirdSettings> settings,
         ILogger<SendbirdChatService>? logger = null)
@@ -71,7 +92,8 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
             }
 
             CurrentUser = user;
-            _currentUserId = !string.IsNullOrEmpty(user.FirebaseUid) ? user.FirebaseUid : user.Username;
+            // Usar FirebaseUid como ID de Sendbird (único por usuario)
+            _currentUserId = GetSendbirdUserId(user);
 
             // Crear o actualizar usuario en Sendbird
             var userData = new
@@ -561,6 +583,52 @@ public class SendbirdChatService : ISendbirdChatService, IDisposable
             _logger?.LogError(ex, "Error al asegurar que usuario {UserId} existe en Sendbird", userId);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Sincroniza todos los usuarios de Firebase a Sendbird
+    /// IMPORTANTE: Solo llamar UNA VEZ al inicializar para evitar bucles infinitos
+    /// </summary>
+    public async Task<int> SyncAllUsersAsync(IEnumerable<Usuario> usuarios)
+    {
+        if (usuarios == null)
+            return 0;
+        
+        var syncedCount = 0;
+        var failedCount = 0;
+        
+        try
+        {
+            _logger?.LogInformation("Iniciando sincronización de usuarios con Sendbird...");
+            
+            foreach (var usuario in usuarios)
+            {
+                try
+                {
+                    var sendbirdUserId = GetSendbirdUserId(usuario);
+                    var success = await EnsureUserExistsAsync(sendbirdUserId, usuario.NombreCompleto);
+                    
+                    if (success)
+                        syncedCount++;
+                    else
+                        failedCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Error al sincronizar usuario {Username}", usuario.Username);
+                    failedCount++;
+                }
+            }
+            
+            _logger?.LogInformation("Sincronización completada: {SyncedCount} exitosos, {FailedCount} fallidos", 
+                syncedCount, failedCount);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error crítico durante sincronización de usuarios");
+        }
+        
+        return syncedCount;
     }
 
     /// <summary>

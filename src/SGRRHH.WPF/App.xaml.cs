@@ -99,6 +99,9 @@ public partial class App : Application
         
         // Registrar ViewModels
         RegisterViewModels(services);
+        
+        // Registrar servicio de SMS/MFA
+        ConfigureSmsService(services);
     }
 
     /// <summary>
@@ -122,6 +125,34 @@ public partial class App : Application
         services.AddSingleton<ISendbirdChatService, SendbirdChatService>();
 
         // Nota: El registro del ViewModel se hace en RegisterViewModels
+    }
+    
+    /// <summary>
+    /// Configura el servicio de verificación SMS para MFA
+    /// </summary>
+    private void ConfigureSmsService(IServiceCollection services)
+    {
+        var twilioSettings = AppSettings.GetTwilioSettings();
+        var mfaSettings = AppSettings.GetMfaSettings();
+        
+        // Solo registrar si MFA está habilitado y Twilio está configurado
+        if (mfaSettings.Enabled && twilioSettings.Enabled && 
+            !string.IsNullOrEmpty(twilioSettings.AccountSid) &&
+            !twilioSettings.AccountSid.StartsWith("YOUR_"))
+        {
+            services.AddSingleton<ISmsVerificationService>(sp => 
+                new TwilioSmsVerificationService(
+                    twilioSettings.AccountSid,
+                    twilioSettings.AuthToken,
+                    twilioSettings.VerifyServiceSid,
+                    sp.GetService<Microsoft.Extensions.Logging.ILogger<TwilioSmsVerificationService>>()));
+            
+            System.Diagnostics.Debug.WriteLine("Servicio SMS (Twilio) configurado para MFA");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("MFA deshabilitado o Twilio no configurado");
+        }
     }
     
     /// <summary>
@@ -266,7 +297,23 @@ public partial class App : Application
             
             if (result == true && loginViewModel.AuthenticatedUser != null)
             {
-                _currentUser = loginViewModel.AuthenticatedUser;
+                var user = loginViewModel.AuthenticatedUser;
+                
+                // ===== VERIFICACIÓN MFA =====
+                var mfaSettings = AppSettings.GetMfaSettings();
+                
+                if (mfaSettings.Enabled && !string.IsNullOrEmpty(user.PhoneNumber))
+                {
+                    var mfaPassed = await PerformMfaVerificationAsync(user);
+                    
+                    if (!mfaPassed)
+                    {
+                        // MFA falló o fue cancelado, volver a login
+                        continue;
+                    }
+                }
+                
+                _currentUser = user;
                 CurrentUser = _currentUser;
                 authenticated = true;
                 
@@ -317,6 +364,73 @@ public partial class App : Application
         {
             // No bloquear el inicio si falla la conexión a Sendbird
             System.Diagnostics.Debug.WriteLine($"Error al conectar a Sendbird: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// Realiza la verificación MFA por SMS
+    /// </summary>
+    private async Task<bool> PerformMfaVerificationAsync(Usuario user)
+    {
+        if (_serviceProvider == null || string.IsNullOrEmpty(user.PhoneNumber))
+            return true; // Si no hay teléfono, permitir sin MFA
+        
+        try
+        {
+            var smsService = _serviceProvider.GetService<ISmsVerificationService>();
+            
+            if (smsService == null)
+            {
+                System.Diagnostics.Debug.WriteLine("Servicio SMS no configurado, saltando MFA");
+                return true;
+            }
+            
+            // Verificar si el dispositivo es confiable
+            var userId = user.FirebaseUid ?? user.Id.ToString();
+            var isTrusted = await smsService.IsDeviceTrustedAsync(userId);
+            
+            if (isTrusted)
+            {
+                System.Diagnostics.Debug.WriteLine($"Dispositivo confiable para {user.Username}, saltando MFA");
+                return true;
+            }
+            
+            // Mostrar ventana de verificación SMS
+            var smsWindow = new SmsVerificationWindow(smsService, user.PhoneNumber, userId)
+            {
+                Owner = null
+            };
+            
+            // Enviar código SMS
+            var sent = await smsWindow.SendCodeAsync();
+            
+            if (!sent)
+            {
+                MessageBox.Show(
+                    "No se pudo enviar el código de verificación. Intente nuevamente.",
+                    "Error SMS",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return false;
+            }
+            
+            // Mostrar diálogo y esperar verificación
+            var dialogResult = smsWindow.ShowDialog();
+            
+            return dialogResult == true && smsWindow.IsVerified;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error en MFA: {ex.Message}");
+            
+            // En caso de error, mostrar mensaje pero permitir continuar
+            var result = MessageBox.Show(
+                "Error al verificar SMS. ¿Desea continuar sin verificación?",
+                "Error MFA",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            
+            return result == MessageBoxResult.Yes;
         }
     }
     

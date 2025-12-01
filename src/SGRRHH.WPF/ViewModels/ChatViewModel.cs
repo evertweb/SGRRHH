@@ -147,6 +147,21 @@ public partial class ChatViewModel : ObservableObject, IDisposable
                 return;
             }
 
+            // ✨ NUEVO: Sincronizar TODOS los usuarios del sistema a Sendbird (UNA SOLA VEZ)
+            // Esto asegura que TODOS los usuarios estén disponibles para chatear
+            LoadingMessage = "Sincronizando usuarios...";
+            try
+            {
+                var allUsers = await _usuarioService.GetAllActiveAsync();
+                var syncedCount = await _sendbirdService.SyncAllUsersAsync(allUsers);
+                System.Diagnostics.Debug.WriteLine($"✅ Sincronizados {syncedCount} usuarios con Sendbird");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ Error en sincronización (no crítico): {ex.Message}");
+                // No bloquear la app si la sincronización falla
+            }
+
             LoadingMessage = "Cargando conversaciones...";
 
             // Cargar canales

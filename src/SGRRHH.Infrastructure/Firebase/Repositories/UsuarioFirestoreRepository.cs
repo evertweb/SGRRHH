@@ -30,6 +30,7 @@ public class UsuarioFirestoreRepository : FirestoreRepository<Usuario>, IUsuario
         doc["username"] = entity.Username;
         doc["nombreCompleto"] = entity.NombreCompleto;
         doc["email"] = entity.Email;
+        doc["phoneNumber"] = entity.PhoneNumber;
         doc["rol"] = entity.Rol.ToString();
         
         // Referencias a empleado
@@ -61,6 +62,9 @@ public class UsuarioFirestoreRepository : FirestoreRepository<Usuario>, IUsuario
         
         if (document.TryGetValue<string>("email", out var email))
             entity.Email = email;
+        
+        if (document.TryGetValue<string>("phoneNumber", out var phoneNumber))
+            entity.PhoneNumber = phoneNumber;
         
         if (document.TryGetValue<string>("rol", out var rolStr) && !string.IsNullOrEmpty(rolStr))
             if (Enum.TryParse<RolUsuario>(rolStr, out var rol))

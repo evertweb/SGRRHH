@@ -62,8 +62,17 @@ public class FirebaseAuthService : IFirebaseAuthService
         
         try
         {
-            // Determinar si es email o username
-            string email = username.Contains("@") ? username : $"{username}@sgrrhh.local";
+            // Validar que el username tenga formato email completo (@sgrrhh.local)
+            if (!username.Contains("@") || !username.EndsWith("@sgrrhh.local", StringComparison.OrdinalIgnoreCase))
+            {
+                return new AuthResult
+                {
+                    Success = false,
+                    Message = "Ingrese su usuario completo (ej: secretaria@sgrrhh.local)"
+                };
+            }
+            
+            string email = username.ToLower();
             
             // Intentar autenticar con Firebase Auth
             var result = await AuthenticateWithFirebaseAsync(email, password);

@@ -25,6 +25,7 @@ ehthumbs.db
 
 # Local appsettings
 appsettings.*.json
+appsettings.json
 
 # Firebase credentials (IMPORTANTE: nunca subir credenciales)
 firebase-credentials.json

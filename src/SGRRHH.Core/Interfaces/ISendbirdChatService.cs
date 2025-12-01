@@ -64,6 +64,13 @@ public interface ISendbirdChatService
     Task<bool> EnsureUserExistsAsync(string userId, string nickname);
 
     /// <summary>
+    /// Sincroniza todos los usuarios de Firebase a Sendbird
+    /// IMPORTANTE: Solo llamar UNA VEZ al inicializar para evitar bucles
+    /// </summary>
+    /// <returns>Número de usuarios sincronizados exitosamente</returns>
+    Task<int> SyncAllUsersAsync(IEnumerable<Usuario> usuarios);
+
+    /// <summary>
     /// Envía un archivo a un canal
     /// </summary>
     Task<SendbirdMessage?> SendFileAsync(string channelUrl, string filePath);
@@ -137,4 +144,62 @@ public class SendbirdUser
     public bool IsActive { get; set; }
     public DateTime? LastSeenAt { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// Combina datos de Usuario de Firebase con estado de Sendbird
+/// Permite mostrar TODOS los usuarios del sistema con su estado online
+/// </summary>
+public class CombinedUserInfo
+{
+    public Usuario Usuario { get; set; } = null!;
+    public SendbirdUser? SendbirdData { get; set; }
+    
+    /// <summary>
+    /// Indica si el usuario está online en Sendbird
+    /// </summary>
+    public bool IsOnline => SendbirdData?.IsOnline ?? false;
+    
+    /// <summary>
+    /// Indica si el usuario se ha conectado alguna vez a Sendbird
+    /// </summary>
+    public bool HasConnectedBefore => SendbirdData != null;
+    
+    /// <summary>
+    /// Última vez que estuvo online (null si nunca se conectó)
+    /// </summary>
+    public DateTime? LastSeenAt => SendbirdData?.LastSeenAt;
+    
+    /// <summary>
+    /// Texto de estado para mostrar en la UI
+    /// </summary>
+    public string StatusText
+    {
+        get
+        {
+            if (IsOnline) return "En línea";
+            if (!HasConnectedBefore) return "Nunca conectado";
+            return GetLastSeenText();
+        }
+    }
+    
+    /// <summary>
+    /// Color del indicador de estado
+    /// </summary>
+    public string StatusColor => IsOnline ? "#43B581" : "#747F8D";
+    
+    private string GetLastSeenText()
+    {
+        if (!LastSeenAt.HasValue)
+            return "Desconectado";
+
+        var diff = DateTime.UtcNow - LastSeenAt.Value;
+        
+        if (diff.TotalMinutes < 5) return "Hace un momento";
+        if (diff.TotalMinutes < 60) return $"Hace {(int)diff.TotalMinutes} min";
+        if (diff.TotalHours < 24) return $"Hace {(int)diff.TotalHours} h";
+        if (diff.TotalDays < 7) return $"Hace {(int)diff.TotalDays} días";
+        
+        return "Desconectado";
+    }
 }

@@ -33,6 +33,12 @@ public class Usuario : EntidadBase
     public string? Email { get; set; }
     
     /// <summary>
+    /// Número de teléfono del usuario (formato E.164, ej: +573236019907)
+    /// Se usa como identificador único para Sendbird
+    /// </summary>
+    public string? PhoneNumber { get; set; }
+    
+    /// <summary>
     /// Rol del usuario en el sistema
     /// </summary>
     public RolUsuario Rol { get; set; }

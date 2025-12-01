@@ -69,7 +69,9 @@ public partial class LoginViewModel : ObservableObject
         {
             IsLoading = true;
             
-            var result = await _authService.AuthenticateAsync(Username, Password);
+            // Usar username con dominio auto-completado
+            var fullUsername = GetFullUsername();
+            var result = await _authService.AuthenticateAsync(fullUsername, Password);
             
             if (result.Success)
             {
@@ -91,6 +93,22 @@ public partial class LoginViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+    
+    /// <summary>
+    /// Obtiene el username completo con dominio @sgrrhh.local si no está incluido
+    /// </summary>
+    private string GetFullUsername()
+    {
+        if (string.IsNullOrWhiteSpace(Username))
+            return string.Empty;
+        
+        // Si ya contiene @, usarlo tal cual (permite dominios personalizados)
+        if (Username.Contains("@"))
+            return Username.Trim();
+        
+        // Auto-completar con dominio predeterminado
+        return $"{Username.Trim()}@sgrrhh.local";
     }
     
     [RelayCommand]
