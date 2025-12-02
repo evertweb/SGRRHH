@@ -56,59 +56,48 @@ public partial class NewConversationDialog : Window
         {
             _allUsers.Clear();
 
-            // SIEMPRE obtener usuarios de Firebase (fuente de verdad)
+            // Firebase es la fuente de verdad para usuarios
             var firebaseUsers = await _usuarioService.GetAllActiveAsync();
             
-            // Excluir al usuario actual
-            var currentUserId = App.CurrentUser?.Id;
+            // Excluir al usuario actual por FirebaseUid (más confiable que Id)
             var currentFirebaseUid = App.CurrentUser?.FirebaseUid;
-            var otherUsers = firebaseUsers.Where(u => u.Id != currentUserId).ToList();
+            var otherUsers = firebaseUsers
+                .Where(u => !string.IsNullOrEmpty(u.FirebaseUid) && u.FirebaseUid != currentFirebaseUid)
+                .ToList();
 
-            // Si Sendbird está disponible, sincronizar usuarios de Firebase a Sendbird
-            // y obtener estados online
+            // Obtener estados online de Sendbird
             Dictionary<string, SendbirdUser> sendbirdUserStates = new();
             if (_sendbirdService != null)
             {
                 try
                 {
-                    // PASO 1: Asegurar que todos los usuarios de Firebase existen en Sendbird
-                    foreach (var user in otherUsers)
-                    {
-                        // Usar FirebaseUid como ID de Sendbird (único por usuario)
-                        var sbUserId = !string.IsNullOrEmpty(user.FirebaseUid)
-                            ? user.FirebaseUid
-                            : user.Username;
-                        await _sendbirdService.EnsureUserExistsAsync(sbUserId, user.NombreCompleto);
-                    }
-                    
-                    // PASO 2: Obtener estados actualizados de Sendbird
+                    // Obtener estados de usuarios en Sendbird
                     var sbUsers = await _sendbirdService.GetUsersAsync(onlineOnly: false);
                     foreach (var sbUser in sbUsers)
                     {
+                        // El UserId en Sendbird ES el FirebaseUid
                         sendbirdUserStates[sbUser.UserId] = sbUser;
                     }
                     
-                    System.Diagnostics.Debug.WriteLine($"Sincronizados {otherUsers.Count} usuarios con Sendbird, estados obtenidos: {sendbirdUserStates.Count}");
+                    System.Diagnostics.Debug.WriteLine($"Estados obtenidos de Sendbird: {sendbirdUserStates.Count}");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error al sincronizar con Sendbird: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Error al obtener estados de Sendbird: {ex.Message}");
                 }
             }
 
             // Crear lista combinando datos de Firebase con estado de Sendbird
             foreach (var user in otherUsers)
             {
-                // El ID de Sendbird es el PhoneNumber del usuario (único)
-                // Fallback: FirebaseUid -> Username
-                var sendbirdUserId = !string.IsNullOrEmpty(user.PhoneNumber) 
-                    ? user.PhoneNumber 
-                    : (user.FirebaseUid ?? user.Username);
+                // IMPORTANTE: El ID de Sendbird es SIEMPRE el FirebaseUid
+                var sendbirdUserId = user.FirebaseUid!;
+                
                 var isOnline = false;
                 DateTime? lastSeenAt = null;
                 SendbirdUser? sbUser = null;
 
-                // Buscar estado en Sendbird
+                // Buscar estado en Sendbird usando FirebaseUid
                 if (sendbirdUserStates.TryGetValue(sendbirdUserId, out var foundSbUser))
                 {
                     isOnline = foundSbUser.IsOnline;
@@ -118,7 +107,7 @@ public partial class NewConversationDialog : Window
 
                 _allUsers.Add(new UserListItem
                 {
-                    UserId = sendbirdUserId,
+                    UserId = sendbirdUserId,  // FirebaseUid
                     NombreCompleto = user.NombreCompleto,
                     Username = user.Username,
                     IsOnline = isOnline,
@@ -136,7 +125,7 @@ public partial class NewConversationDialog : Window
             _filteredUsers = new List<UserListItem>(_allUsers);
             UsersListBox.ItemsSource = _filteredUsers;
             
-            System.Diagnostics.Debug.WriteLine($"Cargados {_allUsers.Count} usuarios en el diálogo");
+            System.Diagnostics.Debug.WriteLine($"Cargados {_allUsers.Count} usuarios (Firebase + estado Sendbird)");
         }
         catch (Exception ex)
         {
@@ -176,6 +165,15 @@ public partial class NewConversationDialog : Window
         {
             SelectedUser = userItem.Usuario;
             SelectedSendbirdUser = userItem.SendbirdUser;
+            
+            System.Diagnostics.Debug.WriteLine($"=== Usuario seleccionado ===");
+            System.Diagnostics.Debug.WriteLine($"  UserItem.UserId: {userItem.UserId}");
+            System.Diagnostics.Debug.WriteLine($"  UserItem.NombreCompleto: {userItem.NombreCompleto}");
+            System.Diagnostics.Debug.WriteLine($"  UserItem.IsOnline: {userItem.IsOnline}");
+            System.Diagnostics.Debug.WriteLine($"  SelectedUser: {(SelectedUser != null ? SelectedUser.NombreCompleto : "NULL")}");
+            System.Diagnostics.Debug.WriteLine($"  SelectedUser.FirebaseUid: {SelectedUser?.FirebaseUid ?? "NULL"}");
+            System.Diagnostics.Debug.WriteLine($"  SelectedSendbirdUser: {(SelectedSendbirdUser != null ? SelectedSendbirdUser.UserId : "NULL")}");
+            
             DialogResult = true;
             Close();
         }

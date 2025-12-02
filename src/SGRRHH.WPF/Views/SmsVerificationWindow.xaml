@@ -9,8 +9,8 @@
         Background="Transparent"
         ResizeMode="NoResize">
     
-    <Border Background="#FAFAFA" CornerRadius="10" 
-            BorderBrush="#1E88E5" BorderThickness="2">
+    <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="10" 
+            BorderBrush="{DynamicResource PrimaryBrush}" BorderThickness="2">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -18,14 +18,14 @@
             </Grid.RowDefinitions>
             
             <!-- Barra de título -->
-            <Border Grid.Row="0" Background="#1E88E5" CornerRadius="8,8,0,0" 
+            <Border Grid.Row="0" Background="{DynamicResource PrimaryBrush}" CornerRadius="8,8,0,0" 
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid Margin="15,10">
                     <TextBlock Text="🔐 Verificación" FontSize="16" FontWeight="Bold" 
-                               Foreground="White" HorizontalAlignment="Left"/>
+                               Foreground="{DynamicResource TextInverseBrush}" HorizontalAlignment="Left"/>
                     <Button Content="✕" HorizontalAlignment="Right" 
                             Background="Transparent" BorderThickness="0"
-                            Foreground="White" FontSize="16" Cursor="Hand"
+                            Foreground="{DynamicResource TextInverseBrush}" FontSize="16" Cursor="Hand"
                             Click="CancelButton_Click"
                             Padding="5,0"/>
                 </Grid>
@@ -38,9 +38,9 @@
                 <TextBlock Text="�" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
                 <TextBlock Text="Ingrese el código de verificación" 
                            FontSize="16" FontWeight="SemiBold" 
-                           Foreground="#37474F" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                           Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                 <TextBlock x:Name="PhoneLabel" Text="Enviado por WhatsApp a +57***907" 
-                           FontSize="13" Foreground="#757575" 
+                           FontSize="13" Foreground="{DynamicResource TextMutedBrush}" 
                            HorizontalAlignment="Center" Margin="0,0,0,20"/>
                 
                 <!-- Campo de código -->
@@ -49,15 +49,15 @@
                          FontSize="28" FontWeight="Bold"
                          TextAlignment="Center"
                          Padding="15,10" Margin="0,0,0,15"
-                         BorderBrush="#BDBDBD" BorderThickness="1"
+                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                          PreviewTextInput="CodeTextBox_PreviewTextInput"
                          TextChanged="CodeTextBox_TextChanged">
                     <TextBox.Style>
                         <Style TargetType="TextBox">
-                            <Setter Property="Background" Value="White"/>
+                            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                             <Style.Triggers>
                                 <Trigger Property="IsFocused" Value="True">
-                                    <Setter Property="BorderBrush" Value="#1E88E5"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -67,14 +67,14 @@
                 <!-- Checkbox recordar dispositivo -->
                 <CheckBox x:Name="TrustDeviceCheckbox" 
                           Content="Recordar este dispositivo por 30 días"
-                          Foreground="#37474F" FontSize="13"
+                          Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13"
                           Margin="0,0,0,15" HorizontalAlignment="Center"
                           IsChecked="True"/>
                 
                 <!-- Mensaje de error -->
-                <Border x:Name="ErrorBorder" Background="#FFEBEE" CornerRadius="5" 
+                <Border x:Name="ErrorBorder" Background="{DynamicResource DangerLightBrush}" CornerRadius="5" 
                         Padding="10" Margin="0,0,0,15" Visibility="Collapsed">
-                    <TextBlock x:Name="ErrorText" Foreground="#E53935" 
+                    <TextBlock x:Name="ErrorText" Foreground="{DynamicResource DangerBrush}" 
                                TextWrapping="Wrap" FontSize="12" TextAlignment="Center"/>
                 </Border>
                 
@@ -94,8 +94,8 @@
                             Cursor="Hand">
                         <Button.Style>
                             <Style TargetType="Button">
-                                <Setter Property="Background" Value="#E3F2FD"/>
-                                <Setter Property="Foreground" Value="#1E88E5"/>
+                                <Setter Property="Background" Value="{DynamicResource PrimaryLightBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
                                 <Setter Property="BorderThickness" Value="0"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
@@ -110,11 +110,11 @@
                                 </Setter>
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#BBDEFB"/>
+                                        <Setter Property="Background" Value="{DynamicResource PrimaryAccentBrush}"/>
                                     </Trigger>
                                     <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Background" Value="#EEEEEE"/>
-                                        <Setter Property="Foreground" Value="#9E9E9E"/>
+                                        <Setter Property="Background" Value="{DynamicResource BorderLightBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -130,8 +130,8 @@
                             Cursor="Hand">
                         <Button.Style>
                             <Style TargetType="Button">
-                                <Setter Property="Background" Value="#1E88E5"/>
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}"/>
                                 <Setter Property="BorderThickness" Value="0"/>
                                 <Setter Property="Template">
                                     <Setter.Value>
@@ -146,10 +146,10 @@
                                 </Setter>
                                 <Style.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#1976D2"/>
+                                        <Setter Property="Background" Value="{DynamicResource PrimaryDarkBrush}"/>
                                     </Trigger>
                                     <Trigger Property="IsEnabled" Value="False">
-                                        <Setter Property="Background" Value="#BDBDBD"/>
+                                        <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -163,7 +163,7 @@
                             Visibility="Collapsed">
                     <TextBlock Text="⏳" FontSize="14"/>
                     <TextBlock x:Name="LoadingText" Text=" Verificando..." 
-                               Foreground="#757575" FontSize="12"/>
+                               Foreground="{DynamicResource TextMutedBrush}" FontSize="12"/>
                 </StackPanel>
                 
             </StackPanel>

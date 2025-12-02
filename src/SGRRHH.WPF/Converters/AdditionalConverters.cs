@@ -307,3 +307,96 @@ public class FileSizeConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Convierte un bool hasError a un color de fondo (error=rojo claro, success=verde claro)
+/// </summary>
+public class BoolToErrorBackgroundConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool hasError)
+        {
+            if (hasError)
+            {
+                // Rojo claro para errores
+                return Application.Current.TryFindResource("DangerLightBrush")
+                    ?? new SolidColorBrush(Color.FromRgb(255, 235, 235));
+            }
+            else
+            {
+                // Verde claro para éxito
+                return Application.Current.TryFindResource("SuccessLightBrush")
+                    ?? new SolidColorBrush(Color.FromRgb(235, 255, 235));
+            }
+        }
+        return new SolidColorBrush(Colors.Transparent);
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Convierte un bool hasError a un color de texto (error=rojo oscuro, success=verde oscuro)
+/// </summary>
+public class BoolToErrorForegroundConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool hasError)
+        {
+            if (hasError)
+            {
+                // Rojo oscuro para errores
+                return Application.Current.TryFindResource("DangerBrush")
+                    ?? new SolidColorBrush(Color.FromRgb(244, 67, 54));
+            }
+            else
+            {
+                // Verde oscuro para éxito
+                return Application.Current.TryFindResource("SuccessBrush")
+                    ?? new SolidColorBrush(Color.FromRgb(76, 175, 80));
+            }
+        }
+        return new SolidColorBrush(Colors.Black);
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Convierte el paso actual del wizard a un color de fondo para los indicadores de paso
+/// </summary>
+public class StepToColorConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is int currentStep && parameter is string stepParam && int.TryParse(stepParam, out int stepNumber))
+        {
+            if (currentStep >= stepNumber)
+            {
+                // Paso actual o completado: Color primario
+                return Application.Current.TryFindResource("PrimaryBrush")
+                    ?? new SolidColorBrush(Color.FromRgb(33, 150, 243));
+            }
+            else
+            {
+                // Paso futuro: Gris
+                return Application.Current.TryFindResource("GrayBrush")
+                    ?? new SolidColorBrush(Color.FromRgb(189, 189, 189));
+            }
+        }
+        return new SolidColorBrush(Color.FromRgb(189, 189, 189));
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

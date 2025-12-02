@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:SGRRHH.WPF.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1000"
-             Background="#F5F5F5">
+             Background="{StaticResource BackgroundBrush}">
     
     <UserControl.Resources>
         <!-- Converter para iniciales -->
@@ -19,10 +19,10 @@
             <Setter Property="Margin" Value="5,0,0,0"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsOnline}" Value="True">
-                    <Setter Property="Fill" Value="#4CAF50"/>
+                    <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsOnline}" Value="False">
-                    <Setter Property="Fill" Value="#9E9E9E"/>
+                    <Setter Property="Fill" Value="{StaticResource GrayBrush}"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -33,21 +33,21 @@
                 <Border CornerRadius="18,18,4,18" Padding="14,10" MaxWidth="450">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#0084FF" Offset="0"/>
-                            <GradientStop Color="#0066CC" Offset="1"/>
+                            <GradientStop Color="{StaticResource PrimaryColor}" Offset="0"/>
+                            <GradientStop Color="{StaticResource PrimaryDarkColor}" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
                     <Border.Effect>
-                        <DropShadowEffect Color="#0084FF" BlurRadius="12" ShadowDepth="2" Opacity="0.3" Direction="270"/>
+                        <DropShadowEffect Color="{StaticResource PrimaryColor}" BlurRadius="12" ShadowDepth="2" Opacity="0.3" Direction="270"/>
                     </Border.Effect>
                     <StackPanel>
                         <TextBlock Text="{Binding Content}" Foreground="White" TextWrapping="Wrap" 
                                    FontSize="14" LineHeight="20" FontFamily="Segoe UI"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
-                            <TextBlock Text="{Binding FormattedTime}" Foreground="#E3F2FD" FontSize="11" 
+                            <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource PrimaryLightBrush}" FontSize="11" 
                                        FontWeight="Light" VerticalAlignment="Center" Opacity="0.9"/>
                             <!-- Checkmark de leído -->
-                            <TextBlock Text=" ✓✓" Foreground="#4FC3F7" FontSize="11" 
+                            <TextBlock Text=" ✓✓" Foreground="{StaticResource InfoBrush}" FontSize="11" 
                                        VerticalAlignment="Center" Margin="3,0,0,0"
                                        Visibility="{Binding IsRead, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </StackPanel>
@@ -60,16 +60,16 @@
         <DataTemplate x:Key="ReceivedMessageTemplate">
             <Grid Margin="12,3,60,3" HorizontalAlignment="Left">
                 <Border CornerRadius="18,18,18,4" Padding="14,10" MaxWidth="450"
-                        Background="White" BorderBrush="#E8E8E8" BorderThickness="1">
+                        Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                     <Border.Effect>
                         <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="1" Opacity="0.15" Direction="270"/>
                     </Border.Effect>
                     <StackPanel>
-                        <TextBlock Text="{Binding SenderName}" Foreground="#0084FF" FontSize="12" 
+                        <TextBlock Text="{Binding SenderName}" Foreground="{StaticResource PrimaryBrush}" FontSize="12" 
                                    FontWeight="SemiBold" Margin="0,0,0,2"/>
-                        <TextBlock Text="{Binding Content}" Foreground="#303030" TextWrapping="Wrap" 
+                        <TextBlock Text="{Binding Content}" Foreground="{StaticResource TextPrimaryBrush}" TextWrapping="Wrap" 
                                    FontSize="14" LineHeight="20" Margin="0,2,0,0" FontFamily="Segoe UI"/>
-                        <TextBlock Text="{Binding FormattedTime}" Foreground="#8A8A8A" FontSize="11" 
+                        <TextBlock Text="{Binding FormattedTime}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" 
                                    FontWeight="Light" HorizontalAlignment="Right" Margin="0,6,0,0" Opacity="0.8"/>
                     </StackPanel>
                 </Border>
@@ -89,8 +89,8 @@
         </Grid.ColumnDefinitions>
         
         <!-- Panel izquierdo: Lista de usuarios -->
-        <Border Grid.Column="0" Background="White" CornerRadius="12" Margin="0,0,10,0"
-                BorderBrush="#E0E0E0" BorderThickness="1">
+        <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" CornerRadius="12" Margin="0,0,10,0"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
             <Border.Effect>
                 <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="0" Opacity="0.1"/>
             </Border.Effect>
@@ -103,21 +103,21 @@
                 </Grid.RowDefinitions>
                 
                 <!-- Encabezado -->
-                <Border Grid.Row="0" Background="#1976D2" CornerRadius="12,12,0,0" Padding="15">
+                <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" CornerRadius="12,12,0,0" Padding="15">
                     <StackPanel>
                         <TextBlock Text="💬 Chat" FontSize="20" FontWeight="Bold" Foreground="White"/>
                         <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                            <Ellipse Width="8" Height="8" Fill="#4CAF50" VerticalAlignment="Center"/>
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding OnlineUsers.Count, StringFormat=' {0} usuarios online'}" 
-                                       Foreground="#B3E5FC" FontSize="12" VerticalAlignment="Center"/>
+                                       Foreground="{StaticResource PrimaryLightBrush}" FontSize="12" VerticalAlignment="Center"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
                 
                 <!-- Buscador -->
-                <Border Grid.Row="1" Background="#F5F5F5" Padding="10">
+                <Border Grid.Row="1" Background="{StaticResource BackgroundBrush}" Padding="10">
                     <TextBox x:Name="SearchBox" Text="{Binding SearchFilter, UpdateSourceTrigger=PropertyChanged}"
-                             Padding="10,8" Background="White" BorderBrush="#E0E0E0" BorderThickness="1"
+                             Padding="10,8" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                              ToolTip="Buscar usuario...">
                         <TextBox.Style>
                             <Style TargetType="TextBox">
@@ -127,7 +127,7 @@
                                             <Setter.Value>
                                                 <VisualBrush Stretch="None" AlignmentX="Left">
                                                     <VisualBrush.Visual>
-                                                        <TextBlock Text="🔍 Buscar usuario..." Foreground="#9E9E9E" Margin="10,0,0,0"/>
+                                                        <TextBlock Text="🔍 Buscar usuario..." Foreground="{StaticResource TextMutedBrush}" Margin="10,0,0,0"/>
                                                     </VisualBrush.Visual>
                                                 </VisualBrush>
                                             </Setter.Value>
@@ -140,10 +140,10 @@
                 </Border>
                 
                 <!-- Filtro online/todos -->
-                <Border Grid.Row="2" Background="#FAFAFA" Padding="10,5">
+                <Border Grid.Row="2" Background="{StaticResource GrayLightBrush}" Padding="10,5">
                     <StackPanel Orientation="Horizontal">
                         <CheckBox IsChecked="{Binding ShowOnlyOnline}" VerticalAlignment="Center"/>
-                        <TextBlock Text="Solo usuarios online" FontSize="12" Foreground="#757575" 
+                        <TextBlock Text="Solo usuarios online" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" 
                                    VerticalAlignment="Center" Margin="5,0,0,0"/>
                     </StackPanel>
                 </Border>
@@ -162,16 +162,16 @@
                                 <Setter.Value>
                                     <ControlTemplate TargetType="ListBoxItem">
                                         <Border x:Name="Border" Background="Transparent" 
-                                                BorderThickness="0,0,0,1" BorderBrush="#F0F0F0"
+                                                BorderThickness="0,0,0,1" BorderBrush="{StaticResource BorderLightBrush}"
                                                 Padding="15,12" Cursor="Hand">
                                             <ContentPresenter/>
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="Border" Property="Background" Value="#E3F2FD"/>
+                                                <Setter TargetName="Border" Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
                                             </Trigger>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="Border" Property="Background" Value="#BBDEFB"/>
+                                                <Setter TargetName="Border" Property="Background" Value="{StaticResource PrimaryMutedBrush}"/>
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -200,10 +200,10 @@
                                 
                                 <!-- Avatar con indicador online -->
                                 <Grid Grid.Column="0" Margin="0,0,12,0">
-                                    <Border Width="40" Height="40" CornerRadius="20" Background="#E3F2FD">
+                                    <Border Width="40" Height="40" CornerRadius="20" Background="{StaticResource PrimaryLightBrush}">
                                         <TextBlock Text="{Binding NombreCompleto, Converter={StaticResource InitialsConverter}}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                   FontWeight="Bold" FontSize="14" Foreground="#1976D2"/>
+                                                   FontWeight="Bold" FontSize="14" Foreground="{StaticResource PrimaryBrush}"/>
                                     </Border>
                                     <Ellipse Style="{StaticResource OnlineIndicatorStyle}"
                                              HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-2">
@@ -217,11 +217,11 @@
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding NombreCompleto}" FontWeight="SemiBold" FontSize="13"
                                                TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Status}" FontSize="11" Foreground="#757575"/>
+                                    <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 </StackPanel>
                                 
                                 <!-- Badge de mensajes no leídos -->
-                                <Border Grid.Column="2" Background="#F44336" CornerRadius="10" 
+                                <Border Grid.Column="2" Background="{StaticResource DangerBrush}" CornerRadius="10" 
                                         Padding="6,2" VerticalAlignment="Center"
                                         Visibility="{Binding HasUnread, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <TextBlock Text="{Binding UnreadCount}" Foreground="White" FontSize="11" FontWeight="Bold"/>
@@ -234,8 +234,8 @@
         </Border>
         
         <!-- Panel derecho: Área de chat -->
-        <Border Grid.Column="1" Background="White" CornerRadius="12"
-                BorderBrush="#E0E0E0" BorderThickness="1">
+        <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" CornerRadius="12"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
             <Border.Effect>
                 <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="0" Opacity="0.1"/>
             </Border.Effect>
@@ -248,8 +248,8 @@
                 </Grid.RowDefinitions>
                 
                 <!-- Encabezado del chat (cuando hay conversación activa) -->
-                <Border Grid.Row="0" Background="#FAFAFA" CornerRadius="12,12,0,0" Padding="15"
-                        BorderBrush="#E0E0E0" BorderThickness="0,0,0,1"
+                <Border Grid.Row="0" Background="{StaticResource GrayLightBrush}" CornerRadius="12,12,0,0" Padding="15"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
                         Visibility="{Binding HasActiveConversation, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -259,10 +259,10 @@
                         
                         <!-- Avatar del chat partner -->
                         <Grid Grid.Column="0" Margin="0,0,12,0">
-                            <Border Width="45" Height="45" CornerRadius="22" Background="#E3F2FD">
+                            <Border Width="45" Height="45" CornerRadius="22" Background="{StaticResource PrimaryLightBrush}">
                                 <TextBlock Text="{Binding ChatPartnerName, Converter={StaticResource InitialsConverter}}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                                           FontWeight="Bold" FontSize="16" Foreground="#1976D2"/>
+                                           FontWeight="Bold" FontSize="16" Foreground="{StaticResource PrimaryBrush}"/>
                             </Border>
                         </Grid>
                         
@@ -272,16 +272,16 @@
                                 <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,5,0">
                                     <Ellipse.Style>
                                         <Style TargetType="Ellipse">
-                                            <Setter Property="Fill" Value="#9E9E9E"/>
+                                            <Setter Property="Fill" Value="{StaticResource GrayBrush}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsChatPartnerOnline}" Value="True">
-                                                    <Setter Property="Fill" Value="#4CAF50"/>
+                                                    <Setter Property="Fill" Value="{StaticResource SuccessBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </Ellipse.Style>
                                 </Ellipse>
-                                <TextBlock FontSize="12" Foreground="#757575">
+                                <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="Desconectado"/>
@@ -305,9 +305,9 @@
                                 Visibility="{Binding HasActiveConversation, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <TextBlock Text="💬" FontSize="60" HorizontalAlignment="Center"/>
                         <TextBlock Text="Selecciona un usuario para iniciar una conversación" 
-                                   FontSize="16" Foreground="#757575" HorizontalAlignment="Center" Margin="0,15,0,0"/>
+                                   FontSize="16" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,15,0,0"/>
                         <TextBlock Text="Puedes ver quién está en línea en la lista de la izquierda" 
-                                   FontSize="13" Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                   FontSize="13" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                     </StackPanel>
                     
                     <!-- Lista de mensajes -->
@@ -316,8 +316,8 @@
                                   Visibility="{Binding HasActiveConversation, Converter={StaticResource BoolToVisibilityConverter}}">
                         <ScrollViewer.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#ECE5DD" Offset="0"/>
-                                <GradientStop Color="#D9D0C9" Offset="1"/>
+                                <GradientStop Color="{StaticResource BorderLightColor}" Offset="0"/>
+                                <GradientStop Color="{StaticResource BorderColor}" Offset="1"/>
                             </LinearGradientBrush>
                         </ScrollViewer.Background>
                         <ItemsControl ItemsSource="{Binding Messages}" 
@@ -327,19 +327,19 @@
                     </ScrollViewer>
                     
                     <!-- Indicador de carga -->
-                    <Border Background="#F5F5F5" 
+                    <Border Background="{StaticResource BackgroundBrush}" 
                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <TextBlock Text="⏳" FontSize="30" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding LoadingMessage}" FontSize="14" Foreground="#757575" 
+                            <TextBlock Text="{Binding LoadingMessage}" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" 
                                        HorizontalAlignment="Center" Margin="0,10,0,0"/>
                         </StackPanel>
                     </Border>
                 </Grid>
                 
                 <!-- Área de entrada de mensaje -->
-                <Border Grid.Row="2" Background="#FAFAFA" Padding="15" 
-                        BorderBrush="#E0E0E0" BorderThickness="0,1,0,0"
+                <Border Grid.Row="2" Background="{StaticResource GrayLightBrush}" Padding="15" 
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
                         Visibility="{Binding HasActiveConversation, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -349,8 +349,8 @@
                         
                         <TextBox x:Name="MessageInput" Grid.Column="0" 
                                  Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
-                                 Padding="12,10" Background="White" 
-                                 BorderBrush="#E0E0E0" BorderThickness="1"
+                                 Padding="12,10" Background="{StaticResource SurfaceBrush}" 
+                                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                                  FontSize="13" AcceptsReturn="False"
                                  VerticalContentAlignment="Center">
                             <TextBox.InputBindings>
@@ -359,9 +359,9 @@
                         </TextBox>
                         
                         <Button Grid.Column="1" Command="{Binding SendMessageCommand}"
-                                Background="#1976D2" Foreground="White" 
+                                Style="{StaticResource PrimaryButton}"
                                 Padding="20,10" Margin="10,0,0,0"
-                                BorderThickness="0" Cursor="Hand"
+                                Cursor="Hand"
                                 FontWeight="SemiBold"
                                 ToolTip="Enviar mensaje (Enter)">
                             <StackPanel Orientation="Horizontal">

@@ -29,7 +29,9 @@
       "Bash(dotnet add:*)",
       "Bash(git mv:*)",
       "Bash(dotnet remove:*)",
-      "Bash(Select-String -Pattern \"error|warning|Build succeeded\")"
+      "Bash(Select-String -Pattern \"error|warning|Build succeeded\")",
+      "Bash(git log:*)",
+      "Bash(Select-String -Pattern \"error|warning|Build succeeded|Build failed\")"
     ],
     "deny": [],
     "ask": []

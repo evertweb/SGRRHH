@@ -8,12 +8,12 @@
         Height="700" Width="1000"
         MinHeight="550" MinWidth="800"
         WindowStartupLocation="CenterScreen"
-        Background="#F5F6FA">
+        Background="{DynamicResource BackgroundBrush}">
     
     <Window.Resources>
-        <!-- Estilos -->
+        <!-- Estilos locales no duplicados -->
         <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="15"/>
             <Setter Property="Margin" Value="5"/>
@@ -27,105 +27,14 @@
         <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
         
         <Style x:Key="LabelStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#7F8C8D"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
             <Setter Property="Margin" Value="0,5,0,2"/>
-        </Style>
-        
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#3498DB"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2980B9"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Background" Value="#BDC3C7"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#ECF0F1"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#D5DBDB"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="SuccessButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#27AE60"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1E8449"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="DangerButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#E74C3C"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#C0392B"/>
-                </Trigger>
-            </Style.Triggers>
         </Style>
     </Window.Resources>
     
@@ -136,17 +45,17 @@
         </Grid.RowDefinitions>
         
         <!-- Encabezado -->
-        <Border Grid.Row="0" Background="#37474F" Padding="20">
+        <Border Grid.Row="0" Background="{DynamicResource SidebarBackgroundBrush}" Padding="20">
             <Grid>
                 <StackPanel>
-                    <TextBlock Text="📁 Documentos del Empleado" FontSize="22" FontWeight="Bold" Foreground="White"/>
-                    <TextBlock Text="{Binding Empleado.NombreCompleto}" FontSize="14" Foreground="#B0BEC5" Margin="0,5,0,0"/>
+                    <TextBlock Text="📁 Documentos del Empleado" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextInverseBrush}"/>
+                    <TextBlock Text="{Binding Empleado.NombreCompleto}" FontSize="14" Foreground="{DynamicResource SidebarTextMutedBrush}" Margin="0,5,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding ProgresoChecklist}" Foreground="White" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                    <TextBlock Text="{Binding ProgresoChecklist}" Foreground="{DynamicResource TextInverseBrush}" VerticalAlignment="Center" Margin="0,0,15,0"/>
                     <Button Content="➕ Nuevo Documento" 
                             Command="{Binding NuevoDocumentoCommand}"
-                            Style="{StaticResource SuccessButtonStyle}"
+                            Style="{DynamicResource SuccessButton}"
                             Visibility="{Binding PuedeGestionar, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 </StackPanel>
             </Grid>
@@ -214,18 +123,18 @@
                                             <!-- Nombre del tipo -->
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding NombreTipo}" FontWeight="Medium" TextWrapping="Wrap"/>
-                                                <TextBlock FontSize="11" Foreground="#7F8C8D">
+                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Text" Value="Opcional"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding EsRequerido}" Value="True">
                                                                     <Setter Property="Text" Value="Requerido"/>
-                                                                    <Setter Property="Foreground" Value="#E74C3C"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding EstaVencido}" Value="True">
                                                                     <Setter Property="Text" Value="⚠️ Vencido"/>
-                                                                    <Setter Property="Foreground" Value="#E74C3C"/>
+                                                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -238,7 +147,7 @@
                                                     Command="{Binding DataContext.NuevoDocumentoTipoCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding Tipo}"
                                                     Width="28" Height="28"
-                                                    Background="#3498DB" Foreground="White"
+                                                    Background="{DynamicResource PrimaryBrush}" Foreground="{DynamicResource TextInverseBrush}"
                                                     BorderThickness="0" Cursor="Hand"
                                                     Visibility="{Binding DataContext.PuedeGestionar, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
                                                 <Button.Style>
@@ -325,16 +234,16 @@
                         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                             <Button Content="👁️ Ver" 
                                     Command="{Binding VerDocumentoCommand}"
-                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Style="{DynamicResource PrimaryButton}"
                                     Margin="0,0,5,0"/>
                             <Button Content="✏️ Editar" 
                                     Command="{Binding EditarDocumentoCommand}"
-                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Style="{DynamicResource SecondaryButton}"
                                     Margin="0,0,5,0"
                                     Visibility="{Binding PuedeGestionar, Converter={StaticResource BoolToVisibilityConverter}}"/>
                             <Button Content="🗑️ Eliminar" 
                                     Command="{Binding EliminarDocumentoCommand}"
-                                    Style="{StaticResource DangerButtonStyle}"
+                                    Style="{DynamicResource DangerButton}"
                                     Visibility="{Binding PuedeEliminar, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </StackPanel>
                     </Grid>
@@ -407,11 +316,11 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBox Grid.Column="0" Text="{Binding FormArchivoNombreOriginal, Mode=OneWay}" 
-                                             IsReadOnly="True" Padding="8" Background="#F8F9FA"/>
+                                             IsReadOnly="True" Padding="8" Background="{DynamicResource BorderLightBrush}"/>
                                     <Button Grid.Column="1" Content="📁" 
                                             Command="{Binding SeleccionarArchivoCommand}"
                                             Padding="8,6" Margin="5,0,0,0"
-                                            Background="#3498DB" Foreground="White"
+                                            Background="{DynamicResource PrimaryBrush}" Foreground="{DynamicResource TextInverseBrush}"
                                             BorderThickness="0" Cursor="Hand"/>
                                 </Grid>
                             </StackPanel>
@@ -430,11 +339,11 @@
                                         Orientation="Horizontal" HorizontalAlignment="Right">
                                 <Button Content="Cancelar" 
                                         Command="{Binding CancelarFormularioCommand}"
-                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Style="{DynamicResource SecondaryButton}"
                                         Margin="0,0,10,0"/>
                                 <Button Content="💾 Guardar" 
                                         Command="{Binding GuardarDocumentoCommand}"
-                                        Style="{StaticResource SuccessButtonStyle}"/>
+                                        Style="{DynamicResource SuccessButton}"/>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -447,7 +356,7 @@
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <TextBlock Text="⏳" FontSize="40" HorizontalAlignment="Center"/>
-                <TextBlock Text="Procesando..." FontSize="16" Foreground="White" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                <TextBlock Text="Procesando..." FontSize="16" Foreground="{DynamicResource TextInverseBrush}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
             </StackPanel>
         </Border>
     </Grid>

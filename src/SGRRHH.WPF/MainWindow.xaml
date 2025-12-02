@@ -11,14 +11,14 @@
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized">
     
-    <Grid Background="#FAFAFA">
+    <Grid Background="{StaticResource BackgroundBrush}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="250"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         
         <!-- Panel lateral (Menú) -->
-        <Border Grid.Column="0" Background="#37474F">
+        <Border Grid.Column="0" Background="{StaticResource SidebarBackgroundBrush}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -28,24 +28,22 @@
                 </Grid.RowDefinitions>
                 
                 <!-- Logo y título -->
-                <Border Grid.Row="0" Background="#263238" Padding="20">
+                <Border Grid.Row="0" Background="{StaticResource SidebarHeaderBrush}" Padding="20">
                     <StackPanel>
-                        <TextBlock Text="🏢 SGRRHH" FontSize="24" FontWeight="Bold" 
-                                   Foreground="White" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Sistema de Gestión RRHH" FontSize="11" 
-                                   Foreground="#B0BEC5" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        <TextBlock Text="🏢 SGRRHH" Style="{StaticResource SidebarTitle}"/>
+                        <TextBlock Text="Sistema de Gestión RRHH" Style="{StaticResource SidebarSubtitle}" Margin="0,5,0,0"/>
                     </StackPanel>
                 </Border>
                 
                 <!-- Usuario actual -->
-                <Border Grid.Row="1" Background="#455A64" Padding="15">
+                <Border Grid.Row="1" Background="{StaticResource SidebarUserBrush}" Padding="15">
                     <StackPanel>
                         <TextBlock Text="👤" FontSize="30" HorizontalAlignment="Center"/>
                         <TextBlock Text="{Binding CurrentUserName}" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="White" HorizontalAlignment="Center" Margin="0,5,0,0"
+                                   Foreground="{StaticResource TextInverseBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"
                                    TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding CurrentUserRole}" FontSize="11"
-                                   Foreground="#90A4AE" HorizontalAlignment="Center"/>
+                                   Foreground="{StaticResource SidebarTextMutedBrush}" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
                 
@@ -65,20 +63,20 @@
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="Button">
                                                         <Border x:Name="border" Background="{TemplateBinding Background}" 
-                                                                CornerRadius="5" Padding="15,12">
+                                                                CornerRadius="{StaticResource SmallRadius}" Padding="15,12">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <TextBlock Text="{Binding Icon}" FontSize="18" 
                                                                            VerticalAlignment="Center" Margin="0,0,12,0"/>
                                                                 <TextBlock Text="{Binding Title}" FontSize="14" 
-                                                                           Foreground="White" VerticalAlignment="Center"/>
+                                                                           Foreground="{StaticResource TextInverseBrush}" VerticalAlignment="Center"/>
                                                             </StackPanel>
                                                         </Border>
                                                         <ControlTemplate.Triggers>
                                                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter TargetName="border" Property="Background" Value="#1E88E5"/>
+                                                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryBrush}"/>
                                                             </DataTrigger>
                                                             <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="border" Property="Background" Value="#546E7A"/>
+                                                                <Setter TargetName="border" Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
                                                             </Trigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>
@@ -93,18 +91,16 @@
                 </ScrollViewer>
                 
                 <!-- Opciones de usuario (abajo) -->
-                <Border Grid.Row="3" BorderBrush="#455A64" BorderThickness="0,1,0,0" Padding="10">
+                <Border Grid.Row="3" BorderBrush="{StaticResource SidebarUserBrush}" BorderThickness="0,1,0,0" Padding="10">
                     <StackPanel>
                         <Button Content="🔑 Cambiar Contraseña" 
                                 Command="{Binding ChangePasswordCommand}"
-                                Background="Transparent" Foreground="#B0BEC5" 
-                                BorderThickness="0" HorizontalAlignment="Left"
-                                Cursor="Hand" Padding="10,8" FontSize="12"/>
+                                Style="{StaticResource TransparentButton}"
+                                Foreground="{StaticResource SidebarTextBrush}"/>
                         <Button Content="🚪 Cerrar Sesión" 
                                 Command="{Binding LogoutCommand}"
-                                Background="Transparent" Foreground="#EF5350" 
-                                BorderThickness="0" HorizontalAlignment="Left"
-                                Cursor="Hand" Padding="10,8" FontSize="12"/>
+                                Style="{StaticResource TransparentButton}"
+                                Foreground="{StaticResource DangerMutedBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -118,8 +114,8 @@
             </Grid.RowDefinitions>
             
             <!-- Barra superior -->
-            <Border Grid.Row="0" Background="White" 
-                    BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
+            <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" 
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
                 <Grid Margin="25,15">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -128,32 +124,30 @@
                     </Grid.ColumnDefinitions>
                     
                     <!-- Título de la vista -->
-                    <TextBlock Grid.Column="0" Text="{Binding CurrentViewTitle}" FontSize="22" FontWeight="SemiBold"
-                               Foreground="#37474F" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="0" Text="{Binding CurrentViewTitle}" Style="{StaticResource HeaderTitle}"/>
                     
                     <!-- Fecha/Hora y Versión (centro-derecha) -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" 
                                 VerticalAlignment="Center" Margin="0,0,20,0">
-                        <Border Background="#E3F2FD" CornerRadius="5" Padding="12,6" Margin="0,0,10,0">
+                        <Border Style="{StaticResource StatTagBlue}" Margin="0,0,10,0" Padding="12,6">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="📅" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                 <TextBlock Text="{Binding CurrentDateTime}" FontSize="13" 
-                                           Foreground="#1565C0" VerticalAlignment="Center" FontWeight="Medium"/>
+                                           Foreground="{StaticResource PrimaryDarkBrush}" VerticalAlignment="Center" FontWeight="Medium"/>
                             </StackPanel>
                         </Border>
-                        <Border Background="#E8F5E9" CornerRadius="5" Padding="10,6">
+                        <Border Style="{StaticResource StatTagGreen}" Padding="10,6">
                             <TextBlock Text="{Binding AppVersion}" FontSize="12" 
-                                       Foreground="#2E7D32" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                       Foreground="{StaticResource SuccessDarkBrush}" VerticalAlignment="Center" FontWeight="SemiBold"/>
                         </Border>
                     </StackPanel>
                     
                     <!-- Alertas y notificaciones -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="🔔" FontSize="18" Background="Transparent" 
-                                BorderThickness="0" Cursor="Hand" Padding="10,5"
+                        <Button Content="🔔" FontSize="18" Style="{StaticResource TransparentButton}"
                                 ToolTip="Notificaciones"/>
                         <TextBlock Text="{Binding PendingAlerts}" FontSize="11" 
-                                   Foreground="White" Background="#E53935"
+                                   Foreground="{StaticResource TextInverseBrush}" Background="{StaticResource DangerBrush}"
                                    Padding="5,2" VerticalAlignment="Top" Margin="-15,0,15,0"
                                    Visibility="{Binding PendingAlerts, Converter={StaticResource IntToVisibilityConverter}}"/>
                     </StackPanel>
@@ -168,7 +162,7 @@
                                     Visibility="{Binding CurrentView, Converter={StaticResource NotNullToVisibilityConverter}}"/>
                     
                     <!-- Placeholder para módulos no implementados (solo cuando no hay vista cargada) -->
-                    <Border Background="White" CornerRadius="10" Padding="30">
+                    <Border Background="{StaticResource SurfaceBrush}" CornerRadius="{StaticResource StandardRadius}" Padding="30">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -181,12 +175,12 @@
                         </Border.Style>
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <TextBlock Text="🚧" FontSize="50" HorizontalAlignment="Center"/>
-                            <TextBlock FontSize="18" Foreground="#757575" HorizontalAlignment="Center" Margin="0,15,0,0">
+                            <TextBlock FontSize="18" Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center" Margin="0,15,0,0">
                                 <Run Text="Módulo de "/>
                                 <Run Text="{Binding CurrentViewTitle}" FontWeight="SemiBold"/>
                             </TextBlock>
-                            <TextBlock Text="En construcción - Próximamente disponible" FontSize="13" 
-                                       Foreground="#9E9E9E" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                            <TextBlock Text="En construcción - Próximamente disponible" Style="{StaticResource CaptionText}" 
+                                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
                         </StackPanel>
                     </Border>
                 </Grid>

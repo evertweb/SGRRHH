@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:SGRRHH.WPF.Views"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1000"
-             Background="#FAFAFA">
+             Background="{StaticResource BackgroundBrush}">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -18,16 +18,15 @@
         </Grid.RowDefinitions>
         
         <!-- Panel de solicitudes pendientes (solo visible para Aprobadores/Admin) -->
-        <Border Grid.Row="0" Background="#FFF8E1" Padding="15" Margin="0,0,0,10"
-                BorderBrush="#FFE082" BorderThickness="1" CornerRadius="8"
+        <Border Grid.Row="0" Style="{StaticResource AlertPanel}" Margin="0,0,0,10"
                 Visibility="{Binding ShowPendientes, Converter={StaticResource BoolToVisibilityConverter}}">
             <Expander IsExpanded="True">
                 <Expander.Header>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="📋" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="Solicitudes Pendientes de Aprobación" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Foreground="#F57C00"/>
-                        <Border Background="#FF8F00" CornerRadius="10" Padding="8,2" Margin="15,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding TotalPendientes}" FontWeight="Bold" Foreground="White" FontSize="12"/>
+                        <TextBlock Text="Solicitudes Pendientes de Aprobación" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Foreground="{StaticResource WarningBrush}"/>
+                        <Border Background="{StaticResource WarningAccentBrush}" CornerRadius="10" Padding="8,2" Margin="15,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding TotalPendientes}" Style="{StaticResource CounterBadgeText}"/>
                         </Border>
                     </StackPanel>
                 </Expander.Header>
@@ -41,35 +40,11 @@
                     <!-- Lista de pendientes -->
                     <DataGrid Grid.Row="0" ItemsSource="{Binding EmpleadosPendientes}"
                               SelectedItem="{Binding SelectedPendiente}"
-                              AutoGenerateColumns="False" IsReadOnly="True"
-                              SelectionMode="Single" SelectionUnit="FullRow"
-                              CanUserAddRows="False" CanUserDeleteRows="False"
-                              GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#FFE082"
-                              BorderThickness="1" BorderBrush="#FFE082"
-                              RowHeight="40" FontSize="12" HeadersVisibility="Column"
-                              Background="White" MaxHeight="180"
-                              VerticalScrollBarVisibility="Auto">
-                        
-                        <DataGrid.ColumnHeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#FF8F00"/>
-                                <Setter Property="Foreground" Value="White"/>
-                                <Setter Property="Padding" Value="10,8"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="FontSize" Value="12"/>
-                            </Style>
-                        </DataGrid.ColumnHeaderStyle>
-                        
-                        <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
-                                <Setter Property="Background" Value="White"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#FFF3E0"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.RowStyle>
+                              Style="{StaticResource CompactDataGrid}"
+                              HorizontalGridLinesBrush="{StaticResource WarningBorderBrush}"
+                              BorderBrush="{StaticResource WarningBorderBrush}"
+                              ColumnHeaderStyle="{StaticResource DataGridColumnHeaderWarningStyle}"
+                              RowStyle="{StaticResource DataGridRowWarningStyle}">
                         
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Código" Binding="{Binding Codigo}" Width="80"/>
@@ -84,21 +59,16 @@
                     <!-- Botones de aprobación -->
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
                         <Button Content="✅ Aprobar" Command="{Binding AprobarEmpleadoCommand}"
-                                Height="35" Padding="20,0" Margin="0,0,10,0"
-                                Background="#43A047" Foreground="White" FontWeight="Bold"
-                                BorderThickness="0" Cursor="Hand"/>
+                                Style="{StaticResource SuccessButton}" Height="35" Padding="20,0" Margin="0,0,10,0"/>
                         <Button Content="❌ Rechazar" Command="{Binding RechazarEmpleadoCommand}"
-                                Height="35" Padding="20,0"
-                                Background="#E53935" Foreground="White" FontWeight="Bold"
-                                BorderThickness="0" Cursor="Hand"/>
+                                Style="{StaticResource DangerButton}" Height="35" Padding="20,0"/>
                     </StackPanel>
                 </Grid>
             </Expander>
         </Border>
         
         <!-- Barra de herramientas superior -->
-        <Border Grid.Row="1" Background="White" Padding="15" Margin="0,0,0,10"
-                BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" CornerRadius="8">
+        <Border Grid.Row="1" Style="{StaticResource FilterPanel}" Margin="0,0,0,10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -110,71 +80,44 @@
                     <!-- Campo de búsqueda -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
                         <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 Width="250" Height="35" Padding="10,8"
-                                 VerticalContentAlignment="Center"
-                                 FontSize="13">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <Style.Triggers>
-                                        <Trigger Property="Text" Value="">
-                                            <Setter Property="Background">
-                                                <Setter.Value>
-                                                    <VisualBrush Stretch="None" AlignmentX="Left">
-                                                        <VisualBrush.Visual>
-                                                            <TextBlock Text="🔍 Buscar por nombre, cédula, código..." 
-                                                                       Foreground="#9E9E9E" Margin="10,0,0,0"
-                                                                       FontSize="13"/>
-                                                        </VisualBrush.Visual>
-                                                    </VisualBrush>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
+                                 Style="{StaticResource StandardTextBox}" Width="250">
                             <TextBox.InputBindings>
                                 <KeyBinding Key="Return" Command="{Binding SearchEmpleadosCommand}"/>
                             </TextBox.InputBindings>
                         </TextBox>
                         <Button Content="Buscar" Command="{Binding SearchEmpleadosCommand}"
-                                Width="80" Height="35" Margin="5,0,0,0"
-                                Background="#1E88E5" Foreground="White" FontWeight="SemiBold"
-                                BorderThickness="0" Cursor="Hand"/>
+                                Style="{StaticResource PrimaryButton}" Width="80" Height="35" Margin="5,0,0,0"/>
                     </StackPanel>
                     
                     <!-- Filtro por departamento -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
                         <TextBlock Text="Departamento:" VerticalAlignment="Center" 
-                                   Margin="0,0,8,0" Foreground="#616161" FontSize="13"/>
+                                   Margin="0,0,8,0" Style="{StaticResource BodyTextSecondary}"/>
                         <ComboBox ItemsSource="{Binding Departamentos}"
                                   SelectedItem="{Binding SelectedDepartamento}"
                                   DisplayMemberPath="Nombre"
-                                  Width="180" Height="35" FontSize="13"/>
+                                  Style="{StaticResource StandardComboBox}" Width="180"/>
                     </StackPanel>
                     
                     <!-- Filtro por estado -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
                         <TextBlock Text="Estado:" VerticalAlignment="Center" 
-                                   Margin="0,0,8,0" Foreground="#616161" FontSize="13"/>
+                                   Margin="0,0,8,0" Style="{StaticResource BodyTextSecondary}"/>
                         <ComboBox ItemsSource="{Binding Estados}"
                                   SelectedValue="{Binding SelectedEstado}"
                                   SelectedValuePath="Valor"
                                   DisplayMemberPath="Nombre"
-                                  Width="160" Height="35" FontSize="13"/>
+                                  Style="{StaticResource StandardComboBox}" Width="160"/>
                     </StackPanel>
                     
                     <!-- Botón limpiar filtros -->
                     <Button Content="✖ Limpiar" Command="{Binding ClearFiltersCommand}"
-                            Height="35" Padding="15,0"
-                            Background="#F5F5F5" Foreground="#616161"
-                            BorderBrush="#E0E0E0" BorderThickness="1" Cursor="Hand" Margin="0,0,0,5"/>
+                            Style="{StaticResource SecondaryButton}" Height="35" Padding="15,0" Margin="0,0,0,5"/>
                 </WrapPanel>
                 
                 <!-- Botón nuevo empleado -->
                 <Button Grid.Column="1" Command="{Binding CreateEmpleadoCommand}"
-                        Height="40" Padding="20,0"
-                        Background="#43A047" Foreground="White" FontWeight="Bold"
-                        BorderThickness="0" Cursor="Hand" FontSize="14">
+                        Style="{StaticResource SuccessButton}" Height="40" Padding="20,0" FontSize="14">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="➕" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="Nuevo Empleado" VerticalAlignment="Center"/>
@@ -184,70 +127,19 @@
         </Border>
         
         <!-- Indicador de carga -->
-        <Border Grid.Row="2" Background="#E3F2FD" Padding="10" Margin="0,0,0,10" CornerRadius="5"
+        <Border Grid.Row="2" Background="{StaticResource PrimaryLightBrush}" Padding="10" Margin="0,0,0,10" CornerRadius="{StaticResource SmallRadius}"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <TextBlock Text="⏳" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding StatusMessage}" FontSize="13" Foreground="#1565C0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding StatusMessage}" FontSize="13" Foreground="{StaticResource PrimaryDarkBrush}" VerticalAlignment="Center"/>
             </StackPanel>
         </Border>
         
         <!-- Lista de empleados -->
-        <Border Grid.Row="3" Background="White" CornerRadius="8" Padding="0"
-                BorderBrush="#E0E0E0" BorderThickness="1">
+        <Border Grid.Row="3" Style="{StaticResource CardFlat}" Padding="0">
             <DataGrid ItemsSource="{Binding Empleados}"
                       SelectedItem="{Binding SelectedEmpleado}"
-                      AutoGenerateColumns="False"
-                      IsReadOnly="True"
-                      SelectionMode="Single"
-                      SelectionUnit="FullRow"
-                      CanUserAddRows="False"
-                      CanUserDeleteRows="False"
-                      GridLinesVisibility="Horizontal"
-                      HorizontalGridLinesBrush="#F5F5F5"
-                      BorderThickness="0"
-                      RowHeight="45"
-                      FontSize="13"
-                      HeadersVisibility="Column">
-                
-                <DataGrid.ColumnHeaderStyle>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="#37474F"/>
-                        <Setter Property="Foreground" Value="White"/>
-                        <Setter Property="Padding" Value="12,10"/>
-                        <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="FontSize" Value="13"/>
-                        <Setter Property="BorderThickness" Value="0,0,1,0"/>
-                        <Setter Property="BorderBrush" Value="#455A64"/>
-                    </Style>
-                </DataGrid.ColumnHeaderStyle>
-                
-                <DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow">
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#E3F2FD"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#F5F5F5"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </DataGrid.RowStyle>
-                
-                <DataGrid.CellStyle>
-                    <Style TargetType="DataGridCell">
-                        <Setter Property="Padding" Value="12,0"/>
-                        <Setter Property="BorderThickness" Value="0"/>
-                        <Setter Property="VerticalAlignment" Value="Center"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Foreground" Value="#212121"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </DataGrid.CellStyle>
+                      Style="{StaticResource StandardDataGrid}">
                 
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Código" Binding="{Binding Codigo}" Width="90"/>
@@ -265,25 +157,25 @@
                                         <Style TargetType="Border">
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding Estado}" Value="PendienteAprobacion">
-                                                    <Setter Property="Background" Value="#FFF3E0"/>
+                                                    <Setter Property="Background" Value="{StaticResource WarningLightBrush}"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Estado}" Value="Activo">
-                                                    <Setter Property="Background" Value="#E8F5E9"/>
+                                                    <Setter Property="Background" Value="{StaticResource SuccessLightBrush}"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Estado}" Value="EnVacaciones">
-                                                    <Setter Property="Background" Value="#E3F2FD"/>
+                                                    <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Estado}" Value="EnLicencia">
-                                                    <Setter Property="Background" Value="#FFF3E0"/>
+                                                    <Setter Property="Background" Value="{StaticResource WarningLightBrush}"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Estado}" Value="Suspendido">
-                                                    <Setter Property="Background" Value="#FFEBEE"/>
+                                                    <Setter Property="Background" Value="{StaticResource DangerLightBrush}"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Estado}" Value="Retirado">
-                                                    <Setter Property="Background" Value="#ECEFF1"/>
+                                                    <Setter Property="Background" Value="{StaticResource GrayBlueBrush}"/>
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding Estado}" Value="Rechazado">
-                                                    <Setter Property="Background" Value="#FFCDD2"/>
+                                                    <Setter Property="Background" Value="{StaticResource DangerSoftBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -294,31 +186,31 @@
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Estado}" Value="PendienteAprobacion">
                                                         <Setter Property="Text" Value="⏳ Pendiente"/>
-                                                        <Setter Property="Foreground" Value="#EF6C00"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource WarningDarkBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Activo">
                                                         <Setter Property="Text" Value="✅ Activo"/>
-                                                        <Setter Property="Foreground" Value="#2E7D32"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource SuccessDarkBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="EnVacaciones">
                                                         <Setter Property="Text" Value="🏖️ Vacaciones"/>
-                                                        <Setter Property="Foreground" Value="#1565C0"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="EnLicencia">
                                                         <Setter Property="Text" Value="📋 Licencia"/>
-                                                        <Setter Property="Foreground" Value="#EF6C00"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource WarningDarkBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Suspendido">
                                                         <Setter Property="Text" Value="⚠️ Suspendido"/>
-                                                        <Setter Property="Foreground" Value="#C62828"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource DangerDarkerBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Retirado">
                                                         <Setter Property="Text" Value="🚪 Retirado"/>
-                                                        <Setter Property="Foreground" Value="#546E7A"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource GrayBlueDarkBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Rechazado">
                                                         <Setter Property="Text" Value="❌ Rechazado"/>
-                                                        <Setter Property="Foreground" Value="#C62828"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource DangerDarkerBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -334,26 +226,18 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <Button Content="👁" ToolTip="Ver detalle"
+                                    <Button Content="👁" 
                                             Command="{Binding DataContext.ViewEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            Width="32" Height="28" Margin="2,0"
-                                            Background="#E3F2FD" Foreground="#1E88E5"
-                                            BorderThickness="0" Cursor="Hand" FontSize="13"/>
-                                    <Button Content="✏️" ToolTip="Editar"
+                                            Style="{StaticResource IconButtonView}" Margin="2,0"/>
+                                    <Button Content="✏️"
                                             Command="{Binding DataContext.EditEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            Width="32" Height="28" Margin="2,0"
-                                            Background="#FFF3E0" Foreground="#F57C00"
-                                            BorderThickness="0" Cursor="Hand" FontSize="13"/>
-                                    <Button Content="⏸️" ToolTip="Desactivar (puede reactivarse)"
+                                            Style="{StaticResource IconButtonEdit}" Margin="2,0"/>
+                                    <Button Content="⏸️"
                                             Command="{Binding DataContext.DeactivateEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            Width="32" Height="28" Margin="2,0"
-                                            Background="#FFF8E1" Foreground="#FF8F00"
-                                            BorderThickness="0" Cursor="Hand" FontSize="13"/>
-                                    <Button Content="❌" ToolTip="Eliminar permanentemente"
+                                            Style="{StaticResource IconButtonDeactivate}" Margin="2,0"/>
+                                    <Button Content="❌"
                                             Command="{Binding DataContext.DeleteEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            Width="32" Height="28" Margin="2,0"
-                                            Background="#FFEBEE" Foreground="#D32F2F"
-                                            BorderThickness="0" Cursor="Hand" FontSize="13"/>
+                                            Style="{StaticResource IconButtonDelete}" Margin="2,0"/>
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -363,18 +247,17 @@
         </Border>
         
         <!-- Barra de estado -->
-        <Border Grid.Row="4" Background="White" Padding="15,10" Margin="0,10,0,0"
-                BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" CornerRadius="8">
+        <Border Grid.Row="4" Style="{StaticResource StatusBar}" Margin="0,10,0,0">
             <Grid>
-                <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="#616161" FontSize="13">
+                <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" Style="{StaticResource BodyTextSecondary}">
                     <Run Text="Total:"/>
                     <Run Text="{Binding TotalEmpleados, Mode=OneWay}" FontWeight="Bold"/>
                     <Run Text="empleado(s)"/>
                     <Run Text=" | Pendientes:"/>
-                    <Run Text="{Binding TotalPendientes, Mode=OneWay}" FontWeight="Bold" Foreground="#F57C00"/>
+                    <Run Text="{Binding TotalPendientes, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/>
                 </TextBlock>
                 <TextBlock Text="{Binding StatusMessage}" HorizontalAlignment="Right" 
-                           VerticalAlignment="Center" Foreground="#9E9E9E" FontSize="12"/>
+                           VerticalAlignment="Center" Style="{StaticResource CaptionText}"/>
             </Grid>
         </Border>
     </Grid>

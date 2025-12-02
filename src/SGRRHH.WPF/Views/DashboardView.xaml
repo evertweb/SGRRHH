@@ -5,8 +5,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1000"
-             Background="#FAFAFA">
-    <Grid Margin="20">
+             Background="{StaticResource BackgroundBrush}">
+    <Grid Margin="{StaticResource StandardMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -16,9 +16,8 @@
         </Grid.RowDefinitions>
 
         <!-- Banner de testing v1.0.9 -->
-        <Border Grid.Row="0" Background="#E3F2FD" BorderBrush="#2196F3" BorderThickness="2"
-                CornerRadius="8" Padding="12,8" Margin="0,0,0,15">
-            <TextBlock FontSize="14" Foreground="#1565C0" FontWeight="SemiBold" TextAlignment="Center">
+        <Border Grid.Row="0" Style="{StaticResource InfoPanel}" Margin="0,0,0,15">
+            <TextBlock FontSize="14" Foreground="{StaticResource PrimaryDarkBrush}" FontWeight="SemiBold" TextAlignment="Center">
                 <Run Text="✅ Sistema de actualizaciones corregido - v1.0.9"/>
             </TextBlock>
         </Border>
@@ -31,8 +30,8 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Column="0">
-                <TextBlock Text="{Binding WelcomeMessage}" FontSize="28" FontWeight="Bold" Foreground="#1565C0"/>
-                <TextBlock FontSize="14" Foreground="#757575" Margin="0,5,0,0">
+                <TextBlock Text="{Binding WelcomeMessage}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource PrimaryDarkBrush}"/>
+                <TextBlock FontSize="14" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,5,0,0">
                     <Run Text="📆 "/>
                     <Run Text="{Binding CurrentDate, Mode=OneWay}"/>
                 </TextBlock>
@@ -40,18 +39,18 @@
             
             <Button Grid.Column="1" Content="🔄 Actualizar" 
                     Command="{Binding RefreshDataCommand}"
-                    Background="#E3F2FD" Foreground="#1565C0" 
+                    Background="{StaticResource PrimaryLightBrush}" Foreground="{StaticResource PrimaryDarkBrush}" 
                     FontWeight="SemiBold" Padding="15,10" 
                     BorderThickness="0" Cursor="Hand"
                     ToolTip="Actualizar estadísticas"/>
         </Grid>
         
         <!-- Indicador de carga -->
-        <Border Grid.Row="1" Background="#FFF8E1" Padding="15" Margin="0,0,0,15" CornerRadius="8"
+        <Border Grid.Row="1" Style="{StaticResource LoadingPanel}" Margin="0,0,0,15"
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <TextBlock Text="⏳" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <TextBlock Text="Cargando estadísticas..." FontSize="14" Foreground="#F57C00" VerticalAlignment="Center"/>
+                <TextBlock Text="Cargando estadísticas..." FontSize="14" Foreground="{StaticResource WarningBrush}" VerticalAlignment="Center"/>
             </StackPanel>
         </Border>
 
@@ -65,59 +64,43 @@
             </Grid.ColumnDefinitions>
 
             <!-- Total Empleados -->
-            <Border Grid.Column="0" Background="#E3F2FD" CornerRadius="12" Padding="20" Margin="0,0,10,0"
-                    BorderBrush="#90CAF9" BorderThickness="1">
-                <Border.Effect>
-                    <DropShadowEffect Color="#1565C0" BlurRadius="10" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Column="0" Style="{StaticResource StatCardBlue}" Margin="0,0,10,0">
                 <StackPanel>
-                    <TextBlock Text="👥 Total Empleados" FontSize="14" Foreground="#1565C0"/>
-                    <TextBlock Text="{Binding TotalEmpleados}" FontSize="42" FontWeight="Bold" Foreground="#0D47A1" Margin="0,10,0,0"/>
-                    <TextBlock Text="empleados activos" FontSize="11" Foreground="#64B5F6" Margin="0,5,0,0"/>
+                    <TextBlock Text="👥 Total Empleados" Style="{StaticResource StatLabelBlue}"/>
+                    <TextBlock Text="{Binding TotalEmpleados}" Style="{StaticResource StatNumberBlue}" Margin="0,10,0,0"/>
+                    <TextBlock Text="empleados activos" Style="{StaticResource StatSubtextBlue}"/>
                 </StackPanel>
             </Border>
 
             <!-- Proyectos Activos -->
-            <Border Grid.Column="1" Background="#E8F5E9" CornerRadius="12" Padding="20" Margin="10,0"
-                    BorderBrush="#A5D6A7" BorderThickness="1">
-                <Border.Effect>
-                    <DropShadowEffect Color="#2E7D32" BlurRadius="10" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Column="1" Style="{StaticResource StatCardGreen}" Margin="10,0">
                 <StackPanel>
-                    <TextBlock Text="🚀 Proyectos Activos" FontSize="14" Foreground="#2E7D32"/>
-                    <TextBlock Text="{Binding ProyectosActivos}" FontSize="42" FontWeight="Bold" Foreground="#1B5E20" Margin="0,10,0,0"/>
-                    <TextBlock Text="proyectos en curso" FontSize="11" Foreground="#81C784" Margin="0,5,0,0"/>
+                    <TextBlock Text="🚀 Proyectos Activos" Style="{StaticResource StatLabelGreen}"/>
+                    <TextBlock Text="{Binding ProyectosActivos}" Style="{StaticResource StatNumberGreen}" Margin="0,10,0,0"/>
+                    <TextBlock Text="proyectos en curso" Style="{StaticResource StatSubtextGreen}"/>
                 </StackPanel>
             </Border>
 
             <!-- Presentes Hoy -->
-            <Border Grid.Column="2" Background="#FFF3E0" CornerRadius="12" Padding="20" Margin="10,0"
-                    BorderBrush="#FFCC80" BorderThickness="1">
-                <Border.Effect>
-                    <DropShadowEffect Color="#EF6C00" BlurRadius="10" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Column="2" Style="{StaticResource StatCardOrange}" Margin="10,0">
                 <StackPanel>
-                    <TextBlock Text="📅 Registros Hoy" FontSize="14" Foreground="#EF6C00"/>
-                    <TextBlock Text="{Binding EmpleadosPresentesHoy}" FontSize="42" FontWeight="Bold" Foreground="#E65100" Margin="0,10,0,0"/>
-                    <TextBlock Text="con actividad registrada" FontSize="11" Foreground="#FFB74D" Margin="0,5,0,0"/>
+                    <TextBlock Text="📅 Registros Hoy" Style="{StaticResource StatLabelOrange}"/>
+                    <TextBlock Text="{Binding EmpleadosPresentesHoy}" Style="{StaticResource StatNumberOrange}" Margin="0,10,0,0"/>
+                    <TextBlock Text="con actividad registrada" Style="{StaticResource StatSubtextOrange}"/>
                 </StackPanel>
             </Border>
 
             <!-- Alertas -->
-            <Border Grid.Column="3" Background="#FFEBEE" CornerRadius="12" Padding="20" Margin="10,0,0,0"
-                    BorderBrush="#EF9A9A" BorderThickness="1">
-                <Border.Effect>
-                    <DropShadowEffect Color="#C62828" BlurRadius="10" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Column="3" Style="{StaticResource StatCardRed}" Margin="10,0,0,0">
                 <StackPanel>
-                    <TextBlock Text="⚠️ Alertas" FontSize="14" Foreground="#C62828"/>
+                    <TextBlock Text="⚠️ Alertas" Style="{StaticResource StatLabelRed}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                        <TextBlock Text="{Binding PermisosPendientes}" FontSize="24" FontWeight="Bold" Foreground="#B71C1C"/>
-                        <TextBlock Text=" permisos pendientes" VerticalAlignment="Bottom" Margin="5,0,0,4" FontSize="11" Foreground="#EF5350"/>
+                        <TextBlock Text="{Binding PermisosPendientes}" Style="{StaticResource StatNumberMedium}" Foreground="{StaticResource DangerDeepBrush}"/>
+                        <TextBlock Text=" permisos pendientes" VerticalAlignment="Bottom" Margin="5,0,0,4" Style="{StaticResource StatSubtextRed}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                        <TextBlock Text="{Binding ContratosPorVencer}" FontSize="24" FontWeight="Bold" Foreground="#B71C1C"/>
-                        <TextBlock Text=" contratos por vencer" VerticalAlignment="Bottom" Margin="5,0,0,4" FontSize="11" Foreground="#EF5350"/>
+                        <TextBlock Text="{Binding ContratosPorVencer}" Style="{StaticResource StatNumberMedium}" Foreground="{StaticResource DangerDeepBrush}"/>
+                        <TextBlock Text=" contratos por vencer" VerticalAlignment="Bottom" Margin="5,0,0,4" Style="{StaticResource StatSubtextRed}"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -131,15 +114,11 @@
             </Grid.ColumnDefinitions>
             
             <!-- Cumpleaños Próximos -->
-            <Border Grid.Column="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="1"
-                    CornerRadius="12" Padding="20" Margin="0,0,10,0">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,10,0">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                         <TextBlock Text="🎂" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="Cumpleaños Próximos (7 días)" FontSize="16" FontWeight="SemiBold" Foreground="#E91E63"/>
+                        <TextBlock Text="Cumpleaños Próximos (7 días)" Style="{StaticResource CardTitle}" Foreground="{StaticResource PinkBrush}"/>
                     </StackPanel>
                     
                     <!-- Lista de cumpleaños -->
@@ -147,7 +126,7 @@
                                   Visibility="{Binding HayCumpleanios, Converter={StaticResource BoolToVisibilityConverter}}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FCE4EC" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                <Border Background="{StaticResource PinkLightBrush}" CornerRadius="{StaticResource StandardRadius}" Padding="12" Margin="0,0,0,8">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -155,8 +134,8 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
                                             <TextBlock Text="{Binding NombreCompleto}" FontWeight="SemiBold" FontSize="13"/>
-                                            <TextBlock Text="{Binding Cargo}" FontSize="11" Foreground="#757575"/>
-                                            <TextBlock FontSize="11" Foreground="#E91E63" Margin="0,3,0,0">
+                                            <TextBlock Text="{Binding Cargo}" Style="{StaticResource SmallText}"/>
+                                            <TextBlock FontSize="11" Foreground="{StaticResource PinkBrush}" Margin="0,3,0,0">
                                                 <Run Text="Cumple "/>
                                                 <Run Text="{Binding EdadCumplir, Mode=OneWay}"/>
                                                 <Run Text=" años"/>
@@ -164,9 +143,9 @@
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding DiasTexto}" FontWeight="SemiBold" FontSize="12"
-                                                       Foreground="#C2185B" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="{Binding FechaCumple, StringFormat='dd/MM'}" FontSize="11"
-                                                       Foreground="#757575" HorizontalAlignment="Right"/>
+                                                       Foreground="{StaticResource PinkDarkBrush}" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding FechaCumple, StringFormat='dd/MM'}" Style="{StaticResource SmallText}"
+                                                       HorizontalAlignment="Right"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -175,24 +154,20 @@
                     </ItemsControl>
                     
                     <!-- Mensaje si no hay cumpleaños -->
-                    <Border Background="#F5F5F5" CornerRadius="8" Padding="15"
+                    <Border Background="{StaticResource BorderLightBrush}" CornerRadius="{StaticResource StandardRadius}" Padding="15"
                             Visibility="{Binding HayCumpleanios, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <TextBlock Text="No hay cumpleaños en los próximos 7 días"
-                                   FontSize="12" Foreground="#9E9E9E" HorizontalAlignment="Center"/>
+                                   Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
                     </Border>
                 </StackPanel>
             </Border>
             
             <!-- Aniversarios Laborales -->
-            <Border Grid.Column="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="1"
-                    CornerRadius="12" Padding="20" Margin="10,0,0,0">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="10,0,0,0">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                         <TextBlock Text="🏆" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="Aniversarios Laborales (7 días)" FontSize="16" FontWeight="SemiBold" Foreground="#FF9800"/>
+                        <TextBlock Text="Aniversarios Laborales (7 días)" Style="{StaticResource CardTitle}" Foreground="{StaticResource OrangeBrush}"/>
                     </StackPanel>
                     
                     <!-- Lista de aniversarios -->
@@ -200,7 +175,7 @@
                                   Visibility="{Binding HayAniversarios, Converter={StaticResource BoolToVisibilityConverter}}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FFF3E0" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                <Border Background="{StaticResource WarningLightBrush}" CornerRadius="{StaticResource StandardRadius}" Padding="12" Margin="0,0,0,8">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -208,8 +183,8 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
                                             <TextBlock Text="{Binding NombreCompleto}" FontWeight="SemiBold" FontSize="13"/>
-                                            <TextBlock Text="{Binding Cargo}" FontSize="11" Foreground="#757575"/>
-                                            <TextBlock FontSize="11" Foreground="#EF6C00" Margin="0,3,0,0">
+                                            <TextBlock Text="{Binding Cargo}" Style="{StaticResource SmallText}"/>
+                                            <TextBlock FontSize="11" Foreground="{StaticResource WarningDarkBrush}" Margin="0,3,0,0">
                                                 <Run Text="Cumple "/>
                                                 <Run Text="{Binding AnosTexto, Mode=OneWay}"/>
                                                 <Run Text=" en la empresa"/>
@@ -217,9 +192,9 @@
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding DiasTexto}" FontWeight="SemiBold" FontSize="12"
-                                                       Foreground="#E65100" HorizontalAlignment="Right"/>
-                                            <TextBlock Text="{Binding FechaAniversario, StringFormat='dd/MM'}" FontSize="11"
-                                                       Foreground="#757575" HorizontalAlignment="Right"/>
+                                                       Foreground="{StaticResource WarningDarkerBrush}" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding FechaAniversario, StringFormat='dd/MM'}" Style="{StaticResource SmallText}"
+                                                       HorizontalAlignment="Right"/>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -228,10 +203,10 @@
                     </ItemsControl>
                     
                     <!-- Mensaje si no hay aniversarios -->
-                    <Border Background="#F5F5F5" CornerRadius="8" Padding="15"
+                    <Border Background="{StaticResource BorderLightBrush}" CornerRadius="{StaticResource StandardRadius}" Padding="15"
                             Visibility="{Binding HayAniversarios, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <TextBlock Text="No hay aniversarios en los próximos 7 días"
-                                   FontSize="12" Foreground="#9E9E9E" HorizontalAlignment="Center"/>
+                                   Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
                     </Border>
                 </StackPanel>
             </Border>
@@ -244,21 +219,16 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="1"
-                    CornerRadius="12" Padding="25" Margin="0,0,10,0">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Column="0" Style="{StaticResource Card}" Padding="25" Margin="0,0,10,0">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
                         <TextBlock Text="⚡" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="Accesos Rápidos" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Text="Accesos Rápidos" Style="{StaticResource SectionTitle}"/>
                     </StackPanel>
                     <WrapPanel>
                         <Button Width="170" Height="45" Margin="0,0,10,10"
                                 Command="{Binding NavigateToControlDiarioCommand}"
-                                Background="#1E88E5" Foreground="White" BorderThickness="0"
-                                FontWeight="SemiBold" Cursor="Hand"
+                                Style="{StaticResource PrimaryButton}"
                                 ToolTip="Ir a registrar actividades del día">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="📅" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -268,8 +238,7 @@
                         
                         <Button Width="155" Height="45" Margin="0,0,10,10"
                                 Command="{Binding NavigateToNewEmpleadoCommand}"
-                                Background="#43A047" Foreground="White" BorderThickness="0"
-                                FontWeight="SemiBold" Cursor="Hand"
+                                Style="{StaticResource SuccessButton}"
                                 ToolTip="Registrar un nuevo empleado">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="➕" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -279,8 +248,7 @@
                         
                         <Button Width="155" Height="45" Margin="0,0,10,10"
                                 Command="{Binding NavigateToPermisosCommand}"
-                                Background="#FB8C00" Foreground="White" BorderThickness="0"
-                                FontWeight="SemiBold" Cursor="Hand"
+                                Style="{StaticResource WarningButton}"
                                 ToolTip="Ir a gestión de permisos">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="📝" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -291,15 +259,11 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Column="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="1"
-                    CornerRadius="12" Padding="25" Margin="10,0,0,0">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" BlurRadius="8" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
+            <Border Grid.Column="1" Style="{StaticResource Card}" Padding="25" Margin="10,0,0,0">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
                         <TextBlock Text="📊" FontSize="20" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="Empleados por Departamento" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Text="Empleados por Departamento" Style="{StaticResource SectionTitle}"/>
                     </StackPanel>
                     
                     <!-- Gráfico de barras horizontales -->
@@ -321,7 +285,7 @@
                                     
                                     <!-- Barra de progreso visual -->
                                     <Grid Grid.Column="1" Margin="10,0" VerticalAlignment="Center">
-                                        <Border Background="#E0E0E0" CornerRadius="4" Height="22"/>
+                                        <Border Background="{StaticResource BorderBrush}" CornerRadius="4" Height="22"/>
                                         <Border CornerRadius="4" Height="22" HorizontalAlignment="Left"
                                                 Background="{Binding Color, Converter={StaticResource HexToColorConverter}}">
                                             <Border.Width>
@@ -337,10 +301,10 @@
                                     <StackPanel Grid.Column="2" Orientation="Horizontal"
                                                 HorizontalAlignment="Right" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Cantidad}" FontWeight="Bold" FontSize="13"/>
-                                        <TextBlock Text=" (" FontSize="11" Foreground="#757575" VerticalAlignment="Center"/>
+                                        <TextBlock Text=" (" Style="{StaticResource SmallText}" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding Porcentaje, StringFormat='{}{0:0}%'}"
-                                                   FontSize="11" Foreground="#757575" VerticalAlignment="Center"/>
-                                        <TextBlock Text=")" FontSize="11" Foreground="#757575" VerticalAlignment="Center"/>
+                                                   Style="{StaticResource SmallText}" VerticalAlignment="Center"/>
+                                        <TextBlock Text=")" Style="{StaticResource SmallText}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -348,10 +312,10 @@
                     </ItemsControl>
                     
                     <!-- Mensaje si no hay datos -->
-                    <Border Background="#F5F5F5" CornerRadius="8" Padding="15"
+                    <Border Background="{StaticResource BorderLightBrush}" CornerRadius="{StaticResource StandardRadius}" Padding="15"
                             Visibility="{Binding HayEstadisticasDepartamento, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                         <TextBlock Text="No hay datos de empleados disponibles"
-                                   FontSize="12" Foreground="#9E9E9E" HorizontalAlignment="Center"/>
+                                   Style="{StaticResource CaptionText}" HorizontalAlignment="Center"/>
                     </Border>
                 </StackPanel>
             </Border>

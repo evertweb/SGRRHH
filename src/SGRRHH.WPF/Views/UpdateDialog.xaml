@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         WindowStyle="SingleBorderWindow"
-        Background="#FFFFFF">
+        Background="{DynamicResource SurfaceBrush}">
     
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -29,7 +29,7 @@
             <TextBlock Text="🚀 Nueva Versión Disponible"
                        FontSize="22"
                        FontWeight="Bold"
-                       Foreground="#1976D2"/>
+                       Foreground="{DynamicResource PrimaryBrush}"/>
             
             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                 <TextBlock Text="Versión actual: " Opacity="0.7"/>
@@ -38,7 +38,7 @@
                 <TextBlock Text="Nueva versión: " Opacity="0.7"/>
                 <TextBlock Text="{Binding NewVersion}" 
                            FontWeight="Bold" 
-                           Foreground="#1976D2"/>
+                           Foreground="{DynamicResource PrimaryBrush}"/>
             </StackPanel>
             
             <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
@@ -51,14 +51,14 @@
             
             <!-- Indicador de obligatoria -->
             <Border Visibility="{Binding IsMandatory, Converter={StaticResource BoolToVis}}"
-                    Background="#FFF3E0"
-                    BorderBrush="#FF9800"
+                    Background="{DynamicResource WarningLightBrush}"
+                    BorderBrush="{DynamicResource WarningBrush}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="10,5"
                     Margin="0,10,0,0">
                 <TextBlock Text="⚠️ Esta es una actualización obligatoria"
-                           Foreground="#E65100"
+                           Foreground="{DynamicResource WarningDarkerBrush}"
                            FontWeight="SemiBold"/>
             </Border>
         </StackPanel>
@@ -78,7 +78,7 @@
         <!-- Progreso de descarga -->
         <Border Grid.Row="3" 
                 Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"
-                Background="#E3F2FD"
+                Background="{DynamicResource PrimaryLightBrush}"
                 CornerRadius="4"
                 Padding="15"
                 Margin="0,0,0,15">
@@ -99,8 +99,8 @@
         <!-- Mensaje de error -->
         <Border Grid.Row="3"
                 Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"
-                Background="#FFEBEE"
-                BorderBrush="#F44336"
+                Background="{DynamicResource DangerLightBrush}"
+                BorderBrush="{DynamicResource DangerBrush}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="15"
@@ -108,9 +108,9 @@
             <StackPanel>
                 <TextBlock Text="❌ Error durante la actualización"
                            FontWeight="Bold"
-                           Foreground="#C62828"/>
+                           Foreground="{DynamicResource DangerDarkerBrush}"/>
                 <TextBlock Text="{Binding ErrorMessage}"
-                           Foreground="#C62828"
+                           Foreground="{DynamicResource DangerDarkerBrush}"
                            TextWrapping="Wrap"
                            Margin="0,5,0,0"/>
             </StackPanel>
@@ -119,8 +119,8 @@
         <!-- Descarga completada -->
         <Border Grid.Row="3"
                 Visibility="{Binding DownloadCompleted, Converter={StaticResource BoolToVis}}"
-                Background="#E8F5E9"
-                BorderBrush="#4CAF50"
+                Background="{DynamicResource SuccessLightBrush}"
+                BorderBrush="{DynamicResource SuccessBrush}"
                 BorderThickness="1"
                 CornerRadius="4"
                 Padding="15"
@@ -129,9 +129,9 @@
                 <TextBlock Text="✅ ¡Descarga completada!"
                            FontWeight="Bold"
                            FontSize="14"
-                           Foreground="#2E7D32"/>
+                           Foreground="{DynamicResource SuccessDarkerBrush}"/>
                 <TextBlock Text="{Binding StatusMessage}"
-                           Foreground="#2E7D32"
+                           Foreground="{DynamicResource SuccessDarkerBrush}"
                            TextWrapping="Wrap"
                            Margin="0,8,0,0"/>
             </StackPanel>
@@ -186,13 +186,13 @@
             <Button Padding="20,8"
                     Content="🔄 Descargar actualización"
                     Command="{Binding UpdateNowCommand}"
-                    Background="#1976D2"
-                    Foreground="White"
+                    Background="{DynamicResource PrimaryBrush}"
+                    Foreground="{DynamicResource TextInverseBrush}"
                     IsEnabled="{Binding CanClose}">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                        <Setter Property="Background" Value="#1976D2"/>
-                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}"/>
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed"/>
@@ -209,8 +209,8 @@
             <Button Padding="20,8"
                     Content="🚀 Instalar y reiniciar"
                     Command="{Binding InstallAndRestartCommand}"
-                    Background="#4CAF50"
-                    Foreground="White"
+                    Background="{DynamicResource SuccessBrush}"
+                    Foreground="{DynamicResource TextInverseBrush}"
                     FontWeight="Bold"
                     Visibility="{Binding DownloadCompleted, Converter={StaticResource BoolToVis}}"
                     IsEnabled="{Binding CanClose}"/>

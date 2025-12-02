@@ -210,6 +210,9 @@ public static class FirebaseServiceCollectionExtensions
         services.AddSingleton(config);
         services.AddSingleton(firebase);
         
+        // Registrar FirestoreDb desde el inicializador de Firebase
+        services.AddSingleton(sp => firebase.Firestore ?? throw new InvalidOperationException("FirestoreDb no inicializado"));
+        
         // Registrar servicio de autenticación Firebase (Fase 1)
         services.AddScoped<IFirebaseAuthService, FirebaseAuthService>();
         services.AddScoped<IAuthService>(sp => sp.GetRequiredService<IFirebaseAuthService>());

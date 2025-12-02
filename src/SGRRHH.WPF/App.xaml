@@ -5,7 +5,13 @@
              xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
              ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-        <!-- Convertidores -->
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Tema principal con todos los estilos -->
+                <ResourceDictionary Source="Resources/Styles/Theme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Convertidores -->
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
@@ -18,6 +24,7 @@
         <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"/>
         <converters:BoolToEditTextConverter x:Key="BoolToEditTextConverter"/>
         <converters:LessThanConverter x:Key="LessThanConverter"/>
+        <converters:BoolToCurrentDeviceConverter x:Key="BoolToCurrentDeviceConverter"/>
         <converters:BoolToTextConverter x:Key="BoolToTextConverter"/>
         <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
         <converters:EnumToStringConverter x:Key="EnumToStringConverter"/>
@@ -29,5 +36,9 @@
         <converters:InitialsConverter x:Key="InitialsConverter"/>
         <converters:FileIconConverter x:Key="FileIconConverter"/>
         <converters:FileSizeConverter x:Key="FileSizeConverter"/>
+        <converters:BoolToErrorBackgroundConverter x:Key="BoolToErrorBackgroundConverter"/>
+        <converters:BoolToErrorForegroundConverter x:Key="BoolToErrorForegroundConverter"/>
+        <converters:StepToColorConverter x:Key="StepToColorConverter"/>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

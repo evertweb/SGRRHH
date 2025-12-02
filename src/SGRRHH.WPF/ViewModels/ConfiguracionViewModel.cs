@@ -26,7 +26,10 @@ public partial class ConfiguracionViewModel : ObservableObject
     
     [ObservableProperty]
     private AuditLogViewModel? _auditLogViewModel;
-    
+
+    [ObservableProperty]
+    private SeguridadViewModel? _seguridadViewModel;
+
     public ConfiguracionViewModel(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
@@ -64,7 +67,13 @@ public partial class ConfiguracionViewModel : ObservableObject
                 await AuditLogViewModel.LoadDataAsync();
                 CurrentSectionView = AuditLogViewModel;
                 break;
-                
+
+            case "Seguridad":
+                SeguridadViewModel = scope.ServiceProvider.GetRequiredService<SeguridadViewModel>();
+                await SeguridadViewModel.LoadDataAsync();
+                CurrentSectionView = SeguridadViewModel;
+                break;
+
             default:
                 CurrentSectionView = null;
                 break;

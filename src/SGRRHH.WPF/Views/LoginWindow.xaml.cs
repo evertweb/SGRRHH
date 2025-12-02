@@ -23,8 +23,7 @@ public partial class LoginWindow : Window
         // Poner foco en el campo de usuario
         Loaded += (s, e) => 
         {
-            var textBox = FindName("Username") as System.Windows.Controls.TextBox;
-            textBox?.Focus();
+            UsernameTextBox?.Focus();
         };
     }
     

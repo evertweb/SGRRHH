@@ -1,0 +1,402 @@
+<Window x:Class="SGRRHH.WPF.Views.WindowsHelloWizard"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Asistente de Windows Hello"
+        Height="480" Width="550"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize">
+    
+    <Border Background="{StaticResource BackgroundBrush}" 
+            CornerRadius="10" 
+            BorderBrush="{StaticResource PrimaryBrush}" 
+            BorderThickness="2">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Encabezado con indicador de paso -->
+            <Border Grid.Row="0" 
+                    Background="{StaticResource PrimaryBrush}" 
+                    CornerRadius="8,8,0,0"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid Margin="15,12">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔐" FontSize="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Configurar Windows Hello" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Foreground="White" 
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                        <TextBlock Text="{Binding CurrentStep, StringFormat='Paso {0} de 3'}" 
+                                   FontSize="12" 
+                                   Foreground="White" 
+                                   Opacity="0.8"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,15,0"/>
+                        <Button Content="✕" 
+                                Background="Transparent" 
+                                BorderThickness="0"
+                                Foreground="White" 
+                                FontSize="14" 
+                                Cursor="Hand"
+                                Command="{Binding CancelCommand}"
+                                Padding="5,0"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <!-- Indicadores de progreso -->
+            <Border Grid.Row="0" Margin="0,55,0,0" Padding="20,10" Background="{StaticResource SurfaceBrush}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <!-- Paso 1 -->
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="30" Height="30" CornerRadius="15"
+                                Background="{Binding CurrentStep, Converter={StaticResource StepToColorConverter}, ConverterParameter=1}">
+                            <TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                       Foreground="White" FontWeight="Bold"/>
+                        </Border>
+                        <TextBlock Text="Bienvenida" VerticalAlignment="Center" Margin="8,0,15,0"
+                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+                    </StackPanel>
+                    
+                    <!-- Línea -->
+                    <Border Width="30" Height="2" Background="{StaticResource BorderBrush}" VerticalAlignment="Center"/>
+                    
+                    <!-- Paso 2 -->
+                    <StackPanel Orientation="Horizontal" Margin="15,0">
+                        <Border Width="30" Height="30" CornerRadius="15"
+                                Background="{Binding CurrentStep, Converter={StaticResource StepToColorConverter}, ConverterParameter=2}">
+                            <TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                       Foreground="White" FontWeight="Bold"/>
+                        </Border>
+                        <TextBlock Text="Verificación" VerticalAlignment="Center" Margin="8,0,15,0"
+                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+                    </StackPanel>
+                    
+                    <!-- Línea -->
+                    <Border Width="30" Height="2" Background="{StaticResource BorderBrush}" VerticalAlignment="Center"/>
+                    
+                    <!-- Paso 3 -->
+                    <StackPanel Orientation="Horizontal" Margin="15,0,0,0">
+                        <Border Width="30" Height="30" CornerRadius="15"
+                                Background="{Binding CurrentStep, Converter={StaticResource StepToColorConverter}, ConverterParameter=3}">
+                            <TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                       Foreground="White" FontWeight="Bold"/>
+                        </Border>
+                        <TextBlock Text="Registro" VerticalAlignment="Center" Margin="8,0,0,0"
+                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            
+            <!-- Contenido de los pasos -->
+            <Grid Grid.Row="1" Margin="25,90,25,0">
+                
+                <!-- ===== PASO 1: Bienvenida ===== -->
+                <StackPanel Visibility="{Binding IsStep1, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="¡Bienvenido al Asistente de Windows Hello!" 
+                               FontSize="18" 
+                               FontWeight="SemiBold" 
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Margin="0,0,0,20"/>
+                    
+                    <TextBlock Text="¿Qué es Windows Hello?" 
+                               FontSize="14" 
+                               FontWeight="SemiBold" 
+                               Foreground="{StaticResource PrimaryBrush}"
+                               Margin="0,0,0,8"/>
+                    <TextBlock Text="Windows Hello es una tecnología de Microsoft que le permite iniciar sesión de forma segura usando biometría (huella dactilar o reconocimiento facial) o un PIN."
+                               TextWrapping="Wrap"
+                               FontSize="13"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,20"/>
+                    
+                    <TextBlock Text="Beneficios:" 
+                               FontSize="14" 
+                               FontWeight="SemiBold" 
+                               Foreground="{StaticResource PrimaryBrush}"
+                               Margin="0,0,0,10"/>
+                    
+                    <StackPanel Margin="10,0,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="🔒" FontSize="16" Margin="0,0,10,0"/>
+                            <TextBlock Text="Mayor seguridad que las contraseñas tradicionales"
+                                       FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="⚡" FontSize="16" Margin="0,0,10,0"/>
+                            <TextBlock Text="Inicio de sesión más rápido (2-3 segundos)"
+                                       FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="🧠" FontSize="16" Margin="0,0,10,0"/>
+                            <TextBlock Text="No necesita recordar contraseñas"
+                                       FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="🛡️" FontSize="16" Margin="0,0,10,0"/>
+                            <TextBlock Text="Credenciales únicas por dispositivo"
+                                       FontSize="13" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+                
+                <!-- ===== PASO 2: Verificación de Compatibilidad ===== -->
+                <StackPanel Visibility="{Binding IsStep2, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="Verificación de Compatibilidad" 
+                               FontSize="18" 
+                               FontWeight="SemiBold" 
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Margin="0,0,0,20"/>
+                    
+                    <TextBlock Text="Verificando que su dispositivo sea compatible..."
+                               FontSize="13"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,20"
+                               Visibility="{Binding IsVerifying, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    
+                    <!-- Resultados de verificación -->
+                    <Border Background="{StaticResource SurfaceBrush}" 
+                            CornerRadius="8" 
+                            Padding="20"
+                            BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="1"
+                            Visibility="{Binding IsVerifying, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <!-- Windows Hello disponible -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                <TextBlock Text="{Binding WindowsHelloCheckIcon}" 
+                                           FontSize="18" 
+                                           Margin="0,0,12,0"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="Windows Hello" 
+                                               FontWeight="SemiBold" 
+                                               FontSize="13"/>
+                                    <TextBlock Text="{Binding WindowsHelloStatus}" 
+                                               FontSize="12" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <!-- Dispositivo -->
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                                <TextBlock Text="✓" 
+                                           FontSize="18" 
+                                           Foreground="{StaticResource SuccessBrush}"
+                                           Margin="0,0,12,0"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="Dispositivo" 
+                                               FontWeight="SemiBold" 
+                                               FontSize="13"/>
+                                    <TextBlock Text="{Binding DeviceName}" 
+                                               FontSize="12" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <!-- Método detectado -->
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding MethodCheckIcon}" 
+                                           FontSize="18" 
+                                           Margin="0,0,12,0"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel>
+                                    <TextBlock Text="Método disponible" 
+                                               FontWeight="SemiBold" 
+                                               FontSize="13"/>
+                                    <TextBlock Text="{Binding DetectedMethod}" 
+                                               FontSize="12" 
+                                               Foreground="{StaticResource TextSecondaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Mensaje de error si no es compatible -->
+                    <Border Background="{StaticResource DangerLightBrush}" 
+                            CornerRadius="5" 
+                            Padding="15" 
+                            Margin="0,20,0,0"
+                            Visibility="{Binding IsNotCompatible, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="⚠️ No compatible" 
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource DangerBrush}"
+                                       FontSize="13"
+                                       Margin="0,0,0,5"/>
+                            <TextBlock Text="{Binding CompatibilityErrorMessage}" 
+                                       Foreground="{StaticResource DangerBrush}" 
+                                       TextWrapping="Wrap" 
+                                       FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+                
+                <!-- ===== PASO 3: Registro ===== -->
+                <StackPanel Visibility="{Binding IsStep3, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock Text="Registro de Windows Hello" 
+                               FontSize="18" 
+                               FontWeight="SemiBold" 
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Margin="0,0,0,20"/>
+                    
+                    <!-- Estado: Pendiente -->
+                    <StackPanel Visibility="{Binding IsRegistrationPending, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Haga clic en 'Finalizar' para registrar su huella, rostro o PIN."
+                                   TextWrapping="Wrap"
+                                   FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,0,0,15"/>
+                        
+                        <Border Background="{StaticResource WarningLightBrush}" 
+                                CornerRadius="8" 
+                                Padding="15">
+                            <StackPanel>
+                                <TextBlock Text="ℹ️ Información importante" 
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource WarningBrush}"
+                                           FontSize="13"
+                                           Margin="0,0,0,8"/>
+                                <TextBlock Text="Windows le solicitará verificación biométrica o PIN. Asegúrese de que su dispositivo esté listo."
+                                           TextWrapping="Wrap"
+                                           FontSize="12"
+                                           Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    
+                    <!-- Estado: Registrando -->
+                    <StackPanel HorizontalAlignment="Center" 
+                                VerticalAlignment="Center"
+                                Visibility="{Binding IsRegistering, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="⏳" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                        <TextBlock Text="Registrando Windows Hello..." 
+                                   FontSize="14"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Complete la verificación en la ventana de Windows"
+                                   FontSize="12"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,5,0,0"/>
+                    </StackPanel>
+                    
+                    <!-- Estado: Éxito -->
+                    <StackPanel HorizontalAlignment="Center"
+                                Visibility="{Binding RegistrationSuccess, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Border Background="{StaticResource SuccessLightBrush}" 
+                                CornerRadius="50" 
+                                Width="80" 
+                                Height="80"
+                                HorizontalAlignment="Center"
+                                Margin="0,0,0,20">
+                            <TextBlock Text="✅" FontSize="40" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="¡Configurado exitosamente!" 
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource SuccessBrush}"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,10"/>
+                        <TextBlock Text="Ahora puede iniciar sesión con Windows Hello."
+                                   FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <!-- Estado: Error -->
+                    <Border Background="{StaticResource DangerLightBrush}" 
+                            CornerRadius="5" 
+                            Padding="15" 
+                            Margin="0,20,0,0"
+                            Visibility="{Binding HasRegistrationError, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="❌ Error en el registro" 
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource DangerBrush}"
+                                       FontSize="13"
+                                       Margin="0,0,0,5"/>
+                            <TextBlock Text="{Binding RegistrationErrorMessage}" 
+                                       Foreground="{StaticResource DangerBrush}" 
+                                       TextWrapping="Wrap" 
+                                       FontSize="12"/>
+                            <Button Content="🔄 Reintentar"
+                                    Command="{Binding RetryRegistrationCommand}"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Padding="15,8"
+                                    FontSize="12"
+                                    HorizontalAlignment="Left"
+                                    Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+            
+            <!-- Botones de navegación -->
+            <Border Grid.Row="2" 
+                    Background="{StaticResource SurfaceBrush}" 
+                    CornerRadius="0,0,8,8"
+                    Padding="20,15">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Content="❌ Cancelar"
+                                Command="{Binding CancelCommand}"
+                                Style="{StaticResource SecondaryButton}"
+                                Padding="15,10"
+                                FontSize="13"
+                                Visibility="{Binding RegistrationSuccess, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                    </StackPanel>
+                    
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <!-- Botón Anterior -->
+                        <Button Content="◀ Anterior"
+                                Command="{Binding PreviousCommand}"
+                                Style="{StaticResource SecondaryButton}"
+                                Padding="15,10"
+                                FontSize="13"
+                                Margin="0,0,10,0"
+                                Visibility="{Binding CanGoBack, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        
+                        <!-- Botón Siguiente (Pasos 1 y 2) -->
+                        <Button Content="Siguiente ▶"
+                                Command="{Binding NextCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Padding="15,10"
+                                FontSize="13"
+                                Visibility="{Binding ShowNextButton, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        
+                        <!-- Botón Finalizar (Paso 3) -->
+                        <Button Content="✅ Finalizar"
+                                Command="{Binding FinishCommand}"
+                                Style="{StaticResource SuccessButton}"
+                                Padding="15,10"
+                                FontSize="13"
+                                IsEnabled="{Binding CanFinish}"
+                                Visibility="{Binding ShowFinishButton, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        
+                        <!-- Botón Cerrar (después de éxito) -->
+                        <Button Content="Cerrar"
+                                Command="{Binding CloseCommand}"
+                                Style="{StaticResource PrimaryButton}"
+                                Padding="20,10"
+                                FontSize="13"
+                                Visibility="{Binding RegistrationSuccess, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

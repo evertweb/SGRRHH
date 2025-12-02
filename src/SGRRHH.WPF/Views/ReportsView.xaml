@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1000"
-             Background="White">
+             Background="{DynamicResource SurfaceBrush}">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
@@ -21,7 +21,7 @@
         <TextBlock Text="Reportes y Estadísticas" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
         
         <!-- Panel de Configuración -->
-        <Border Grid.Row="1" VerticalAlignment="Top" Background="#F5F5F5" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+        <Border Grid.Row="1" VerticalAlignment="Top" Background="{DynamicResource BackgroundBrush}" CornerRadius="8" Padding="15" Margin="0,0,0,20">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -31,7 +31,7 @@
                 <WrapPanel Grid.Column="0" Orientation="Horizontal">
                     <!-- Tipo de Reporte -->
                     <StackPanel Margin="0,0,20,10">
-                        <TextBlock Text="Tipo de Reporte" FontSize="12" Foreground="#757575"/>
+                        <TextBlock Text="Tipo de Reporte" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                         <ComboBox Width="250" Height="35" Margin="0,5,0,0"
                                   ItemsSource="{Binding ReportTypes}"
                                   SelectedItem="{Binding SelectedReport}"
@@ -41,14 +41,14 @@
                     <!-- Rango de Fechas -->
                     <StackPanel Margin="0,0,20,10" 
                                 Visibility="{Binding SelectedReport.RequiresDateRange, Converter={StaticResource BoolToVisConverter}, FallbackValue=Collapsed}">
-                        <TextBlock Text="Desde" FontSize="12" Foreground="#757575"/>
+                        <TextBlock Text="Desde" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                         <DatePicker Width="120" Height="35" Margin="0,5,0,0"
                                     SelectedDate="{Binding FechaInicio}"/>
                     </StackPanel>
                     
                     <StackPanel Margin="0,0,20,10"
                                 Visibility="{Binding SelectedReport.RequiresDateRange, Converter={StaticResource BoolToVisConverter}, FallbackValue=Collapsed}">
-                        <TextBlock Text="Hasta" FontSize="12" Foreground="#757575"/>
+                        <TextBlock Text="Hasta" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                         <DatePicker Width="120" Height="35" Margin="0,5,0,0"
                                     SelectedDate="{Binding FechaFin}"/>
                     </StackPanel>
@@ -56,7 +56,7 @@
                     <!-- Selección de Empleado -->
                     <StackPanel Margin="0,0,20,10"
                                 Visibility="{Binding SelectedReport.RequiresEmpleado, Converter={StaticResource BoolToVisConverter}, FallbackValue=Collapsed}">
-                        <TextBlock Text="Empleado" FontSize="12" Foreground="#757575"/>
+                        <TextBlock Text="Empleado" FontSize="12" Foreground="{DynamicResource TextMutedBrush}"/>
                         <ComboBox Width="250" Height="35" Margin="0,5,0,0"
                                   ItemsSource="{Binding Empleados}"
                                   SelectedItem="{Binding SelectedEmpleado}"
@@ -68,13 +68,13 @@
                 <StackPanel Grid.Column="1" VerticalAlignment="Bottom">
                     <Button Content="Generar Reporte" Width="150" Height="40"
                             Command="{Binding GenerateReportCommand}"
-                            Background="#1E88E5" Foreground="White" BorderThickness="0"
+                            Style="{DynamicResource PrimaryButton}"
                             Margin="0,0,0,10"/>
                     
                     <Button Content="🖨️ Imprimir" Width="150" Height="40"
                             Click="OnPrintClick"
                             IsEnabled="{Binding HasResults}"
-                            Background="#607D8B" Foreground="White" BorderThickness="0"
+                            Style="{DynamicResource InfoButton}"
                             Margin="0,0,0,10"/>
                 </StackPanel>
             </Grid>
@@ -89,13 +89,13 @@
                       CanUserDeleteRows="False"
                       GridLinesVisibility="Horizontal"
                       HeadersVisibility="Column"
-                      BorderThickness="1" BorderBrush="#E0E0E0"
+                      BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
                       RowHeight="35"
-                      AlternatingRowBackground="#FAFAFA">
+                      AlternatingRowBackground="{DynamicResource BackgroundBrush}">
                 <DataGrid.Resources>
                     <Style TargetType="DataGridColumnHeader">
                         <Setter Property="Padding" Value="10,5"/>
-                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
                     </Style>
                     <Style TargetType="DataGridCell">
@@ -121,7 +121,7 @@
             <!-- Mensaje de estado -->
             <TextBlock Text="{Binding StatusMessage}" 
                        VerticalAlignment="Bottom" HorizontalAlignment="Left"
-                       Margin="5" Foreground="#757575"/>
+                       Margin="5" Foreground="{DynamicResource TextMutedBrush}"/>
         </Grid>
     </Grid>
 </UserControl>

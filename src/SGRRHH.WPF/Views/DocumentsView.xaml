@@ -8,7 +8,7 @@
              xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
              mc:Ignorable="d"
              d:DesignWidth="1100" d:DesignHeight="700"
-             Background="White">
+             Background="{DynamicResource SurfaceBrush}">
     <UserControl.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
@@ -26,21 +26,21 @@
         <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="20">
                 <TextBlock Text="Documentos PDF" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
-                <TextBlock Text="Genera actas, certificados y constancias con los datos registrados en SGRRHH." Foreground="#616161" Margin="0,0,0,15"/>
+                <TextBlock Text="Genera actas, certificados y constancias con los datos registrados en SGRRHH." Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,15"/>
 
-                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
                     <StackPanel>
                         <TextBlock Text="Plantilla" FontWeight="SemiBold" />
                         <ComboBox ItemsSource="{Binding Templates}"
                                   SelectedItem="{Binding SelectedTemplate}"
                                   DisplayMemberPath="Nombre" Margin="0,8,0,0" />
                         <TextBlock Text="{Binding SelectedTemplate.Descripcion}"
-                                   Margin="0,5,0,0" Foreground="#757575" FontSize="12" />
+                                   Margin="0,5,0,0" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" />
                     </StackPanel>
                 </Border>
 
                 <!-- Permiso Selector -->
-                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -56,12 +56,12 @@
                         <ComboBox ItemsSource="{Binding Permisos}"
                                   SelectedItem="{Binding SelectedPermiso}"
                                   DisplayMemberPath="NumeroActa" Margin="0,8,0,0" />
-                        <TextBlock Text="Selecciona la solicitud aprobada para emitir el acta." FontSize="12" Foreground="#757575" />
+                        <TextBlock Text="Selecciona la solicitud aprobada para emitir el acta." FontSize="12" Foreground="{DynamicResource TextMutedBrush}" />
                     </StackPanel>
                 </Border>
 
                 <!-- Empleado Selector -->
-                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -77,12 +77,12 @@
                         <ComboBox ItemsSource="{Binding Empleados}"
                                   SelectedItem="{Binding SelectedEmpleado}"
                                   DisplayMemberPath="NombreCompleto" Margin="0,8,0,0" />
-                        <TextBlock Text="El colaborador aparecerá automáticamente si eliges un permiso." FontSize="12" Foreground="#757575" />
+                        <TextBlock Text="El colaborador aparecerá automáticamente si eliges un permiso." FontSize="12" Foreground="{DynamicResource TextMutedBrush}" />
                     </StackPanel>
                 </Border>
 
                 <!-- Opciones Certificado -->
-                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -107,7 +107,7 @@
                 </Border>
 
                 <!-- Opciones Constancia -->
-                <Border Background="#F5F7FA" CornerRadius="8" Padding="12">
+                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -135,25 +135,25 @@
 
                 <StackPanel Orientation="Horizontal">
                     <Button Content="Generar" Command="{Binding GenerateDocumentCommand}"
-                            Background="#1E88E5" Foreground="White" Padding="15,8" Margin="0,0,10,0"/>
-                    <Button Content="Descargar" Command="{Binding DownloadDocumentCommand}" Padding="15,8" />
+                            Style="{DynamicResource PrimaryButton}" Margin="0,0,10,0"/>
+                    <Button Content="Descargar" Command="{Binding DownloadDocumentCommand}" Style="{DynamicResource SecondaryButton}" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="Abrir" Command="{Binding OpenPreviewExternallyCommand}" Padding="15,8" Margin="0,0,10,0"/>
-                    <Button Content="Imprimir" Command="{Binding PrintDocumentCommand}" Padding="15,8" />
+                    <Button Content="Abrir" Command="{Binding OpenPreviewExternallyCommand}" Style="{DynamicResource SecondaryButton}" Margin="0,0,10,0"/>
+                    <Button Content="Imprimir" Command="{Binding PrintDocumentCommand}" Style="{DynamicResource SecondaryButton}" />
                 </StackPanel>
 
-                <TextBlock Text="{Binding StatusMessage}" Foreground="#616161" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" />
             </StackPanel>
         </ScrollViewer>
 
         <!-- Preview Panel -->
-        <Border Grid.Column="2" Margin="0,20,20,20" Background="#FAFAFA" CornerRadius="10" Padding="10">
+        <Border Grid.Column="2" Margin="0,20,20,20" Background="{DynamicResource BackgroundBrush}" CornerRadius="10" Padding="10">
             <Grid>
                 <wv2:WebView2 x:Name="PreviewWebView" DefaultBackgroundColor="#FFFFFFFF" />
 
                 <TextBlock Text="Genera un documento para previsualizarlo aquí"
-                           FontSize="18" Foreground="#9E9E9E" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           FontSize="18" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
                            Visibility="{Binding PreviewFilePath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}" />
 
                 <Grid Background="#CCFFFFFF" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">

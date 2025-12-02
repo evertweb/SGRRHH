@@ -137,34 +137,33 @@ public partial class ChatViewModel : ObservableObject, IDisposable
 
         try
         {
-            // Conectar a Sendbird
+            // Conectar usuario actual a Sendbird
             var connected = await _sendbirdService.ConnectAsync(App.CurrentUser);
 
             if (!connected)
             {
-                MessageBox.Show("No se pudo conectar al servidor de chat. Por favor, verifica tu conexión.",
+                MessageBox.Show(
+                    "No se pudo conectar al servidor de chat. Por favor, verifica tu conexión.",
                     "Error de conexión", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            // ✨ NUEVO: Sincronizar TODOS los usuarios del sistema a Sendbird (UNA SOLA VEZ)
-            // Esto asegura que TODOS los usuarios estén disponibles para chatear
+            // Sincronizar usuarios de Firebase a Sendbird (una sola vez)
             LoadingMessage = "Sincronizando usuarios...";
             try
             {
                 var allUsers = await _usuarioService.GetAllActiveAsync();
-                var syncedCount = await _sendbirdService.SyncAllUsersAsync(allUsers);
-                System.Diagnostics.Debug.WriteLine($"✅ Sincronizados {syncedCount} usuarios con Sendbird");
+                await _sendbirdService.SyncAllUsersAsync(allUsers);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"⚠️ Error en sincronización (no crítico): {ex.Message}");
-                // No bloquear la app si la sincronización falla
+                // No bloquear la app si falla la sincronización
+                System.Diagnostics.Debug.WriteLine($"Sincronización de usuarios (no crítico): {ex.Message}");
             }
 
             LoadingMessage = "Cargando conversaciones...";
 
-            // Cargar canales
+            // Cargar canales existentes
             await LoadChannelsAsync();
 
             // Actualizar contador de no leídos
@@ -258,16 +257,11 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Obtiene el ID del usuario actual para Sendbird
+    /// Obtiene el FirebaseUid del usuario actual (ID usado en Sendbird)
     /// </summary>
     private string GetCurrentUserId()
     {
-        if (App.CurrentUser == null)
-            return string.Empty;
-
-        return !string.IsNullOrEmpty(App.CurrentUser.FirebaseUid)
-            ? App.CurrentUser.FirebaseUid
-            : App.CurrentUser.Username;
+        return App.CurrentUser?.FirebaseUid ?? string.Empty;
     }
 
     /// <summary>
@@ -477,64 +471,108 @@ public partial class ChatViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task NewConversationAsync()
     {
+        var logPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sendbird_debug.log");
+        void Log(string msg) {
+            var line = $"[{DateTime.Now:HH:mm:ss}] {msg}";
+            System.IO.File.AppendAllText(logPath, line + Environment.NewLine);
+        }
+        
         try
         {
-            // Mostrar diálogo de selección de usuario (usa Sendbird para mostrar estado online)
+            Log("=== NewConversationAsync INICIO ===");
+            
+            // Diálogo de selección de usuario
             var dialog = new Views.NewConversationDialog(_sendbirdService, _usuarioService)
             {
                 Owner = Application.Current.MainWindow
             };
 
-            if (dialog.ShowDialog() == true)
+            var dialogResult = dialog.ShowDialog();
+            Log($"DialogResult: {dialogResult}");
+            
+            if (dialogResult != true)
             {
-                IsLoading = true;
-                LoadingMessage = "Creando conversación...";
+                Log("Dialog cancelled - saliendo");
+                return;
+            }
 
-                string otherUserId;
-                string otherUserName;
+            // Obtener datos del usuario seleccionado
+            // IMPORTANTE: El UserId es siempre el FirebaseUid
+            string otherUserId;
+            string otherUserName;
 
-                // Obtener datos del usuario seleccionado
-                if (dialog.SelectedSendbirdUser != null)
+            Log($"dialog.SelectedUser: {(dialog.SelectedUser != null ? dialog.SelectedUser.NombreCompleto : "NULL")}");
+            Log($"dialog.SelectedUser?.FirebaseUid: {dialog.SelectedUser?.FirebaseUid ?? "NULL"}");
+            Log($"dialog.SelectedSendbirdUser: {(dialog.SelectedSendbirdUser != null ? dialog.SelectedSendbirdUser.UserId : "NULL")}");
+
+            if (dialog.SelectedUser != null && !string.IsNullOrEmpty(dialog.SelectedUser.FirebaseUid))
+            {
+                otherUserId = dialog.SelectedUser.FirebaseUid;
+                otherUserName = dialog.SelectedUser.NombreCompleto;
+                Log($"Usando SelectedUser - otherUserId: {otherUserId}");
+            }
+            else if (dialog.SelectedSendbirdUser != null)
+            {
+                // El UserId de SendbirdUser ya es el FirebaseUid
+                otherUserId = dialog.SelectedSendbirdUser.UserId;
+                otherUserName = dialog.SelectedSendbirdUser.Nickname;
+                Log($"Usando SelectedSendbirdUser - otherUserId: {otherUserId}");
+            }
+            else
+            {
+                Log("ERROR: No hay usuario válido seleccionado - saliendo!");
+                return; // No se seleccionó usuario válido
+            }
+
+            IsLoading = true;
+            LoadingMessage = "Creando conversación...";
+
+            Log($"Llamando CreateOrGetDirectChannelAsync({otherUserId}, {otherUserName})");
+
+            // Crear o obtener canal directo
+            var channel = await _sendbirdService.CreateOrGetDirectChannelAsync(
+                otherUserId,
+                otherUserName);
+
+            Log($"Resultado canal: {(channel != null ? channel.Url : "NULL")}");
+
+            if (channel != null)
+            {
+                Log("Canal creado exitosamente, recargando lista de canales...");
+                
+                // Recargar lista de canales
+                await LoadChannelsAsync();
+                
+                Log($"Canales cargados: {Channels.Count}");
+                foreach (var ch in Channels)
                 {
-                    // Usuario seleccionado de Sendbird
-                    otherUserId = dialog.SelectedSendbirdUser.UserId;
-                    otherUserName = dialog.SelectedSendbirdUser.Nickname;
+                    Log($"  - Canal: {ch.Url} | Nombre: {ch.Name}");
                 }
-                else if (dialog.SelectedUser != null)
+
+                // Seleccionar el nuevo canal
+                var channelVm = Channels.FirstOrDefault(c => c.Url == channel.Url);
+                Log($"Buscando canal con URL: {channel.Url}");
+                Log($"Canal encontrado: {(channelVm != null ? "SÍ" : "NO")}");
+                
+                if (channelVm != null)
                 {
-                    // Usuario seleccionado del sistema legacy
-                    otherUserId = !string.IsNullOrEmpty(dialog.SelectedUser.FirebaseUid)
-                        ? dialog.SelectedUser.FirebaseUid
-                        : dialog.SelectedUser.Username;
-                    otherUserName = dialog.SelectedUser.NombreCompleto;
+                    Log("Seleccionando canal...");
+                    SelectedChannel = channelVm;
+                    Log($"SelectedChannel ahora es: {SelectedChannel?.Name}");
                 }
                 else
                 {
-                    return; // No se seleccionó ningún usuario
+                    Log("ERROR: No se encontró el canal en la lista!");
                 }
-
-                // Crear o obtener canal directo
-                var channel = await _sendbirdService.CreateOrGetDirectChannelAsync(
-                    otherUserId,
-                    otherUserName);
-
-                if (channel != null)
-                {
-                    // Recargar lista de canales
-                    await LoadChannelsAsync();
-
-                    // Seleccionar el nuevo canal
-                    var channelVm = Channels.FirstOrDefault(c => c.Url == channel.Url);
-                    if (channelVm != null)
-                    {
-                        SelectedChannel = channelVm;
-                    }
-                }
-                else
-                {
-                    MessageBox.Show("No se pudo crear la conversación. Intente nuevamente.",
-                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+            }
+            else
+            {
+                // Mostrar más información del error
+                var errorMsg = $"No se pudo crear la conversación.\n\n" +
+                               $"Usuario destino: {otherUserName}\n" +
+                               $"ID: {otherUserId}\n\n" +
+                               $"Revisa la ventana Output/Debug para más detalles.";
+                MessageBox.Show(errorMsg, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         catch (Exception ex)

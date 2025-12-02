@@ -8,7 +8,7 @@
         Height="650" Width="850"
         MinHeight="500" MinWidth="700"
         WindowStartupLocation="CenterScreen"
-        Background="#FAFAFA">
+        Background="{StaticResource BackgroundBrush}">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -21,8 +21,8 @@
         <Border Grid.Row="0">
             <Border.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#37474F" Offset="0"/>
-                    <GradientStop Color="#546E7A" Offset="1"/>
+                    <GradientStop Color="{StaticResource SidebarHeaderColor}" Offset="0"/>
+                    <GradientStop Color="{StaticResource GrayBlueColor}" Offset="1"/>
                 </LinearGradientBrush>
             </Border.Background>
             <Grid Margin="25">
@@ -34,10 +34,10 @@
                 
                 <!-- Foto -->
                 <Border Grid.Column="0" Width="100" Height="120" CornerRadius="8"
-                        Background="White" Margin="0,0,20,0">
+                        Background="{StaticResource SurfaceBrush}" Margin="0,0,20,0">
                     <Grid>
                         <TextBlock Text="👤" FontSize="50" HorizontalAlignment="Center" 
-                                   VerticalAlignment="Center" Foreground="#BDBDBD"
+                                   VerticalAlignment="Center" Foreground="{StaticResource GrayBrush}"
                                    Visibility="{Binding FotoPath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}"/>
                         <Image Source="{Binding FotoPath}" Stretch="UniformToFill"
                                Visibility="{Binding FotoPath, Converter={StaticResource NotNullToVisibilityConverter}}"/>
@@ -46,22 +46,22 @@
                 
                 <!-- Información principal -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding NombreCompleto}" FontSize="26" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="{Binding NombreCompleto}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextInverseBrush}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <Border Background="#1E88E5" CornerRadius="3" Padding="8,4" Margin="0,0,10,0">
-                            <TextBlock Text="{Binding Codigo}" Foreground="White" FontSize="12" FontWeight="SemiBold"/>
+                        <Border Background="{StaticResource PrimaryBrush}" CornerRadius="3" Padding="8,4" Margin="0,0,10,0">
+                            <TextBlock Text="{Binding Codigo}" Foreground="{StaticResource TextInverseBrush}" FontSize="12" FontWeight="SemiBold"/>
                         </Border>
-                        <Border Background="#43A047" CornerRadius="3" Padding="8,4" Margin="0,0,10,0">
-                            <TextBlock Text="{Binding Estado}" Foreground="White" FontSize="12" FontWeight="SemiBold"/>
+                        <Border Background="{StaticResource SuccessBrush}" CornerRadius="3" Padding="8,4" Margin="0,0,10,0">
+                            <TextBlock Text="{Binding Estado}" Foreground="{StaticResource TextInverseBrush}" FontSize="12" FontWeight="SemiBold"/>
                         </Border>
-                        <Border Background="#FF9800" CornerRadius="3" Padding="8,4">
-                            <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold">
+                        <Border Background="{StaticResource WarningBrush}" CornerRadius="3" Padding="8,4">
+                            <TextBlock Foreground="{StaticResource TextInverseBrush}" FontSize="12" FontWeight="SemiBold">
                                 <Run Text="Antigüedad: "/>
                                 <Run Text="{Binding Antiguedad, Mode=OneWay}"/>
                             </TextBlock>
                         </Border>
                     </StackPanel>
-                    <TextBlock Margin="0,8,0,0" Foreground="#B0BEC5" FontSize="13">
+                    <TextBlock Margin="0,8,0,0" Foreground="{StaticResource SidebarTextMutedBrush}" FontSize="13">
                         <Run Text="Cédula: "/>
                         <Run Text="{Binding Cedula, Mode=OneWay}"/>
                         <Run Text="  |  Ingreso: "/>
@@ -71,9 +71,9 @@
                 
                 <!-- Botón editar -->
                 <Button Grid.Column="2" Content="✏️ Editar" Command="{Binding EditCommand}"
+                        Style="{StaticResource WarningButton}"
                         VerticalAlignment="Top"
-                        Padding="15,10" Background="#FFA000" Foreground="White" FontWeight="Bold"
-                        BorderThickness="0" Cursor="Hand" FontSize="13"/>
+                        Padding="15,10" FontWeight="Bold" FontSize="13"/>
             </Grid>
         </Border>
         
@@ -92,11 +92,10 @@
                 </Grid.RowDefinitions>
                 
                 <!-- Datos Personales -->
-                <Border Grid.Column="0" Grid.Row="0" Background="White" CornerRadius="8" Padding="20" 
-                        BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,0,15">
+                <Border Grid.Column="0" Grid.Row="0" Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
                     <StackPanel>
                         <TextBlock Text="👤 Datos Personales" FontWeight="Bold" FontSize="15" 
-                                   Foreground="#37474F" Margin="0,0,0,15"/>
+                                   Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
                         
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -112,27 +111,27 @@
                             </Grid.RowDefinitions>
                             
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Fecha Nacimiento:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,10"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FechaNacimiento}" 
                                        FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
                             
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Género:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,10"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Genero}" 
                                        FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
                             
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="Estado Civil:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,10"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding EstadoCivil}" 
                                        FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
                             
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="Dirección:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,10"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
                             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Direccion}" 
                                        FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,10"/>
                             
                             <TextBlock Grid.Row="4" Grid.Column="0" Text="Email:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,0"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,0"/>
                             <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Email}" 
                                        FontWeight="SemiBold" FontSize="13"/>
                         </Grid>
@@ -140,11 +139,10 @@
                 </Border>
                 
                 <!-- Datos de Contacto -->
-                <Border Grid.Column="2" Grid.Row="0" Background="White" CornerRadius="8" Padding="20" 
-                        BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,0,15">
+                <Border Grid.Column="2" Grid.Row="0" Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
                     <StackPanel>
                         <TextBlock Text="📞 Contacto y Emergencia" FontWeight="Bold" FontSize="15" 
-                                   Foreground="#37474F" Margin="0,0,0,15"/>
+                                   Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
                         
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -158,17 +156,17 @@
                             </Grid.RowDefinitions>
                             
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Teléfono:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,10"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Telefono}" 
                                        FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
                             
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Tel. Emergencia:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,10"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TelefonoEmergencia}" 
                                        FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
                             
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="Contacto Emerg.:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,0"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,0"/>
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ContactoEmergencia}" 
                                        FontWeight="SemiBold" FontSize="13"/>
                         </Grid>
@@ -176,11 +174,10 @@
                 </Border>
                 
                 <!-- Datos Laborales -->
-                <Border Grid.Column="0" Grid.Row="1" Background="White" CornerRadius="8" Padding="20" 
-                        BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,0,15">
+                <Border Grid.Column="0" Grid.Row="1" Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
                     <StackPanel>
                         <TextBlock Text="🏢 Información Laboral" FontWeight="Bold" FontSize="15" 
-                                   Foreground="#37474F" Margin="0,0,0,15"/>
+                                   Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
                         
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -195,22 +192,22 @@
                             </Grid.RowDefinitions>
                             
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Departamento:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,10"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Departamento}" 
                                        FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
                             
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Cargo:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,10"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Cargo}" 
                                        FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
                             
                             <TextBlock Grid.Row="2" Grid.Column="0" Text="Supervisor:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,10"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Supervisor}" 
                                        FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
                             
                             <TextBlock Grid.Row="3" Grid.Column="0" Text="Tipo Contrato:" 
-                                       Foreground="#757575" FontSize="13" Margin="0,0,15,0"/>
+                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,0"/>
                             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TipoContrato}" 
                                        FontWeight="SemiBold" FontSize="13"/>
                         </Grid>
@@ -218,39 +215,33 @@
                 </Border>
                 
                 <!-- Observaciones -->
-                <Border Grid.Column="2" Grid.Row="1" Background="White" CornerRadius="8" Padding="20" 
-                        BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,0,15">
+                <Border Grid.Column="2" Grid.Row="1" Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
                     <StackPanel>
                         <TextBlock Text="📝 Observaciones" FontWeight="Bold" FontSize="15" 
-                                   Foreground="#37474F" Margin="0,0,0,15"/>
+                                   Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
                         <TextBlock Text="{Binding Observaciones}" FontSize="13" TextWrapping="Wrap"
-                                   Foreground="#616161"/>
+                                   Foreground="{StaticResource TextSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
                 
                 <!-- Acciones rápidas (placeholder para futuras funciones) -->
-                <Border Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2" Background="#E3F2FD" 
+                <Border Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2" Background="{StaticResource PrimaryLightBrush}" 
                         CornerRadius="8" Padding="20">
                     <StackPanel>
                         <TextBlock Text="⚡ Acciones Rápidas" FontWeight="Bold" FontSize="15" 
-                                   Foreground="#1565C0" Margin="0,0,0,15"/>
+                                   Foreground="{StaticResource InfoBrush}" Margin="0,0,0,15"/>
                         <WrapPanel>
-                            <Button Content="� Ver Documentos" Margin="0,0,10,10" Padding="15,8"
+                            <Button Content="📁 Ver Documentos" Margin="0,0,10,10" Padding="15,8"
                                     Command="{Binding VerDocumentosCommand}"
-                                    Background="#1565C0" Foreground="White" 
-                                    BorderThickness="0" Cursor="Hand"/>
+                                    Style="{StaticResource InfoButton}"/>
                             <Button Content="📅 Ver Permisos" Margin="0,0,10,10" Padding="15,8"
-                                    Background="White" Foreground="#1565C0" BorderBrush="#1565C0"
-                                    BorderThickness="1" Cursor="Hand" IsEnabled="False"/>
+                                    Style="{StaticResource PrimaryOutlineButton}" IsEnabled="False"/>
                             <Button Content="🏖️ Ver Vacaciones" Margin="0,0,10,10" Padding="15,8"
-                                    Background="White" Foreground="#1565C0" BorderBrush="#1565C0"
-                                    BorderThickness="1" Cursor="Hand" IsEnabled="False"/>
+                                    Style="{StaticResource PrimaryOutlineButton}" IsEnabled="False"/>
                             <Button Content="📊 Ver Actividades" Margin="0,0,10,10" Padding="15,8"
-                                    Background="White" Foreground="#1565C0" BorderBrush="#1565C0"
-                                    BorderThickness="1" Cursor="Hand" IsEnabled="False"/>
+                                    Style="{StaticResource PrimaryOutlineButton}" IsEnabled="False"/>
                             <Button Content="📄 Generar Certificado" Margin="0,0,10,10" Padding="15,8"
-                                    Background="White" Foreground="#1565C0" BorderBrush="#1565C0"
-                                    BorderThickness="1" Cursor="Hand" IsEnabled="False"/>
+                                    Style="{StaticResource PrimaryOutlineButton}" IsEnabled="False"/>
                         </WrapPanel>
                     </StackPanel>
                 </Border>
@@ -258,22 +249,21 @@
         </ScrollViewer>
         
         <!-- Barra inferior -->
-        <Border Grid.Row="2" Background="White" Padding="20" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" Padding="20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
             <Button Content="Cerrar" Command="{Binding CloseCommand}"
+                    Style="{StaticResource SecondaryButton}"
                     HorizontalAlignment="Right"
-                    Width="120" Height="40"
-                    Background="#F5F5F5" Foreground="#616161"
-                    BorderBrush="#E0E0E0" BorderThickness="1" Cursor="Hand" FontSize="14"/>
+                    Width="120" Height="40" FontSize="14"/>
         </Border>
         
         <!-- Overlay de carga -->
         <Border Grid.RowSpan="3" Background="#80000000" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Border Background="White" CornerRadius="10" Padding="30"
+            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="30"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
                     <TextBlock Text="⏳" FontSize="40" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Cargando información..." FontSize="16" Foreground="#616161" 
+                    <TextBlock Text="Cargando información..." FontSize="16" Foreground="{StaticResource TextSecondaryBrush}" 
                                HorizontalAlignment="Center" Margin="0,10,0,0"/>
                 </StackPanel>
             </Border>

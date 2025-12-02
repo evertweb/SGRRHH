@@ -1,0 +1,73 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+    
+    <!-- ============================================== -->
+    <!-- TEMA PRINCIPAL - SGRRHH                        -->
+    <!-- Importa todos los archivos de estilos          -->
+    <!-- ============================================== -->
+    
+    <ResourceDictionary.MergedDictionaries>
+        <!-- 1. Colores base (primero, otros dependen de estos) -->
+        <ResourceDictionary Source="Colors.xaml"/>
+        
+        <!-- 2. Brushes (basados en colores) -->
+        <ResourceDictionary Source="Brushes.xaml"/>
+        
+        <!-- 3. Tipografía (textos y títulos) -->
+        <ResourceDictionary Source="Typography.xaml"/>
+        
+        <!-- 4. Componentes de formularios -->
+        <ResourceDictionary Source="Forms.xaml"/>
+        
+        <!-- 5. Botones -->
+        <ResourceDictionary Source="Buttons.xaml"/>
+        
+        <!-- 6. DataGrid -->
+        <ResourceDictionary Source="DataGridStyles.xaml"/>
+        
+        <!-- 7. Cards y paneles -->
+        <ResourceDictionary Source="Cards.xaml"/>
+        
+        <!-- 8. Badges y estados -->
+        <ResourceDictionary Source="Badges.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+    
+    <!-- ============================================== -->
+    <!-- ESTILOS GLOBALES ADICIONALES                   -->
+    <!-- ============================================== -->
+    
+    <!-- Fondo de página estándar (aplicar como Style a un Grid) -->
+    <Style x:Key="PageBackgroundStyle" TargetType="Grid">
+        <Setter Property="Background" Value="{StaticResource BackgroundBrush}"/>
+    </Style>
+    
+    <!-- Espaciado estándar -->
+    <Thickness x:Key="StandardMargin">20</Thickness>
+    <Thickness x:Key="SmallMargin">10</Thickness>
+    <Thickness x:Key="LargeMargin">30</Thickness>
+    
+    <Thickness x:Key="CardMargin">0,0,0,15</Thickness>
+    <Thickness x:Key="SectionMargin">0,0,0,20</Thickness>
+    
+    <!-- CornerRadius comunes -->
+    <CornerRadius x:Key="SmallRadius">5</CornerRadius>
+    <CornerRadius x:Key="StandardRadius">8</CornerRadius>
+    <CornerRadius x:Key="LargeRadius">12</CornerRadius>
+    <CornerRadius x:Key="CircleRadius">50</CornerRadius>
+    
+    <!-- Tamaños de fuente -->
+    <system:Double x:Key="FontSizeSmall">11</system:Double>
+    <system:Double x:Key="FontSizeNormal">13</system:Double>
+    <system:Double x:Key="FontSizeMedium">14</system:Double>
+    <system:Double x:Key="FontSizeLarge">16</system:Double>
+    <system:Double x:Key="FontSizeTitle">18</system:Double>
+    <system:Double x:Key="FontSizeHeader">22</system:Double>
+    <system:Double x:Key="FontSizeHero">24</system:Double>
+    
+    <!-- Alturas estándar de controles -->
+    <system:Double x:Key="ControlHeight">35</system:Double>
+    <system:Double x:Key="ButtonHeight">40</system:Double>
+    <system:Double x:Key="RowHeight">45</system:Double>
+    
+</ResourceDictionary>

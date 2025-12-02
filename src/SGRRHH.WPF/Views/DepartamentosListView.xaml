@@ -14,7 +14,7 @@
         </Grid.RowDefinitions>
         
         <!-- Header -->
-        <Border Grid.Row="0" Background="#2196F3" CornerRadius="8" Padding="20" Margin="0,0,0,15">
+        <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" CornerRadius="8" Padding="20" Margin="0,0,0,15">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -22,14 +22,13 @@
                 </Grid.ColumnDefinitions>
                 
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="Gestión de Departamentos" FontSize="24" FontWeight="Bold" Foreground="White"/>
-                    <TextBlock Text="Administre los departamentos de la organización" FontSize="14" Foreground="#B3FFFFFF" Margin="0,5,0,0"/>
+                    <TextBlock Text="Gestión de Departamentos" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextInverseBrush}"/>
+                    <TextBlock Text="Administre los departamentos de la organización" FontSize="14" Foreground="{StaticResource TextInverseBrush}" Opacity="0.7" Margin="0,5,0,0"/>
                 </StackPanel>
                 
                 <Button Grid.Column="1" Command="{Binding NuevoCommand}" 
-                        Background="#4CAF50" Foreground="White" 
-                        Padding="20,10" FontSize="14" FontWeight="SemiBold"
-                        BorderThickness="0" Cursor="Hand">
+                        Style="{StaticResource SuccessButton}"
+                        Padding="20,10" FontSize="14">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="+" FontSize="18" FontWeight="Bold" Margin="0,0,8,0"/>
                         <TextBlock Text="Nuevo Departamento" VerticalAlignment="Center"/>
@@ -39,19 +38,15 @@
         </Border>
         
         <!-- Formulario de edición -->
-        <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,15"
+        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="20" Margin="0,0,0,15"
                 Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1"/>
-            </Border.Effect>
             
             <StackPanel>
                 <TextBlock Text="{Binding EditingId, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter='Editar Departamento|Nuevo Departamento'}" 
-                           FontSize="18" FontWeight="SemiBold" Margin="0,0,0,15"
-                           Foreground="#333"/>
-                <TextBlock FontSize="18" FontWeight="SemiBold" Margin="0,0,0,15" Foreground="#333">
+                           Style="{StaticResource SectionTitle}" Margin="0,0,0,15"/>
+                <TextBlock Margin="0,0,0,15">
                     <TextBlock.Style>
-                        <Style TargetType="TextBlock">
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
                             <Setter Property="Text" Value="Nuevo Departamento"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding EditingId, Converter={StaticResource NotNullToVisibilityConverter}}" Value="Visible">
@@ -73,16 +68,16 @@
                     
                     <!-- Nombre -->
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Nombre *" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <TextBlock Text="Nombre *" Style="{StaticResource FieldLabelBold}"/>
                         <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
-                                 Padding="10" FontSize="14"/>
+                                 Style="{StaticResource StandardTextBox}"/>
                     </StackPanel>
                     
                     <!-- Descripción -->
                     <StackPanel Grid.Column="2">
-                        <TextBlock Text="Descripción" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <TextBlock Text="Descripción" Style="{StaticResource FieldLabelBold}"/>
                         <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}" 
-                                 Padding="10" FontSize="14"/>
+                                 Style="{StaticResource StandardTextBox}"/>
                     </StackPanel>
                     
                     <!-- Activo -->
@@ -95,20 +90,17 @@
                 <!-- Botones -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
                     <Button Content="Cancelar" Command="{Binding CancelarCommand}"
-                            Padding="20,10" Margin="0,0,10,0" Background="#9E9E9E" 
-                            Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                            Style="{StaticResource SecondaryButton}"
+                            Padding="20,10" Margin="0,0,10,0"/>
                     <Button Content="Guardar" Command="{Binding GuardarCommand}"
-                            Padding="20,10" Background="#4CAF50" 
-                            Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                            Style="{StaticResource SuccessButton}"
+                            Padding="20,10"/>
                 </StackPanel>
             </StackPanel>
         </Border>
         
         <!-- Lista de departamentos -->
-        <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="0">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1"/>
-            </Border.Effect>
+        <Border Grid.Row="2" Style="{StaticResource CardNoBorder}" Padding="0">
             
             <Grid>
                 <Grid.RowDefinitions>
@@ -117,63 +109,15 @@
                 </Grid.RowDefinitions>
                 
                 <!-- Encabezado de tabla -->
-                <Border Grid.Row="0" Background="#F5F5F5" Padding="15">
-                    <TextBlock Text="Lista de Departamentos" FontWeight="SemiBold" FontSize="14"/>
+                <Border Grid.Row="0" Background="{StaticResource BorderLightBrush}" Padding="15">
+                    <TextBlock Text="Lista de Departamentos" Style="{StaticResource CardTitle}"/>
                 </Border>
                 
                 <!-- DataGrid -->
                 <DataGrid Grid.Row="1" ItemsSource="{Binding Departamentos}" 
                           SelectedItem="{Binding SelectedDepartamento}"
-                          AutoGenerateColumns="False" IsReadOnly="True"
-                          SelectionMode="Single" SelectionUnit="FullRow"
-                          GridLinesVisibility="Horizontal" 
-                          HorizontalGridLinesBrush="#E0E0E0"
-                          HeadersVisibility="Column"
-                          BorderThickness="0"
-                          RowHeight="50"
-                          CanUserAddRows="False"
-                          CanUserDeleteRows="False"
-                          Background="White">
-                    
-                    <DataGrid.ColumnHeaderStyle>
-                        <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#37474F"/>
-                            <Setter Property="Foreground" Value="White"/>
-                            <Setter Property="Padding" Value="12,10"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter Property="FontSize" Value="13"/>
-                            <Setter Property="BorderThickness" Value="0,0,1,0"/>
-                            <Setter Property="BorderBrush" Value="#455A64"/>
-                        </Style>
-                    </DataGrid.ColumnHeaderStyle>
-                    
-                    <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
-                            <Setter Property="Background" Value="White"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="#E3F2FD"/>
-                                </Trigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#F5F5F5"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGrid.RowStyle>
-                    
-                    <DataGrid.CellStyle>
-                        <Style TargetType="DataGridCell">
-                            <Setter Property="Padding" Value="12,0"/>
-                            <Setter Property="BorderThickness" Value="0"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="Foreground" Value="#212121"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DataGrid.CellStyle>
+                          Style="{StaticResource StandardDataGrid}"
+                          RowHeight="50">
                     
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70"/>
@@ -185,10 +129,10 @@
                                     <Border Padding="8,4" CornerRadius="4" HorizontalAlignment="Center">
                                         <Border.Style>
                                             <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#E8F5E9"/>
+                                                <Setter Property="Background" Value="{StaticResource SuccessLightBrush}"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Activo}" Value="False">
-                                                        <Setter Property="Background" Value="#FFEBEE"/>
+                                                        <Setter Property="Background" Value="{StaticResource DangerLightBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -197,11 +141,11 @@
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Text" Value="Activo"/>
-                                                    <Setter Property="Foreground" Value="#4CAF50"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Activo}" Value="False">
                                                             <Setter Property="Text" Value="Inactivo"/>
-                                                            <Setter Property="Foreground" Value="#F44336"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -217,16 +161,14 @@
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                         <Button Content="✏️ Editar" 
                                                 Command="{Binding DataContext.EditarCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                Background="#2196F3" Foreground="White" 
+                                                Style="{StaticResource PrimaryButton}"
                                                 Padding="12,6" Margin="0,0,5,0" 
-                                                BorderThickness="0" Cursor="Hand"
-                                                FontSize="12" FontWeight="SemiBold"/>
+                                                FontSize="12"/>
                                         <Button Content="🗑️ Eliminar" 
                                                 Command="{Binding DataContext.EliminarCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                Background="#F44336" Foreground="White" 
+                                                Style="{StaticResource DangerButton}"
                                                 Padding="12,6"
-                                                BorderThickness="0" Cursor="Hand"
-                                                FontSize="12" FontWeight="SemiBold"/>
+                                                FontSize="12"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -238,26 +180,26 @@
                 <Border Grid.Row="1" Background="#80FFFFFF" 
                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <TextBlock Text="Cargando..." FontSize="16" Foreground="#666"/>
+                        <TextBlock Text="Cargando..." FontSize="16" Foreground="{StaticResource TextSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
                 
                 <!-- Empty state -->
-                <Border Grid.Row="1" Background="White"
+                <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}"
                         Visibility="{Binding Departamentos.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="📁" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                        <TextBlock Text="No hay departamentos registrados" FontSize="16" Foreground="#999"/>
+                        <TextBlock Text="No hay departamentos registrados" FontSize="16" Foreground="{StaticResource TextMutedBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>
         </Border>
         
         <!-- Error message -->
-        <Border Grid.Row="2" VerticalAlignment="Top" Margin="0,60,0,0" Background="#FFEBEE" 
+        <Border Grid.Row="2" VerticalAlignment="Top" Margin="0,60,0,0" Background="{StaticResource DangerLightBrush}" 
                 CornerRadius="4" Padding="15"
                 Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullToVisibilityConverter}}">
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="#D32F2F"/>
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerDarkBrush}"/>
         </Border>
     </Grid>
 </UserControl>

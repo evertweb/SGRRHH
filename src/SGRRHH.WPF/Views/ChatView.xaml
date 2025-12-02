@@ -5,55 +5,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
              d:DesignHeight="800" d:DesignWidth="1200"
-             Background="#0F0F0F">
+             Background="{StaticResource ChatBackgroundBrush}">
 
     <UserControl.Resources>
-        <!-- Estilos modernos minimalistas -->
-
-        <!-- Botón moderno flat -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="#1E1E1E"/>
-            <Setter Property="Foreground" Value="#E0E0E0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2A2A2A"/>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#363636"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- TextBox moderno -->
-        <Style x:Key="ModernTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="#1A1A1A"/>
-            <Setter Property="Foreground" Value="#E0E0E0"/>
-            <Setter Property="BorderBrush" Value="#2D2D2D"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="CaretBrush" Value="#E0E0E0"/>
-        </Style>
-
         <!-- Template para mensaje enviado (mío) - Estilo Discord/Slack -->
         <DataTemplate x:Key="MyMessageTemplate">
             <Grid Margin="80,4,16,4" HorizontalAlignment="Right">
-                <Border Background="#5865F2" CornerRadius="8" Padding="12,8" MaxWidth="500">
+                <Border Background="{StaticResource ChatAccentBrush}" CornerRadius="8" Padding="12,8" MaxWidth="500">
                     <StackPanel>
                         <TextBlock Text="{Binding Message}"
                                    Foreground="White"
@@ -61,7 +19,7 @@
                                    FontSize="14"
                                    LineHeight="20"/>
                         <TextBlock Text="{Binding CreatedAt, StringFormat='HH:mm'}"
-                                   Foreground="#B9BBBE"
+                                   Foreground="{StaticResource ChatTextDimBrush}"
                                    FontSize="11"
                                    HorizontalAlignment="Right"
                                    Margin="0,4,0,0"
@@ -83,7 +41,7 @@
                 <Border Grid.Column="0"
                         Width="36" Height="36"
                         CornerRadius="18"
-                        Background="#43B581"
+                        Background="{StaticResource ChatOnlineBrush}"
                         VerticalAlignment="Top"
                         Margin="0,0,10,0">
                     <TextBlock Text="{Binding SenderName, Converter={StaticResource InitialsConverter}}"
@@ -99,21 +57,21 @@
                     <!-- Nombre y hora -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="{Binding SenderName}"
-                                   Foreground="#FFFFFF"
+                                   Foreground="{StaticResource ChatTextBrush}"
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
                         <TextBlock Text="{Binding CreatedAt, StringFormat='HH:mm'}"
-                                   Foreground="#72767D"
+                                   Foreground="{StaticResource ChatTextMutedBrush}"
                                    FontSize="11"
                                    Margin="8,0,0,0"
                                    VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- Contenido del mensaje -->
-                    <Border Background="#2B2D31" CornerRadius="8" Padding="12,8" MaxWidth="500">
+                    <Border Background="{StaticResource ChatHoverBrush}" CornerRadius="8" Padding="12,8" MaxWidth="500">
                         <TextBlock Text="{Binding Message}"
-                                   Foreground="#DCDDDE"
+                                   Foreground="{StaticResource ChatTextBrush}"
                                    TextWrapping="Wrap"
                                    FontSize="14"
                                    LineHeight="20"/>
@@ -125,7 +83,7 @@
         <!-- Template para mensaje de archivo -->
         <DataTemplate x:Key="FileMessageTemplate">
             <Grid Margin="16,4,80,4" HorizontalAlignment="{Binding IsMyMessage, Converter={StaticResource BoolToAlignment}}">
-                <Border Background="#2B2D31" CornerRadius="8" Padding="12" MaxWidth="350">
+                <Border Background="{StaticResource ChatHoverBrush}" CornerRadius="8" Padding="12" MaxWidth="350">
                     <StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -136,7 +94,7 @@
                             <!-- Icono del archivo -->
                             <Border Grid.Column="0"
                                     Width="48" Height="48"
-                                    Background="#404249"
+                                    Background="{StaticResource ChatActiveBrush}"
                                     CornerRadius="8"
                                     Margin="0,0,12,0"
                                     VerticalAlignment="Top">
@@ -154,7 +112,7 @@
                                            FontSize="13"
                                            TextTrimming="CharacterEllipsis"/>
                                 <TextBlock Text="{Binding FileSize, Converter={StaticResource FileSizeConverter}}"
-                                           Foreground="#72767D"
+                                           Foreground="{StaticResource ChatTextMutedBrush}"
                                            FontSize="11"
                                            Margin="0,2,0,0"/>
                             </StackPanel>
@@ -164,24 +122,14 @@
                         <Button Content="⬇ Descargar"
                                 Command="{Binding DataContext.DownloadFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                 CommandParameter="{Binding}"
+                                Style="{StaticResource ChatPrimaryButton}"
                                 Margin="0,12,0,0"
                                 Padding="10,6"
-                                HorizontalAlignment="Stretch">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
-                                    <Setter Property="Background" Value="#5865F2"/>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#4752C4"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
+                                HorizontalAlignment="Stretch"/>
 
                         <!-- Timestamp -->
                         <TextBlock Text="{Binding CreatedAt, StringFormat='HH:mm'}"
-                                   Foreground="#72767D"
+                                   Foreground="{StaticResource ChatTextMutedBrush}"
                                    FontSize="11"
                                    HorizontalAlignment="Right"
                                    Margin="0,8,0,0"/>
@@ -202,7 +150,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- Panel izquierdo: Lista de conversaciones -->
-        <Border Grid.Column="0" Background="#1E1E1E" BorderBrush="#2D2D2D" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="{StaticResource ChatSurfaceBrush}" BorderBrush="{StaticResource ChatBorderBrush}" BorderThickness="0,0,1,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -212,18 +160,18 @@
                 </Grid.RowDefinitions>
 
                 <!-- Header con título -->
-                <Border Grid.Row="0" Background="#27282C" Padding="20,16" BorderBrush="#2D2D2D" BorderThickness="0,0,0,1">
+                <Border Grid.Row="0" Background="{StaticResource ChatSurfaceLightBrush}" Padding="20,16" BorderBrush="{StaticResource ChatBorderBrush}" BorderThickness="0,0,0,1">
                     <StackPanel>
-                        <TextBlock Text="Mensajes" FontSize="20" FontWeight="Bold" Foreground="#FFFFFF"/>
-                        <TextBlock Text="Powered by Sendbird ⚡" FontSize="11" Foreground="#72767D" Margin="0,4,0,0"/>
+                        <TextBlock Text="Mensajes" FontSize="20" FontWeight="Bold" Foreground="{StaticResource ChatTextBrush}"/>
+                        <TextBlock Text="Powered by Sendbird ⚡" FontSize="11" Foreground="{StaticResource ChatTextMutedBrush}" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Border>
 
                 <!-- Buscador -->
-                <Border Grid.Row="1" Padding="12" Background="#1E1E1E">
-                    <TextBox Style="{StaticResource ModernTextBox}"
+                <Border Grid.Row="1" Padding="12" Background="{StaticResource ChatSurfaceBrush}">
+                    <TextBox Style="{StaticResource ChatTextBox}"
                              Text="{Binding SearchFilter, UpdateSourceTrigger=PropertyChanged}"
-                             BorderBrush="#2D2D2D">
+                             BorderBrush="{StaticResource ChatBorderBrush}">
                         <TextBox.Resources>
                             <Style TargetType="{x:Type Border}">
                                 <Setter Property="CornerRadius" Value="6"/>
@@ -240,7 +188,7 @@
                                 <Border Background="Transparent"
                                         Cursor="Hand"
                                         Padding="16,12"
-                                        BorderBrush="#2D2D2D"
+                                        BorderBrush="{StaticResource ChatBorderBrush}"
                                         BorderThickness="0,0,0,1">
                                     <Border.InputBindings>
                                         <MouseBinding MouseAction="LeftClick"
@@ -251,10 +199,10 @@
                                         <Style TargetType="Border">
                                             <Style.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#2B2D31"/>
+                                                    <Setter Property="Background" Value="{StaticResource ChatHoverBrush}"/>
                                                 </Trigger>
                                                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                    <Setter Property="Background" Value="#404249"/>
+                                                    <Setter Property="Background" Value="{StaticResource ChatActiveBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -269,14 +217,14 @@
 
                                         <!-- Avatar -->
                                         <Grid Grid.Column="0" Margin="0,0,12,0">
-                                            <Border Width="42" Height="42" CornerRadius="21" Background="#5865F2">
+                                            <Border Width="42" Height="42" CornerRadius="21" Background="{StaticResource ChatAccentBrush}">
                                                 <TextBlock Text="{Binding OtherUserInitials}"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                                            FontWeight="Bold" FontSize="16" Foreground="White"/>
                                             </Border>
                                             <!-- Indicador online -->
                                             <Ellipse Width="12" Height="12"
-                                                     Fill="#43B581"
+                                                     Fill="{StaticResource ChatOnlineBrush}"
                                                      HorizontalAlignment="Right"
                                                      VerticalAlignment="Bottom"
                                                      Margin="0,0,-2,-2"
@@ -292,18 +240,18 @@
                                             <TextBlock Text="{Binding Name}"
                                                        FontWeight="SemiBold"
                                                        FontSize="14"
-                                                       Foreground="#FFFFFF"
+                                                       Foreground="{StaticResource ChatTextBrush}"
                                                        TextTrimming="CharacterEllipsis"/>
                                             <TextBlock Text="{Binding LastMessagePreview}"
                                                        FontSize="12"
-                                                       Foreground="#72767D"
+                                                       Foreground="{StaticResource ChatTextMutedBrush}"
                                                        TextTrimming="CharacterEllipsis"
                                                        Margin="0,2,0,0"/>
                                         </StackPanel>
 
                                         <!-- Badge de no leídos -->
                                         <Border Grid.Column="2"
-                                                Background="#ED4245"
+                                                Background="{StaticResource ChatErrorBrush}"
                                                 CornerRadius="10"
                                                 Padding="6,3"
                                                 VerticalAlignment="Center"
@@ -321,17 +269,16 @@
                 </ScrollViewer>
 
                 <!-- Footer con botón nueva conversación -->
-                <Border Grid.Row="3" Background="#27282C" Padding="12" BorderBrush="#2D2D2D" BorderThickness="0,1,0,0">
+                <Border Grid.Row="3" Background="{StaticResource ChatSurfaceLightBrush}" Padding="12" BorderBrush="{StaticResource ChatBorderBrush}" BorderThickness="0,1,0,0">
                     <Button Content="➕ Nueva conversación"
-                            Style="{StaticResource ModernButton}"
-                            Background="#5865F2"
+                            Style="{StaticResource ChatPrimaryButton}"
                             Command="{Binding NewConversationCommand}"/>
                 </Border>
             </Grid>
         </Border>
 
         <!-- Panel derecho: Conversación activa -->
-        <Grid Grid.Column="1" Background="#0F0F0F">
+        <Grid Grid.Column="1" Background="{StaticResource ChatBackgroundBrush}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -340,9 +287,9 @@
 
             <!-- Header de conversación -->
             <Border Grid.Row="0"
-                    Background="#1E1E1E"
+                    Background="{StaticResource ChatSurfaceBrush}"
                     Padding="20,12"
-                    BorderBrush="#2D2D2D"
+                    BorderBrush="{StaticResource ChatBorderBrush}"
                     BorderThickness="0,0,0,1"
                     Visibility="{Binding HasActiveChannel, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Grid>
@@ -356,7 +303,7 @@
                     <Border Grid.Column="0"
                             Width="40" Height="40"
                             CornerRadius="20"
-                            Background="#5865F2"
+                            Background="{StaticResource ChatAccentBrush}"
                             Margin="0,0,12,0">
                         <TextBlock Text="{Binding SelectedChannelInitials}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -368,19 +315,19 @@
                         <TextBlock Text="{Binding SelectedChannelName}"
                                    FontWeight="Bold"
                                    FontSize="16"
-                                   Foreground="#FFFFFF"/>
+                                   Foreground="{StaticResource ChatTextBrush}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                             <Ellipse Width="8" Height="8"
-                                     Fill="#43B581"
+                                     Fill="{StaticResource ChatOnlineBrush}"
                                      VerticalAlignment="Center"
                                      Visibility="{Binding IsOtherUserOnline, Converter={StaticResource BoolToVisibilityConverter}}"/>
                             <Ellipse Width="8" Height="8"
-                                     Fill="#747F8D"
+                                     Fill="{StaticResource ChatTextMutedBrush}"
                                      VerticalAlignment="Center"
                                      Visibility="{Binding IsOtherUserOnline, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
                             <TextBlock Text="{Binding OtherUserStatus}"
                                        FontSize="12"
-                                       Foreground="#B9BBBE"
+                                       Foreground="{StaticResource ChatTextDimBrush}"
                                        Margin="6,0,0,0"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
@@ -389,7 +336,7 @@
                     <!-- Botón de opciones -->
                     <Button Grid.Column="2"
                             Content="⋮"
-                            Style="{StaticResource ModernButton}"
+                            Style="{StaticResource ChatButton}"
                             FontSize="18"
                             Padding="12,6"
                             ToolTip="Opciones"/>
@@ -404,13 +351,13 @@
                 <TextBlock Text="💬" FontSize="72" HorizontalAlignment="Center" Opacity="0.3"/>
                 <TextBlock Text="Selecciona una conversación"
                            FontSize="18"
-                           Foreground="#72767D"
+                           Foreground="{StaticResource ChatTextMutedBrush}"
                            HorizontalAlignment="Center"
                            Margin="0,20,0,0"
                            FontWeight="SemiBold"/>
                 <TextBlock Text="o inicia una nueva para comenzar a chatear"
                            FontSize="14"
-                           Foreground="#4E5058"
+                           Foreground="{StaticResource ChatTextDimBrush}"
                            HorizontalAlignment="Center"
                            Margin="0,8,0,0"/>
             </StackPanel>
@@ -419,7 +366,7 @@
             <ScrollViewer x:Name="MessagesScrollViewer"
                           Grid.Row="1"
                           VerticalScrollBarVisibility="Auto"
-                          Background="#0F0F0F"
+                          Background="{StaticResource ChatBackgroundBrush}"
                           Padding="0,12"
                           Visibility="{Binding HasActiveChannel, Converter={StaticResource BoolToVisibilityConverter}}">
                 <ItemsControl ItemsSource="{Binding Messages}">
@@ -459,9 +406,9 @@
 
             <!-- Input de mensaje -->
             <Border Grid.Row="2"
-                    Background="#1E1E1E"
+                    Background="{StaticResource ChatSurfaceBrush}"
                     Padding="20,16"
-                    BorderBrush="#2D2D2D"
+                    BorderBrush="{StaticResource ChatBorderBrush}"
                     BorderThickness="0,1,0,0"
                     Visibility="{Binding HasActiveChannel, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Grid>
@@ -473,18 +420,18 @@
 
                     <!-- Input -->
                     <Border Grid.Column="0"
-                            Background="#27282C"
+                            Background="{StaticResource ChatSurfaceLightBrush}"
                             CornerRadius="8"
                             Padding="14,10">
                         <TextBox x:Name="MessageInput"
                                  Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"
                                  Background="Transparent"
-                                 Foreground="#DCDDDE"
+                                 Foreground="{StaticResource ChatTextBrush}"
                                  BorderThickness="0"
                                  FontSize="14"
                                  AcceptsReturn="False"
                                  VerticalContentAlignment="Center"
-                                 CaretBrush="#DCDDDE">
+                                 CaretBrush="{StaticResource ChatTextBrush}">
                             <TextBox.InputBindings>
                                 <KeyBinding Key="Return" Command="{Binding SendMessageCommand}"/>
                             </TextBox.InputBindings>
@@ -494,48 +441,22 @@
                     <!-- Botón adjuntar -->
                     <Button Grid.Column="1"
                             Content="📎"
+                            Style="{StaticResource ChatButton}"
                             FontSize="20"
                             Padding="12,10"
                             Margin="12,0,0,0"
                             ToolTip="Adjuntar archivo"
-                            Command="{Binding AttachFileCommand}">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
-                                <Setter Property="Background" Value="#2B2D31"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#404249"/>
-                                    </Trigger>
-                                    <Trigger Property="IsPressed" Value="True">
-                                        <Setter Property="Background" Value="#4E5058"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                            Command="{Binding AttachFileCommand}"/>
 
                     <!-- Botón enviar -->
                     <Button Grid.Column="2"
                             Content="Enviar ➤"
+                            Style="{StaticResource ChatPrimaryButton}"
                             Foreground="White"
                             Padding="20,10"
                             Margin="8,0,0,0"
                             FontWeight="SemiBold"
-                            Command="{Binding SendMessageCommand}">
-                        <Button.Style>
-                            <Style TargetType="Button" BasedOn="{StaticResource ModernButton}">
-                                <Setter Property="Background" Value="#5865F2"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#4752C4"/>
-                                    </Trigger>
-                                    <Trigger Property="IsPressed" Value="True">
-                                        <Setter Property="Background" Value="#3C45A5"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                            Command="{Binding SendMessageCommand}"/>
                 </Grid>
             </Border>
         </Grid>

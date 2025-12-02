@@ -8,18 +8,11 @@
         xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
         mc:Ignorable="d"
         d:DesignHeight="700" d:DesignWidth="1100"
-        Background="#F5F5F5">
+        Background="{StaticResource PageBackground}">
     
     <UserControl.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
-        
-        <!-- Estilo para estados de permiso -->
-        <Style x:Key="EstadoBadgeStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="HorizontalAlignment" Value="Center"/>
-        </Style>
     </UserControl.Resources>
     
     <Grid Margin="20">
@@ -39,35 +32,35 @@
             </Grid.ColumnDefinitions>
             
             <StackPanel>
-                <TextBlock Text="📝 Gestión de Permisos" FontSize="24" FontWeight="Bold" Foreground="#1976D2"/>
-                <TextBlock Text="Consulta y gestión de solicitudes de permisos" Foreground="#666" Margin="0,5,0,0"/>
+                <TextBlock Text="📝 Gestión de Permisos" Style="{StaticResource PageTitle}"/>
+                <TextBlock Text="Consulta y gestión de solicitudes de permisos" Style="{StaticResource PageSubtitle}"/>
             </StackPanel>
             
             <!-- Estadísticas rápidas -->
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Border Background="#FFF3E0" CornerRadius="8" Padding="15,10" Margin="5,0">
+                <Border Style="{StaticResource StatCardOrange}" Margin="5,0">
                     <StackPanel>
-                        <TextBlock Text="{Binding PermisosPendientes}" FontSize="20" FontWeight="Bold" Foreground="#F57C00" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Pendientes" FontSize="11" Foreground="#F57C00"/>
+                        <TextBlock Text="{Binding PermisosPendientes}" Style="{StaticResource StatNumber}" Foreground="{StaticResource WarningBrush}"/>
+                        <TextBlock Text="Pendientes" Style="{StaticResource StatLabel}" Foreground="{StaticResource WarningBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border Background="#E8F5E9" CornerRadius="8" Padding="15,10" Margin="5,0">
+                <Border Style="{StaticResource StatCardGreen}" Margin="5,0">
                     <StackPanel>
-                        <TextBlock Text="{Binding PermisosAprobados}" FontSize="20" FontWeight="Bold" Foreground="#388E3C" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Aprobados" FontSize="11" Foreground="#388E3C"/>
+                        <TextBlock Text="{Binding PermisosAprobados}" Style="{StaticResource StatNumber}" Foreground="{StaticResource SuccessBrush}"/>
+                        <TextBlock Text="Aprobados" Style="{StaticResource StatLabel}" Foreground="{StaticResource SuccessBrush}"/>
                     </StackPanel>
                 </Border>
-                <Border Background="#FFEBEE" CornerRadius="8" Padding="15,10" Margin="5,0">
+                <Border Style="{StaticResource StatCardRed}" Margin="5,0">
                     <StackPanel>
-                        <TextBlock Text="{Binding PermisosRechazados}" FontSize="20" FontWeight="Bold" Foreground="#D32F2F" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Rechazados" FontSize="11" Foreground="#D32F2F"/>
+                        <TextBlock Text="{Binding PermisosRechazados}" Style="{StaticResource StatNumber}" Foreground="{StaticResource DangerBrush}"/>
+                        <TextBlock Text="Rechazados" Style="{StaticResource StatLabel}" Foreground="{StaticResource DangerBrush}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
         </Grid>
         
         <!-- Filtros -->
-        <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+        <Border Grid.Row="1" Style="{StaticResource CardPanel}" Margin="0,0,0,15">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -83,25 +76,19 @@
                 
                 <!-- Empleado -->
                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                    <TextBlock Text="Empleado" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBlock Text="Empleado" Style="{StaticResource FormLabel}"/>
                     <ComboBox ItemsSource="{Binding Empleados}" 
                               SelectedItem="{Binding SelectedEmpleado}"
                               DisplayMemberPath="NombreCompleto"
-                              Height="35">
-                        <ComboBox.Style>
-                            <Style TargetType="ComboBox">
-                                <Setter Property="IsEditable" Value="True"/>
-                            </Style>
-                        </ComboBox.Style>
-                    </ComboBox>
+                              Style="{StaticResource StandardComboBox}"/>
                 </StackPanel>
                 
                 <!-- Estado -->
                 <StackPanel Grid.Column="1" Margin="10,0">
-                    <TextBlock Text="Estado" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBlock Text="Estado" Style="{StaticResource FormLabel}"/>
                     <ComboBox ItemsSource="{Binding Estados}" 
                               SelectedItem="{Binding SelectedEstado}"
-                              Height="35">
+                              Style="{StaticResource StandardComboBox}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock>
@@ -123,59 +110,29 @@
                 
                 <!-- Fecha Desde -->
                 <StackPanel Grid.Column="2" Margin="10,0">
-                    <TextBlock Text="Desde" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                    <DatePicker SelectedDate="{Binding FechaDesde}" Height="35"/>
+                    <TextBlock Text="Desde" Style="{StaticResource FormLabel}"/>
+                    <DatePicker SelectedDate="{Binding FechaDesde}" Style="{StaticResource StandardDatePicker}"/>
                 </StackPanel>
                 
                 <!-- Fecha Hasta -->
                 <StackPanel Grid.Column="3" Margin="10,0">
-                    <TextBlock Text="Hasta" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                    <DatePicker SelectedDate="{Binding FechaHasta}" Height="35"/>
+                    <TextBlock Text="Hasta" Style="{StaticResource FormLabel}"/>
+                    <DatePicker SelectedDate="{Binding FechaHasta}" Style="{StaticResource StandardDatePicker}"/>
                 </StackPanel>
                 
                 <!-- Botones -->
                 <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Bottom">
                     <Button Content="🔍 Buscar" Command="{Binding SearchCommand}" 
-                            Background="#1976D2" Foreground="White" 
-                            Padding="15,8" Margin="5,0" Cursor="Hand">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                            Style="{StaticResource PrimaryButton}" Margin="5,0"/>
                     <Button Content="🗑️ Limpiar" Command="{Binding ClearFiltersCommand}" 
-                            Background="#757575" Foreground="White" 
-                            Padding="15,8" Cursor="Hand">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                            Style="{StaticResource SecondaryButton}"/>
                 </StackPanel>
                 
                 <!-- Búsqueda por texto -->
                 <StackPanel Grid.Row="1" Grid.ColumnSpan="3" Margin="0,10,0,0">
-                    <TextBlock Text="Buscar" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBlock Text="Buscar" Style="{StaticResource FormLabel}"/>
                     <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
-                             Height="35" Padding="10,8"
+                             Style="{StaticResource StandardTextBox}"
                              ToolTip="Buscar por número de acta, empleado, tipo o motivo">
                         <TextBox.InputBindings>
                             <KeyBinding Key="Enter" Command="{Binding SearchCommand}"/>
@@ -188,45 +145,22 @@
         <!-- Botón Nuevo -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
             <Button Content="➕ Solicitar Permiso" Command="{Binding CreateCommand}" 
-                    Background="#4CAF50" Foreground="White" 
-                    Padding="20,10" FontSize="14" Cursor="Hand">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Button">
-                                    <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Button.Style>
-            </Button>
+                    Style="{StaticResource SuccessButton}" FontSize="14"/>
         </StackPanel>
         
         <!-- Lista de permisos -->
-        <Border Grid.Row="3" Background="White" CornerRadius="8">
+        <Border Grid.Row="3" Style="{StaticResource CardPanel}" Padding="0">
             <Grid>
                 <!-- Loading -->
                 <StackPanel Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                             HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <TextBlock Text="⏳ Cargando..." FontSize="16" Foreground="#666"/>
+                    <TextBlock Text="⏳ Cargando..." FontSize="16" Foreground="{StaticResource TextMutedBrush}"/>
                 </StackPanel>
                 
                 <!-- DataGrid -->
                 <DataGrid ItemsSource="{Binding Permisos}"
                           SelectedItem="{Binding SelectedPermiso}"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          CanUserAddRows="False"
-                          CanUserDeleteRows="False"
-                          SelectionMode="Single"
-                          GridLinesVisibility="Horizontal"
-                          HeadersVisibility="Column"
-                          BorderThickness="0"
-                          RowHeight="45"
+                          Style="{StaticResource StandardDataGrid}"
                           Visibility="{Binding IsLoading, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                     
                     <DataGrid.Columns>
@@ -246,16 +180,16 @@
                                             <Style TargetType="Border">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Pendiente">
-                                                        <Setter Property="Background" Value="#FFF3E0"/>
+                                                        <Setter Property="Background" Value="{StaticResource WarningLightBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Aprobado">
-                                                        <Setter Property="Background" Value="#E8F5E9"/>
+                                                        <Setter Property="Background" Value="{StaticResource SuccessLightBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Rechazado">
-                                                        <Setter Property="Background" Value="#FFEBEE"/>
+                                                        <Setter Property="Background" Value="{StaticResource DangerLightBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Cancelado">
-                                                        <Setter Property="Background" Value="#ECEFF1"/>
+                                                        <Setter Property="Background" Value="{StaticResource GrayLightBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -265,16 +199,16 @@
                                                 <Style TargetType="TextBlock">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Estado}" Value="Pendiente">
-                                                            <Setter Property="Foreground" Value="#F57C00"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Estado}" Value="Aprobado">
-                                                            <Setter Property="Foreground" Value="#388E3C"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Estado}" Value="Rechazado">
-                                                            <Setter Property="Foreground" Value="#D32F2F"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Estado}" Value="Cancelado">
-                                                            <Setter Property="Foreground" Value="#616161"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -295,23 +229,19 @@
                                         <Button Content="👁️" ToolTip="Ver detalle"
                                                 Command="{Binding DataContext.ViewCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                 CommandParameter="{Binding}"
-                                                Background="Transparent" BorderThickness="0" 
-                                                Padding="8,4" Cursor="Hand" FontSize="14"/>
+                                                Style="{StaticResource IconButton}"/>
                                         <Button Content="✏️" ToolTip="Editar"
                                                 Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                 CommandParameter="{Binding}"
-                                                Background="Transparent" BorderThickness="0" 
-                                                Padding="8,4" Cursor="Hand" FontSize="14"/>
+                                                Style="{StaticResource IconButton}"/>
                                         <Button Content="❌" ToolTip="Cancelar"
                                                 Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                 CommandParameter="{Binding}"
-                                                Background="Transparent" BorderThickness="0" 
-                                                Padding="8,4" Cursor="Hand" FontSize="14"/>
+                                                Style="{StaticResource IconButton}"/>
                                         <Button Content="🗑️" ToolTip="Eliminar"
                                                 Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                 CommandParameter="{Binding}"
-                                                Background="Transparent" BorderThickness="0" 
-                                                Padding="8,4" Cursor="Hand" FontSize="14"/>
+                                                Style="{StaticResource IconButton}"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -322,7 +252,7 @@
         </Border>
         
         <!-- Footer -->
-        <Border Grid.Row="4" Background="White" CornerRadius="8" Padding="15" Margin="0,10,0,0">
+        <Border Grid.Row="4" Style="{StaticResource CardPanel}" Margin="0,10,0,0">
             <TextBlock>
                 <Run Text="Total de registros: "/>
                 <Run Text="{Binding TotalPermisos}" FontWeight="Bold"/>

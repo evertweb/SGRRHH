@@ -7,53 +7,13 @@
         mc:Ignorable="d"
         Title="Nueva Conversación" Height="500" Width="450"
         WindowStartupLocation="CenterOwner"
-        Background="#1E1E1E"
+        Background="{StaticResource ChatSurfaceBrush}"
         ResizeMode="NoResize">
 
     <Window.Resources>
         <!-- Converters -->
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:InitialsConverter x:Key="InitialsConverter"/>
-        
-        <!-- Botón moderno -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="#1E1E1E"/>
-            <Setter Property="Foreground" Value="#E0E0E0"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2A2A2A"/>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#363636"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- TextBox moderno -->
-        <Style x:Key="ModernTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="#1A1A1A"/>
-            <Setter Property="Foreground" Value="#E0E0E0"/>
-            <Setter Property="BorderBrush" Value="#2D2D2D"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="CaretBrush" Value="#E0E0E0"/>
-        </Style>
     </Window.Resources>
 
     <Grid>
@@ -65,17 +25,17 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#27282C" Padding="20,16" BorderBrush="#2D2D2D" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="{StaticResource ChatSurfaceLightBrush}" Padding="20,16" BorderBrush="{StaticResource ChatBorderBrush}" BorderThickness="0,0,0,1">
             <StackPanel>
-                <TextBlock Text="Nueva Conversación" FontSize="20" FontWeight="Bold" Foreground="#FFFFFF"/>
-                <TextBlock Text="Selecciona un usuario para iniciar una conversación" FontSize="12" Foreground="#72767D" Margin="0,4,0,0"/>
+                <TextBlock Text="Nueva Conversación" FontSize="20" FontWeight="Bold" Foreground="{StaticResource ChatTextBrush}"/>
+                <TextBlock Text="Selecciona un usuario para iniciar una conversación" FontSize="12" Foreground="{StaticResource ChatTextMutedBrush}" Margin="0,4,0,0"/>
             </StackPanel>
         </Border>
 
         <!-- Buscador -->
-        <Border Grid.Row="1" Padding="16,12" Background="#1E1E1E">
+        <Border Grid.Row="1" Padding="16,12" Background="{StaticResource ChatSurfaceBrush}">
             <TextBox x:Name="SearchTextBox"
-                     Style="{StaticResource ModernTextBox}"
+                     Style="{StaticResource ChatTextBox}"
                      TextChanged="SearchTextBox_TextChanged">
                 <TextBox.Resources>
                     <Style TargetType="{x:Type Border}">
@@ -86,14 +46,14 @@
         </Border>
 
         <!-- Lista de usuarios -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Background="#0F0F0F">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Background="{StaticResource ChatBackgroundBrush}">
             <ItemsControl x:Name="UsersListBox" Padding="0">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Background="Transparent"
                                 Cursor="Hand"
                                 Padding="20,14"
-                                BorderBrush="#2D2D2D"
+                                BorderBrush="{StaticResource ChatBorderBrush}"
                                 BorderThickness="0,0,0,1"
                                 MouseLeftButtonDown="UserItem_Click"
                                 Tag="{Binding}">
@@ -101,7 +61,7 @@
                                 <Style TargetType="Border">
                                     <Style.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#2B2D31"/>
+                                            <Setter Property="Background" Value="{StaticResource ChatHoverBrush}"/>
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
@@ -118,7 +78,7 @@
                                 <Grid Grid.Column="0" Width="42" Height="42" Margin="0,0,12,0">
                                     <Border Width="42" Height="42"
                                             CornerRadius="21"
-                                            Background="#5865F2">
+                                            Background="{StaticResource ChatAccentBrush}">
                                         <TextBlock HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
                                                    FontWeight="Bold"
@@ -130,7 +90,7 @@
                                     <Ellipse Width="14" Height="14"
                                              HorizontalAlignment="Right"
                                              VerticalAlignment="Bottom"
-                                             Stroke="#1E1E1E"
+                                             Stroke="{StaticResource ChatSurfaceBrush}"
                                              StrokeThickness="3"
                                              Fill="{Binding StatusColor, Mode=OneWay}"/>
                                 </Grid>
@@ -141,10 +101,10 @@
                                         <TextBlock Text="{Binding NombreCompleto, Mode=OneWay}"
                                                    FontWeight="SemiBold"
                                                    FontSize="14"
-                                                   Foreground="#FFFFFF"
+                                                   Foreground="{StaticResource ChatTextBrush}"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <!-- Badge online -->
-                                        <Border Background="#43B581" 
+                                        <Border Background="{StaticResource ChatOnlineBrush}" 
                                                 CornerRadius="3" 
                                                 Padding="6,2" 
                                                 Margin="8,0,0,0"
@@ -156,7 +116,7 @@
                                         </Border>
                                     </StackPanel>
                                     <TextBlock FontSize="12"
-                                               Foreground="#72767D"
+                                               Foreground="{StaticResource ChatTextMutedBrush}"
                                                TextTrimming="CharacterEllipsis"
                                                Margin="0,2,0,0">
                                         <Run Text="@"/><Run Text="{Binding Username, Mode=OneWay}"/>
@@ -169,7 +129,7 @@
                                 <TextBlock Grid.Column="2"
                                            Text="➤"
                                            FontSize="16"
-                                           Foreground="#72767D"
+                                           Foreground="{StaticResource ChatTextMutedBrush}"
                                            VerticalAlignment="Center"/>
                             </Grid>
                         </Border>
@@ -179,9 +139,9 @@
         </ScrollViewer>
 
         <!-- Footer con botón cancelar -->
-        <Border Grid.Row="3" Background="#27282C" Padding="16" BorderBrush="#2D2D2D" BorderThickness="0,1,0,0">
+        <Border Grid.Row="3" Background="{StaticResource ChatSurfaceLightBrush}" Padding="16" BorderBrush="{StaticResource ChatBorderBrush}" BorderThickness="0,1,0,0">
             <Button Content="Cancelar"
-                    Style="{StaticResource ModernButton}"
+                    Style="{StaticResource ChatButton}"
                     Click="CancelButton_Click"
                     HorizontalAlignment="Center"
                     Padding="24,10"/>

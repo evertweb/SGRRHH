@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Windows;
+using Google.Cloud.Firestore;
 using Microsoft.Extensions.DependencyInjection;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
@@ -7,6 +8,7 @@ using SGRRHH.Core.Models;
 using SGRRHH.Infrastructure.Firebase;
 using SGRRHH.Infrastructure.Services;
 using SGRRHH.WPF.Helpers;
+using SGRRHH.WPF.Services;
 using SGRRHH.WPF.ViewModels;
 using SGRRHH.WPF.Views;
 
@@ -94,9 +96,12 @@ public partial class App : Application
         services.AddFullFirebaseSupport(firebaseConfig, _firebaseInitializer, currentVersion);
         
         // Sobrescribir el servicio de actualización con la implementación de GitHub
-        services.AddSingleton<IUpdateService>(sp => 
+        services.AddSingleton<IUpdateService>(sp =>
             new GithubUpdateService(currentVersion, sp.GetService<Microsoft.Extensions.Logging.ILogger<GithubUpdateService>>()));
-        
+
+        // Registrar servicio de Windows Hello
+        services.AddSingleton<IWindowsHelloService, WindowsHelloService>();
+
         // Registrar ViewModels
         RegisterViewModels(services);
         
@@ -233,12 +238,15 @@ public partial class App : Application
         services.AddTransient<ConfiguracionEmpresaViewModel>();
         services.AddTransient<BackupViewModel>();
         services.AddTransient<AuditLogViewModel>();
+        services.AddTransient<SeguridadViewModel>();
         services.AddTransient<UsuariosListViewModel>();
         services.AddTransient<CambiarPasswordViewModel>();
         services.AddTransient<CatalogosViewModel>();
         services.AddTransient<DocumentosEmpleadoViewModel>();
         services.AddTransient<ChatViewModelLegacy>();
         services.AddTransient<ChatViewModel>();
+        services.AddTransient<WindowsHelloSetupDialogViewModel>();
+        services.AddTransient<WindowsHelloWizardViewModel>();
     }
     
     /// <summary>
@@ -317,6 +325,13 @@ public partial class App : Application
                 CurrentUser = _currentUser;
                 authenticated = true;
                 
+                // ===== DIÁLOGO WINDOWS HELLO POST-LOGIN =====
+                // Solo mostrar si el login fue con contraseña (no con Windows Hello)
+                if (loginViewModel.LastAuthMethod == "password")
+                {
+                    await ShowWindowsHelloPromptIfNeededAsync(user);
+                }
+                
                 // Conectar a Sendbird automáticamente después del login
                 await ConnectToSendbirdAsync();
                 
@@ -338,6 +353,104 @@ public partial class App : Application
                 Shutdown();
                 return;
             }
+        }
+    }
+
+    /// <summary>
+    /// Muestra el diálogo de configuración de Windows Hello si corresponde
+    /// </summary>
+    private async Task ShowWindowsHelloPromptIfNeededAsync(Usuario usuario)
+    {
+        try
+        {
+            var shouldShowPrompt = await ShouldShowWindowsHelloPromptAsync(usuario);
+
+            if (!shouldShowPrompt) return;
+
+            // Crear y mostrar el diálogo
+            var dialogViewModel = _serviceProvider?.GetService<WindowsHelloSetupDialogViewModel>();
+            if (dialogViewModel == null) return;
+
+            dialogViewModel.CurrentUser = usuario;
+
+            var setupDialog = new WindowsHelloSetupDialog
+            {
+                DataContext = dialogViewModel
+            };
+
+            // Mostrar como diálogo modal
+            setupDialog.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error al mostrar prompt de Windows Hello: {ex.Message}");
+            // No bloquear el flujo si falla el prompt
+        }
+    }
+
+    /// <summary>
+    /// Determina si se debe mostrar el prompt de configuración de Windows Hello
+    /// </summary>
+    private async Task<bool> ShouldShowWindowsHelloPromptAsync(Usuario usuario)
+    {
+        try
+        {
+            // 1. Verificar si Windows Hello está disponible
+            var windowsHelloService = Services?.GetService<IWindowsHelloService>();
+            if (windowsHelloService == null || !await windowsHelloService.IsAvailableAsync())
+                return false;
+
+            // 2. Verificar si el usuario ya tiene passkey registrada
+            var firebaseAuthService = Services?.GetService<IFirebaseAuthService>();
+            if (firebaseAuthService == null || string.IsNullOrEmpty(usuario.FirebaseUid))
+                return false;
+
+            var passkeys = await firebaseAuthService.GetUserPasskeysAsync(usuario.FirebaseUid);
+            if (passkeys.Any())
+                return false;
+
+            // 3. Verificar si el usuario ya dijo "No Preguntar"
+            var dismissed = await CheckWindowsHelloPromptDismissedAsync(usuario.FirebaseUid);
+            return !dismissed;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error al verificar prompt de Windows Hello: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Verifica si el usuario ya descartó el prompt de Windows Hello
+    /// </summary>
+    private async Task<bool> CheckWindowsHelloPromptDismissedAsync(string firebaseUid)
+    {
+        try
+        {
+            var firestore = Services?.GetService<FirestoreDb>();
+            if (firestore == null) return false;
+
+            var docRef = firestore
+                .Collection("users")
+                .Document(firebaseUid)
+                .Collection("preferences")
+                .Document("windowsHello");
+
+            var snapshot = await docRef.GetSnapshotAsync();
+            if (!snapshot.Exists) return false;
+
+            // Verificar si la propiedad "dismissed" existe y es true
+            if (snapshot.TryGetValue<bool>("dismissed", out var dismissed))
+            {
+                return dismissed;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error al verificar preferencia de Windows Hello: {ex.Message}");
+            return false;
         }
     }
     

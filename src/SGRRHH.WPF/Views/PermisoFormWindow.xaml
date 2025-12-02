@@ -11,7 +11,7 @@
         Height="650" Width="550"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="#F5F5F5">
+        Background="{StaticResource GrayLightBrush}">
     
     <Window.Resources>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -19,7 +19,7 @@
         <Style x:Key="FormLabelStyle" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Margin" Value="0,0,0,5"/>
-            <Setter Property="Foreground" Value="#333"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         </Style>
         
         <Style x:Key="FormFieldStyle" TargetType="FrameworkElement">
@@ -28,7 +28,7 @@
         </Style>
         
         <Style x:Key="RequiredIndicatorStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#D32F2F"/>
+            <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="Margin" Value="3,0,0,0"/>
         </Style>
@@ -41,7 +41,7 @@
                 Panel.ZIndex="100">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock Text="⏳" FontSize="40"/>
-                <TextBlock Text="Procesando..." Foreground="White" FontSize="16" Margin="0,10,0,0"/>
+                <TextBlock Text="Procesando..." Foreground="{StaticResource TextInverseBrush}" FontSize="16" Margin="0,10,0,0"/>
             </StackPanel>
         </Border>
         
@@ -54,8 +54,8 @@
             
             <!-- Header -->
             <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                <TextBlock Text="{Binding WindowTitle}" FontSize="22" FontWeight="Bold" Foreground="#1976D2"/>
-                <TextBlock Text="Complete los datos del permiso" Foreground="#666" Margin="0,5,0,0"/>
+                <TextBlock Text="{Binding WindowTitle}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource PrimaryDarkBrush}"/>
+                <TextBlock Text="Complete los datos del permiso" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0"/>
             </StackPanel>
             
             <!-- Formulario -->
@@ -97,37 +97,37 @@
                     </StackPanel>
                     
                     <!-- Info del tipo de permiso -->
-                    <Border Background="#E3F2FD" CornerRadius="5" Padding="10" Margin="0,0,0,15"
+                    <Border Background="{StaticResource PrimaryLightBrush}" CornerRadius="5" Padding="10" Margin="0,0,0,15"
                             Visibility="{Binding SelectedTipoPermiso, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedTipoPermiso.Descripcion}" 
-                                       TextWrapping="Wrap" Foreground="#1565C0" FontSize="12"/>
+                                       TextWrapping="Wrap" Foreground="{StaticResource InfoBrush}" FontSize="12"/>
                             <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                <TextBlock Text="📋 Requiere documento: " FontSize="11" Foreground="#666"/>
+                                <TextBlock Text="📋 Requiere documento: " FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <TextBlock FontSize="11" FontWeight="SemiBold">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="No"/>
-                                            <Setter Property="Foreground" Value="#666"/>
+                                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding RequiereDocumento}" Value="True">
                                                     <Setter Property="Text" Value="Sí"/>
-                                                    <Setter Property="Foreground" Value="#D32F2F"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="   |   🔄 Compensable: " FontSize="11" Foreground="#666"/>
+                                <TextBlock Text="   |   🔄 Compensable: " FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
                                 <TextBlock FontSize="11" FontWeight="SemiBold">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="No"/>
-                                            <Setter Property="Foreground" Value="#666"/>
+                                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding EsCompensable}" Value="True">
                                                     <Setter Property="Text" Value="Sí"/>
-                                                    <Setter Property="Foreground" Value="#F57C00"/>
+                                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -165,10 +165,10 @@
                         
                         <StackPanel Grid.Column="4">
                             <TextBlock Text="Total Días" Style="{StaticResource FormLabelStyle}"/>
-                            <Border Background="#E8F5E9" CornerRadius="5" Height="35">
+                            <Border Background="{StaticResource SuccessLightBrush}" CornerRadius="5" Height="35">
                                 <TextBlock Text="{Binding TotalDias}" 
                                            VerticalAlignment="Center" HorizontalAlignment="Center"
-                                           FontSize="16" FontWeight="Bold" Foreground="#388E3C"/>
+                                           FontSize="16" FontWeight="Bold" Foreground="{StaticResource SuccessDarkBrush}"/>
                             </Border>
                         </StackPanel>
                     </Grid>
@@ -181,7 +181,7 @@
                         </StackPanel>
                         <TextBox Text="{Binding Motivo, UpdateSourceTrigger=PropertyChanged}" 
                                  Height="80" TextWrapping="Wrap" AcceptsReturn="True"
-                                 Padding="10"/>
+                                 Padding="10" BorderBrush="{StaticResource BorderBrush}"/>
                     </StackPanel>
                     
                     <!-- Observaciones -->
@@ -189,11 +189,11 @@
                         <TextBlock Text="Observaciones (opcional)" Style="{StaticResource FormLabelStyle}"/>
                         <TextBox Text="{Binding Observaciones, UpdateSourceTrigger=PropertyChanged}" 
                                  Height="60" TextWrapping="Wrap" AcceptsReturn="True"
-                                 Padding="10"/>
+                                 Padding="10" BorderBrush="{StaticResource BorderBrush}"/>
                     </StackPanel>
                     
                     <!-- Documento soporte -->
-                    <Border Background="#FAFAFA" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="5" Padding="15" Margin="0,0,0,15">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                 <TextBlock Text="📎 Documento Soporte" Style="{StaticResource FormLabelStyle}"/>
@@ -209,71 +209,44 @@
                                 </Grid.ColumnDefinitions>
                                 
                                 <TextBox Text="{Binding DocumentoSoportePath}" IsReadOnly="True" 
-                                         Height="35" Padding="10,8"/>
+                                         Style="{StaticResource StandardTextBox}"/>
                                 <Button Grid.Column="1" Content="📂 Seleccionar" 
                                         Command="{Binding SelectDocumentCommand}"
-                                        Margin="10,0,0,0" Padding="15,8" Cursor="Hand"/>
+                                        Style="{StaticResource PrimaryButton}"
+                                        Margin="10,0,0,0" Padding="15,8"/>
                                 <Button Grid.Column="2" Content="❌" 
                                         Command="{Binding RemoveDocumentCommand}"
                                         Visibility="{Binding HasDocument, Converter={StaticResource BoolToVisibilityConverter}}"
-                                        Margin="5,0,0,0" Padding="10,8" Cursor="Hand"
-                                        Background="#FFEBEE" Foreground="#D32F2F"/>
+                                        Style="{StaticResource DangerOutlineButton}"
+                                        Margin="5,0,0,0" Padding="10,8"/>
                             </Grid>
                         </StackPanel>
                     </Border>
                     
                     <!-- Fecha de compensación (si aplica) -->
-                    <Border Background="#FFF8E1" CornerRadius="5" Padding="15" Margin="0,0,0,15"
+                    <Border Background="{StaticResource WarningLightBrush}" CornerRadius="5" Padding="15" Margin="0,0,0,15"
                             Visibility="{Binding EsCompensable, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
-                            <TextBlock Text="🔄 Este permiso es compensable" FontWeight="SemiBold" Foreground="#F57C00" Margin="0,0,0,10"/>
+                            <TextBlock Text="🔄 Este permiso es compensable" FontWeight="SemiBold" Foreground="{StaticResource WarningBrush}" Margin="0,0,0,10"/>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Fecha de Compensación" Style="{StaticResource FormLabelStyle}"/>
                                 <TextBlock Text="*" Style="{StaticResource RequiredIndicatorStyle}"/>
                             </StackPanel>
-                            <DatePicker SelectedDate="{Binding FechaCompensacion}" Width="200" HorizontalAlignment="Left"/>
+                            <DatePicker SelectedDate="{Binding FechaCompensacion}" Style="{StaticResource StandardDatePicker}" Width="200" HorizontalAlignment="Left"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
             
             <!-- Botones -->
-            <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="#E0E0E0" Padding="0,20,0,0" Margin="0,20,0,0">
+            <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrush}" Padding="0,20,0,0" Margin="0,20,0,0">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="Cancelar" Command="{Binding CancelCommand}" 
-                            Width="120" Height="40" Margin="0,0,10,0"
-                            Background="#ECEFF1" Foreground="#333" Cursor="Hand">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="5">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                            Style="{StaticResource SecondaryButton}"
+                            Width="120" Height="40" Margin="0,0,10,0" FontSize="14"/>
                     <Button Content="💾 Guardar" Command="{Binding SaveCommand}" 
-                            Width="140" Height="40"
-                            Background="#4CAF50" Foreground="White" FontWeight="SemiBold" Cursor="Hand">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="5">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                            Style="{StaticResource SuccessButton}"
+                            Width="140" Height="40" FontWeight="SemiBold" FontSize="14"/>
                 </StackPanel>
             </Border>
         </Grid>

@@ -102,4 +102,38 @@ public interface IFirebaseAuthService : IAuthService
     /// Verifica si el servicio de Firebase Auth está disponible
     /// </summary>
     Task<bool> IsFirebaseAvailableAsync();
+
+    // ===== Métodos para Windows Hello / Passkeys =====
+
+    /// <summary>
+    /// Autentica usando Windows Hello / Passkey
+    /// </summary>
+    /// <param name="email">Email del usuario</param>
+    /// <param name="credentialId">ID de la credencial verificada</param>
+    /// <returns>Resultado con tokens de Firebase</returns>
+    Task<FirebaseAuthResult> AuthenticateWithPasskeyAsync(string email, string credentialId);
+
+    /// <summary>
+    /// Registra una nueva passkey para un usuario
+    /// </summary>
+    /// <param name="firebaseUid">UID del usuario en Firebase</param>
+    /// <param name="credentialId">ID de la credencial</param>
+    /// <param name="deviceName">Nombre del dispositivo</param>
+    /// <returns>True si se registró exitosamente</returns>
+    Task<bool> RegisterPasskeyAsync(string firebaseUid, string credentialId, string deviceName);
+
+    /// <summary>
+    /// Obtiene la lista de passkeys registradas para un usuario
+    /// </summary>
+    /// <param name="firebaseUid">UID del usuario en Firebase</param>
+    /// <returns>Lista de passkeys</returns>
+    Task<List<SGRRHH.Core.Models.PasskeyInfo>> GetUserPasskeysAsync(string firebaseUid);
+
+    /// <summary>
+    /// Revoca (desactiva) una passkey
+    /// </summary>
+    /// <param name="firebaseUid">UID del usuario en Firebase</param>
+    /// <param name="credentialId">ID de la credencial a revocar</param>
+    /// <returns>True si se revocó exitosamente</returns>
+    Task<bool> RevokePasskeyAsync(string firebaseUid, string credentialId);
 }

@@ -118,3 +118,23 @@ public class LessThanConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Convierte booleano a texto "(Este dispositivo)" para passkeys
+/// </summary>
+public class BoolToCurrentDeviceConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is bool isCurrent && isCurrent)
+        {
+            return "(Este dispositivo)";
+        }
+        return string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
