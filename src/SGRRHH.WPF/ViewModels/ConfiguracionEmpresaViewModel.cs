@@ -11,9 +11,10 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para la configuración de empresa
 /// </summary>
-public partial class ConfiguracionEmpresaViewModel : ObservableObject
+public partial class ConfiguracionEmpresaViewModel : ViewModelBase
 {
     private readonly IConfiguracionService _configuracionService;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private string _nombre = string.Empty;
@@ -43,17 +44,15 @@ public partial class ConfiguracionEmpresaViewModel : ObservableObject
     private string? _logoPath;
     
     [ObservableProperty]
-    private bool _isLoading;
-    
-    [ObservableProperty]
     private string? _mensaje;
     
     [ObservableProperty]
     private bool _hayLogo;
     
-    public ConfiguracionEmpresaViewModel(IConfiguracionService configuracionService)
+    public ConfiguracionEmpresaViewModel(IConfiguracionService configuracionService, IDialogService dialogService)
     {
         _configuracionService = configuracionService;
+        _dialogService = dialogService;
     }
     
     public async Task LoadDataAsync()
@@ -112,7 +111,7 @@ public partial class ConfiguracionEmpresaViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show("Configuración guardada exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Configuración guardada exitosamente");
             }
             else
             {
@@ -151,16 +150,16 @@ public partial class ConfiguracionEmpresaViewModel : ObservableObject
                 {
                     LogoPath = result.Data;
                     HayLogo = true;
-                    MessageBox.Show("Logo actualizado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Logo actualizado exitosamente");
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al copiar logo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al copiar logo: {ex.Message}");
             }
             finally
             {
@@ -172,12 +171,10 @@ public partial class ConfiguracionEmpresaViewModel : ObservableObject
     [RelayCommand]
     private void EliminarLogo()
     {
-        var result = MessageBox.Show("¿Está seguro de eliminar el logo?", "Confirmar", MessageBoxButton.YesNo, MessageBoxImage.Question);
-        
-        if (result == MessageBoxResult.Yes)
-        {
-            LogoPath = null;
-            HayLogo = false;
-        }
+        if (!_dialogService.Confirm("¿Está seguro de eliminar el logo?", "Confirmar"))
+            return;
+            
+        LogoPath = null;
+        HayLogo = false;
     }
 }

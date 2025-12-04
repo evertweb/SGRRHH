@@ -13,6 +13,8 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageReference Include="CredentialManagement" Version="1.0.2" />
+    <PackageReference Include="ILove_PDF" Version="1.6.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
   </ItemGroup>
@@ -62,9 +64,7 @@
 
   <!-- Compilar y copiar SGRRHH.Updater.exe al output -->
   <Target Name="CopyUpdater" AfterTargets="Build">
-    <MSBuild Projects="..\SGRRHH.Updater\SGRRHH.Updater.csproj"
-             Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)"
-             Targets="Build" />
+    <MSBuild Projects="..\SGRRHH.Updater\SGRRHH.Updater.csproj" Properties="Configuration=$(Configuration);RuntimeIdentifier=$(RuntimeIdentifier)" Targets="Build" />
     <PropertyGroup>
       <!-- Detectar la ruta correcta del updater (puede ser net8.0 o win-x64) -->
       <UpdaterPath Condition="'$(RuntimeIdentifier)' != ''">$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)\..\SGRRHH.Updater\bin\$(Configuration)\net8.0\$(RuntimeIdentifier)'))</UpdaterPath>
@@ -75,10 +75,7 @@
       <UpdaterFiles Include="$(UpdaterPath)SGRRHH.Updater.dll" Condition="Exists('$(UpdaterPath)SGRRHH.Updater.dll')" />
       <UpdaterFiles Include="$(UpdaterPath)SGRRHH.Updater.runtimeconfig.json" Condition="Exists('$(UpdaterPath)SGRRHH.Updater.runtimeconfig.json')" />
     </ItemGroup>
-    <Copy SourceFiles="@(UpdaterFiles)"
-          DestinationFolder="$(OutDir)"
-          SkipUnchangedFiles="true"
-          Condition="'@(UpdaterFiles)' != ''" />
+    <Copy SourceFiles="@(UpdaterFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="'@(UpdaterFiles)' != ''" />
   </Target>
 
 </Project>

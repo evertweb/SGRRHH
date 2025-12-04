@@ -400,3 +400,27 @@ public class StepToColorConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Convierte un TimeSpan a string en formato HH:mm
+/// </summary>
+public class TimeSpanToStringConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is TimeSpan timeSpan)
+        {
+            return timeSpan.ToString(@"hh\:mm");
+        }
+        return "--:--";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is string str && TimeSpan.TryParse(str, out var result))
+        {
+            return result;
+        }
+        return TimeSpan.Zero;
+    }
+}

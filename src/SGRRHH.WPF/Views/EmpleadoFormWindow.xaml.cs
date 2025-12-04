@@ -1,4 +1,5 @@
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using SGRRHH.WPF.ViewModels;
 
 namespace SGRRHH.WPF.Views;
@@ -19,6 +20,7 @@ public partial class EmpleadoFormWindow : Window
         // Suscribirse a eventos
         _viewModel.CloseRequested += OnCloseRequested;
         _viewModel.SaveCompleted += OnSaveCompleted;
+        _viewModel.OpenDocumentosRequested += OnOpenDocumentosRequested;
     }
     
     private void OnCloseRequested(object? sender, EventArgs e)
@@ -31,10 +33,26 @@ public partial class EmpleadoFormWindow : Window
         DialogResult = true;
     }
     
+    private void OnOpenDocumentosRequested(object? sender, int empleadoId)
+    {
+        // Abrir ventana de documentos del empleado
+        var documentosViewModel = App.Services!.GetRequiredService<DocumentosEmpleadoViewModel>();
+        documentosViewModel.Initialize(empleadoId);
+        
+        var documentosWindow = new DocumentosEmpleadoWindow(documentosViewModel);
+        documentosWindow.Owner = this.Owner; // Usar el owner de esta ventana
+        
+        // Cargar los documentos (será vacío para empleado nuevo)
+        _ = documentosViewModel.LoadDataAsync();
+        
+        documentosWindow.ShowDialog();
+    }
+    
     protected override void OnClosed(EventArgs e)
     {
         _viewModel.CloseRequested -= OnCloseRequested;
         _viewModel.SaveCompleted -= OnSaveCompleted;
+        _viewModel.OpenDocumentosRequested -= OnOpenDocumentosRequested;
         base.OnClosed(e);
     }
 }

@@ -13,10 +13,11 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para la gestión de cargos
 /// </summary>
-public partial class CargosListViewModel : ObservableObject
+public partial class CargosListViewModel : ViewModelBase
 {
     private readonly ICargoService _cargoService;
     private readonly IDepartamentoService _departamentoService;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private ObservableCollection<Cargo> _cargos = new();
@@ -26,9 +27,6 @@ public partial class CargosListViewModel : ObservableObject
     
     [ObservableProperty]
     private Cargo? _selectedCargo;
-    
-    [ObservableProperty]
-    private bool _isLoading;
     
     [ObservableProperty]
     private string _errorMessage = string.Empty;
@@ -50,6 +48,9 @@ public partial class CargosListViewModel : ObservableObject
     private int _nivel = 1;
     
     [ObservableProperty]
+    private bool _activo = true;
+    
+    [ObservableProperty]
     private bool _isEditing;
     
     [ObservableProperty]
@@ -61,24 +62,47 @@ public partial class CargosListViewModel : ObservableObject
     
     private List<Cargo> _allCargos = new();
     
-    public CargosListViewModel(ICargoService cargoService, IDepartamentoService departamentoService)
+    // ======== Control de vistas ========
+    
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFormViewVisible))]
+    [NotifyPropertyChangedFor(nameof(IsListViewVisible))]
+    [NotifyPropertyChangedFor(nameof(IsEditViewVisible))]
+    private bool _isHomeVisible = true;
+    
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHomeVisible))]
+    [NotifyPropertyChangedFor(nameof(IsListViewVisible))]
+    [NotifyPropertyChangedFor(nameof(IsEditViewVisible))]
+    private bool _isFormViewVisible;
+    
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHomeVisible))]
+    [NotifyPropertyChangedFor(nameof(IsFormViewVisible))]
+    [NotifyPropertyChangedFor(nameof(IsEditViewVisible))]
+    private bool _isListViewVisible;
+    
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHomeVisible))]
+    [NotifyPropertyChangedFor(nameof(IsFormViewVisible))]
+    [NotifyPropertyChangedFor(nameof(IsListViewVisible))]
+    private bool _isEditViewVisible;
+    
+    public string CurrentDateText => DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"));
+    
+    public CargosListViewModel(ICargoService cargoService, IDepartamentoService departamentoService, IDialogService dialogService)
     {
         _cargoService = cargoService;
         _departamentoService = departamentoService;
+        _dialogService = dialogService;
     }
     
-    /// <summary>
-    /// Carga inicial de datos
-    /// </summary>
     public async Task LoadAsync()
     {
         await LoadDepartamentosAsync();
         await LoadCargosAsync();
     }
     
-    /// <summary>
-    /// Carga la lista de departamentos
-    /// </summary>
     private async Task LoadDepartamentosAsync()
     {
         try
@@ -97,9 +121,6 @@ public partial class CargosListViewModel : ObservableObject
         }
     }
     
-    /// <summary>
-    /// Carga la lista de cargos
-    /// </summary>
     [RelayCommand]
     private async Task LoadCargosAsync()
     {
@@ -123,9 +144,6 @@ public partial class CargosListViewModel : ObservableObject
         }
     }
     
-    /// <summary>
-    /// Aplica el filtro de departamento
-    /// </summary>
     partial void OnFilterDepartamentoIdChanged(int? value)
     {
         ApplyFilter();
@@ -148,41 +166,72 @@ public partial class CargosListViewModel : ObservableObject
         }
     }
     
-    /// <summary>
-    /// Limpia el filtro
-    /// </summary>
     [RelayCommand]
     private void LimpiarFiltro()
     {
         FilterDepartamentoId = null;
     }
     
-    /// <summary>
-    /// Prepara el formulario para nuevo cargo
-    /// </summary>
+    // ======== Comandos de navegación ========
+    
+    [RelayCommand]
+    private void ShowHome()
+    {
+        IsHomeVisible = true;
+        IsFormViewVisible = false;
+        IsListViewVisible = false;
+        IsEditViewVisible = false;
+        LimpiarFormulario();
+    }
+    
+    [RelayCommand]
+    private async Task ShowFormAsync()
+    {
+        IsHomeVisible = false;
+        IsFormViewVisible = true;
+        IsListViewVisible = false;
+        IsEditViewVisible = false;
+        
+        LimpiarFormulario();
+        Codigo = await _cargoService.GetNextCodigoAsync();
+        Activo = true;
+        await LoadDepartamentosAsync();
+    }
+    
+    [RelayCommand]
+    private async Task ShowListAsync()
+    {
+        IsHomeVisible = false;
+        IsFormViewVisible = false;
+        IsListViewVisible = true;
+        IsEditViewVisible = false;
+        
+        await LoadDepartamentosAsync();
+        await LoadCargosAsync();
+    }
+    
+    private void ShowEdit()
+    {
+        IsHomeVisible = false;
+        IsFormViewVisible = false;
+        IsListViewVisible = false;
+        IsEditViewVisible = true;
+    }
+    
+    // ======== Comandos CRUD ========
+    
     [RelayCommand]
     private async Task NuevoAsync()
     {
-        IsEditing = true;
-        EditingId = null;
-        Codigo = await _cargoService.GetNextCodigoAsync();
-        Nombre = string.Empty;
-        Descripcion = string.Empty;
-        DepartamentoId = null;
-        Nivel = 1;
-        SelectedCargo = null;
+        await ShowFormAsync();
     }
     
-    /// <summary>
-    /// Prepara el formulario para editar
-    /// </summary>
     [RelayCommand]
     private void Editar()
     {
         if (SelectedCargo == null)
         {
-            MessageBox.Show("Seleccione un cargo para editar", "Aviso",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un cargo para editar");
             return;
         }
         
@@ -193,18 +242,17 @@ public partial class CargosListViewModel : ObservableObject
         Descripcion = SelectedCargo.Descripcion ?? string.Empty;
         DepartamentoId = SelectedCargo.DepartamentoId;
         Nivel = SelectedCargo.Nivel;
+        Activo = SelectedCargo.Activo;
+        
+        ShowEdit();
     }
     
-    /// <summary>
-    /// Guarda el cargo (nuevo o editado)
-    /// </summary>
     [RelayCommand]
     private async Task GuardarAsync()
     {
         if (string.IsNullOrWhiteSpace(Nombre))
         {
-            MessageBox.Show("El nombre es obligatorio", "Validación",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("El nombre es obligatorio", "Validación");
             return;
         }
         
@@ -215,7 +263,6 @@ public partial class CargosListViewModel : ObservableObject
             
             if (EditingId.HasValue)
             {
-                // Editar existente
                 var cargo = new Cargo
                 {
                     Id = EditingId.Value,
@@ -223,49 +270,44 @@ public partial class CargosListViewModel : ObservableObject
                     Nombre = Nombre,
                     Descripcion = Descripcion,
                     DepartamentoId = DepartamentoId,
-                    Nivel = Nivel
+                    Nivel = Nivel,
+                    Activo = Activo
                 };
                 
                 var result = await _cargoService.UpdateAsync(cargo);
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Cargo actualizado correctamente", "Éxito",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
-                    Cancelar();
-                    await LoadCargosAsync();
+                    _dialogService.ShowSuccess("Cargo actualizado correctamente");
+                    await ShowListAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message ?? "Error al actualizar", "Error",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message ?? "Error al actualizar");
                 }
             }
             else
             {
-                // Crear nuevo
                 var cargo = new Cargo
                 {
                     Codigo = Codigo,
                     Nombre = Nombre,
                     Descripcion = Descripcion,
                     DepartamentoId = DepartamentoId,
-                    Nivel = Nivel
+                    Nivel = Nivel,
+                    Activo = Activo
                 };
                 
                 var result = await _cargoService.CreateAsync(cargo);
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Cargo creado correctamente", "Éxito",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
-                    Cancelar();
-                    await LoadCargosAsync();
+                    _dialogService.ShowSuccess("Cargo creado correctamente");
+                    ShowHome();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message ?? "Error al crear", "Error",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message ?? "Error al crear");
                 }
             }
         }
@@ -279,11 +321,21 @@ public partial class CargosListViewModel : ObservableObject
         }
     }
     
-    /// <summary>
-    /// Cancela la edición
-    /// </summary>
     [RelayCommand]
     private void Cancelar()
+    {
+        LimpiarFormulario();
+        ShowHome();
+    }
+    
+    [RelayCommand]
+    private async Task CancelarEditAsync()
+    {
+        LimpiarFormulario();
+        await ShowListAsync();
+    }
+    
+    private void LimpiarFormulario()
     {
         IsEditing = false;
         EditingId = null;
@@ -292,28 +344,19 @@ public partial class CargosListViewModel : ObservableObject
         Descripcion = string.Empty;
         DepartamentoId = null;
         Nivel = 1;
+        Activo = true;
     }
     
-    /// <summary>
-    /// Elimina un cargo
-    /// </summary>
     [RelayCommand]
     private async Task EliminarAsync()
     {
         if (SelectedCargo == null)
         {
-            MessageBox.Show("Seleccione un cargo para eliminar", "Aviso",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un cargo para eliminar");
             return;
         }
         
-        var confirmResult = MessageBox.Show(
-            $"¿Está seguro de eliminar el cargo '{SelectedCargo.Nombre}'?\n\nEsta acción no se puede deshacer.",
-            "Confirmar eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-        
-        if (confirmResult != MessageBoxResult.Yes)
+        if (!_dialogService.ConfirmWarning($"¿Está seguro de eliminar el cargo '{SelectedCargo.Nombre}'?\n\nEsta acción no se puede deshacer.", "Confirmar eliminación"))
             return;
         
         try
@@ -325,14 +368,12 @@ public partial class CargosListViewModel : ObservableObject
             
             if (deleteResult.Success)
             {
-                MessageBox.Show("Cargo eliminado correctamente", "Éxito",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Cargo eliminado correctamente");
                 await LoadCargosAsync();
             }
             else
             {
-                MessageBox.Show(deleteResult.Message ?? "Error al eliminar", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(deleteResult.Message ?? "Error al eliminar");
             }
         }
         catch (Exception ex)

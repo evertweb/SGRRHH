@@ -8,7 +8,7 @@ using System.Collections.ObjectModel;
 
 namespace SGRRHH.WPF.ViewModels;
 
-public partial class DashboardViewModel : ObservableObject
+public partial class DashboardViewModel : ViewModelBase
 {
     private readonly IEmpleadoService _empleadoService;
     private readonly IProyectoService _proyectoService;
@@ -30,9 +30,6 @@ public partial class DashboardViewModel : ObservableObject
 
     [ObservableProperty]
     private int _contratosPorVencer;
-    
-    [ObservableProperty]
-    private bool _isLoading;
     
     [ObservableProperty]
     private string _welcomeMessage = string.Empty;

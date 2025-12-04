@@ -11,7 +11,7 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para el Wizard de configuración de Windows Hello
 /// </summary>
-public partial class WindowsHelloWizardViewModel : ObservableObject
+public partial class WindowsHelloWizardViewModel : ViewModelBase
 {
     private readonly IWindowsHelloService _windowsHelloService;
     private readonly IFirebaseAuthService _firebaseAuthService;

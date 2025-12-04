@@ -74,6 +74,7 @@
     <!-- === COLORES ESPECIALES === -->
     <Color x:Key="InfoColor">#1976D2</Color>
     <Color x:Key="InfoLightColor">#E3F2FD</Color>
+    <Color x:Key="InfoDarkColor">#0D47A1</Color>
     <Color x:Key="PinkColor">#E91E63</Color>
     <Color x:Key="PinkLightColor">#FCE4EC</Color>
     <Color x:Key="PinkDarkColor">#C2185B</Color>

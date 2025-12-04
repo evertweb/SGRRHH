@@ -32,7 +32,7 @@ public class RegistroDiarioFirestoreRepository : FirestoreRepository<RegistroDia
         // Fecha del registro
         doc["fecha"] = Timestamp.FromDateTime(entity.Fecha.Date.ToUniversalTime());
         
-        // Horas de entrada/salida (almacenadas como strings "HH:mm")
+        // Horas de entrada/salida (almacenadas como strings "hh:mm")
         doc["horaEntrada"] = entity.HoraEntrada?.ToString(@"hh\:mm");
         doc["horaSalida"] = entity.HoraSalida?.ToString(@"hh\:mm");
         
@@ -535,6 +535,41 @@ public class RegistroDiarioFirestoreRepository : FirestoreRepository<RegistroDia
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al obtener registros de fecha {Fecha}", fecha);
+            throw;
+        }
+    }
+    
+    /// <summary>
+    /// Obtiene registros de todos los empleados en un rango de fechas
+    /// </summary>
+    public async Task<IEnumerable<RegistroDiario>> GetByRangoFechasAsync(DateTime fechaInicio, DateTime fechaFin)
+    {
+        try
+        {
+            var query = Collection
+                .WhereGreaterThanOrEqualTo("fecha", Timestamp.FromDateTime(fechaInicio.Date.ToUniversalTime()))
+                .WhereLessThanOrEqualTo("fecha", Timestamp.FromDateTime(fechaFin.Date.ToUniversalTime()))
+                .WhereEqualTo("activo", true);
+            
+            var snapshot = await query.GetSnapshotAsync();
+            
+            var registros = new List<RegistroDiario>();
+            foreach (var doc in snapshot.Documents)
+            {
+                var registro = DocumentToEntity(doc);
+                var documentId = registro.GetFirestoreDocumentId();
+                if (!string.IsNullOrEmpty(documentId))
+                {
+                    registro.DetallesActividades = await GetDetallesAsync(documentId, registro.Id);
+                }
+                registros.Add(registro);
+            }
+            
+            return registros.OrderByDescending(r => r.Fecha).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al obtener registros en rango de fechas {FechaInicio} - {FechaFin}", fechaInicio, fechaFin);
             throw;
         }
     }

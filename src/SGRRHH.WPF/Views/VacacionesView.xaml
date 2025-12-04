@@ -140,13 +140,145 @@
     </UserControl.Resources>
     
     <Grid Background="#F5F6FA">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="350"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <!-- ==================== PANTALLA DE BIENVENIDA ==================== -->
+        <Grid Visibility="{Binding IsHomeVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Contenido central -->
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <!-- Emoji y título -->
+                <TextBlock Text="🏖️" FontSize="80" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <TextBlock Text="¡Gestión de Vacaciones!" 
+                           FontSize="36" FontWeight="Bold" 
+                           Foreground="#2C3E50" 
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="¿Qué deseas hacer hoy?" 
+                           FontSize="18" 
+                           Foreground="#7F8C8D" 
+                           HorizontalAlignment="Center"
+                           Margin="0,10,0,40"/>
+                
+                <!-- Tarjetas de acción -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <!-- Tarjeta: Solicitar Vacaciones -->
+                    <Button Command="{Binding SolicitarVacacionesCommand}" 
+                            Cursor="Hand" Margin="15">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="CardBorder" 
+                                        Background="White" 
+                                        CornerRadius="16" 
+                                        Width="220" Height="180"
+                                        BorderBrush="#27AE60" BorderThickness="2">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.15" Color="#27AE60"/>
+                                    </Border.Effect>
+                                    <Grid>
+                                        <!-- Franja superior verde -->
+                                        <Border Background="#27AE60" CornerRadius="14,14,0,0" 
+                                                VerticalAlignment="Top" Height="8"/>
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <Border Background="#E8F8F0" CornerRadius="50" 
+                                                    Width="70" Height="70" Margin="0,0,0,15">
+                                                <TextBlock Text="➕" FontSize="32" 
+                                                           HorizontalAlignment="Center" 
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Solicitar Vacaciones" 
+                                                       FontSize="16" FontWeight="SemiBold" 
+                                                       Foreground="#2C3E50" 
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Text="Programar nuevas fechas" 
+                                                       FontSize="12" Foreground="#95A5A6" 
+                                                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="CardBorder" Property="Background" Value="#F0FFF4"/>
+                                        <Setter TargetName="CardBorder" Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="25" ShadowDepth="6" Opacity="0.25" Color="#27AE60"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    
+                    <!-- Tarjeta: Ver Historial -->
+                    <Button Command="{Binding ShowContentCommand}" 
+                            Cursor="Hand" Margin="15">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="CardBorder" 
+                                        Background="White" 
+                                        CornerRadius="16" 
+                                        Width="220" Height="180"
+                                        BorderBrush="#3498DB" BorderThickness="2">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.15" Color="#3498DB"/>
+                                    </Border.Effect>
+                                    <Grid>
+                                        <!-- Franja superior azul -->
+                                        <Border Background="#3498DB" CornerRadius="14,14,0,0" 
+                                                VerticalAlignment="Top" Height="8"/>
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <Border Background="#EBF5FB" CornerRadius="50" 
+                                                    Width="70" Height="70" Margin="0,0,0,15">
+                                                <TextBlock Text="📅" FontSize="32" 
+                                                           HorizontalAlignment="Center" 
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Ver Historial" 
+                                                       FontSize="16" FontWeight="SemiBold" 
+                                                       Foreground="#2C3E50" 
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Text="Consultar vacaciones" 
+                                                       FontSize="12" Foreground="#95A5A6" 
+                                                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="CardBorder" Property="Background" Value="#EBF5FB"/>
+                                        <Setter TargetName="CardBorder" Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="25" ShadowDepth="6" Opacity="0.25" Color="#3498DB"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+            
+            <!-- Footer con fecha -->
+            <Border Grid.Row="1" Background="#ECF0F1" Padding="20,15">
+                <TextBlock Text="{Binding CurrentDateText}" 
+                           FontSize="14" 
+                           Foreground="#7F8C8D" 
+                           HorizontalAlignment="Center"/>
+            </Border>
+        </Grid>
         
-        <!-- Panel izquierdo: Selección de empleado y resumen -->
-        <Grid Grid.Column="0" Margin="10">
+        <!-- ==================== CONTENIDO PRINCIPAL ==================== -->
+        <Grid Visibility="{Binding IsContentVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="350"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+        
+            <!-- Panel izquierdo: Selección de empleado y resumen -->
+            <Grid Grid.Column="0" Margin="10">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -247,7 +379,15 @@
             <!-- Botones de acción -->
             <Border Grid.Row="2" Style="{StaticResource CardStyle}" VerticalAlignment="Top">
                 <StackPanel>
-                    <TextBlock Text="Acciones" Style="{StaticResource HeaderTextStyle}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Acciones" Style="{StaticResource HeaderTextStyle}" VerticalAlignment="Center"/>
+                        <Button Content="🏠 Inicio" 
+                                Command="{Binding ShowHomeCommand}"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Margin="15,0,0,0"
+                                Padding="10,5"
+                                VerticalAlignment="Center"/>
+                    </StackPanel>
                     
                     <Button Content="➕ Nueva Vacación" 
                             Command="{Binding NuevaVacacionCommand}"
@@ -436,10 +576,10 @@
                 </StackPanel>
             </Border>
         </Grid>
+        </Grid>
         
         <!-- Loading overlay -->
-        <Border Grid.ColumnSpan="2" 
-                Background="#80000000" 
+        <Border Background="#80000000" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <TextBlock Text="Cargando..." Foreground="White" FontSize="18"/>

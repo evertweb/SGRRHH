@@ -14,12 +14,42 @@ namespace SGRRHH.WPF.ViewModels;
 
 /// <summary>
 /// ViewModel para la gestión de contratos
+/// Permisos según matriz:
+/// - Administrador: Todo (crear, editar, renovar, finalizar, eliminar)
+/// - Operador (Secretaria): Crear, Editar, Renovar, Ver
+/// - Aprobador (Ingeniera): Solo Ver
 /// </summary>
-public partial class ContratosViewModel : ObservableObject
+public partial class ContratosViewModel : ViewModelBase
 {
     private readonly IContratoService _contratoService;
     private readonly IEmpleadoService _empleadoService;
     private readonly ICargoService _cargoService;
+    private readonly IDialogService _dialogService;
+    
+    // Propiedades para la pantalla de bienvenida
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContentVisible))]
+    private bool _isHomeVisible = true;
+    
+    /// <summary>
+    /// Indica si el contenido principal (gestión de contratos) está visible
+    /// </summary>
+    public bool IsContentVisible => !IsHomeVisible;
+    
+    /// <summary>
+    /// Texto con la fecha actual para el footer de la pantalla de bienvenida
+    /// </summary>
+    public string CurrentDateText => DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"));
+    
+    // Control de permisos por rol
+    [ObservableProperty]
+    private bool _puedeGestionar; // Crear/Editar/Renovar contratos
+    
+    [ObservableProperty]
+    private bool _puedeFinalizar; // Finalizar contratos - Solo Admin
+    
+    [ObservableProperty]
+    private bool _puedeEliminar; // Eliminar contratos - Solo Admin
     
     [ObservableProperty]
     private ObservableCollection<Empleado> _empleados = new();
@@ -41,12 +71,6 @@ public partial class ContratosViewModel : ObservableObject
     
     [ObservableProperty]
     private Contrato? _contratoActivo;
-    
-    [ObservableProperty]
-    private bool _isLoading;
-    
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
     
     [ObservableProperty]
     private bool _isFormVisible;
@@ -94,11 +118,23 @@ public partial class ContratosViewModel : ObservableObject
         TipoContrato.Aprendizaje
     };
     
-    public ContratosViewModel(IContratoService contratoService, IEmpleadoService empleadoService, ICargoService cargoService)
+    public ContratosViewModel(IContratoService contratoService, IEmpleadoService empleadoService, ICargoService cargoService, IDialogService dialogService)
     {
         _contratoService = contratoService;
         _empleadoService = empleadoService;
         _cargoService = cargoService;
+        _dialogService = dialogService;
+        
+        // Determinar permisos según rol del usuario actual
+        var rolActual = App.CurrentUser?.Rol ?? RolUsuario.Operador;
+        
+        // Ingeniera (Aprobador) solo puede ver - NO puede gestionar
+        // Admin y Secretaria (Operador) pueden crear/editar/renovar
+        PuedeGestionar = rolActual == RolUsuario.Administrador || rolActual == RolUsuario.Operador;
+        
+        // Solo Admin puede finalizar y eliminar
+        PuedeFinalizar = rolActual == RolUsuario.Administrador;
+        PuedeEliminar = rolActual == RolUsuario.Administrador;
     }
     
     /// <summary>
@@ -135,7 +171,7 @@ public partial class ContratosViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
-            MessageBox.Show($"Error al cargar datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar datos: {ex.Message}");
         }
         finally
         {
@@ -243,20 +279,50 @@ public partial class ContratosViewModel : ObservableObject
     }
     
     /// <summary>
+    /// Muestra la pantalla de bienvenida
+    /// </summary>
+    [RelayCommand]
+    private void ShowHome()
+    {
+        IsHomeVisible = true;
+    }
+    
+    /// <summary>
+    /// Muestra el contenido principal (gestión de contratos)
+    /// </summary>
+    [RelayCommand]
+    private void ShowContent()
+    {
+        IsHomeVisible = false;
+    }
+    
+    /// <summary>
     /// Muestra el formulario para nuevo contrato
     /// </summary>
     [RelayCommand]
     private void NuevoContrato()
     {
+        if (!PuedeGestionar)
+        {
+            _dialogService.ShowWarning("No tiene permisos para crear contratos", "Permiso denegado");
+            return;
+        }
+        
+        // Si estamos en la pantalla de bienvenida, ir al contenido principal
+        if (IsHomeVisible)
+        {
+            IsHomeVisible = false;
+        }
+        
         if (SelectedEmpleado == null)
         {
-            MessageBox.Show("Seleccione un empleado primero", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un empleado primero");
             return;
         }
         
         if (ContratoActivo != null)
         {
-            MessageBox.Show("El empleado ya tiene un contrato activo. Use la opción de renovar o finalice el contrato actual.", "Información", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("El empleado ya tiene un contrato activo. Use la opción de renovar o finalice el contrato actual.");
             return;
         }
         
@@ -278,15 +344,21 @@ public partial class ContratosViewModel : ObservableObject
     [RelayCommand]
     private void EditarContrato()
     {
+        if (!PuedeGestionar)
+        {
+            _dialogService.ShowWarning("No tiene permisos para editar contratos", "Permiso denegado");
+            return;
+        }
+        
         if (SelectedContrato == null)
         {
-            MessageBox.Show("Seleccione un contrato para editar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un contrato para editar");
             return;
         }
         
         if (SelectedContrato.Estado != EstadoContrato.Activo)
         {
-            MessageBox.Show("Solo se pueden editar contratos activos", "Información", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("Solo se pueden editar contratos activos");
             return;
         }
         
@@ -308,9 +380,15 @@ public partial class ContratosViewModel : ObservableObject
     [RelayCommand]
     private void RenovarContrato()
     {
+        if (!PuedeGestionar)
+        {
+            _dialogService.ShowWarning("No tiene permisos para renovar contratos", "Permiso denegado");
+            return;
+        }
+        
         if (ContratoActivo == null)
         {
-            MessageBox.Show("No hay contrato activo para renovar", "Información", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("No hay contrato activo para renovar");
             return;
         }
         
@@ -332,23 +410,29 @@ public partial class ContratosViewModel : ObservableObject
     [RelayCommand]
     private async Task GuardarContratoAsync()
     {
+        if (!PuedeGestionar)
+        {
+            _dialogService.ShowWarning("No tiene permisos para gestionar contratos", "Permiso denegado");
+            return;
+        }
+        
         if (SelectedEmpleado == null || FormCargo == null) return;
         
         if (FormSalario <= 0)
         {
-            MessageBox.Show("El salario debe ser mayor a cero", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("El salario debe ser mayor a cero", "Validación");
             return;
         }
         
         if (FormTipoContrato != TipoContrato.Indefinido && !FormFechaFin.HasValue)
         {
-            MessageBox.Show("Para contratos a término fijo debe especificar la fecha de fin", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("Para contratos a término fijo debe especificar la fecha de fin", "Validación");
             return;
         }
         
         if (FormFechaFin.HasValue && FormFechaFin.Value <= FormFechaInicio)
         {
-            MessageBox.Show("La fecha de fin debe ser posterior a la fecha de inicio", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("La fecha de fin debe ser posterior a la fecha de inicio", "Validación");
             return;
         }
         
@@ -375,14 +459,14 @@ public partial class ContratosViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Contrato renovado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Contrato renovado exitosamente");
                     IsFormVisible = false;
                     await LoadContratosEmpleadoAsync();
                     await LoadContratosProximosAVencerAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
             else if (IsEditing && SelectedContrato != null)
@@ -400,14 +484,14 @@ public partial class ContratosViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Contrato actualizado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Contrato actualizado exitosamente");
                     IsFormVisible = false;
                     await LoadContratosEmpleadoAsync();
                     await LoadContratosProximosAVencerAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
             else
@@ -429,19 +513,19 @@ public partial class ContratosViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Contrato creado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Contrato creado exitosamente");
                     IsFormVisible = false;
                     await LoadContratosEmpleadoAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}");
         }
         finally
         {
@@ -485,11 +569,11 @@ public partial class ContratosViewModel : ObservableObject
                 File.Copy(dialog.FileName, destPath, true);
                 FormArchivoAdjuntoPath = destPath;
                 
-                MessageBox.Show("Archivo adjuntado correctamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Archivo adjuntado correctamente");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al adjuntar archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al adjuntar archivo: {ex.Message}");
             }
         }
     }
@@ -504,13 +588,13 @@ public partial class ContratosViewModel : ObservableObject
         
         if (string.IsNullOrEmpty(path))
         {
-            MessageBox.Show("No hay archivo adjunto", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("No hay archivo adjunto");
             return;
         }
         
         if (!File.Exists(path))
         {
-            MessageBox.Show("El archivo no existe en la ubicación especificada", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("El archivo no existe en la ubicación especificada");
             return;
         }
         
@@ -524,7 +608,7 @@ public partial class ContratosViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al abrir el archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al abrir el archivo: {ex.Message}");
         }
     }
     
@@ -536,17 +620,11 @@ public partial class ContratosViewModel : ObservableObject
     {
         if (string.IsNullOrEmpty(FormArchivoAdjuntoPath))
         {
-            MessageBox.Show("No hay archivo para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("No hay archivo para eliminar");
             return;
         }
         
-        var result = MessageBox.Show(
-            "¿Está seguro de eliminar el archivo adjunto?",
-            "Confirmar",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-            
-        if (result == MessageBoxResult.Yes)
+        if (_dialogService.Confirm("¿Está seguro de eliminar el archivo adjunto?", "Confirmar"))
         {
             FormArchivoAdjuntoPath = null;
         }
@@ -563,19 +641,19 @@ public partial class ContratosViewModel : ObservableObject
         
         if (contrato == null)
         {
-            MessageBox.Show("Seleccione un contrato", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un contrato");
             return;
         }
         
         if (string.IsNullOrEmpty(contrato.ArchivoAdjuntoPath))
         {
-            MessageBox.Show("Este contrato no tiene archivo adjunto", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Este contrato no tiene archivo adjunto");
             return;
         }
         
         if (!File.Exists(contrato.ArchivoAdjuntoPath))
         {
-            MessageBox.Show("El archivo no existe en la ubicación especificada", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("El archivo no existe en la ubicación especificada");
             return;
         }
         
@@ -589,7 +667,7 @@ public partial class ContratosViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al abrir el archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al abrir el archivo: {ex.Message}");
         }
     }
     
@@ -599,45 +677,45 @@ public partial class ContratosViewModel : ObservableObject
     [RelayCommand]
     private async Task FinalizarContratoAsync()
     {
-        if (ContratoActivo == null)
+        if (!PuedeFinalizar)
         {
-            MessageBox.Show("No hay contrato activo para finalizar", "Información", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("Solo el administrador puede finalizar contratos", "Permiso denegado");
             return;
         }
         
-        var confirmResult = MessageBox.Show(
-            $"¿Está seguro de finalizar el contrato del empleado {SelectedEmpleado?.NombreCompleto}?\n\nEsta acción no se puede deshacer.",
-            "Confirmar finalización",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-            
-        if (confirmResult == MessageBoxResult.Yes)
+        if (ContratoActivo == null)
         {
-            IsLoading = true;
+            _dialogService.ShowWarning("No hay contrato activo para finalizar");
+            return;
+        }
+        
+        if (!_dialogService.ConfirmWarning($"¿Está seguro de finalizar el contrato del empleado {SelectedEmpleado?.NombreCompleto}?\n\nEsta acción no se puede deshacer.", "Confirmar finalización"))
+            return;
             
-            try
+        IsLoading = true;
+        
+        try
+        {
+            var result = await _contratoService.FinalizarContratoAsync(ContratoActivo.Id, DateTime.Today);
+            
+            if (result.Success)
             {
-                var result = await _contratoService.FinalizarContratoAsync(ContratoActivo.Id, DateTime.Today);
-                
-                if (result.Success)
-                {
-                    MessageBox.Show("Contrato finalizado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-                    await LoadContratosEmpleadoAsync();
-                    await LoadContratosProximosAVencerAsync();
-                }
-                else
-                {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                _dialogService.ShowSuccess("Contrato finalizado exitosamente");
+                await LoadContratosEmpleadoAsync();
+                await LoadContratosProximosAVencerAsync();
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
-            finally
-            {
-                IsLoading = false;
-            }
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
     
@@ -647,50 +725,50 @@ public partial class ContratosViewModel : ObservableObject
     [RelayCommand]
     private async Task EliminarContratoAsync()
     {
+        if (!PuedeEliminar)
+        {
+            _dialogService.ShowWarning("Solo el administrador puede eliminar contratos", "Permiso denegado");
+            return;
+        }
+        
         if (SelectedContrato == null)
         {
-            MessageBox.Show("Seleccione un contrato para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un contrato para eliminar");
             return;
         }
         
         if (SelectedContrato.Estado == EstadoContrato.Finalizado)
         {
-            MessageBox.Show("No se puede eliminar un contrato finalizado", "Información", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("No se puede eliminar un contrato finalizado");
             return;
         }
         
-        var confirmResult = MessageBox.Show(
-            "¿Está seguro de eliminar este contrato?",
-            "Confirmar eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+        if (!_dialogService.ConfirmWarning("¿Está seguro de eliminar este contrato?", "Confirmar eliminación"))
+            return;
             
-        if (confirmResult == MessageBoxResult.Yes)
+        IsLoading = true;
+        
+        try
         {
-            IsLoading = true;
+            var result = await _contratoService.DeleteAsync(SelectedContrato.Id);
             
-            try
+            if (result.Success)
             {
-                var result = await _contratoService.DeleteAsync(SelectedContrato.Id);
-                
-                if (result.Success)
-                {
-                    MessageBox.Show("Contrato eliminado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-                    await LoadContratosEmpleadoAsync();
-                }
-                else
-                {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                _dialogService.ShowSuccess("Contrato eliminado exitosamente");
+                await LoadContratosEmpleadoAsync();
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
-            finally
-            {
-                IsLoading = false;
-            }
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 }

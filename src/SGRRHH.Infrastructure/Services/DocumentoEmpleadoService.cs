@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
@@ -16,6 +17,8 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
 {
     private readonly IDocumentoEmpleadoRepository _repository;
     private readonly IEmpleadoRepository _empleadoRepository;
+    private readonly IPdfCompressionService? _pdfCompressionService;
+    private readonly ILogger<DocumentoEmpleadoService>? _logger;
     private readonly string _documentosPath;
     
     /// <summary>
@@ -25,10 +28,12 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
     {
         TipoDocumentoEmpleado.Cedula,
         TipoDocumentoEmpleado.HojaVida,
+        TipoDocumentoEmpleado.ContratoFirmado,
         TipoDocumentoEmpleado.ExamenMedicoIngreso,
         TipoDocumentoEmpleado.AfiliacionEPS,
         TipoDocumentoEmpleado.AfiliacionAFP,
-        TipoDocumentoEmpleado.AfiliacionARL
+        TipoDocumentoEmpleado.AfiliacionARL,
+        TipoDocumentoEmpleado.CertificadoBancario
     };
     
     /// <summary>
@@ -36,6 +41,7 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
     /// </summary>
     private static readonly TipoDocumentoEmpleado[] DocumentosOpcionales = new[]
     {
+        TipoDocumentoEmpleado.Foto,
         TipoDocumentoEmpleado.CertificadoEstudios,
         TipoDocumentoEmpleado.CertificadoLaboral,
         TipoDocumentoEmpleado.ReferenciasPersonales,
@@ -43,17 +49,22 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
         TipoDocumentoEmpleado.Antecedentes,
         TipoDocumentoEmpleado.AfiliacionCajaCompensacion,
         TipoDocumentoEmpleado.RUT,
-        TipoDocumentoEmpleado.CertificadoBancario,
         TipoDocumentoEmpleado.LicenciaConduccion,
-        TipoDocumentoEmpleado.LibretaMilitar
+        TipoDocumentoEmpleado.LibretaMilitar,
+        TipoDocumentoEmpleado.ActaEntregaDotacion,
+        TipoDocumentoEmpleado.Capacitacion
     };
     
     public DocumentoEmpleadoService(
         IDocumentoEmpleadoRepository repository,
-        IEmpleadoRepository empleadoRepository)
+        IEmpleadoRepository empleadoRepository,
+        IPdfCompressionService? pdfCompressionService = null,
+        ILogger<DocumentoEmpleadoService>? logger = null)
     {
         _repository = repository;
         _empleadoRepository = empleadoRepository;
+        _pdfCompressionService = pdfCompressionService;
+        _logger = logger;
         
         // Configurar ruta de documentos
         _documentosPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "documentos_empleados");
@@ -133,6 +144,7 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
     /// <summary>
     /// Sube y registra un nuevo documento
     /// Requiere rol Administrador u Operador
+    /// Comprime automáticamente PDFs mayores a 5MB usando iLovePDF
     /// </summary>
     public async Task<ServiceResult<DocumentoEmpleado>> SubirDocumentoAsync(
         DocumentoEmpleado documento,
@@ -171,6 +183,39 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
                 return ServiceResult<DocumentoEmpleado>.Fail("Empleado no encontrado");
             }
             
+            // Intentar comprimir PDFs grandes
+            var archivoBytesFinales = archivoBytes;
+            var mensajeCompresion = string.Empty;
+            
+            if (_pdfCompressionService != null && 
+                _pdfCompressionService.IsPdfFile(documento.NombreArchivoOriginal))
+            {
+                var originalSizeMb = archivoBytes.Length / (1024.0 * 1024.0);
+                _logger?.LogInformation("📄 Procesando PDF: {FileName} ({Size:F2} MB)", 
+                    documento.NombreArchivoOriginal, originalSizeMb);
+                
+                var compressionResult = await _pdfCompressionService.CompressIfNeededAsync(
+                    archivoBytes, 
+                    documento.NombreArchivoOriginal);
+                
+                if (compressionResult.Success && compressionResult.Data != null)
+                {
+                    archivoBytesFinales = compressionResult.Data;
+                    mensajeCompresion = compressionResult.Message;
+                    
+                    if (archivoBytesFinales.Length < archivoBytes.Length)
+                    {
+                        var compressedSizeMb = archivoBytesFinales.Length / (1024.0 * 1024.0);
+                        _logger?.LogInformation("✅ PDF comprimido: {Original:F2} MB → {Compressed:F2} MB", 
+                            originalSizeMb, compressedSizeMb);
+                    }
+                }
+                else
+                {
+                    _logger?.LogWarning("⚠️ No se pudo comprimir PDF: {Message}", compressionResult.Message);
+                }
+            }
+            
             // Crear carpeta del empleado
             var empleadoFolder = Path.Combine(_documentosPath, $"emp_{empleado.Id}_{empleado.Cedula}");
             Directory.CreateDirectory(empleadoFolder);
@@ -180,12 +225,12 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
             var nuevoNombre = $"{documento.TipoDocumento}_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
             var rutaCompleta = Path.Combine(empleadoFolder, nuevoNombre);
             
-            // Guardar archivo
-            await File.WriteAllBytesAsync(rutaCompleta, archivoBytes);
+            // Guardar archivo (comprimido o no)
+            await File.WriteAllBytesAsync(rutaCompleta, archivoBytesFinales);
             
             // Actualizar datos del documento
             documento.ArchivoPath = rutaCompleta;
-            documento.TamanoArchivo = archivoBytes.Length;
+            documento.TamanoArchivo = archivoBytesFinales.Length;
             documento.SubidoPorUsuarioId = usuarioId;
             documento.FechaCreacion = DateTime.Now;
             documento.Empleado = empleado;
@@ -194,10 +239,17 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
             await _repository.AddAsync(documento);
             await _repository.SaveChangesAsync();
             
-            return ServiceResult<DocumentoEmpleado>.Ok(documento, "Documento subido exitosamente");
+            var mensaje = "Documento subido exitosamente";
+            if (!string.IsNullOrEmpty(mensajeCompresion) && archivoBytesFinales.Length < archivoBytes.Length)
+            {
+                mensaje += $". {mensajeCompresion}";
+            }
+            
+            return ServiceResult<DocumentoEmpleado>.Ok(documento, mensaje);
         }
         catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error al subir documento para empleado {EmpleadoId}", documento.EmpleadoId);
             return ServiceResult<DocumentoEmpleado>.Fail($"Error al subir documento: {ex.Message}");
         }
     }
@@ -414,6 +466,8 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
             TipoDocumentoEmpleado.CertificadoBancario => "Certificado Bancario",
             TipoDocumentoEmpleado.ActaEntregaDotacion => "Acta Entrega Dotación",
             TipoDocumentoEmpleado.Capacitacion => "Capacitación",
+            TipoDocumentoEmpleado.ContratoFirmado => "Contrato Firmado",
+            TipoDocumentoEmpleado.Foto => "Foto del Empleado",
             TipoDocumentoEmpleado.Otro => "Otro Documento",
             _ => tipo.ToString()
         };

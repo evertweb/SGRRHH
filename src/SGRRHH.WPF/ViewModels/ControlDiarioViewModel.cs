@@ -1,107 +1,114 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
+using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
 using SGRRHH.WPF.Helpers;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Windows;
 
 namespace SGRRHH.WPF.ViewModels;
 
 /// <summary>
-/// ViewModel para el control diario de actividades
+/// ViewModel para el historial de registros de control diario
+/// Vista simplificada con tabla y operaciones CRUD
 /// </summary>
-public partial class ControlDiarioViewModel : ObservableObject
+public partial class ControlDiarioViewModel : ViewModelBase
 {
     private readonly IControlDiarioService _controlDiarioService;
     private readonly IEmpleadoService _empleadoService;
-    private readonly IActividadService _actividadService;
-    private readonly IProyectoService _proyectoService;
+    private readonly IDialogService _dialogService;
+    
+    // Control de permisos por rol
+    [ObservableProperty]
+    private bool _puedeEliminar; // Solo Admin
+    
+    [ObservableProperty]
+    private bool _puedeEditar; // Admin y Operador
+    
+    #region Colecciones
     
     [ObservableProperty]
     private ObservableCollection<Empleado> _empleados = new();
     
     [ObservableProperty]
-    private ObservableCollection<Actividad> _actividades = new();
+    private ObservableCollection<RegistroDiario> _registrosFiltrados = new();
     
     [ObservableProperty]
-    private ObservableCollection<Proyecto> _proyectos = new();
+    private ObservableCollection<string> _meses = new();
     
     [ObservableProperty]
-    private ObservableCollection<DetalleActividad> _detallesActividades = new();
+    private ObservableCollection<int> _anios = new();
     
-    [ObservableProperty]
-    private ObservableCollection<RegistroDiario> _registrosRecientes = new();
+    #endregion
+    
+    #region Filtros
     
     [ObservableProperty]
     private Empleado? _selectedEmpleado;
     
     [ObservableProperty]
-    private DateTime _selectedFecha = DateTime.Today;
+    private string? _selectedMes;
     
     [ObservableProperty]
-    private RegistroDiario? _registroActual;
+    private int _selectedAnio;
     
-    [ObservableProperty]
-    private TimeSpan? _horaEntrada;
+    #endregion
     
+    #region Selección y Estado
+
     [ObservableProperty]
-    private TimeSpan? _horaSalida;
-    
+    private RegistroDiario? _selectedRegistro;
+
     [ObservableProperty]
-    private string _observaciones = string.Empty;
-    
+    private ObservableCollection<RegistroDiario> _registrosSeleccionados = new();
+
     [ObservableProperty]
-    private DetalleActividad? _selectedDetalle;
-    
-    [ObservableProperty]
-    private Actividad? _selectedActividad;
-    
-    [ObservableProperty]
-    private Proyecto? _selectedProyecto;
-    
-    [ObservableProperty]
-    private decimal _horas = 1;
-    
-    [ObservableProperty]
-    private string _descripcionActividad = string.Empty;
-    
-    [ObservableProperty]
-    private decimal _totalHoras;
+    private int _totalRegistros;
     
     [ObservableProperty]
     private decimal _horasMesActual;
     
     [ObservableProperty]
-    private bool _isLoading;
+    [NotifyPropertyChangedFor(nameof(HasNoRegistros))]
+    private bool _hasRegistros;
     
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
+    public bool HasNoRegistros => !HasRegistros;
     
-    [ObservableProperty]
-    private bool _isEditMode;
-    
-    [ObservableProperty]
-    private bool _canEdit = true;
-    
-    [ObservableProperty]
-    private bool _requiereProyecto;
-    
-    // Protección contra múltiples cargas simultáneas
-    private bool _isLoadingRegistroInProgress = false;
-    private DateTime _lastLoadTime = DateTime.MinValue;
-    private const int MIN_LOAD_INTERVAL_MS = 500; // Mínimo 500ms entre cargas
+    #endregion
     
     public ControlDiarioViewModel(
         IControlDiarioService controlDiarioService,
         IEmpleadoService empleadoService,
-        IActividadService actividadService,
-        IProyectoService proyectoService)
+        IDialogService dialogService)
     {
         _controlDiarioService = controlDiarioService;
         _empleadoService = empleadoService;
-        _actividadService = actividadService;
-        _proyectoService = proyectoService;
+        _dialogService = dialogService;
+        
+        // Inicializar permisos según rol
+        var rolActual = App.CurrentUser?.Rol ?? RolUsuario.Operador;
+        PuedeEliminar = rolActual == RolUsuario.Administrador;
+        PuedeEditar = rolActual == RolUsuario.Administrador || rolActual == RolUsuario.Operador;
+        
+        // Inicializar meses
+        var culture = new CultureInfo("es-ES");
+        for (int i = 1; i <= 12; i++)
+        {
+            Meses.Add(culture.DateTimeFormat.GetMonthName(i));
+        }
+        
+        // Inicializar años (últimos 3 años)
+        var currentYear = DateTime.Now.Year;
+        for (int i = currentYear - 2; i <= currentYear; i++)
+        {
+            Anios.Add(i);
+        }
+        
+        // Valores por defecto
+        SelectedMes = Meses[DateTime.Now.Month - 1];
+        SelectedAnio = currentYear;
     }
     
     /// <summary>
@@ -117,34 +124,21 @@ public partial class ControlDiarioViewModel : ObservableObject
             // Cargar empleados activos
             var empleados = await _empleadoService.GetAllAsync();
             Empleados.Clear();
+            Empleados.Add(new Empleado { Id = 0, Nombres = "Todos", Apellidos = "los empleados" });
             foreach (var emp in empleados)
             {
                 Empleados.Add(emp);
             }
             
-            // Cargar actividades
-            var actividades = await _actividadService.GetAllAsync();
-            Actividades.Clear();
-            foreach (var act in actividades)
-            {
-                Actividades.Add(act);
-            }
+            // Seleccionar "Todos" por defecto
+            SelectedEmpleado = Empleados.FirstOrDefault();
             
-            // Cargar proyectos activos
-            var proyectos = await _proyectoService.GetByEstadoAsync(EstadoProyecto.Activo);
-            Proyectos.Clear();
-            Proyectos.Add(new Proyecto { Id = 0, Nombre = "Sin proyecto" });
-            foreach (var pry in proyectos)
-            {
-                Proyectos.Add(pry);
-            }
-            
-            StatusMessage = "Datos cargados. Seleccione un empleado.";
+            StatusMessage = "Seleccione filtros para ver los registros";
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error al cargar datos: {ex.Message}";
-            MessageBox.Show($"Error al cargar datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar datos: {ex.Message}");
         }
         finally
         {
@@ -153,157 +147,49 @@ public partial class ControlDiarioViewModel : ObservableObject
     }
     
     /// <summary>
-    /// Carga el registro del empleado para la fecha seleccionada
+    /// Carga los registros filtrados
     /// </summary>
     [RelayCommand]
-    private async Task LoadRegistroAsync()
+    private async Task RefreshAsync()
     {
-        if (SelectedEmpleado == null)
-        {
-            StatusMessage = "Seleccione un empleado";
-            return;
-        }
-        
-        // PROTECCIÓN: Evitar cargas simultáneas o muy frecuentes
-        if (_isLoadingRegistroInProgress)
-        {
-            return;
-        }
-        
-        var timeSinceLastLoad = (DateTime.Now - _lastLoadTime).TotalMilliseconds;
-        if (timeSinceLastLoad < MIN_LOAD_INTERVAL_MS)
-        {
-            return;
-        }
-        
-        _isLoadingRegistroInProgress = true;
-        _lastLoadTime = DateTime.Now;
-        
         IsLoading = true;
-        StatusMessage = "Cargando registro...";
+        StatusMessage = "Cargando registros...";
         
         try
         {
-            var registro = await _controlDiarioService.GetRegistroByFechaEmpleadoAsync(SelectedFecha, SelectedEmpleado.Id);
+            // Obtener mes seleccionado como número
+            int mesNumero = Meses.IndexOf(SelectedMes ?? Meses[0]) + 1;
             
-            if (registro != null)
+            IEnumerable<RegistroDiario> registros;
+            
+            if (SelectedEmpleado == null || SelectedEmpleado.Id == 0)
             {
-                RegistroActual = registro;
-                HoraEntrada = registro.HoraEntrada;
-                HoraSalida = registro.HoraSalida;
-                Observaciones = registro.Observaciones ?? string.Empty;
-                
-                DetallesActividades.Clear();
-                if (registro.DetallesActividades != null)
-                {
-                    foreach (var detalle in registro.DetallesActividades.OrderBy(d => d.Orden))
-                    {
-                        DetallesActividades.Add(detalle);
-                    }
-                }
-                
-                CanEdit = registro.Estado == EstadoRegistroDiario.Borrador;
-                StatusMessage = CanEdit ? "Registro cargado" : "Registro completado (solo lectura)";
+                // Cargar todos los registros del mes/año
+                registros = await _controlDiarioService.GetByMesAnioAsync(mesNumero, SelectedAnio);
             }
             else
             {
-                // Crear nuevo registro en memoria
-                RegistroActual = new RegistroDiario
-                {
-                    Fecha = SelectedFecha,
-                    EmpleadoId = SelectedEmpleado.Id,
-                    Empleado = SelectedEmpleado,
-                    Estado = EstadoRegistroDiario.Borrador
-                };
-                
-                HoraEntrada = null;
-                HoraSalida = null;
-                Observaciones = string.Empty;
-                DetallesActividades.Clear();
-                CanEdit = true;
-                StatusMessage = "Nuevo registro";
+                // Cargar registros del empleado específico
+                registros = await _controlDiarioService.GetByEmpleadoMesAnioAsync(
+                    SelectedEmpleado.Id, mesNumero, SelectedAnio);
             }
             
-            // Cargar registros recientes
-            await LoadRegistrosRecientesAsync();
+            RegistrosFiltrados.Clear();
+            foreach (var reg in registros.OrderByDescending(r => r.Fecha))
+            {
+                RegistrosFiltrados.Add(reg);
+            }
             
-            // Calcular horas del mes
-            HorasMesActual = await _controlDiarioService.GetHorasMesActualAsync(SelectedEmpleado.Id);
+            TotalRegistros = RegistrosFiltrados.Count;
+            HorasMesActual = RegistrosFiltrados.Sum(r => r.TotalHoras);
+            HasRegistros = RegistrosFiltrados.Any();
             
-            UpdateTotalHoras();
+            StatusMessage = $"Se encontraron {TotalRegistros} registros";
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
-            MessageBox.Show($"Error al cargar el registro: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally
-        {
-            IsLoading = false;
-            _isLoadingRegistroInProgress = false;
-        }
-    }
-    
-    private async Task LoadRegistrosRecientesAsync()
-    {
-        if (SelectedEmpleado == null) return;
-        
-        var registros = await _controlDiarioService.GetByEmpleadoMesActualAsync(SelectedEmpleado.Id);
-        RegistrosRecientes.Clear();
-        foreach (var reg in registros.Take(10))
-        {
-            RegistrosRecientes.Add(reg);
-        }
-    }
-    
-    /// <summary>
-    /// Guarda el registro diario (crea o actualiza)
-    /// </summary>
-    [RelayCommand]
-    private async Task SaveRegistroAsync()
-    {
-        if (SelectedEmpleado == null)
-        {
-            MessageBox.Show("Seleccione un empleado", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-        
-        if (!CanEdit)
-        {
-            MessageBox.Show("El registro ya está completado y no se puede modificar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-        
-        IsLoading = true;
-        StatusMessage = "Guardando registro...";
-        
-        try
-        {
-            var registro = RegistroActual ?? new RegistroDiario();
-            registro.Fecha = SelectedFecha;
-            registro.EmpleadoId = SelectedEmpleado.Id;
-            registro.HoraEntrada = HoraEntrada;
-            registro.HoraSalida = HoraSalida;
-            registro.Observaciones = Observaciones;
-            
-            var result = await _controlDiarioService.SaveRegistroAsync(registro);
-            
-            if (result.Success)
-            {
-                RegistroActual = result.Data;
-                StatusMessage = result.Message;
-                MessageBox.Show(result.Message, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            else
-            {
-                StatusMessage = result.Message;
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Error: {ex.Message}";
-            MessageBox.Show($"Error al guardar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar registros: {ex.Message}");
         }
         finally
         {
@@ -312,153 +198,143 @@ public partial class ControlDiarioViewModel : ObservableObject
     }
     
     /// <summary>
-    /// Agrega una actividad al registro
+    /// Alterna la selección de un registro (para checkbox)
     /// </summary>
     [RelayCommand]
-    private async Task AddActividadAsync()
+    private void ToggleRegistroSelection(RegistroDiario registro)
     {
-        if (SelectedEmpleado == null)
+        if (registro == null) return;
+
+        if (RegistrosSeleccionados.Contains(registro))
         {
-            MessageBox.Show("Seleccione un empleado primero", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            RegistrosSeleccionados.Remove(registro);
+        }
+        else
+        {
+            RegistrosSeleccionados.Add(registro);
+        }
+    }
+
+    /// <summary>
+    /// Ver detalles de un registro o múltiples registros seleccionados
+    /// </summary>
+    [RelayCommand]
+    private void ViewRegistro()
+    {
+        List<RegistroDiario> registrosAMostrar;
+
+        // Si hay registros seleccionados con checkbox, usar esos
+        if (RegistrosSeleccionados.Any())
+        {
+            registrosAMostrar = RegistrosSeleccionados.ToList();
+        }
+        // Si no hay selección múltiple, usar el registro seleccionado
+        else if (SelectedRegistro != null)
+        {
+            registrosAMostrar = new List<RegistroDiario> { SelectedRegistro };
+        }
+        else
+        {
+            _dialogService.ShowInfo("Seleccione un registro para ver o use los checkboxes para seleccionar múltiples registros");
             return;
         }
-        
-        if (SelectedActividad == null)
+
+        // Abrir ventana de previsualización completa
+        var viewModel = new RegistrosDetalleViewModel(_dialogService);
+        viewModel.Initialize(registrosAMostrar);
+
+        var window = new Views.RegistrosDetalleWindow(viewModel)
         {
-            MessageBox.Show("Seleccione una actividad", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-        
-        if (Horas <= 0 || Horas > 24)
-        {
-            MessageBox.Show("Las horas deben ser entre 0.1 y 24", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-        
-        if (SelectedActividad.RequiereProyecto && (SelectedProyecto == null || SelectedProyecto.Id == 0))
-        {
-            MessageBox.Show("Esta actividad requiere seleccionar un proyecto", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-        
-        if (!CanEdit)
-        {
-            MessageBox.Show("El registro ya está completado", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-        
-        IsLoading = true;
-        
-        try
-        {
-            // Primero asegurar que el registro existe
-            if (RegistroActual == null || RegistroActual.Id == 0)
-            {
-                var registro = new RegistroDiario
-                {
-                    Fecha = SelectedFecha,
-                    EmpleadoId = SelectedEmpleado.Id,
-                    HoraEntrada = HoraEntrada,
-                    HoraSalida = HoraSalida,
-                    Observaciones = Observaciones
-                };
-                
-                var saveResult = await _controlDiarioService.SaveRegistroAsync(registro);
-                if (!saveResult.Success)
-                {
-                    MessageBox.Show(saveResult.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-                RegistroActual = saveResult.Data;
-            }
-            
-            var detalle = new DetalleActividad
-            {
-                ActividadId = SelectedActividad.Id,
-                Actividad = SelectedActividad,
-                ProyectoId = SelectedProyecto?.Id > 0 ? SelectedProyecto.Id : null,
-                Proyecto = SelectedProyecto?.Id > 0 ? SelectedProyecto : null,
-                Horas = Horas,
-                Descripcion = DescripcionActividad
-            };
-            
-            var result = await _controlDiarioService.AddActividadAsync(RegistroActual!.Id, detalle);
-            
-            if (result.Success)
-            {
-                DetallesActividades.Add(result.Data!);
-                UpdateTotalHoras();
-                
-                // Limpiar formulario de actividad
-                SelectedActividad = null;
-                SelectedProyecto = Proyectos.FirstOrDefault();
-                Horas = 1;
-                DescripcionActividad = string.Empty;
-                
-                StatusMessage = "Actividad agregada";
-            }
-            else
-            {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+            Owner = Application.Current.MainWindow
+        };
+
+        window.ShowDialog();
     }
     
     /// <summary>
-    /// Elimina una actividad del registro
+    /// Editar un registro (solo si está en borrador)
     /// </summary>
     [RelayCommand]
-    private async Task DeleteActividadAsync()
+    private void EditRegistro()
     {
-        if (SelectedDetalle == null)
+        if (SelectedRegistro == null)
         {
-            MessageBox.Show("Seleccione una actividad para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un registro para editar");
             return;
         }
         
-        if (!CanEdit)
+        if (!PuedeEditar)
         {
-            MessageBox.Show("El registro ya está completado", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowWarning("No tiene permisos para editar registros", "Permiso denegado");
             return;
         }
         
-        var confirm = MessageBox.Show(
-            $"¿Está seguro de eliminar la actividad '{SelectedDetalle.Actividad?.Nombre}'?",
-            "Confirmar eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-            
-        if (confirm != MessageBoxResult.Yes) return;
+        if (SelectedRegistro.Estado != EstadoRegistroDiario.Borrador)
+        {
+            _dialogService.ShowInfo("Solo se pueden editar registros en estado Borrador");
+            return;
+        }
+        
+        // TODO: Abrir ventana de edición o navegar al wizard con el registro cargado
+        _dialogService.ShowInfo("Función de edición en desarrollo.\nPor ahora, use el wizard para crear nuevos registros.");
+    }
+    
+    /// <summary>
+    /// Eliminar un registro
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteRegistroAsync()
+    {
+        if (SelectedRegistro == null)
+        {
+            _dialogService.ShowInfo("Seleccione un registro para eliminar");
+            return;
+        }
+        
+        if (!PuedeEliminar)
+        {
+            _dialogService.ShowWarning("Solo el Administrador puede eliminar registros", "Permiso denegado");
+            return;
+        }
+        
+        if (SelectedRegistro.Estado != EstadoRegistroDiario.Borrador)
+        {
+            _dialogService.ShowInfo("Solo se pueden eliminar registros en estado Borrador");
+            return;
+        }
+        
+        var confirmado = _dialogService.ConfirmWarning(
+            $"¿Está seguro de eliminar el registro del {SelectedRegistro.Fecha:dd/MM/yyyy}?\n" +
+            $"Empleado: {SelectedRegistro.Empleado?.NombreCompleto}\n\n" +
+            "Esta acción no se puede deshacer.",
+            "Confirmar eliminación");
+        
+        if (!confirmado) return;
         
         IsLoading = true;
         
         try
         {
-            var result = await _controlDiarioService.DeleteActividadAsync(SelectedDetalle.Id);
+            var result = await _controlDiarioService.DeleteRegistroAsync(SelectedRegistro.Id);
             
             if (result.Success)
             {
-                DetallesActividades.Remove(SelectedDetalle);
-                SelectedDetalle = null;
-                UpdateTotalHoras();
-                StatusMessage = "Actividad eliminada";
+                RegistrosFiltrados.Remove(SelectedRegistro);
+                SelectedRegistro = null;
+                TotalRegistros = RegistrosFiltrados.Count;
+                HorasMesActual = RegistrosFiltrados.Sum(r => r.TotalHoras);
+                HasRegistros = RegistrosFiltrados.Any();
+                StatusMessage = "Registro eliminado correctamente";
+                _dialogService.ShowSuccess("Registro eliminado correctamente");
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}");
         }
         finally
         {
@@ -467,118 +343,46 @@ public partial class ControlDiarioViewModel : ObservableObject
     }
     
     /// <summary>
-    /// Marca el registro como completado
+    /// Exportar registros (placeholder)
     /// </summary>
     [RelayCommand]
-    private async Task CompletarRegistroAsync()
+    private void Export()
     {
-        if (RegistroActual == null || RegistroActual.Id == 0)
+        if (!RegistrosFiltrados.Any())
         {
-            MessageBox.Show("Guarde el registro primero", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("No hay registros para exportar");
             return;
         }
         
-        if (!DetallesActividades.Any())
-        {
-            MessageBox.Show("Debe agregar al menos una actividad", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-        
-        var confirm = MessageBox.Show(
-            "¿Está seguro de marcar el registro como completado?\nNo podrá modificarlo después.",
-            "Confirmar completar",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-            
-        if (confirm != MessageBoxResult.Yes) return;
-        
-        IsLoading = true;
-        
-        try
-        {
-            var result = await _controlDiarioService.CompletarRegistroAsync(RegistroActual.Id);
-            
-            if (result.Success)
-            {
-                CanEdit = false;
-                RegistroActual.Estado = EstadoRegistroDiario.Completado;
-                StatusMessage = "Registro completado";
-                MessageBox.Show(result.Message, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-                
-                // Recargar registros recientes
-                await LoadRegistrosRecientesAsync();
-            }
-            else
-            {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        // TODO: Implementar exportación a Excel/CSV
+        _dialogService.ShowInfo("Función de exportación en desarrollo");
     }
     
-    /// <summary>
-    /// Navega al día anterior
-    /// </summary>
-    [RelayCommand]
-    private async Task DiaAnteriorAsync()
-    {
-        SelectedFecha = SelectedFecha.AddDays(-1);
-        await LoadRegistroAsync();
-    }
-    
-    /// <summary>
-    /// Navega al día siguiente
-    /// </summary>
-    [RelayCommand]
-    private async Task DiaSiguienteAsync()
-    {
-        if (SelectedFecha.Date < DateTime.Today)
-        {
-            SelectedFecha = SelectedFecha.AddDays(1);
-            await LoadRegistroAsync();
-        }
-    }
-    
-    /// <summary>
-    /// Va al día de hoy
-    /// </summary>
-    [RelayCommand]
-    private async Task IrAHoyAsync()
-    {
-        SelectedFecha = DateTime.Today;
-        await LoadRegistroAsync();
-    }
-    
-    private void UpdateTotalHoras()
-    {
-        TotalHoras = DetallesActividades.Sum(d => d.Horas);
-    }
+    #region Property Changed Handlers
     
     partial void OnSelectedEmpleadoChanged(Empleado? value)
     {
-        if (value != null)
+        if (value != null && Empleados.Count > 0)
         {
-            _ = LoadRegistroAsync();
+            _ = RefreshAsync();
         }
     }
     
-    partial void OnSelectedFechaChanged(DateTime value)
+    partial void OnSelectedMesChanged(string? value)
     {
-        if (SelectedEmpleado != null)
+        if (value != null && Empleados.Count > 0)
         {
-            _ = LoadRegistroAsync();
+            _ = RefreshAsync();
         }
     }
     
-    partial void OnSelectedActividadChanged(Actividad? value)
+    partial void OnSelectedAnioChanged(int value)
     {
-        RequiereProyecto = value?.RequiereProyecto ?? false;
+        if (value > 0 && Empleados.Count > 0)
+        {
+            _ = RefreshAsync();
+        }
     }
+    
+    #endregion
 }

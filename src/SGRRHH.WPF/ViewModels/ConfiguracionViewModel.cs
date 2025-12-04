@@ -8,7 +8,7 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel principal de Configuración que agrupa todas las secciones
 /// </summary>
-public partial class ConfiguracionViewModel : ObservableObject
+public partial class ConfiguracionViewModel : ViewModelBase
 {
     private readonly IServiceProvider _serviceProvider;
     

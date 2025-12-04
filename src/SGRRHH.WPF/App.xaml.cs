@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Windows;
 using Google.Cloud.Firestore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
@@ -78,6 +79,13 @@ public partial class App : Application
     /// </summary>
     private void ConfigureFirebaseServices(IServiceCollection services)
     {
+        // Registrar IConfiguration para acceder a appsettings.json
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .Build();
+        services.AddSingleton<IConfiguration>(configuration);
+        
         // Obtener configuración de Firebase
         var firebaseConfig = AppSettings.GetFirebaseConfig();
         var currentVersion = AppSettings.GetAppVersion();
@@ -216,6 +224,9 @@ public partial class App : Application
     /// </summary>
     private void RegisterViewModels(IServiceCollection services)
     {
+        // Registrar DialogService como singleton
+        services.AddSingleton<IDialogService, DialogService>();
+        
         services.AddTransient<LoginViewModel>();
         services.AddTransient<EmpleadosListViewModel>();
         services.AddTransient<EmpleadoFormViewModel>();
@@ -223,8 +234,10 @@ public partial class App : Application
         services.AddTransient<DepartamentosListViewModel>();
         services.AddTransient<CargosListViewModel>();
         services.AddTransient<ControlDiarioViewModel>();
+        services.AddTransient<DailyActivityWizardViewModel>();
         services.AddTransient<ProyectosListViewModel>();
         services.AddTransient<ActividadesListViewModel>();
+        services.AddTransient<ActividadFormViewModel>();
         services.AddTransient<DashboardViewModel>();
         services.AddTransient<ReportsViewModel>();
         services.AddTransient<DocumentsViewModel>();
@@ -243,7 +256,6 @@ public partial class App : Application
         services.AddTransient<CambiarPasswordViewModel>();
         services.AddTransient<CatalogosViewModel>();
         services.AddTransient<DocumentosEmpleadoViewModel>();
-        services.AddTransient<ChatViewModelLegacy>();
         services.AddTransient<ChatViewModel>();
         services.AddTransient<WindowsHelloSetupDialogViewModel>();
         services.AddTransient<WindowsHelloWizardViewModel>();
@@ -573,7 +585,8 @@ public partial class App : Application
     {
         try
         {
-            var mainViewModel = new MainViewModel(_currentUser!, _serviceProvider!);
+            var dialogService = _serviceProvider!.GetRequiredService<IDialogService>();
+            var mainViewModel = new MainViewModel(_currentUser!, _serviceProvider!, dialogService);
             var mainWindow = new MainWindow(mainViewModel);
             
             // Establecer la ventana como la ventana principal de la aplicación

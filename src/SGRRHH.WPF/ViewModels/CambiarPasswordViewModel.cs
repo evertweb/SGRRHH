@@ -8,9 +8,10 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para cambiar contraseña del usuario actual
 /// </summary>
-public partial class CambiarPasswordViewModel : ObservableObject
+public partial class CambiarPasswordViewModel : ViewModelBase
 {
     private readonly IUsuarioService _usuarioService;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private string _passwordActual = string.Empty;
@@ -22,9 +23,6 @@ public partial class CambiarPasswordViewModel : ObservableObject
     private string _passwordConfirmar = string.Empty;
     
     [ObservableProperty]
-    private bool _isLoading;
-    
-    [ObservableProperty]
     private string? _mensaje;
     
     /// <summary>
@@ -32,9 +30,10 @@ public partial class CambiarPasswordViewModel : ObservableObject
     /// </summary>
     public event EventHandler? PasswordChanged;
     
-    public CambiarPasswordViewModel(IUsuarioService usuarioService)
+    public CambiarPasswordViewModel(IUsuarioService usuarioService, IDialogService dialogService)
     {
         _usuarioService = usuarioService;
+        _dialogService = dialogService;
     }
     
     [RelayCommand]
@@ -84,7 +83,7 @@ public partial class CambiarPasswordViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show("Contraseña cambiada exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Contraseña cambiada exitosamente");
                 PasswordChanged?.Invoke(this, EventArgs.Empty);
             }
             else

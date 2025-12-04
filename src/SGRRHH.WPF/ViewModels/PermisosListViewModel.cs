@@ -11,12 +11,27 @@ namespace SGRRHH.WPF.ViewModels;
 
 /// <summary>
 /// ViewModel para la lista de permisos con filtros
+/// Permisos según matriz:
+/// - Administrador: Todo (crear, editar, cancelar, eliminar)
+/// - Operador (Secretaria): Crear, Editar (pendientes), Cancelar
+/// - Aprobador (Ingeniera): Solo ver historial (NO puede crear ni editar)
 /// </summary>
-public partial class PermisosListViewModel : ObservableObject
+public partial class PermisosListViewModel : ViewModelBase
 {
     private readonly IPermisoService _permisoService;
     private readonly IEmpleadoService _empleadoService;
     private readonly ITipoPermisoService _tipoPermisoService;
+    private readonly IDialogService _dialogService;
+    
+    // Control de permisos por rol
+    [ObservableProperty]
+    private bool _puedeCrear; // Crear solicitudes
+    
+    [ObservableProperty]
+    private bool _puedeEditar; // Editar pendientes
+    
+    [ObservableProperty]
+    private bool _puedeEliminar; // Solo Admin
     
     [ObservableProperty]
     private ObservableCollection<Permiso> _permisos = new();
@@ -46,7 +61,9 @@ public partial class PermisosListViewModel : ObservableObject
     private string _searchText = string.Empty;
     
     [ObservableProperty]
-    private bool _isLoading;
+    private bool _isHomeVisible = true;
+    
+    public bool IsListVisible => !IsHomeVisible;
     
     [ObservableProperty]
     private int _totalPermisos;
@@ -90,11 +107,24 @@ public partial class PermisosListViewModel : ObservableObject
     public PermisosListViewModel(
         IPermisoService permisoService,
         IEmpleadoService empleadoService,
-        ITipoPermisoService tipoPermisoService)
+        ITipoPermisoService tipoPermisoService,
+        IDialogService dialogService)
     {
         _permisoService = permisoService;
         _empleadoService = empleadoService;
         _tipoPermisoService = tipoPermisoService;
+        _dialogService = dialogService;
+        
+        // Determinar permisos según rol del usuario actual
+        var rolActual = App.CurrentUser?.Rol ?? RolUsuario.Operador;
+        
+        // Ingeniera (Aprobador) NO puede crear ni editar - solo ve historial
+        // Admin y Secretaria (Operador) pueden crear/editar
+        PuedeCrear = rolActual == RolUsuario.Administrador || rolActual == RolUsuario.Operador;
+        PuedeEditar = rolActual == RolUsuario.Administrador || rolActual == RolUsuario.Operador;
+        
+        // Solo Admin puede eliminar
+        PuedeEliminar = rolActual == RolUsuario.Administrador;
         
         // Establecer fechas por defecto (último mes)
         FechaDesde = DateTime.Today.AddMonths(-1);
@@ -131,7 +161,7 @@ public partial class PermisosListViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al cargar datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar datos: {ex.Message}");
         }
         finally
         {
@@ -198,6 +228,12 @@ public partial class PermisosListViewModel : ObservableObject
     [RelayCommand]
     private void Create()
     {
+        if (!PuedeCrear)
+        {
+            _dialogService.ShowWarning("No tiene permisos para crear solicitudes de permiso", "Permiso denegado");
+            return;
+        }
+        
         CreatePermisoRequested?.Invoke(this, EventArgs.Empty);
     }
     
@@ -206,9 +242,15 @@ public partial class PermisosListViewModel : ObservableObject
     {
         if (permiso == null) return;
         
+        if (!PuedeEditar)
+        {
+            _dialogService.ShowWarning("No tiene permisos para editar solicitudes", "Permiso denegado");
+            return;
+        }
+        
         if (permiso.Estado != EstadoPermiso.Pendiente)
         {
-            MessageBox.Show("Solo se pueden editar permisos pendientes", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Solo se pueden editar permisos pendientes");
             return;
         }
         
@@ -229,28 +271,26 @@ public partial class PermisosListViewModel : ObservableObject
         
         if (permiso.Estado != EstadoPermiso.Pendiente)
         {
-            MessageBox.Show("Solo se pueden cancelar permisos pendientes", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Solo se pueden cancelar permisos pendientes");
             return;
         }
         
-        var result = MessageBox.Show(
+        var confirmado = _dialogService.Confirm(
             $"¿Está seguro de cancelar el permiso {permiso.NumeroActa}?",
-            "Confirmar cancelación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Confirmar cancelación");
             
-        if (result == MessageBoxResult.Yes)
+        if (confirmado)
         {
             var cancelResult = await _permisoService.CancelarPermisoAsync(permiso.Id, App.CurrentUser!.Id);
             
             if (cancelResult.Success)
             {
-                MessageBox.Show("Permiso cancelado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Permiso cancelado exitosamente");
                 await LoadPermisosAsync();
             }
             else
             {
-                MessageBox.Show($"Error: {string.Join(", ", cancelResult.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error: {string.Join(", ", cancelResult.Errors)}");
             }
         }
     }
@@ -260,32 +300,54 @@ public partial class PermisosListViewModel : ObservableObject
     {
         if (permiso == null) return;
         
-        if (permiso.Estado != EstadoPermiso.Pendiente)
+        if (!PuedeEliminar)
         {
-            MessageBox.Show("Solo se pueden eliminar permisos pendientes", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowWarning("Solo el administrador puede eliminar permisos", "Permiso denegado");
             return;
         }
         
-        var result = MessageBox.Show(
+        if (permiso.Estado != EstadoPermiso.Pendiente)
+        {
+            _dialogService.ShowInfo("Solo se pueden eliminar permisos pendientes");
+            return;
+        }
+        
+        var confirmado = _dialogService.ConfirmWarning(
             $"¿Está seguro de eliminar el permiso {permiso.NumeroActa}?",
-            "Confirmar eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            "Confirmar eliminación");
             
-        if (result == MessageBoxResult.Yes)
+        if (confirmado)
         {
             var deleteResult = await _permisoService.DeleteAsync(permiso.Id);
             
             if (deleteResult.Success)
             {
-                MessageBox.Show("Permiso eliminado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Permiso eliminado exitosamente");
                 await LoadPermisosAsync();
             }
             else
             {
-                MessageBox.Show($"Error: {string.Join(", ", deleteResult.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error: {string.Join(", ", deleteResult.Errors)}");
             }
         }
+    }
+    
+    [RelayCommand]
+    private void ShowHome()
+    {
+        IsHomeVisible = true;
+    }
+    
+    [RelayCommand]
+    private async Task ShowList()
+    {
+        IsHomeVisible = false;
+        await LoadPermisosAsync();
+    }
+    
+    partial void OnIsHomeVisibleChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsListVisible));
     }
     
     partial void OnSelectedEmpleadoChanged(Empleado? value)

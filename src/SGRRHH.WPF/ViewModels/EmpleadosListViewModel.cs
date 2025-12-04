@@ -4,6 +4,7 @@ using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -11,11 +12,26 @@ namespace SGRRHH.WPF.ViewModels;
 
 /// <summary>
 /// ViewModel para la lista de empleados
+/// Permisos según matriz:
+/// - Administrador: Todo (crear, editar, desactivar, eliminar, aprobar)
+/// - Operador (Secretaria): Crear, Editar, Desactivar, Ver
+/// - Aprobador (Ingeniera): Solo Ver y Aprobar/Rechazar
 /// </summary>
-public partial class EmpleadosListViewModel : ObservableObject
+public partial class EmpleadosListViewModel : ViewModelBase
 {
     private readonly IEmpleadoService _empleadoService;
     private readonly IDepartamentoService _departamentoService;
+    private readonly IDialogService _dialogService;
+    
+    // Control de permisos por rol
+    [ObservableProperty]
+    private bool _puedeCrear; // Crear empleados
+    
+    [ObservableProperty]
+    private bool _puedeEditar; // Editar empleados
+    
+    [ObservableProperty]
+    private bool _puedeEliminar; // Eliminar permanentemente - Solo Admin
     
     [ObservableProperty]
     private ObservableCollection<Empleado> _empleados = new();
@@ -42,16 +58,10 @@ public partial class EmpleadosListViewModel : ObservableObject
     private EstadoEmpleado? _selectedEstado;
     
     [ObservableProperty]
-    private bool _isLoading;
-    
-    [ObservableProperty]
     private int _totalEmpleados;
     
     [ObservableProperty]
     private int _totalPendientes;
-    
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
     
     [ObservableProperty]
     private bool _canApprove;
@@ -60,18 +70,35 @@ public partial class EmpleadosListViewModel : ObservableObject
     private bool _showPendientes;
     
     /// <summary>
+    /// Controla la visibilidad de la pantalla de bienvenida
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsListVisible))]
+    private bool _isHomeVisible = true;
+    
+    /// <summary>
+    /// Indica si la lista de empleados debe estar visible
+    /// </summary>
+    public bool IsListVisible => !IsHomeVisible;
+    
+    /// <summary>
+    /// Texto con la fecha actual para el footer
+    /// </summary>
+    public string CurrentDateText => DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"));
+    
+    /// <summary>
     /// Lista de estados para el filtro
     /// </summary>
-    public ObservableCollection<EstadoEmpleadoItem> Estados { get; } = new()
+    public ObservableCollection<EnumComboItem<EstadoEmpleado>> Estados { get; } = new()
     {
-        new EstadoEmpleadoItem { Nombre = "Todos", Valor = null },
-        new EstadoEmpleadoItem { Nombre = "Pendiente Aprobación", Valor = EstadoEmpleado.PendienteAprobacion },
-        new EstadoEmpleadoItem { Nombre = "Activo", Valor = EstadoEmpleado.Activo },
-        new EstadoEmpleadoItem { Nombre = "Vacaciones", Valor = EstadoEmpleado.EnVacaciones },
-        new EstadoEmpleadoItem { Nombre = "Licencia", Valor = EstadoEmpleado.EnLicencia },
-        new EstadoEmpleadoItem { Nombre = "Suspendido", Valor = EstadoEmpleado.Suspendido },
-        new EstadoEmpleadoItem { Nombre = "Retirado", Valor = EstadoEmpleado.Retirado },
-        new EstadoEmpleadoItem { Nombre = "Rechazado", Valor = EstadoEmpleado.Rechazado }
+        new EnumComboItem<EstadoEmpleado> { Nombre = "Todos", Valor = null },
+        new EnumComboItem<EstadoEmpleado> { Nombre = "Pendiente Aprobación", Valor = EstadoEmpleado.PendienteAprobacion },
+        new EnumComboItem<EstadoEmpleado> { Nombre = "Activo", Valor = EstadoEmpleado.Activo },
+        new EnumComboItem<EstadoEmpleado> { Nombre = "Vacaciones", Valor = EstadoEmpleado.EnVacaciones },
+        new EnumComboItem<EstadoEmpleado> { Nombre = "Licencia", Valor = EstadoEmpleado.EnLicencia },
+        new EnumComboItem<EstadoEmpleado> { Nombre = "Suspendido", Valor = EstadoEmpleado.Suspendido },
+        new EnumComboItem<EstadoEmpleado> { Nombre = "Retirado", Valor = EstadoEmpleado.Retirado },
+        new EnumComboItem<EstadoEmpleado> { Nombre = "Rechazado", Valor = EstadoEmpleado.Rechazado }
     };
     
     /// <summary>
@@ -89,16 +116,31 @@ public partial class EmpleadosListViewModel : ObservableObject
     /// </summary>
     public event EventHandler<Empleado>? ViewEmpleadoRequested;
     
-    public EmpleadosListViewModel(IEmpleadoService empleadoService, IDepartamentoService departamentoService)
+    public EmpleadosListViewModel(
+        IEmpleadoService empleadoService, 
+        IDepartamentoService departamentoService,
+        IDialogService dialogService)
     {
         _empleadoService = empleadoService;
         _departamentoService = departamentoService;
+        _dialogService = dialogService;
+        
+        // Determinar permisos según rol del usuario actual
+        var currentUser = App.CurrentUser;
+        var rolActual = currentUser?.Rol ?? RolUsuario.Operador;
         
         // Verificar si el usuario puede aprobar (Admin o Aprobador)
-        var currentUser = App.CurrentUser;
         CanApprove = currentUser != null && 
-            (currentUser.Rol == RolUsuario.Administrador || currentUser.Rol == RolUsuario.Aprobador);
+            (rolActual == RolUsuario.Administrador || rolActual == RolUsuario.Aprobador);
         ShowPendientes = CanApprove;
+        
+        // Ingeniera (Aprobador) NO puede crear ni editar - solo ver y aprobar
+        // Admin y Secretaria (Operador) pueden crear/editar
+        PuedeCrear = rolActual == RolUsuario.Administrador || rolActual == RolUsuario.Operador;
+        PuedeEditar = rolActual == RolUsuario.Administrador || rolActual == RolUsuario.Operador;
+        
+        // Solo Admin puede eliminar permanentemente
+        PuedeEliminar = rolActual == RolUsuario.Administrador;
     }
     
     /// <summary>
@@ -132,7 +174,7 @@ public partial class EmpleadosListViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error al cargar datos: {ex.Message}";
-            MessageBox.Show($"Error al cargar los datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar los datos: {ex.Message}");
         }
         finally
         {
@@ -207,7 +249,7 @@ public partial class EmpleadosListViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error en la búsqueda: {ex.Message}";
-            MessageBox.Show($"Error en la búsqueda: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error en la búsqueda: {ex.Message}");
         }
         finally
         {
@@ -233,6 +275,12 @@ public partial class EmpleadosListViewModel : ObservableObject
     [RelayCommand]
     private void CreateEmpleado()
     {
+        if (!PuedeCrear)
+        {
+            _dialogService.ShowWarning("No tiene permisos para crear empleados", "Permiso denegado");
+            return;
+        }
+        
         CreateEmpleadoRequested?.Invoke(this, EventArgs.Empty);
     }
     
@@ -242,9 +290,15 @@ public partial class EmpleadosListViewModel : ObservableObject
     [RelayCommand]
     private void EditEmpleado()
     {
+        if (!PuedeEditar)
+        {
+            _dialogService.ShowWarning("No tiene permisos para editar empleados", "Permiso denegado");
+            return;
+        }
+        
         if (SelectedEmpleado == null)
         {
-            MessageBox.Show("Seleccione un empleado para editar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un empleado para editar");
             return;
         }
         
@@ -259,7 +313,7 @@ public partial class EmpleadosListViewModel : ObservableObject
     {
         if (SelectedEmpleado == null)
         {
-            MessageBox.Show("Seleccione un empleado para ver su detalle", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un empleado para ver su detalle");
             return;
         }
         
@@ -272,19 +326,23 @@ public partial class EmpleadosListViewModel : ObservableObject
     [RelayCommand]
     private async Task DeactivateEmpleadoAsync()
     {
-        if (SelectedEmpleado == null)
+        if (!PuedeEditar)
         {
-            MessageBox.Show("Seleccione un empleado para desactivar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowWarning("No tiene permisos para desactivar empleados", "Permiso denegado");
             return;
         }
         
-        var result = MessageBox.Show(
+        if (SelectedEmpleado == null)
+        {
+            _dialogService.ShowInfo("Seleccione un empleado para desactivar");
+            return;
+        }
+        
+        var confirmado = _dialogService.Confirm(
             $"¿Está seguro de desactivar al empleado {SelectedEmpleado.NombreCompleto}?",
-            "Confirmar desactivación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Confirmar desactivación");
             
-        if (result == MessageBoxResult.Yes)
+        if (confirmado)
         {
             try
             {
@@ -293,16 +351,16 @@ public partial class EmpleadosListViewModel : ObservableObject
                 if (serviceResult.Success)
                 {
                     await SearchEmpleadosAsync();
-                    MessageBox.Show(serviceResult.Message, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess(serviceResult.Message);
                 }
                 else
                 {
-                    MessageBox.Show(serviceResult.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(serviceResult.Message);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al desactivar el empleado: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al desactivar el empleado: {ex.Message}");
             }
         }
     }
@@ -313,28 +371,30 @@ public partial class EmpleadosListViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteEmpleadoAsync()
     {
-        if (SelectedEmpleado == null)
+        if (!PuedeEliminar)
         {
-            MessageBox.Show("Seleccione un empleado para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowWarning("Solo el administrador puede eliminar empleados permanentemente", "Permiso denegado");
             return;
         }
         
-        var result = MessageBox.Show(
+        if (SelectedEmpleado == null)
+        {
+            _dialogService.ShowInfo("Seleccione un empleado para eliminar");
+            return;
+        }
+        
+        var primeraConfirmacion = _dialogService.ConfirmWarning(
             $"⚠️ ADVERTENCIA: Esta acción eliminará PERMANENTEMENTE al empleado {SelectedEmpleado.NombreCompleto} y todos sus datos asociados.\n\n¿Está completamente seguro?",
-            "Confirmar eliminación permanente",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            "Confirmar eliminación permanente");
             
-        if (result == MessageBoxResult.Yes)
+        if (primeraConfirmacion)
         {
             // Segunda confirmación
-            var confirmResult = MessageBox.Show(
+            var segundaConfirmacion = _dialogService.ConfirmWarning(
                 "Esta acción NO se puede deshacer.\n\n¿Desea continuar con la eliminación permanente?",
-                "Última confirmación",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Stop);
+                "Última confirmación");
                 
-            if (confirmResult == MessageBoxResult.Yes)
+            if (segundaConfirmacion)
             {
                 try
                 {
@@ -343,16 +403,16 @@ public partial class EmpleadosListViewModel : ObservableObject
                     if (serviceResult.Success)
                     {
                         await SearchEmpleadosAsync();
-                        MessageBox.Show(serviceResult.Message, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                        _dialogService.ShowSuccess(serviceResult.Message);
                     }
                     else
                     {
-                        MessageBox.Show(serviceResult.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        _dialogService.ShowError(serviceResult.Message);
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error al eliminar el empleado: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error al eliminar el empleado: {ex.Message}");
                 }
             }
         }
@@ -366,24 +426,22 @@ public partial class EmpleadosListViewModel : ObservableObject
     {
         if (SelectedPendiente == null)
         {
-            MessageBox.Show("Seleccione un empleado pendiente para aprobar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un empleado pendiente para aprobar");
             return;
         }
         
-        var result = MessageBox.Show(
+        var confirmado = _dialogService.Confirm(
             $"¿Está seguro de aprobar al empleado {SelectedPendiente.NombreCompleto}?\n\nEl empleado quedará activo en el sistema.",
-            "Confirmar aprobación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Confirmar aprobación");
             
-        if (result == MessageBoxResult.Yes)
+        if (confirmado)
         {
             try
             {
                 var currentUser = App.CurrentUser;
                 if (currentUser == null)
                 {
-                    MessageBox.Show("Error: Usuario no identificado", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError("Error: Usuario no identificado");
                     return;
                 }
                 
@@ -393,16 +451,16 @@ public partial class EmpleadosListViewModel : ObservableObject
                 {
                     await LoadPendientesAsync();
                     await SearchEmpleadosAsync();
-                    MessageBox.Show($"✅ {SelectedPendiente.NombreCompleto} ha sido aprobado exitosamente.", "Aprobado", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess($"✅ {SelectedPendiente.NombreCompleto} ha sido aprobado exitosamente.");
                 }
                 else
                 {
-                    MessageBox.Show(serviceResult.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(serviceResult.Message);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al aprobar el empleado: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al aprobar el empleado: {ex.Message}");
             }
         }
     }
@@ -415,88 +473,32 @@ public partial class EmpleadosListViewModel : ObservableObject
     {
         if (SelectedPendiente == null)
         {
-            MessageBox.Show("Seleccione un empleado pendiente para rechazar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un empleado pendiente para rechazar");
             return;
         }
         
-        // Crear diálogo simple para pedir motivo
-        var dialog = new Window
-        {
-            Title = "Motivo de Rechazo",
-            Width = 400,
-            Height = 200,
-            WindowStartupLocation = WindowStartupLocation.CenterScreen,
-            ResizeMode = ResizeMode.NoResize
-        };
+        // Pedir motivo del rechazo
+        var motivo = _dialogService.ShowInputDialog(
+            $"Ingrese el motivo del rechazo para:\n{SelectedPendiente.NombreCompleto}",
+            "Motivo de Rechazo");
         
-        var panel = new System.Windows.Controls.StackPanel { Margin = new Thickness(15) };
-        panel.Children.Add(new System.Windows.Controls.TextBlock 
-        { 
-            Text = $"Ingrese el motivo del rechazo para:\n{SelectedPendiente.NombreCompleto}",
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 0, 0, 10)
-        });
-        
-        var textBox = new System.Windows.Controls.TextBox 
-        { 
-            Height = 60,
-            TextWrapping = TextWrapping.Wrap,
-            AcceptsReturn = true,
-            VerticalScrollBarVisibility = System.Windows.Controls.ScrollBarVisibility.Auto
-        };
-        panel.Children.Add(textBox);
-        
-        var buttonPanel = new System.Windows.Controls.StackPanel 
-        { 
-            Orientation = System.Windows.Controls.Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 15, 0, 0)
-        };
-        
-        var okButton = new System.Windows.Controls.Button 
-        { 
-            Content = "Rechazar", 
-            Width = 80, 
-            Margin = new Thickness(0, 0, 10, 0),
-            IsDefault = true
-        };
-        okButton.Click += (s, e) => { dialog.DialogResult = true; dialog.Close(); };
-        
-        var cancelButton = new System.Windows.Controls.Button 
-        { 
-            Content = "Cancelar", 
-            Width = 80,
-            IsCancel = true
-        };
-        cancelButton.Click += (s, e) => { dialog.DialogResult = false; dialog.Close(); };
-        
-        buttonPanel.Children.Add(okButton);
-        buttonPanel.Children.Add(cancelButton);
-        panel.Children.Add(buttonPanel);
-        
-        dialog.Content = panel;
-        
-        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(textBox.Text))
+        if (string.IsNullOrWhiteSpace(motivo))
         {
             return;
         }
         
-        var motivo = textBox.Text.Trim();
-        
-        var result = MessageBox.Show(
+        var confirmado = _dialogService.ConfirmWarning(
             $"¿Está seguro de rechazar al empleado {SelectedPendiente.NombreCompleto}?\n\nMotivo: {motivo}",
-            "Confirmar rechazo",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            "Confirmar rechazo");
             
-        if (result == MessageBoxResult.Yes)
+        if (confirmado)
         {
             try
             {
                 var currentUser = App.CurrentUser;
                 if (currentUser == null)
                 {
-                    MessageBox.Show("Error: Usuario no identificado", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError("Error: Usuario no identificado");
                     return;
                 }
                 
@@ -506,18 +508,37 @@ public partial class EmpleadosListViewModel : ObservableObject
                 {
                     await LoadPendientesAsync();
                     await SearchEmpleadosAsync();
-                    MessageBox.Show($"❌ {SelectedPendiente.NombreCompleto} ha sido rechazado.", "Rechazado", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess($"❌ {SelectedPendiente.NombreCompleto} ha sido rechazado.");
                 }
                 else
                 {
-                    MessageBox.Show(serviceResult.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(serviceResult.Message);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al rechazar el empleado: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al rechazar el empleado: {ex.Message}");
             }
         }
+    }
+    
+    /// <summary>
+    /// Muestra la pantalla de inicio
+    /// </summary>
+    [RelayCommand]
+    private void ShowHome()
+    {
+        IsHomeVisible = true;
+    }
+    
+    /// <summary>
+    /// Muestra la lista de empleados y carga los datos
+    /// </summary>
+    [RelayCommand]
+    private async Task ShowListAsync()
+    {
+        IsHomeVisible = false;
+        await LoadDataAsync();
     }
     
     /// <summary>
@@ -539,13 +560,4 @@ public partial class EmpleadosListViewModel : ObservableObject
             _ = SearchEmpleadosAsync();
         }
     }
-}
-
-/// <summary>
-/// Item para el combo de estados
-/// </summary>
-public class EstadoEmpleadoItem
-{
-    public string Nombre { get; set; } = string.Empty;
-    public EstadoEmpleado? Valor { get; set; }
 }

@@ -262,4 +262,34 @@ public class ControlDiarioService : IControlDiarioService
         var finMes = inicioMes.AddMonths(1).AddDays(-1);
         return await GetTotalHorasAsync(empleadoId, inicioMes, finMes);
     }
+    
+    public async Task<IEnumerable<RegistroDiario>> GetByMesAnioAsync(int mes, int anio)
+    {
+        var fechaInicio = new DateTime(anio, mes, 1);
+        var fechaFin = fechaInicio.AddMonths(1).AddDays(-1);
+        return await _registroRepository.GetByRangoFechasAsync(fechaInicio, fechaFin);
+    }
+    
+    public async Task<IEnumerable<RegistroDiario>> GetByEmpleadoMesAnioAsync(int empleadoId, int mes, int anio)
+    {
+        var fechaInicio = new DateTime(anio, mes, 1);
+        var fechaFin = fechaInicio.AddMonths(1).AddDays(-1);
+        return await _registroRepository.GetByEmpleadoRangoFechasAsync(empleadoId, fechaInicio, fechaFin);
+    }
+    
+    public async Task<ServiceResult> DeleteRegistroAsync(int registroId)
+    {
+        var registro = await _registroRepository.GetByIdWithDetallesAsync(registroId);
+        if (registro == null)
+            return ServiceResult.Fail("Registro no encontrado");
+            
+        if (registro.Estado == EstadoRegistroDiario.Completado || 
+            registro.Estado == EstadoRegistroDiario.Aprobado)
+            return ServiceResult.Fail("No se puede eliminar un registro completado o aprobado");
+            
+        await _registroRepository.DeleteAsync(registroId);
+        await _registroRepository.SaveChangesAsync();
+        
+        return ServiceResult.Ok("Registro eliminado exitosamente");
+    }
 }

@@ -28,6 +28,11 @@ public interface IRegistroDiarioRepository : IRepository<RegistroDiario>
     Task<IEnumerable<RegistroDiario>> GetByFechaAsync(DateTime fecha);
     
     /// <summary>
+    /// Obtiene registros de todos los empleados en un rango de fechas
+    /// </summary>
+    Task<IEnumerable<RegistroDiario>> GetByRangoFechasAsync(DateTime fechaInicio, DateTime fechaFin);
+    
+    /// <summary>
     /// Obtiene los registros de un empleado con sus detalles
     /// </summary>
     Task<IEnumerable<RegistroDiario>> GetByEmpleadoWithDetallesAsync(int empleadoId, int? cantidad = null);

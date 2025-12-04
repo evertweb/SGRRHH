@@ -19,10 +19,11 @@ namespace SGRRHH.WPF.ViewModels;
 /// - Operador: Ver, Subir, Editar
 /// - Aprobador: Solo Ver
 /// </summary>
-public partial class DocumentosEmpleadoViewModel : ObservableObject
+public partial class DocumentosEmpleadoViewModel : ViewModelBase
 {
     private readonly IDocumentoEmpleadoService _documentoService;
     private readonly IEmpleadoService _empleadoService;
+    private readonly IDialogService _dialogService;
     private int _empleadoId;
     
     [ObservableProperty]
@@ -38,16 +39,15 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
     private DocumentoEmpleado? _selectedDocumento;
     
     [ObservableProperty]
-    private bool _isLoading;
-    
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-    
-    [ObservableProperty]
     private bool _isFormVisible;
     
     [ObservableProperty]
     private bool _isEditing;
+    
+    /// <summary>
+    /// Título del formulario basado en si está editando o creando
+    /// </summary>
+    public string FormTitle => IsEditing ? "📝 Editar Documento" : "📝 Nuevo Documento";
     
     // Propiedades de permisos
     [ObservableProperty]
@@ -101,10 +101,12 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
     
     public DocumentosEmpleadoViewModel(
         IDocumentoEmpleadoService documentoService,
-        IEmpleadoService empleadoService)
+        IEmpleadoService empleadoService,
+        IDialogService dialogService)
     {
         _documentoService = documentoService;
         _empleadoService = empleadoService;
+        _dialogService = dialogService;
         
         // Determinar permisos según rol del usuario actual
         var rolActual = App.CurrentUser?.Rol ?? RolUsuario.Operador;
@@ -178,7 +180,7 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
-            MessageBox.Show($"Error al cargar documentos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar documentos: {ex.Message}");
         }
         finally
         {
@@ -194,7 +196,7 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
     {
         if (!PuedeGestionar)
         {
-            MessageBox.Show("No tiene permisos para subir documentos", "Permiso denegado", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("No tiene permisos para subir documentos", "Permiso denegado");
             return;
         }
         
@@ -218,7 +220,7 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
     {
         if (!PuedeGestionar)
         {
-            MessageBox.Show("No tiene permisos para subir documentos", "Permiso denegado", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("No tiene permisos para subir documentos", "Permiso denegado");
             return;
         }
         
@@ -242,13 +244,13 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
     {
         if (!PuedeGestionar)
         {
-            MessageBox.Show("No tiene permisos para editar documentos", "Permiso denegado", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("No tiene permisos para editar documentos", "Permiso denegado");
             return;
         }
         
         if (SelectedDocumento == null)
         {
-            MessageBox.Show("Seleccione un documento para editar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un documento para editar");
             return;
         }
         
@@ -293,7 +295,7 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al leer el archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al leer el archivo: {ex.Message}");
             }
         }
     }
@@ -307,13 +309,13 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
         // Validaciones
         if (string.IsNullOrWhiteSpace(FormNombre))
         {
-            MessageBox.Show("El nombre del documento es requerido", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("El nombre del documento es requerido", "Validación");
             return;
         }
         
         if (!IsEditing && (FormArchivoBytes == null || FormArchivoBytes.Length == 0))
         {
-            MessageBox.Show("Debe seleccionar un archivo", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("Debe seleccionar un archivo", "Validación");
             return;
         }
         
@@ -337,13 +339,13 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Documento actualizado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Documento actualizado exitosamente");
                     IsFormVisible = false;
                     await LoadDataAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
             else
@@ -378,19 +380,19 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Documento subido exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Documento subido exitosamente");
                     IsFormVisible = false;
                     await LoadDataAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}");
         }
         finally
         {
@@ -415,13 +417,13 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
     {
         if (SelectedDocumento == null)
         {
-            MessageBox.Show("Seleccione un documento para ver", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un documento para ver");
             return;
         }
         
         if (!File.Exists(SelectedDocumento.ArchivoPath))
         {
-            MessageBox.Show("El archivo no existe en la ubicación especificada", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("El archivo no existe en la ubicación especificada");
             return;
         }
         
@@ -435,7 +437,7 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al abrir el archivo: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al abrir el archivo: {ex.Message}");
         }
     }
     
@@ -447,49 +449,43 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
     {
         if (!PuedeEliminar)
         {
-            MessageBox.Show("Solo el administrador puede eliminar documentos", "Permiso denegado", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("Solo el administrador puede eliminar documentos", "Permiso denegado");
             return;
         }
         
         if (SelectedDocumento == null)
         {
-            MessageBox.Show("Seleccione un documento para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un documento para eliminar");
             return;
         }
         
-        var confirmResult = MessageBox.Show(
-            $"¿Está seguro de eliminar el documento '{SelectedDocumento.Nombre}'?\n\nEsta acción no se puede deshacer.",
-            "Confirmar eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+        if (!_dialogService.ConfirmWarning($"¿Está seguro de eliminar el documento '{SelectedDocumento.Nombre}'?\n\nEsta acción no se puede deshacer.", "Confirmar eliminación"))
+            return;
             
-        if (confirmResult == MessageBoxResult.Yes)
+        IsLoading = true;
+        
+        try
         {
-            IsLoading = true;
+            var rolActual = App.CurrentUser?.Rol ?? RolUsuario.Operador;
+            var result = await _documentoService.DeleteAsync(SelectedDocumento.Id, rolActual);
             
-            try
+            if (result.Success)
             {
-                var rolActual = App.CurrentUser?.Rol ?? RolUsuario.Operador;
-                var result = await _documentoService.DeleteAsync(SelectedDocumento.Id, rolActual);
-                
-                if (result.Success)
-                {
-                    MessageBox.Show("Documento eliminado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-                    await LoadDataAsync();
-                }
-                else
-                {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                _dialogService.ShowSuccess("Documento eliminado exitosamente");
+                await LoadDataAsync();
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
-            finally
-            {
-                IsLoading = false;
-            }
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError($"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
     
@@ -502,6 +498,14 @@ public partial class DocumentosEmpleadoViewModel : ObservableObject
         {
             FormNombre = DocumentoEmpleadoService.GetNombreTipoDocumento(value);
         }
+    }
+    
+    /// <summary>
+    /// Notifica que el título del formulario cambió cuando cambia IsEditing
+    /// </summary>
+    partial void OnIsEditingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(FormTitle));
     }
 }
 

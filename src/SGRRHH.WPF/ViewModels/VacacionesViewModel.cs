@@ -13,11 +13,23 @@ namespace SGRRHH.WPF.ViewModels;
 
 /// <summary>
 /// ViewModel para la gestión de vacaciones
+/// Permisos según matriz:
+/// - Administrador: Todo (programar, editar, eliminar)
+/// - Operador (Secretaria): Programar, Editar, Ver
+/// - Aprobador (Ingeniera): Solo Ver
 /// </summary>
-public partial class VacacionesViewModel : ObservableObject
+public partial class VacacionesViewModel : ViewModelBase
 {
     private readonly IVacacionService _vacacionService;
     private readonly IEmpleadoService _empleadoService;
+    private readonly IDialogService _dialogService;
+    
+    // Control de permisos por rol
+    [ObservableProperty]
+    private bool _puedeGestionar; // Crear/Editar vacaciones
+    
+    [ObservableProperty]
+    private bool _puedeEliminar; // Solo Admin
     
     [ObservableProperty]
     private ObservableCollection<Empleado> _empleados = new();
@@ -35,13 +47,22 @@ public partial class VacacionesViewModel : ObservableObject
     private ResumenVacaciones? _resumenVacaciones;
     
     [ObservableProperty]
-    private bool _isLoading;
-    
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-    
-    [ObservableProperty]
     private bool _isFormVisible;
+    
+    // Propiedades para la pantalla de bienvenida
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContentVisible))]
+    private bool _isHomeVisible = true;
+    
+    /// <summary>
+    /// Indica si el contenido principal debe mostrarse (inverso de IsHomeVisible)
+    /// </summary>
+    public bool IsContentVisible => !IsHomeVisible;
+    
+    /// <summary>
+    /// Fecha actual formateada para el footer
+    /// </summary>
+    public string CurrentDateText => DateTime.Today.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"));
     
     [ObservableProperty]
     private bool _isEditing;
@@ -80,10 +101,24 @@ public partial class VacacionesViewModel : ObservableObject
     /// </summary>
     public ObservableCollection<int> PeriodosDisponibles { get; } = new();
     
-    public VacacionesViewModel(IVacacionService vacacionService, IEmpleadoService empleadoService)
+    public VacacionesViewModel(
+        IVacacionService vacacionService, 
+        IEmpleadoService empleadoService,
+        IDialogService dialogService)
     {
         _vacacionService = vacacionService;
         _empleadoService = empleadoService;
+        _dialogService = dialogService;
+        
+        // Determinar permisos según rol del usuario actual
+        var rolActual = App.CurrentUser?.Rol ?? RolUsuario.Operador;
+        
+        // Ingeniera (Aprobador) solo puede ver - NO puede gestionar
+        // Admin y Secretaria (Operador) pueden programar/editar
+        PuedeGestionar = rolActual == RolUsuario.Administrador || rolActual == RolUsuario.Operador;
+        
+        // Solo Admin puede eliminar
+        PuedeEliminar = rolActual == RolUsuario.Administrador;
         
         // Inicializar periodos (últimos 3 años y próximo año)
         var currentYear = DateTime.Today.Year;
@@ -115,7 +150,7 @@ public partial class VacacionesViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
-            MessageBox.Show($"Error al cargar datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar datos: {ex.Message}");
         }
         finally
         {
@@ -214,9 +249,15 @@ public partial class VacacionesViewModel : ObservableObject
     [RelayCommand]
     private void NuevaVacacion()
     {
+        if (!PuedeGestionar)
+        {
+            _dialogService.ShowWarning("No tiene permisos para programar vacaciones", "Permiso denegado");
+            return;
+        }
+        
         if (SelectedEmpleado == null)
         {
-            MessageBox.Show("Seleccione un empleado primero", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un empleado primero");
             return;
         }
         
@@ -236,15 +277,21 @@ public partial class VacacionesViewModel : ObservableObject
     [RelayCommand]
     private void EditarVacacion()
     {
+        if (!PuedeGestionar)
+        {
+            _dialogService.ShowWarning("No tiene permisos para editar vacaciones", "Permiso denegado");
+            return;
+        }
+        
         if (SelectedVacacion == null)
         {
-            MessageBox.Show("Seleccione una vacación para editar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione una vacación para editar");
             return;
         }
         
         if (SelectedVacacion.Estado == EstadoVacacion.Disfrutada && SelectedVacacion.FechaFin < DateTime.Today)
         {
-            MessageBox.Show("No se puede editar una vacación ya disfrutada", "Información", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("No se puede editar una vacación ya disfrutada");
             return;
         }
         
@@ -268,7 +315,7 @@ public partial class VacacionesViewModel : ObservableObject
         
         if (FormFechaFin < FormFechaInicio)
         {
-            MessageBox.Show("La fecha de fin debe ser mayor o igual a la fecha de inicio", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("La fecha de fin debe ser mayor o igual a la fecha de inicio", "Validación");
             return;
         }
         
@@ -289,13 +336,13 @@ public partial class VacacionesViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Vacación actualizada exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Vacación actualizada exitosamente");
                     IsFormVisible = false;
                     await LoadVacacionesEmpleadoAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
             else
@@ -315,19 +362,19 @@ public partial class VacacionesViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Vacación programada exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Vacación programada exitosamente");
                     IsFormVisible = false;
                     await LoadVacacionesEmpleadoAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}");
         }
         finally
         {
@@ -345,24 +392,58 @@ public partial class VacacionesViewModel : ObservableObject
     }
     
     /// <summary>
+    /// Muestra la pantalla de bienvenida
+    /// </summary>
+    [RelayCommand]
+    private void ShowHome()
+    {
+        IsHomeVisible = true;
+        IsFormVisible = false;
+    }
+    
+    /// <summary>
+    /// Muestra el contenido principal (historial)
+    /// </summary>
+    [RelayCommand]
+    private void ShowContent()
+    {
+        IsHomeVisible = false;
+    }
+    
+    /// <summary>
+    /// Inicia el flujo de solicitar vacaciones desde la pantalla de bienvenida
+    /// </summary>
+    [RelayCommand]
+    private void SolicitarVacaciones()
+    {
+        IsHomeVisible = false;
+        // Llamar al comando de nueva vacación después de mostrar el contenido
+        NuevaVacacion();
+    }
+    
+    /// <summary>
     /// Elimina (cancela) la vacación seleccionada
     /// </summary>
     [RelayCommand]
     private async Task EliminarVacacionAsync()
     {
-        if (SelectedVacacion == null)
+        if (!PuedeEliminar)
         {
-            MessageBox.Show("Seleccione una vacación para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowWarning("Solo el administrador puede eliminar vacaciones", "Permiso denegado");
             return;
         }
         
-        var confirmResult = MessageBox.Show(
+        if (SelectedVacacion == null)
+        {
+            _dialogService.ShowInfo("Seleccione una vacación para eliminar");
+            return;
+        }
+        
+        var confirmado = _dialogService.Confirm(
             $"¿Está seguro de eliminar esta vacación?\n\nFechas: {SelectedVacacion.FechaInicio:dd/MM/yyyy} - {SelectedVacacion.FechaFin:dd/MM/yyyy}\nDías: {SelectedVacacion.DiasTomados}",
-            "Confirmar eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Confirmar eliminación");
             
-        if (confirmResult == MessageBoxResult.Yes)
+        if (confirmado)
         {
             IsLoading = true;
             
@@ -372,17 +453,17 @@ public partial class VacacionesViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Vacación eliminada exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Vacación eliminada exitosamente");
                     await LoadVacacionesEmpleadoAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error: {ex.Message}");
             }
             finally
             {
@@ -397,9 +478,15 @@ public partial class VacacionesViewModel : ObservableObject
     [RelayCommand]
     private async Task MarcarDisfrutadaAsync()
     {
+        if (!PuedeGestionar)
+        {
+            _dialogService.ShowWarning("No tiene permisos para modificar vacaciones", "Permiso denegado");
+            return;
+        }
+        
         if (SelectedVacacion == null || SelectedVacacion.Estado != EstadoVacacion.Programada)
         {
-            MessageBox.Show("Seleccione una vacación programada para marcar como disfrutada", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione una vacación programada para marcar como disfrutada");
             return;
         }
         
@@ -411,17 +498,17 @@ public partial class VacacionesViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show("Vacación marcada como disfrutada", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Vacación marcada como disfrutada");
                 await LoadVacacionesEmpleadoAsync();
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}");
         }
         finally
         {

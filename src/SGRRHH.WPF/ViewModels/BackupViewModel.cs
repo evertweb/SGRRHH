@@ -12,9 +12,10 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para la gestión de backups
 /// </summary>
-public partial class BackupViewModel : ObservableObject
+public partial class BackupViewModel : ViewModelBase
 {
     private readonly IBackupService _backupService;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private ObservableCollection<BackupInfo> _backups = new();
@@ -31,9 +32,10 @@ public partial class BackupViewModel : ObservableObject
     [ObservableProperty]
     private string _rutaBackups = string.Empty;
     
-    public BackupViewModel(IBackupService backupService)
+    public BackupViewModel(IBackupService backupService, IDialogService dialogService)
     {
         _backupService = backupService;
+        _dialogService = dialogService;
         RutaBackups = _backupService.GetRutaBackups();
     }
     
@@ -74,17 +76,17 @@ public partial class BackupViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show($"Backup creado exitosamente:\n{result.Data}", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess($"Backup creado exitosamente:\n{result.Data}", "Éxito");
                 await LoadDataAsync();
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message, "Error");
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al crear backup: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al crear backup: {ex.Message}", "Error");
         }
         finally
         {
@@ -113,17 +115,17 @@ public partial class BackupViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Backup creado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Backup creado exitosamente", "Éxito");
                     await LoadDataAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message, "Error");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al crear backup: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al crear backup: {ex.Message}", "Error");
             }
             finally
             {
@@ -137,17 +139,13 @@ public partial class BackupViewModel : ObservableObject
     {
         if (SelectedBackup == null)
         {
-            MessageBox.Show("Seleccione un backup para restaurar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un backup para restaurar", "Información");
             return;
         }
         
-        var confirmacion = MessageBox.Show(
+        if (!_dialogService.ConfirmWarning(
             $"¿Está seguro de restaurar la base de datos desde el backup:\n\n{SelectedBackup.NombreArchivo}\n\nFecha: {SelectedBackup.FechaCreacion:dd/MM/yyyy HH:mm}\n\nSe creará un backup de seguridad antes de restaurar.",
-            "Confirmar Restauración",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-        
-        if (confirmacion != MessageBoxResult.Yes)
+            "Confirmar Restauración"))
             return;
         
         IsLoading = true;
@@ -158,22 +156,20 @@ public partial class BackupViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show(
+                _dialogService.ShowSuccess(
                     "Base de datos restaurada exitosamente.\n\nSe recomienda reiniciar la aplicación para aplicar los cambios.",
-                    "Éxito",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    "Éxito");
                     
                 await LoadDataAsync();
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message, "Error");
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al restaurar backup: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al restaurar backup: {ex.Message}", "Error");
         }
         finally
         {
@@ -198,17 +194,13 @@ public partial class BackupViewModel : ObservableObject
             
             if (!validacion.Success)
             {
-                MessageBox.Show($"El archivo seleccionado no es válido:\n\n{validacion.Message}", "Error de Validación", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"El archivo seleccionado no es válido:\n\n{validacion.Message}", "Error de Validación");
                 return;
             }
             
-            var confirmacion = MessageBox.Show(
+            if (!_dialogService.ConfirmWarning(
                 $"¿Está seguro de restaurar la base de datos desde:\n\n{Path.GetFileName(dialog.FileName)}\n\nSe creará un backup de seguridad antes de restaurar.",
-                "Confirmar Restauración",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-            
-            if (confirmacion != MessageBoxResult.Yes)
+                "Confirmar Restauración"))
                 return;
             
             IsLoading = true;
@@ -219,22 +211,20 @@ public partial class BackupViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show(
+                    _dialogService.ShowSuccess(
                         "Base de datos restaurada exitosamente.\n\nSe recomienda reiniciar la aplicación para aplicar los cambios.",
-                        "Éxito",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                        "Éxito");
                         
                     await LoadDataAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message, "Error");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al restaurar backup: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al restaurar backup: {ex.Message}", "Error");
             }
             finally
             {
@@ -248,17 +238,13 @@ public partial class BackupViewModel : ObservableObject
     {
         if (SelectedBackup == null)
         {
-            MessageBox.Show("Seleccione un backup para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un backup para eliminar", "Información");
             return;
         }
         
-        var confirmacion = MessageBox.Show(
+        if (!_dialogService.ConfirmWarning(
             $"¿Está seguro de eliminar el backup:\n\n{SelectedBackup.NombreArchivo}?",
-            "Confirmar Eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-        
-        if (confirmacion != MessageBoxResult.Yes)
+            "Confirmar Eliminación"))
             return;
         
         IsLoading = true;
@@ -269,17 +255,17 @@ public partial class BackupViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show("Backup eliminado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Backup eliminado exitosamente", "Éxito");
                 await LoadDataAsync();
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message, "Error");
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al eliminar backup: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al eliminar backup: {ex.Message}", "Error");
         }
         finally
         {
@@ -298,12 +284,12 @@ public partial class BackupViewModel : ObservableObject
             }
             else
             {
-                MessageBox.Show("La carpeta de backups no existe", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowInfo("La carpeta de backups no existe", "Información");
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al abrir carpeta: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al abrir carpeta: {ex.Message}", "Error");
         }
     }
 }

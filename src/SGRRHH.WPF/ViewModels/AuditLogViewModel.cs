@@ -10,9 +10,10 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para el log de auditoría
 /// </summary>
-public partial class AuditLogViewModel : ObservableObject
+public partial class AuditLogViewModel : ViewModelBase
 {
     private readonly IAuditService _auditService;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private ObservableCollection<AuditLog> _registros = new();
@@ -48,9 +49,10 @@ public partial class AuditLogViewModel : ObservableObject
         "Backup"
     };
     
-    public AuditLogViewModel(IAuditService auditService)
+    public AuditLogViewModel(IAuditService auditService, IDialogService dialogService)
     {
         _auditService = auditService;
+        _dialogService = dialogService;
         FechaDesde = DateTime.Today.AddDays(-30);
         FechaHasta = DateTime.Today.AddDays(1);
     }
@@ -108,13 +110,9 @@ public partial class AuditLogViewModel : ObservableObject
     [RelayCommand]
     private async Task LimpiarRegistrosAntiguosAsync()
     {
-        var confirmacion = MessageBox.Show(
+        if (!_dialogService.ConfirmWarning(
             "¿Está seguro de eliminar los registros de auditoría anteriores a 90 días?\n\nEsta acción no se puede deshacer.",
-            "Confirmar Limpieza",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-        
-        if (confirmacion != MessageBoxResult.Yes)
+            "Confirmar Limpieza"))
             return;
         
         IsLoading = true;
@@ -122,12 +120,12 @@ public partial class AuditLogViewModel : ObservableObject
         try
         {
             var eliminados = await _auditService.LimpiarRegistrosAntiguosAsync(90);
-            MessageBox.Show($"Se eliminaron {eliminados} registros antiguos", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowSuccess($"Se eliminaron {eliminados} registros antiguos", "Éxito");
             await LoadDataAsync();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}", "Error");
         }
         finally
         {

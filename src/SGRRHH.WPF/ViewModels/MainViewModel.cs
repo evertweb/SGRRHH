@@ -42,10 +42,11 @@ public partial class MenuItemViewModel : ObservableObject
 /// <summary>
 /// ViewModel principal de la aplicación
 /// </summary>
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ViewModelBase
 {
     private readonly Usuario _currentUser;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IDialogService _dialogService;
     
     // Scope actual para mantener vivo el DbContext de la vista activa
     private IServiceScope? _currentViewScope;
@@ -90,10 +91,11 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public event EventHandler? LogoutRequested;
     
-    public MainViewModel(Usuario currentUser, IServiceProvider serviceProvider)
+    public MainViewModel(Usuario currentUser, IServiceProvider serviceProvider, IDialogService dialogService)
     {
         _currentUser = currentUser;
         _serviceProvider = serviceProvider;
+        _dialogService = dialogService;
         CurrentUserName = currentUser.NombreCompleto;
         CurrentUserRole = GetRoleName(currentUser.Rol);
         
@@ -170,7 +172,7 @@ public partial class MainViewModel : ObservableObject
                 Icon = "📄",
                 Title = "Contratos",
                 ViewName = "Contratos",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador }
+                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
             },
             new MenuItemViewModel
             {
@@ -334,30 +336,15 @@ public partial class MainViewModel : ObservableObject
                 break;
                 
             case "ControlDiario":
-                var controlDiarioViewModel = scope.ServiceProvider.GetRequiredService<ControlDiarioViewModel>();
-                var controlDiarioView = new ControlDiarioView(controlDiarioViewModel);
-                _ = controlDiarioViewModel.LoadDataAsync();
-                CurrentView = controlDiarioView;
+                var wizardViewModel = scope.ServiceProvider.GetRequiredService<DailyActivityWizardViewModel>();
+                var wizardView = new DailyActivityWizardView(wizardViewModel);
+                CurrentView = wizardView;
                 break;
             
             case "Chat":
-                // Determinar qué provider de chat usar según configuración
-                var chatProvider = SGRRHH.WPF.Helpers.AppSettings.GetChatProvider();
-
-                if (chatProvider == "Sendbird")
-                {
-                    // Usar nuevo chat con Sendbird
-                    var sendbirdViewModel = scope.ServiceProvider.GetRequiredService<ChatViewModel>();
-                    var sendbirdChatView = new ChatView(sendbirdViewModel);
-                    CurrentView = sendbirdChatView;
-                }
-                else
-                {
-                    // Usar chat legacy con Firebase
-                    var chatViewModel = scope.ServiceProvider.GetRequiredService<ChatViewModelLegacy>();
-                    var chatView = new ChatViewLegacy(chatViewModel);
-                    CurrentView = chatView;
-                }
+                var chatViewModel = scope.ServiceProvider.GetRequiredService<ChatViewModel>();
+                var chatView = new ChatView(chatViewModel);
+                CurrentView = chatView;
                 break;
                 
             case "Proyectos":
@@ -369,6 +356,11 @@ public partial class MainViewModel : ObservableObject
                 
             case "Actividades":
                 var actividadesViewModel = scope.ServiceProvider.GetRequiredService<ActividadesListViewModel>();
+                
+                // Suscribirse a eventos para abrir ventanas modales
+                actividadesViewModel.CreateActividadRequested += OnCreateActividadRequested;
+                actividadesViewModel.EditActividadRequested += OnEditActividadRequested;
+                
                 var actividadesView = new ActividadesListView(actividadesViewModel);
                 _ = actividadesViewModel.LoadDataAsync();
                 CurrentView = actividadesView;
@@ -500,6 +492,41 @@ public partial class MainViewModel : ObservableObject
         ShowPermisoForm(permiso.Id);
     }
     
+    private void OnCreateActividadRequested(object? sender, EventArgs e)
+    {
+        ShowActividadForm(null);
+    }
+    
+    private void OnEditActividadRequested(object? sender, Actividad actividad)
+    {
+        ShowActividadForm(actividad.Id);
+    }
+    
+    private void ShowActividadForm(int? actividadId)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var viewModel = scope.ServiceProvider.GetRequiredService<ActividadFormViewModel>();
+        var window = new ActividadFormWindow(viewModel);
+        window.Owner = Application.Current.MainWindow;
+        
+        if (actividadId.HasValue)
+        {
+            _ = viewModel.InitializeForEditAsync(actividadId.Value);
+        }
+        else
+        {
+            _ = viewModel.InitializeForCreateAsync();
+        }
+        
+        var result = window.ShowDialog();
+        
+        if (result == true)
+        {
+            // Recargar lista de actividades
+            LoadView("Actividades");
+        }
+    }
+    
     private void ShowPermisoForm(int? permisoId)
     {
         using var scope = _serviceProvider.CreateScope();
@@ -569,19 +596,13 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Logout()
     {
-        var result = MessageBox.Show(
-            "¿Está seguro de cerrar sesión?",
-            "Cerrar Sesión",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+        if (!_dialogService.Confirm("¿Está seguro de cerrar sesión?", "Cerrar Sesión"))
+            return;
             
-        if (result == MessageBoxResult.Yes)
-        {
-            // Limpiar scope antes de cerrar
-            _currentViewScope?.Dispose();
-            _currentViewScope = null;
-            LogoutRequested?.Invoke(this, EventArgs.Empty);
-        }
+        // Limpiar scope antes de cerrar
+        _currentViewScope?.Dispose();
+        _currentViewScope = null;
+        LogoutRequested?.Invoke(this, EventArgs.Empty);
     }
     
     [RelayCommand]

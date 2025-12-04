@@ -43,11 +43,11 @@ public class PermisoService : IPermisoService
         try
         {
             var permisos = await _permisoRepository.GetAllWithFiltersAsync(empleadoId, estado, fechaDesde, fechaHasta);
-            return ServiceResult<IEnumerable<Permiso>>.SuccessResult(permisos);
+            return ServiceResult<IEnumerable<Permiso>>.Ok(permisos);
         }
         catch (Exception ex)
         {
-            return ServiceResult<IEnumerable<Permiso>>.FailureResult($"Error al obtener permisos: {ex.Message}");
+            return ServiceResult<IEnumerable<Permiso>>.Fail($"Error al obtener permisos: {ex.Message}");
         }
     }
 
@@ -58,14 +58,14 @@ public class PermisoService : IPermisoService
             var permiso = await _permisoRepository.GetByIdAsync(id);
             if (permiso == null)
             {
-                return ServiceResult<Permiso>.FailureResult("Permiso no encontrado");
+                return ServiceResult<Permiso>.Fail("Permiso no encontrado");
             }
 
-            return ServiceResult<Permiso>.SuccessResult(permiso);
+            return ServiceResult<Permiso>.Ok(permiso);
         }
         catch (Exception ex)
         {
-            return ServiceResult<Permiso>.FailureResult($"Error al obtener permiso: {ex.Message}");
+            return ServiceResult<Permiso>.Fail($"Error al obtener permiso: {ex.Message}");
         }
     }
 
@@ -74,11 +74,11 @@ public class PermisoService : IPermisoService
         try
         {
             var permisos = await _permisoRepository.GetPendientesAsync();
-            return ServiceResult<IEnumerable<Permiso>>.SuccessResult(permisos);
+            return ServiceResult<IEnumerable<Permiso>>.Ok(permisos);
         }
         catch (Exception ex)
         {
-            return ServiceResult<IEnumerable<Permiso>>.FailureResult($"Error al obtener permisos pendientes: {ex.Message}");
+            return ServiceResult<IEnumerable<Permiso>>.Fail($"Error al obtener permisos pendientes: {ex.Message}");
         }
     }
 
@@ -87,11 +87,11 @@ public class PermisoService : IPermisoService
         try
         {
             var permisos = await _permisoRepository.GetByEmpleadoIdAsync(empleadoId);
-            return ServiceResult<IEnumerable<Permiso>>.SuccessResult(permisos);
+            return ServiceResult<IEnumerable<Permiso>>.Ok(permisos);
         }
         catch (Exception ex)
         {
-            return ServiceResult<IEnumerable<Permiso>>.FailureResult($"Error al obtener permisos del empleado: {ex.Message}");
+            return ServiceResult<IEnumerable<Permiso>>.Fail($"Error al obtener permisos del empleado: {ex.Message}");
         }
     }
 
@@ -106,13 +106,13 @@ public class PermisoService : IPermisoService
             if (errores.Any())
             {
                 _logger?.LogWarning("Validación fallida: {Errores}", string.Join(", ", errores));
-                return ServiceResult<Permiso>.FailureResult(errores);
+                return ServiceResult<Permiso>.Fail(errores);
             }
 
             // Validar solapamiento con permisos existentes
             if (await _permisoRepository.ExisteSolapamientoAsync(permiso.EmpleadoId, permiso.FechaInicio, permiso.FechaFin))
             {
-                return ServiceResult<Permiso>.FailureResult("El empleado ya tiene un permiso en las fechas seleccionadas");
+                return ServiceResult<Permiso>.Fail("El empleado ya tiene un permiso en las fechas seleccionadas");
             }
             
             // Validar solapamiento con vacaciones (validación cruzada)
@@ -120,7 +120,7 @@ public class PermisoService : IPermisoService
                 permiso.EmpleadoId, permiso.FechaInicio, permiso.FechaFin);
             if (validacionVacaciones.Success && validacionVacaciones.Data)
             {
-                return ServiceResult<Permiso>.FailureResult("El empleado tiene vacaciones programadas en las fechas seleccionadas");
+                return ServiceResult<Permiso>.Fail("El empleado tiene vacaciones programadas en las fechas seleccionadas");
             }
 
             // Generar número de acta
@@ -138,12 +138,12 @@ public class PermisoService : IPermisoService
             var created = await _permisoRepository.AddAsync(permiso);
             
             _logger?.LogInformation("Permiso {NumeroActa} creado exitosamente", created.NumeroActa);
-            return ServiceResult<Permiso>.SuccessResult(created, $"Permiso solicitado exitosamente. Número de acta: {created.NumeroActa}");
+            return ServiceResult<Permiso>.Ok(created, $"Permiso solicitado exitosamente. Número de acta: {created.NumeroActa}");
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al solicitar permiso");
-            return ServiceResult<Permiso>.FailureResult($"Error al solicitar permiso: {ex.Message}");
+            return ServiceResult<Permiso>.Fail($"Error al solicitar permiso: {ex.Message}");
         }
     }
 
@@ -156,12 +156,12 @@ public class PermisoService : IPermisoService
             var permiso = await _permisoRepository.GetByIdAsync(permisoId);
             if (permiso == null)
             {
-                return ServiceResult<Permiso>.FailureResult("Permiso no encontrado");
+                return ServiceResult<Permiso>.Fail("Permiso no encontrado");
             }
 
             if (permiso.Estado != EstadoPermiso.Pendiente)
             {
-                return ServiceResult<Permiso>.FailureResult("Solo se pueden aprobar permisos pendientes");
+                return ServiceResult<Permiso>.Fail("Solo se pueden aprobar permisos pendientes");
             }
 
             // Aprobar
@@ -177,12 +177,12 @@ public class PermisoService : IPermisoService
             await _permisoRepository.UpdateAsync(permiso);
             
             _logger?.LogInformation("Permiso {NumeroActa} aprobado exitosamente", permiso.NumeroActa);
-            return ServiceResult<Permiso>.SuccessResult(permiso, "Permiso aprobado exitosamente");
+            return ServiceResult<Permiso>.Ok(permiso, "Permiso aprobado exitosamente");
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al aprobar permiso {PermisoId}", permisoId);
-            return ServiceResult<Permiso>.FailureResult($"Error al aprobar permiso: {ex.Message}");
+            return ServiceResult<Permiso>.Fail($"Error al aprobar permiso: {ex.Message}");
         }
     }
 
@@ -192,18 +192,18 @@ public class PermisoService : IPermisoService
         {
             if (string.IsNullOrWhiteSpace(motivoRechazo))
             {
-                return ServiceResult<Permiso>.FailureResult("Debe proporcionar un motivo de rechazo");
+                return ServiceResult<Permiso>.Fail("Debe proporcionar un motivo de rechazo");
             }
 
             var permiso = await _permisoRepository.GetByIdAsync(permisoId);
             if (permiso == null)
             {
-                return ServiceResult<Permiso>.FailureResult("Permiso no encontrado");
+                return ServiceResult<Permiso>.Fail("Permiso no encontrado");
             }
 
             if (permiso.Estado != EstadoPermiso.Pendiente)
             {
-                return ServiceResult<Permiso>.FailureResult("Solo se pueden rechazar permisos pendientes");
+                return ServiceResult<Permiso>.Fail("Solo se pueden rechazar permisos pendientes");
             }
 
             // Rechazar
@@ -213,11 +213,11 @@ public class PermisoService : IPermisoService
             permiso.MotivoRechazo = motivoRechazo;
 
             await _permisoRepository.UpdateAsync(permiso);
-            return ServiceResult<Permiso>.SuccessResult(permiso, "Permiso rechazado");
+            return ServiceResult<Permiso>.Ok(permiso, "Permiso rechazado");
         }
         catch (Exception ex)
         {
-            return ServiceResult<Permiso>.FailureResult($"Error al rechazar permiso: {ex.Message}");
+            return ServiceResult<Permiso>.Fail($"Error al rechazar permiso: {ex.Message}");
         }
     }
 
@@ -228,22 +228,22 @@ public class PermisoService : IPermisoService
             var permiso = await _permisoRepository.GetByIdAsync(permisoId);
             if (permiso == null)
             {
-                return ServiceResult<Permiso>.FailureResult("Permiso no encontrado");
+                return ServiceResult<Permiso>.Fail("Permiso no encontrado");
             }
 
             if (permiso.Estado != EstadoPermiso.Pendiente)
             {
-                return ServiceResult<Permiso>.FailureResult("Solo se pueden cancelar permisos pendientes");
+                return ServiceResult<Permiso>.Fail("Solo se pueden cancelar permisos pendientes");
             }
 
             permiso.Estado = EstadoPermiso.Cancelado;
             await _permisoRepository.UpdateAsync(permiso);
             
-            return ServiceResult<Permiso>.SuccessResult(permiso, "Permiso cancelado exitosamente");
+            return ServiceResult<Permiso>.Ok(permiso, "Permiso cancelado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<Permiso>.FailureResult($"Error al cancelar permiso: {ex.Message}");
+            return ServiceResult<Permiso>.Fail($"Error al cancelar permiso: {ex.Message}");
         }
     }
 
@@ -254,25 +254,25 @@ public class PermisoService : IPermisoService
             var existing = await _permisoRepository.GetByIdAsync(permiso.Id);
             if (existing == null)
             {
-                return ServiceResult<Permiso>.FailureResult("Permiso no encontrado");
+                return ServiceResult<Permiso>.Fail("Permiso no encontrado");
             }
 
             if (existing.Estado != EstadoPermiso.Pendiente)
             {
-                return ServiceResult<Permiso>.FailureResult("Solo se pueden editar permisos pendientes");
+                return ServiceResult<Permiso>.Fail("Solo se pueden editar permisos pendientes");
             }
 
             // Validaciones
             var errores = await ValidarPermisoAsync(permiso);
             if (errores.Any())
             {
-                return ServiceResult<Permiso>.FailureResult(errores);
+                return ServiceResult<Permiso>.Fail(errores);
             }
 
             // Validar solapamiento excluyendo el permiso actual
             if (await _permisoRepository.ExisteSolapamientoAsync(permiso.EmpleadoId, permiso.FechaInicio, permiso.FechaFin, permiso.Id))
             {
-                return ServiceResult<Permiso>.FailureResult("El empleado ya tiene un permiso en las fechas seleccionadas");
+                return ServiceResult<Permiso>.Fail("El empleado ya tiene un permiso en las fechas seleccionadas");
             }
             
             // Validar solapamiento con vacaciones (validación cruzada)
@@ -280,18 +280,18 @@ public class PermisoService : IPermisoService
                 permiso.EmpleadoId, permiso.FechaInicio, permiso.FechaFin);
             if (validacionVacaciones.Success && validacionVacaciones.Data)
             {
-                return ServiceResult<Permiso>.FailureResult("El empleado tiene vacaciones programadas en las fechas seleccionadas");
+                return ServiceResult<Permiso>.Fail("El empleado tiene vacaciones programadas en las fechas seleccionadas");
             }
 
             // Recalcular días usando el servicio centralizado
             permiso.TotalDias = _dateCalculationService.CalcularDiasHabiles(permiso.FechaInicio, permiso.FechaFin);
 
             await _permisoRepository.UpdateAsync(permiso);
-            return ServiceResult<Permiso>.SuccessResult(permiso, "Permiso actualizado exitosamente");
+            return ServiceResult<Permiso>.Ok(permiso, "Permiso actualizado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<Permiso>.FailureResult($"Error al actualizar permiso: {ex.Message}");
+            return ServiceResult<Permiso>.Fail($"Error al actualizar permiso: {ex.Message}");
         }
     }
 
@@ -302,20 +302,20 @@ public class PermisoService : IPermisoService
             var permiso = await _permisoRepository.GetByIdAsync(id);
             if (permiso == null)
             {
-                return ServiceResult<bool>.FailureResult("Permiso no encontrado");
+                return ServiceResult<bool>.Fail("Permiso no encontrado");
             }
 
             if (permiso.Estado != EstadoPermiso.Pendiente)
             {
-                return ServiceResult<bool>.FailureResult("Solo se pueden eliminar permisos pendientes");
+                return ServiceResult<bool>.Fail("Solo se pueden eliminar permisos pendientes");
             }
 
             await _permisoRepository.DeleteAsync(id);
-            return ServiceResult<bool>.SuccessResult(true, "Permiso eliminado exitosamente");
+            return ServiceResult<bool>.Ok(true, "Permiso eliminado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<bool>.FailureResult($"Error al eliminar permiso: {ex.Message}");
+            return ServiceResult<bool>.Fail($"Error al eliminar permiso: {ex.Message}");
         }
     }
 

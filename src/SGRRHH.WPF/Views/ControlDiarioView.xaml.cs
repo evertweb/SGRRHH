@@ -8,9 +8,13 @@ namespace SGRRHH.WPF.Views;
 /// </summary>
 public partial class ControlDiarioView : UserControl
 {
-    public ControlDiarioView(ControlDiarioViewModel viewModel)
+    public ControlDiarioView()
     {
         InitializeComponent();
+    }
+
+    public ControlDiarioView(ControlDiarioViewModel viewModel) : this()
+    {
         DataContext = viewModel;
     }
 }

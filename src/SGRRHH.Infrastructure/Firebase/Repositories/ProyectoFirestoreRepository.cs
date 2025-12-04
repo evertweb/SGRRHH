@@ -179,31 +179,7 @@ public class ProyectoFirestoreRepository : FirestoreRepository<Proyecto>, IProye
     /// </summary>
     public async Task<string> GetNextCodigoAsync()
     {
-        try
-        {
-            var snapshot = await Collection.GetSnapshotAsync();
-            
-            int maxNumber = 0;
-            foreach (var doc in snapshot.Documents)
-            {
-                if (doc.TryGetValue<string>("codigo", out var codigo) && 
-                    codigo.StartsWith(CODE_PREFIX))
-                {
-                    var numStr = codigo.Replace(CODE_PREFIX, "");
-                    if (int.TryParse(numStr, out int num) && num > maxNumber)
-                    {
-                        maxNumber = num;
-                    }
-                }
-            }
-            
-            return $"{CODE_PREFIX}{(maxNumber + 1):D4}";
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error al obtener siguiente código de proyecto");
-            return $"{CODE_PREFIX}0001";
-        }
+        return await GetNextCodigoAsync(CODE_PREFIX, 4);
     }
     
     #endregion

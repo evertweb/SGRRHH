@@ -164,13 +164,182 @@
     </UserControl.Resources>
     
     <Grid Background="#F5F6FA">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+        <!-- ========== PANTALLA DE BIENVENIDA ========== -->
+        <Grid Visibility="{Binding IsHomeVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Contenido principal de bienvenida -->
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <!-- Emoji y título -->
+                <TextBlock Text="📄" FontSize="72" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <TextBlock Text="¡Gestión de Contratos!" 
+                           FontSize="32" FontWeight="Bold" 
+                           Foreground="#2C3E50" 
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="¿Qué deseas hacer hoy?" 
+                           FontSize="18" 
+                           Foreground="#7F8C8D" 
+                           HorizontalAlignment="Center" 
+                           Margin="0,10,0,40"/>
+                
+                <!-- Tarjetas de opciones -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <!-- Tarjeta Nuevo Contrato -->
+                    <Button Command="{Binding NuevoContratoCommand}" 
+                            Cursor="Hand" 
+                            Margin="15">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="CardBorder" 
+                                        Background="White" 
+                                        CornerRadius="16" 
+                                        Width="200" Height="180"
+                                        BorderBrush="#E0E0E0" BorderThickness="1">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.15"/>
+                                    </Border.Effect>
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <!-- Círculo verde con icono -->
+                                            <Border Background="#27AE60" 
+                                                    CornerRadius="30" 
+                                                    Width="60" Height="60" 
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,15">
+                                                <TextBlock Text="➕" 
+                                                           FontSize="28" 
+                                                           Foreground="White"
+                                                           HorizontalAlignment="Center" 
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Nuevo Contrato" 
+                                                       FontSize="16" 
+                                                       FontWeight="SemiBold" 
+                                                       Foreground="#2C3E50"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Text="Crear un contrato nuevo" 
+                                                       FontSize="12" 
+                                                       Foreground="#95A5A6"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="CardBorder" Property="BorderBrush" Value="#27AE60"/>
+                                        <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    
+                    <!-- Tarjeta Ver Contratos -->
+                    <Button Command="{Binding ShowContentCommand}" 
+                            Cursor="Hand" 
+                            Margin="15">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="CardBorder" 
+                                        Background="White" 
+                                        CornerRadius="16" 
+                                        Width="200" Height="180"
+                                        BorderBrush="#E0E0E0" BorderThickness="1">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.15"/>
+                                    </Border.Effect>
+                                    <Grid>
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <!-- Círculo azul con icono -->
+                                            <Border Background="#3498DB" 
+                                                    CornerRadius="30" 
+                                                    Width="60" Height="60" 
+                                                    HorizontalAlignment="Center"
+                                                    Margin="0,0,0,15">
+                                                <TextBlock Text="📋" 
+                                                           FontSize="28" 
+                                                           Foreground="White"
+                                                           HorizontalAlignment="Center" 
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBlock Text="Ver Contratos" 
+                                                       FontSize="16" 
+                                                       FontWeight="SemiBold" 
+                                                       Foreground="#2C3E50"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Text="Gestionar contratos existentes" 
+                                                       FontSize="12" 
+                                                       Foreground="#95A5A6"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="CardBorder" Property="BorderBrush" Value="#3498DB"/>
+                                        <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+            
+            <!-- Footer con fecha -->
+            <Border Grid.Row="1" 
+                    Background="#ECF0F1" 
+                    Padding="20,15" 
+                    Margin="20,0,20,20"
+                    CornerRadius="8">
+                <TextBlock Text="{Binding CurrentDateText}" 
+                           FontSize="14" 
+                           Foreground="#7F8C8D"
+                           HorizontalAlignment="Center"/>
+            </Border>
+        </Grid>
         
-        <!-- Alertas de contratos por vencer -->
-        <Border Grid.Row="0" Style="{StaticResource CardStyle}" 
+        <!-- ========== CONTENIDO PRINCIPAL (Vista existente) ========== -->
+        <Grid Visibility="{Binding IsContentVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Botón para volver a la pantalla de bienvenida -->
+            <Button Grid.Row="0" 
+                    Command="{Binding ShowHomeCommand}" 
+                    HorizontalAlignment="Left"
+                    Margin="10,10,10,5"
+                    Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BackBorder" 
+                                Background="#ECF0F1" 
+                                CornerRadius="6" 
+                                Padding="12,8">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="←" FontSize="14" Foreground="#7F8C8D" Margin="0,0,8,0"/>
+                                <TextBlock Text="Volver al inicio" FontSize="13" Foreground="#7F8C8D"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BackBorder" Property="Background" Value="#D5DBDB"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        
+            <!-- Alertas de contratos por vencer -->
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}" 
                 Background="#FFF8E1" Margin="10,10,10,5"
                 Visibility="{Binding ContratosProximosAVencer.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
             <StackPanel>
@@ -202,7 +371,7 @@
             </StackPanel>
         </Border>
         
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="350"/>
                 <ColumnDefinition Width="*"/>
@@ -576,10 +745,10 @@
                 </Border>
             </Grid>
         </Grid>
+        </Grid>
         
         <!-- Loading overlay -->
-        <Border Grid.RowSpan="2" 
-                Background="#80000000" 
+        <Border Background="#80000000" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <TextBlock Text="Cargando..." Foreground="White" FontSize="18"/>

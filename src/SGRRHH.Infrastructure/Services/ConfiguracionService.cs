@@ -32,32 +32,37 @@ public class ConfiguracionService : IConfiguracionService
     {
         var companyInfo = new CompanyInfo();
         
-        var nombre = await GetConfiguracionAsync(KEY_EMPRESA_NOMBRE);
-        if (!string.IsNullOrWhiteSpace(nombre)) companyInfo.Nombre = nombre;
+        // Obtener todas las configuraciones de la categoría "Empresa" en una sola consulta
+        // Esto evita hacer 9 llamadas individuales a Firestore, mejorando el rendimiento
+        var configuraciones = await _configuracionRepository.GetByCategoriaAsync("Empresa");
+        var configDict = configuraciones.ToDictionary(c => c.Clave, c => c.Valor);
         
-        var nit = await GetConfiguracionAsync(KEY_EMPRESA_NIT);
-        if (!string.IsNullOrWhiteSpace(nit)) companyInfo.Nit = nit;
+        if (configDict.TryGetValue(KEY_EMPRESA_NOMBRE, out var nombre) && !string.IsNullOrWhiteSpace(nombre))
+            companyInfo.Nombre = nombre;
         
-        var direccion = await GetConfiguracionAsync(KEY_EMPRESA_DIRECCION);
-        if (!string.IsNullOrWhiteSpace(direccion)) companyInfo.Direccion = direccion;
+        if (configDict.TryGetValue(KEY_EMPRESA_NIT, out var nit) && !string.IsNullOrWhiteSpace(nit))
+            companyInfo.Nit = nit;
         
-        var ciudad = await GetConfiguracionAsync(KEY_EMPRESA_CIUDAD);
-        if (!string.IsNullOrWhiteSpace(ciudad)) companyInfo.Ciudad = ciudad;
+        if (configDict.TryGetValue(KEY_EMPRESA_DIRECCION, out var direccion) && !string.IsNullOrWhiteSpace(direccion))
+            companyInfo.Direccion = direccion;
         
-        var telefono = await GetConfiguracionAsync(KEY_EMPRESA_TELEFONO);
-        if (!string.IsNullOrWhiteSpace(telefono)) companyInfo.Telefono = telefono;
+        if (configDict.TryGetValue(KEY_EMPRESA_CIUDAD, out var ciudad) && !string.IsNullOrWhiteSpace(ciudad))
+            companyInfo.Ciudad = ciudad;
         
-        var correo = await GetConfiguracionAsync(KEY_EMPRESA_CORREO);
-        if (!string.IsNullOrWhiteSpace(correo)) companyInfo.Correo = correo;
+        if (configDict.TryGetValue(KEY_EMPRESA_TELEFONO, out var telefono) && !string.IsNullOrWhiteSpace(telefono))
+            companyInfo.Telefono = telefono;
         
-        var representanteNombre = await GetConfiguracionAsync(KEY_EMPRESA_REPRESENTANTE_NOMBRE);
-        if (!string.IsNullOrWhiteSpace(representanteNombre)) companyInfo.RepresentanteNombre = representanteNombre;
+        if (configDict.TryGetValue(KEY_EMPRESA_CORREO, out var correo) && !string.IsNullOrWhiteSpace(correo))
+            companyInfo.Correo = correo;
         
-        var representanteCargo = await GetConfiguracionAsync(KEY_EMPRESA_REPRESENTANTE_CARGO);
-        if (!string.IsNullOrWhiteSpace(representanteCargo)) companyInfo.RepresentanteCargo = representanteCargo;
+        if (configDict.TryGetValue(KEY_EMPRESA_REPRESENTANTE_NOMBRE, out var representanteNombre) && !string.IsNullOrWhiteSpace(representanteNombre))
+            companyInfo.RepresentanteNombre = representanteNombre;
         
-        var logoPath = await GetConfiguracionAsync(KEY_EMPRESA_LOGO_PATH);
-        if (!string.IsNullOrWhiteSpace(logoPath)) companyInfo.LogoPath = logoPath;
+        if (configDict.TryGetValue(KEY_EMPRESA_REPRESENTANTE_CARGO, out var representanteCargo) && !string.IsNullOrWhiteSpace(representanteCargo))
+            companyInfo.RepresentanteCargo = representanteCargo;
+        
+        if (configDict.TryGetValue(KEY_EMPRESA_LOGO_PATH, out var logoPath) && !string.IsNullOrWhiteSpace(logoPath))
+            companyInfo.LogoPath = logoPath;
         
         return companyInfo;
     }

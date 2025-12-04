@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -11,9 +12,10 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para la lista de proyectos
 /// </summary>
-public partial class ProyectosListViewModel : ObservableObject
+public partial class ProyectosListViewModel : ViewModelBase
 {
     private readonly IProyectoService _proyectoService;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private ObservableCollection<Proyecto> _proyectos = new();
@@ -28,13 +30,22 @@ public partial class ProyectosListViewModel : ObservableObject
     private EstadoProyecto? _selectedEstado;
     
     [ObservableProperty]
-    private bool _isLoading;
-    
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-    
-    [ObservableProperty]
     private int _totalProyectos;
+    
+    // Propiedades de navegación de vistas
+    [ObservableProperty]
+    private bool _isHomeVisible = true;
+    
+    [ObservableProperty]
+    private bool _isFormViewVisible;
+    
+    [ObservableProperty]
+    private bool _isListViewVisible;
+    
+    /// <summary>
+    /// Texto de la fecha actual para el footer
+    /// </summary>
+    public string CurrentDateText => DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"));
     
     // Campos para el formulario
     [ObservableProperty]
@@ -67,29 +78,65 @@ public partial class ProyectosListViewModel : ObservableObject
     /// <summary>
     /// Lista de estados para el filtro
     /// </summary>
-    public ObservableCollection<EstadoProyectoItem> Estados { get; } = new()
+    public ObservableCollection<EnumComboItem<EstadoProyecto>> Estados { get; } = new()
     {
-        new EstadoProyectoItem { Nombre = "Todos", Valor = null },
-        new EstadoProyectoItem { Nombre = "Activo", Valor = EstadoProyecto.Activo },
-        new EstadoProyectoItem { Nombre = "Suspendido", Valor = EstadoProyecto.Suspendido },
-        new EstadoProyectoItem { Nombre = "Finalizado", Valor = EstadoProyecto.Finalizado },
-        new EstadoProyectoItem { Nombre = "Cancelado", Valor = EstadoProyecto.Cancelado }
+        new EnumComboItem<EstadoProyecto> { Nombre = "Todos", Valor = null },
+        new EnumComboItem<EstadoProyecto> { Nombre = "Activo", Valor = EstadoProyecto.Activo },
+        new EnumComboItem<EstadoProyecto> { Nombre = "Suspendido", Valor = EstadoProyecto.Suspendido },
+        new EnumComboItem<EstadoProyecto> { Nombre = "Finalizado", Valor = EstadoProyecto.Finalizado },
+        new EnumComboItem<EstadoProyecto> { Nombre = "Cancelado", Valor = EstadoProyecto.Cancelado }
     };
     
     /// <summary>
     /// Lista de estados para el formulario
     /// </summary>
-    public ObservableCollection<EstadoProyectoItem> EstadosForm { get; } = new()
+    public ObservableCollection<EnumComboItem<EstadoProyecto>> EstadosForm { get; } = new()
     {
-        new EstadoProyectoItem { Nombre = "Activo", Valor = EstadoProyecto.Activo },
-        new EstadoProyectoItem { Nombre = "Suspendido", Valor = EstadoProyecto.Suspendido },
-        new EstadoProyectoItem { Nombre = "Finalizado", Valor = EstadoProyecto.Finalizado },
-        new EstadoProyectoItem { Nombre = "Cancelado", Valor = EstadoProyecto.Cancelado }
+        new EnumComboItem<EstadoProyecto> { Nombre = "Activo", Valor = EstadoProyecto.Activo },
+        new EnumComboItem<EstadoProyecto> { Nombre = "Suspendido", Valor = EstadoProyecto.Suspendido },
+        new EnumComboItem<EstadoProyecto> { Nombre = "Finalizado", Valor = EstadoProyecto.Finalizado },
+        new EnumComboItem<EstadoProyecto> { Nombre = "Cancelado", Valor = EstadoProyecto.Cancelado }
     };
     
-    public ProyectosListViewModel(IProyectoService proyectoService)
+    public ProyectosListViewModel(IProyectoService proyectoService, IDialogService dialogService)
     {
         _proyectoService = proyectoService;
+        _dialogService = dialogService;
+    }
+    
+    /// <summary>
+    /// Muestra la pantalla de inicio
+    /// </summary>
+    [RelayCommand]
+    private void ShowHome()
+    {
+        IsHomeVisible = true;
+        IsFormViewVisible = false;
+        IsListViewVisible = false;
+    }
+    
+    /// <summary>
+    /// Muestra el formulario para crear nuevo proyecto
+    /// </summary>
+    [RelayCommand]
+    private async Task ShowFormAsync()
+    {
+        IsHomeVisible = false;
+        IsFormViewVisible = true;
+        IsListViewVisible = false;
+        await NewProyectoAsync();
+    }
+    
+    /// <summary>
+    /// Muestra la lista de proyectos
+    /// </summary>
+    [RelayCommand]
+    private async Task ShowListAsync()
+    {
+        IsHomeVisible = false;
+        IsFormViewVisible = false;
+        IsListViewVisible = true;
+        await SearchProyectosAsync();
     }
     
     /// <summary>
@@ -109,7 +156,7 @@ public partial class ProyectosListViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
-            MessageBox.Show($"Error al cargar los datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar los datos: {ex.Message}");
         }
         finally
         {
@@ -204,7 +251,7 @@ public partial class ProyectosListViewModel : ObservableObject
     {
         if (SelectedProyecto == null)
         {
-            MessageBox.Show("Seleccione un proyecto para editar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un proyecto para editar");
             return;
         }
         
@@ -217,6 +264,11 @@ public partial class ProyectosListViewModel : ObservableObject
         FechaInicio = SelectedProyecto.FechaInicio;
         FechaFin = SelectedProyecto.FechaFin;
         Estado = SelectedProyecto.Estado;
+        
+        // Cambiar a vista de formulario
+        IsHomeVisible = false;
+        IsFormViewVisible = true;
+        IsListViewVisible = false;
     }
     
     /// <summary>
@@ -227,7 +279,7 @@ public partial class ProyectosListViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(Nombre))
         {
-            MessageBox.Show("El nombre del proyecto es obligatorio", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("El nombre del proyecto es obligatorio", "Validación");
             return;
         }
         
@@ -261,18 +313,18 @@ public partial class ProyectosListViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show(result.Message, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess(result.Message);
                 await SearchProyectosAsync();
-                await NewProyectoAsync();
+                ShowHome();
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al guardar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al guardar: {ex.Message}");
         }
         finally
         {
@@ -288,17 +340,15 @@ public partial class ProyectosListViewModel : ObservableObject
     {
         if (SelectedProyecto == null)
         {
-            MessageBox.Show("Seleccione un proyecto para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un proyecto para eliminar");
             return;
         }
         
-        var confirm = MessageBox.Show(
+        var confirmado = _dialogService.Confirm(
             $"¿Está seguro de eliminar el proyecto '{SelectedProyecto.Nombre}'?",
-            "Confirmar eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Confirmar eliminación");
             
-        if (confirm != MessageBoxResult.Yes) return;
+        if (!confirmado) return;
         
         IsLoading = true;
         
@@ -308,17 +358,17 @@ public partial class ProyectosListViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show(result.Message, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess(result.Message);
                 await SearchProyectosAsync();
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al eliminar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al eliminar: {ex.Message}");
         }
         finally
         {
@@ -330,17 +380,8 @@ public partial class ProyectosListViewModel : ObservableObject
     /// Cancela la edición
     /// </summary>
     [RelayCommand]
-    private async Task CancelEditAsync()
+    private void CancelEdit()
     {
-        await NewProyectoAsync();
+        ShowHome();
     }
-}
-
-/// <summary>
-/// Item para el combo de estados de proyecto
-/// </summary>
-public class EstadoProyectoItem
-{
-    public string Nombre { get; set; } = string.Empty;
-    public EstadoProyecto? Valor { get; set; }
 }

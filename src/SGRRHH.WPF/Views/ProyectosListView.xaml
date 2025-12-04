@@ -5,28 +5,299 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900"
-             Background="{StaticResource SurfaceBrush}">
+             Background="{StaticResource BackgroundBrush}">
     
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
     </UserControl.Resources>
     
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="350"/>
-        </Grid.ColumnDefinitions>
-        
-        <!-- Panel izquierdo: Lista de proyectos -->
-        <Grid Grid.Column="0" Margin="0,0,15,0">
+        <!-- ============================================ -->
+        <!-- PANTALLA DE BIENVENIDA (Home) -->
+        <!-- ============================================ -->
+        <Grid Visibility="{Binding IsHomeVisible, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="📁" FontSize="72" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <TextBlock Text="¡Gestión de Proyectos!" 
+                           FontSize="32" FontWeight="Bold" 
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <TextBlock Text="¿Qué deseas hacer hoy?" 
+                           FontSize="18" 
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           HorizontalAlignment="Center" Margin="0,0,0,40"/>
+                
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <!-- Tarjeta: Nuevo Proyecto -->
+                    <Border Background="{StaticResource SurfaceBrush}" 
+                            CornerRadius="16" 
+                            Padding="30,25" 
+                            Margin="0,0,20,0"
+                            Cursor="Hand"
+                            BorderThickness="2"
+                            BorderBrush="Transparent">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect BlurRadius="15" ShadowDepth="3" Opacity="0.15" Color="#000000"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.25" Color="#22C55E"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowFormCommand}"/>
+                        </Border.InputBindings>
+                        <StackPanel Width="180">
+                            <Border Background="{StaticResource SuccessLightBrush}" 
+                                    CornerRadius="12" 
+                                    Width="64" Height="64" 
+                                    HorizontalAlignment="Center" 
+                                    Margin="0,0,0,15">
+                                <TextBlock Text="➕" FontSize="28" 
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Nuevo Proyecto" 
+                                       FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                            <TextBlock Text="Crear un nuevo proyecto" 
+                                       FontSize="12"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Tarjeta: Ver Proyectos -->
+                    <Border Background="{StaticResource SurfaceBrush}" 
+                            CornerRadius="16" 
+                            Padding="30,25"
+                            Cursor="Hand"
+                            BorderThickness="2"
+                            BorderBrush="Transparent">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect BlurRadius="15" ShadowDepth="3" Opacity="0.15" Color="#000000"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.25" Color="#3B82F6"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowListCommand}"/>
+                        </Border.InputBindings>
+                        <StackPanel Width="180">
+                            <Border Background="{StaticResource PrimaryLightBrush}" 
+                                    CornerRadius="12" 
+                                    Width="64" Height="64" 
+                                    HorizontalAlignment="Center" 
+                                    Margin="0,0,0,15">
+                                <TextBlock Text="📁" FontSize="28" 
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Ver Proyectos" 
+                                       FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                            <TextBlock Text="Consultar y gestionar proyectos" 
+                                       FontSize="12"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+            
+            <Border Grid.Row="1" Padding="20,15" Background="{StaticResource SurfaceBrush}">
+                <TextBlock HorizontalAlignment="Center" 
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           FontSize="13">
+                    <Run Text="📅"/>
+                    <Run Text="{Binding CurrentDateText, Mode=OneWay}"/>
+                </TextBlock>
+            </Border>
+        </Grid>
+        
+        <!-- ============================================ -->
+        <!-- VISTA DE FORMULARIO (Crear/Editar) -->
+        <!-- ============================================ -->
+        <Grid Visibility="{Binding IsFormViewVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+              Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <Button Grid.Row="0" Command="{Binding ShowHomeCommand}"
+                    HorizontalAlignment="Left" Margin="0,0,0,15"
+                    Style="{StaticResource SecondaryButton}" Height="36" Padding="15,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⬅" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="Volver al inicio" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            
+            <Border Grid.Row="1" Style="{StaticResource CardFlat}" Padding="30">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <TextBlock Grid.Row="0" Margin="0,0,0,20">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource CardTitle}">
+                                <Setter Property="Text" Value="➕ Nuevo Proyecto"/>
+                                <Setter Property="FontSize" Value="24"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                        <Setter Property="Text" Value="✏️ Editar Proyecto"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel MaxWidth="800">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Código *" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox Text="{Binding Codigo, UpdateSourceTrigger=PropertyChanged}" 
+                                             Style="{StaticResource StandardTextBox}" Margin="0,5,0,15"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Nombre *" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
+                                             Style="{StaticResource StandardTextBox}" Margin="0,5,0,15"/>
+                                </StackPanel>
+                            </Grid>
+                            
+                            <TextBlock Text="Cliente" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding Cliente, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{StaticResource StandardTextBox}" Margin="0,5,0,15"/>
+                            
+                            <TextBlock Text="Descripción" Style="{StaticResource FieldLabel}"/>
+                            <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}" 
+                                     Height="80" Margin="0,5,0,15" TextWrapping="Wrap" AcceptsReturn="True"
+                                     VerticalContentAlignment="Top"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Fecha Inicio" Style="{StaticResource FieldLabel}"/>
+                                    <DatePicker SelectedDate="{Binding FechaInicio}" Style="{StaticResource StandardDatePicker}" Margin="0,5,0,15"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Fecha Fin" Style="{StaticResource FieldLabel}"/>
+                                    <DatePicker SelectedDate="{Binding FechaFin}" Style="{StaticResource StandardDatePicker}" Margin="0,5,0,15"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Column="4">
+                                    <TextBlock Text="Estado" Style="{StaticResource FieldLabel}"/>
+                                    <ComboBox ItemsSource="{Binding EstadosForm}"
+                                              SelectedValuePath="Valor"
+                                              DisplayMemberPath="Nombre"
+                                              SelectedValue="{Binding Estado}"
+                                              Style="{StaticResource StandardComboBox}" Margin="0,5,0,15"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                    
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                        <Button Content="Cancelar" 
+                                Command="{Binding CancelEditCommand}"
+                                Style="{StaticResource SecondaryButton}" Padding="25,12" Margin="0,0,10,0"/>
+                        <Button Content="💾 Guardar" 
+                                Command="{Binding SaveProyectoCommand}"
+                                Style="{StaticResource SuccessButton}" Padding="25,12"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+        
+        <!-- ============================================ -->
+        <!-- VISTA DE LISTA -->
+        <!-- ============================================ -->
+        <Grid Visibility="{Binding IsListViewVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+              Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             
+            <Button Grid.Row="0" Command="{Binding ShowHomeCommand}"
+                    HorizontalAlignment="Left" Margin="0,0,0,15"
+                    Style="{StaticResource SecondaryButton}" Height="36" Padding="15,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⬅" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="Volver al inicio" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            
+            <Border Grid.Row="1" Background="{StaticResource PrimaryBrush}" CornerRadius="8" Padding="20" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="📋 Lista de Proyectos" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextInverseBrush}"/>
+                    <TextBlock Foreground="{StaticResource TextInverseBrush}" Opacity="0.8" Margin="0,5,0,0">
+                        <Run Text="Total:"/>
+                        <Run Text="{Binding TotalProyectos, Mode=OneWay}"/>
+                        <Run Text="proyecto(s)"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+            
             <!-- Filtros -->
-            <Border Grid.Row="0" Style="{StaticResource FilterPanel}" Margin="0,0,0,15">
+            <Border Grid.Row="2" Style="{StaticResource FilterPanel}" Margin="0,0,0,15">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -58,7 +329,7 @@
             </Border>
             
             <!-- DataGrid de proyectos -->
-            <DataGrid Grid.Row="1" 
+            <DataGrid Grid.Row="3" 
                       ItemsSource="{Binding Proyectos}"
                       SelectedItem="{Binding SelectedProyecto}"
                       Style="{StaticResource StandardDataGrid}"
@@ -110,111 +381,34 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
+                    <DataGridTemplateColumn Header="Acciones" Width="150">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button Content="✏️" ToolTip="Editar"
+                                            Command="{Binding DataContext.EditProyectoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            Style="{StaticResource IconButtonEdit}"
+                                            Padding="10,6" Margin="0,0,5,0"/>
+                                    <Button Content="🗑️" ToolTip="Eliminar"
+                                            Command="{Binding DataContext.DeleteProyectoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                            Style="{StaticResource IconButtonDelete}"
+                                            Padding="10,6"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
             
-            <!-- Barra de acciones -->
-            <Border Grid.Row="2" Style="{StaticResource StatusBar}" Margin="0,15,0,0">
-                <Grid>
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="➕ Nuevo" Width="90"
-                                Command="{Binding NewProyectoCommand}"
-                                Style="{StaticResource SuccessButton}" Margin="0,0,10,0"/>
-                        <Button Content="✏️ Editar" Width="90"
-                                Command="{Binding EditProyectoCommand}"
-                                Style="{StaticResource WarningButton}" Margin="0,0,10,0"/>
-                        <Button Content="🗑️ Eliminar" Width="90"
-                                Command="{Binding DeleteProyectoCommand}"
-                                Style="{StaticResource DangerButton}"/>
-                    </StackPanel>
-                    
-                    <TextBlock Text="{Binding TotalProyectos, StringFormat={}{0} proyecto(s)}" 
-                               HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"/>
-                </Grid>
+            <!-- Barra de estado -->
+            <Border Grid.Row="4" Style="{StaticResource StatusBar}" Margin="0,15,0,0">
+                <TextBlock Text="{Binding TotalProyectos, StringFormat={}{0} proyecto(s)}" 
+                           HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}"/>
             </Border>
         </Grid>
         
-        <!-- Panel derecho: Formulario -->
-        <Border Grid.Column="1" Style="{StaticResource CardFlat}" Padding="20">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <!-- Título -->
-                <TextBlock Grid.Row="0" Margin="0,0,0,20">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock" BasedOn="{StaticResource CardTitle}">
-                            <Setter Property="Text" Value="➕ Nuevo Proyecto"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsEditing}" Value="True">
-                                    <Setter Property="Text" Value="✏️ Editar Proyecto"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-                
-                <!-- Campos del formulario -->
-                <StackPanel Grid.Row="1">
-                    <TextBlock Text="Código *" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Text="{Binding Codigo, UpdateSourceTrigger=PropertyChanged}" 
-                             Style="{StaticResource StandardTextBox}" Margin="0,5,0,15"/>
-                    
-                    <TextBlock Text="Nombre *" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
-                             Style="{StaticResource StandardTextBox}" Margin="0,5,0,15"/>
-                    
-                    <TextBlock Text="Cliente" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Text="{Binding Cliente, UpdateSourceTrigger=PropertyChanged}" 
-                             Style="{StaticResource StandardTextBox}" Margin="0,5,0,15"/>
-                    
-                    <TextBlock Text="Descripción" Style="{StaticResource FieldLabel}"/>
-                    <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}" 
-                             Height="60" Margin="0,5,0,15" TextWrapping="Wrap" AcceptsReturn="True"
-                             VerticalContentAlignment="Top"/>
-                    
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <StackPanel Grid.Column="0" Margin="0,0,5,0">
-                            <TextBlock Text="Fecha Inicio" Style="{StaticResource FieldLabel}"/>
-                            <DatePicker SelectedDate="{Binding FechaInicio}" Style="{StaticResource StandardDatePicker}" Margin="0,5,0,15"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Column="1" Margin="5,0,0,0">
-                            <TextBlock Text="Fecha Fin" Style="{StaticResource FieldLabel}"/>
-                            <DatePicker SelectedDate="{Binding FechaFin}" Style="{StaticResource StandardDatePicker}" Margin="0,5,0,15"/>
-                        </StackPanel>
-                    </Grid>
-                    
-                    <TextBlock Text="Estado" Style="{StaticResource FieldLabel}"/>
-                    <ComboBox ItemsSource="{Binding EstadosForm}"
-                              SelectedValuePath="Valor"
-                              DisplayMemberPath="Nombre"
-                              SelectedValue="{Binding Estado}"
-                              Style="{StaticResource StandardComboBox}" Margin="0,5,0,15"/>
-                </StackPanel>
-                
-                <!-- Botones -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Cancelar" Width="90"
-                            Command="{Binding CancelEditCommand}"
-                            Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
-                    <Button Content="💾 Guardar" Width="100"
-                            Command="{Binding SaveProyectoCommand}"
-                            Style="{StaticResource PrimaryButton}"/>
-                </StackPanel>
-            </Grid>
-        </Border>
-        
         <!-- Loading overlay -->
-        <Border Grid.ColumnSpan="2" Background="#80000000" 
+        <Border Background="#80000000" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                 <ProgressBar IsIndeterminate="True" Width="200" Height="5"/>

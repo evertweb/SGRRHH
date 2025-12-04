@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SGRRHH.Core.Interfaces;
@@ -71,6 +72,14 @@ public static class FirebaseServiceCollectionExtensions
         services.AddScoped<IDateCalculationService, DateCalculationService>();
         services.AddScoped<IAbsenceValidationService, AbsenceValidationService>();
         
+        // Servicio de compresión de PDF (iLovePDF)
+        services.AddSingleton<IPdfCompressionService>(sp =>
+        {
+            var config = sp.GetService<IConfiguration>();
+            var logger = sp.GetService<ILogger<PdfCompressionService>>();
+            return new PdfCompressionService(config!, logger);
+        });
+        
         // Servicios de negocio
         services.AddScoped<IEmpleadoService, EmpleadoService>();
         services.AddScoped<IDepartamentoService, DepartamentoService>();
@@ -87,7 +96,16 @@ public static class FirebaseServiceCollectionExtensions
         services.AddScoped<IBackupService, BackupService>();
         services.AddScoped<IAuditService, AuditService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
-        services.AddScoped<IDocumentoEmpleadoService, DocumentoEmpleadoService>();
+        
+        // Servicio de documentos de empleado con soporte para compresión de PDF
+        services.AddScoped<IDocumentoEmpleadoService>(sp =>
+        {
+            var documentoRepo = sp.GetRequiredService<IDocumentoEmpleadoRepository>();
+            var empleadoRepo = sp.GetRequiredService<IEmpleadoRepository>();
+            var pdfCompression = sp.GetService<IPdfCompressionService>();
+            var logger = sp.GetService<ILogger<DocumentoEmpleadoService>>();
+            return new DocumentoEmpleadoService(documentoRepo, empleadoRepo, pdfCompression, logger);
+        });
         
         return services;
     }

@@ -18,16 +18,6 @@ public class ServiceResult
 
     public static ServiceResult Fail(List<string> errors)
         => new() { Success = false, Errors = errors, Message = string.Join(", ", errors) };
-
-    // Métodos estilo SuccessResult/FailureResult (alias para compatibilidad)
-    public static ServiceResult SuccessResult(string? message = null)
-        => Ok(message ?? "Operación exitosa");
-
-    public static ServiceResult FailureResult(string error)
-        => Fail(error);
-
-    public static ServiceResult FailureResult(List<string> errors)
-        => Fail(errors);
 }
 
 /// <summary>
@@ -47,14 +37,4 @@ public class ServiceResult<T> : ServiceResult
 
     public new static ServiceResult<T> Fail(List<string> errors)
         => new() { Success = false, Errors = errors, Message = string.Join(", ", errors) };
-
-    // Métodos estilo SuccessResult/FailureResult (alias para compatibilidad)
-    public static ServiceResult<T> SuccessResult(T data, string? message = null)
-        => Ok(data, message ?? "Operación exitosa");
-
-    public new static ServiceResult<T> FailureResult(string error)
-        => Fail(error);
-
-    public new static ServiceResult<T> FailureResult(List<string> errors)
-        => Fail(errors);
 }

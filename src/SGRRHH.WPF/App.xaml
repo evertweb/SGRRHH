@@ -39,6 +39,7 @@
         <converters:BoolToErrorBackgroundConverter x:Key="BoolToErrorBackgroundConverter"/>
         <converters:BoolToErrorForegroundConverter x:Key="BoolToErrorForegroundConverter"/>
         <converters:StepToColorConverter x:Key="StepToColorConverter"/>
+        <converters:CollectionContainsConverter x:Key="CollectionContainsConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

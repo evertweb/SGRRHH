@@ -9,256 +9,405 @@
              Background="{StaticResource BackgroundBrush}">
     
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        <!-- Panel de solicitudes pendientes (solo visible para Aprobadores/Admin) -->
-        <Border Grid.Row="0" Style="{StaticResource AlertPanel}" Margin="0,0,0,10"
-                Visibility="{Binding ShowPendientes, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Expander IsExpanded="True">
-                <Expander.Header>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="📋" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="Solicitudes Pendientes de Aprobación" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Foreground="{StaticResource WarningBrush}"/>
-                        <Border Background="{StaticResource WarningAccentBrush}" CornerRadius="10" Padding="8,2" Margin="15,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding TotalPendientes}" Style="{StaticResource CounterBadgeText}"/>
-                        </Border>
-                    </StackPanel>
-                </Expander.Header>
+        <!-- ============================================ -->
+        <!-- PANTALLA DE BIENVENIDA (Home) -->
+        <!-- ============================================ -->
+        <Grid Visibility="{Binding IsHomeVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Contenido principal centrado -->
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <!-- Emoji y Título -->
+                <TextBlock Text="👥" FontSize="72" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <TextBlock Text="¡Gestión de Empleados!" 
+                           FontSize="32" FontWeight="Bold" 
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <TextBlock Text="¿Qué deseas hacer hoy?" 
+                           FontSize="18" 
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           HorizontalAlignment="Center" Margin="0,0,0,40"/>
                 
-                <Grid Margin="0,10,0,0">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" MaxHeight="200"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                <!-- Tarjetas de acción -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <!-- Tarjeta: Registrar Empleado -->
+                    <Border Background="{StaticResource SurfaceBrush}" 
+                            CornerRadius="16" 
+                            Padding="30,25" 
+                            Margin="0,0,20,0"
+                            Cursor="Hand"
+                            BorderThickness="2"
+                            BorderBrush="Transparent">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect BlurRadius="15" ShadowDepth="3" Opacity="0.15" Color="#000000"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.25" Color="#22C55E"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding CreateEmpleadoCommand}"/>
+                        </Border.InputBindings>
+                        <StackPanel Width="180">
+                            <!-- Icono con fondo verde -->
+                            <Border Background="{StaticResource SuccessLightBrush}" 
+                                    CornerRadius="12" 
+                                    Width="64" Height="64" 
+                                    HorizontalAlignment="Center" 
+                                    Margin="0,0,0,15">
+                                <TextBlock Text="➕" FontSize="28" 
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Registrar Empleado" 
+                                       FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                            <TextBlock Text="Agregar un nuevo empleado al sistema" 
+                                       FontSize="12"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                     
-                    <!-- Lista de pendientes -->
-                    <DataGrid Grid.Row="0" ItemsSource="{Binding EmpleadosPendientes}"
-                              SelectedItem="{Binding SelectedPendiente}"
-                              Style="{StaticResource CompactDataGrid}"
-                              HorizontalGridLinesBrush="{StaticResource WarningBorderBrush}"
-                              BorderBrush="{StaticResource WarningBorderBrush}"
-                              ColumnHeaderStyle="{StaticResource DataGridColumnHeaderWarningStyle}"
-                              RowStyle="{StaticResource DataGridRowWarningStyle}">
-                        
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Código" Binding="{Binding Codigo}" Width="80"/>
-                            <DataGridTextColumn Header="Cédula" Binding="{Binding Cedula}" Width="100"/>
-                            <DataGridTextColumn Header="Nombre Completo" Binding="{Binding NombreCompleto}" Width="*"/>
-                            <DataGridTextColumn Header="Departamento" Binding="{Binding Departamento.Nombre}" Width="130"/>
-                            <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo.Nombre}" Width="130"/>
-                            <DataGridTextColumn Header="Fecha Solicitud" Binding="{Binding FechaSolicitud, StringFormat=dd/MM/yyyy HH:mm}" Width="130"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                    
-                    <!-- Botones de aprobación -->
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                        <Button Content="✅ Aprobar" Command="{Binding AprobarEmpleadoCommand}"
-                                Style="{StaticResource SuccessButton}" Height="35" Padding="20,0" Margin="0,0,10,0"/>
-                        <Button Content="❌ Rechazar" Command="{Binding RechazarEmpleadoCommand}"
-                                Style="{StaticResource DangerButton}" Height="35" Padding="20,0"/>
-                    </StackPanel>
-                </Grid>
-            </Expander>
-        </Border>
-        
-        <!-- Barra de herramientas superior -->
-        <Border Grid.Row="1" Style="{StaticResource FilterPanel}" Margin="0,0,0,10">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                
-                <!-- Filtros de búsqueda -->
-                <WrapPanel Grid.Column="0" VerticalAlignment="Center">
-                    <!-- Campo de búsqueda -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
-                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource StandardTextBox}" Width="250">
-                            <TextBox.InputBindings>
-                                <KeyBinding Key="Return" Command="{Binding SearchEmpleadosCommand}"/>
-                            </TextBox.InputBindings>
-                        </TextBox>
-                        <Button Content="Buscar" Command="{Binding SearchEmpleadosCommand}"
-                                Style="{StaticResource PrimaryButton}" Width="80" Height="35" Margin="5,0,0,0"/>
-                    </StackPanel>
-                    
-                    <!-- Filtro por departamento -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
-                        <TextBlock Text="Departamento:" VerticalAlignment="Center" 
-                                   Margin="0,0,8,0" Style="{StaticResource BodyTextSecondary}"/>
-                        <ComboBox ItemsSource="{Binding Departamentos}"
-                                  SelectedItem="{Binding SelectedDepartamento}"
-                                  DisplayMemberPath="Nombre"
-                                  Style="{StaticResource StandardComboBox}" Width="180"/>
-                    </StackPanel>
-                    
-                    <!-- Filtro por estado -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
-                        <TextBlock Text="Estado:" VerticalAlignment="Center" 
-                                   Margin="0,0,8,0" Style="{StaticResource BodyTextSecondary}"/>
-                        <ComboBox ItemsSource="{Binding Estados}"
-                                  SelectedValue="{Binding SelectedEstado}"
-                                  SelectedValuePath="Valor"
-                                  DisplayMemberPath="Nombre"
-                                  Style="{StaticResource StandardComboBox}" Width="160"/>
-                    </StackPanel>
-                    
-                    <!-- Botón limpiar filtros -->
-                    <Button Content="✖ Limpiar" Command="{Binding ClearFiltersCommand}"
-                            Style="{StaticResource SecondaryButton}" Height="35" Padding="15,0" Margin="0,0,0,5"/>
-                </WrapPanel>
-                
-                <!-- Botón nuevo empleado -->
-                <Button Grid.Column="1" Command="{Binding CreateEmpleadoCommand}"
-                        Style="{StaticResource SuccessButton}" Height="40" Padding="20,0" FontSize="14">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="➕" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Nuevo Empleado" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </Grid>
-        </Border>
-        
-        <!-- Indicador de carga -->
-        <Border Grid.Row="2" Background="{StaticResource PrimaryLightBrush}" Padding="10" Margin="0,0,0,10" CornerRadius="{StaticResource SmallRadius}"
-                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <TextBlock Text="⏳" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                <TextBlock Text="{Binding StatusMessage}" FontSize="13" Foreground="{StaticResource PrimaryDarkBrush}" VerticalAlignment="Center"/>
+                    <!-- Tarjeta: Ver Empleados -->
+                    <Border Background="{StaticResource SurfaceBrush}" 
+                            CornerRadius="16" 
+                            Padding="30,25"
+                            Cursor="Hand"
+                            BorderThickness="2"
+                            BorderBrush="Transparent">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect BlurRadius="15" ShadowDepth="3" Opacity="0.15" Color="#000000"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.25" Color="#3B82F6"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowListCommand}"/>
+                        </Border.InputBindings>
+                        <StackPanel Width="180">
+                            <!-- Icono con fondo azul -->
+                            <Border Background="{StaticResource PrimaryLightBrush}" 
+                                    CornerRadius="12" 
+                                    Width="64" Height="64" 
+                                    HorizontalAlignment="Center" 
+                                    Margin="0,0,0,15">
+                                <TextBlock Text="👥" FontSize="28" 
+                                           HorizontalAlignment="Center" 
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Ver Empleados" 
+                                       FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                            <TextBlock Text="Consultar y gestionar empleados existentes" 
+                                       FontSize="12"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap" TextAlignment="Center"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </StackPanel>
-        </Border>
+            
+            <!-- Footer con fecha -->
+            <Border Grid.Row="1" Padding="20,15" Background="{StaticResource SurfaceBrush}">
+                <TextBlock HorizontalAlignment="Center" 
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           FontSize="13">
+                    <Run Text="📅"/>
+                    <Run Text="{Binding CurrentDateText, Mode=OneWay}"/>
+                </TextBlock>
+            </Border>
+        </Grid>
         
-        <!-- Lista de empleados -->
-        <Border Grid.Row="3" Style="{StaticResource CardFlat}" Padding="0">
-            <DataGrid ItemsSource="{Binding Empleados}"
-                      SelectedItem="{Binding SelectedEmpleado}"
-                      Style="{StaticResource StandardDataGrid}">
-                
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Código" Binding="{Binding Codigo}" Width="90"/>
-                    <DataGridTextColumn Header="Cédula" Binding="{Binding Cedula}" Width="110"/>
-                    <DataGridTextColumn Header="Nombre Completo" Binding="{Binding NombreCompleto}" Width="*"/>
-                    <DataGridTextColumn Header="Departamento" Binding="{Binding Departamento.Nombre}" Width="140"/>
-                    <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo.Nombre}" Width="140"/>
-                    <DataGridTextColumn Header="Ingreso" Binding="{Binding FechaIngreso, StringFormat=dd/MM/yyyy}" Width="90"/>
+        <!-- ============================================ -->
+        <!-- VISTA DE LISTA DE EMPLEADOS -->
+        <!-- ============================================ -->
+        <Grid Visibility="{Binding IsListVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Botón volver al inicio -->
+            <Button Grid.Row="0" Command="{Binding ShowHomeCommand}"
+                    HorizontalAlignment="Left" Margin="0,0,0,10"
+                    Style="{StaticResource SecondaryButton}" Height="36" Padding="15,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⬅" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="Volver al inicio" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            
+            <!-- Panel de solicitudes pendientes (solo visible para Aprobadores/Admin) -->
+            <Border Grid.Row="1" Style="{StaticResource AlertPanel}" Margin="0,0,0,10"
+                    Visibility="{Binding ShowPendientes, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Expander IsExpanded="True">
+                    <Expander.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📋" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBlock Text="Solicitudes Pendientes de Aprobación" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Foreground="{StaticResource WarningBrush}"/>
+                            <Border Background="{StaticResource WarningAccentBrush}" CornerRadius="10" Padding="8,2" Margin="15,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding TotalPendientes}" Style="{StaticResource CounterBadgeText}"/>
+                            </Border>
+                        </StackPanel>
+                    </Expander.Header>
                     
-                    <DataGridTemplateColumn Header="Estado" Width="110">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Border Padding="8,4" CornerRadius="3" HorizontalAlignment="Left">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Estado}" Value="PendienteAprobacion">
-                                                    <Setter Property="Background" Value="{StaticResource WarningLightBrush}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Estado}" Value="Activo">
-                                                    <Setter Property="Background" Value="{StaticResource SuccessLightBrush}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Estado}" Value="EnVacaciones">
-                                                    <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Estado}" Value="EnLicencia">
-                                                    <Setter Property="Background" Value="{StaticResource WarningLightBrush}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Estado}" Value="Suspendido">
-                                                    <Setter Property="Background" Value="{StaticResource DangerLightBrush}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Estado}" Value="Retirado">
-                                                    <Setter Property="Background" Value="{StaticResource GrayBlueBrush}"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Estado}" Value="Rechazado">
-                                                    <Setter Property="Background" Value="{StaticResource DangerSoftBrush}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <TextBlock FontSize="11" FontWeight="SemiBold">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
+                    <Grid Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" MaxHeight="200"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Lista de pendientes -->
+                        <DataGrid Grid.Row="0" ItemsSource="{Binding EmpleadosPendientes}"
+                                  SelectedItem="{Binding SelectedPendiente}"
+                                  Style="{StaticResource CompactDataGrid}"
+                                  HorizontalGridLinesBrush="{StaticResource WarningBorderBrush}"
+                                  BorderBrush="{StaticResource WarningBorderBrush}"
+                                  ColumnHeaderStyle="{StaticResource DataGridColumnHeaderWarningStyle}"
+                                  RowStyle="{StaticResource DataGridRowWarningStyle}">
+                            
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Código" Binding="{Binding Codigo}" Width="80"/>
+                                <DataGridTextColumn Header="Cédula" Binding="{Binding Cedula}" Width="100"/>
+                                <DataGridTextColumn Header="Nombre Completo" Binding="{Binding NombreCompleto}" Width="*"/>
+                                <DataGridTextColumn Header="Departamento" Binding="{Binding Departamento.Nombre}" Width="130"/>
+                                <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo.Nombre}" Width="130"/>
+                                <DataGridTextColumn Header="Fecha Solicitud" Binding="{Binding FechaSolicitud, StringFormat=dd/MM/yyyy HH:mm}" Width="130"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        
+                        <!-- Botones de aprobación -->
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                            <Button Content="✅ Aprobar" Command="{Binding AprobarEmpleadoCommand}"
+                                    Style="{StaticResource SuccessButton}" Height="35" Padding="20,0" Margin="0,0,10,0"/>
+                            <Button Content="❌ Rechazar" Command="{Binding RechazarEmpleadoCommand}"
+                                    Style="{StaticResource DangerButton}" Height="35" Padding="20,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Expander>
+            </Border>
+        
+            <!-- Barra de herramientas superior -->
+            <Border Grid.Row="2" Style="{StaticResource FilterPanel}" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Filtros de búsqueda -->
+                    <WrapPanel Grid.Column="0" VerticalAlignment="Center">
+                        <!-- Campo de búsqueda -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                            <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource StandardTextBox}" Width="250">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Return" Command="{Binding SearchEmpleadosCommand}"/>
+                                </TextBox.InputBindings>
+                            </TextBox>
+                            <Button Content="Buscar" Command="{Binding SearchEmpleadosCommand}"
+                                    Style="{StaticResource PrimaryButton}" Width="80" Height="35" Margin="5,0,0,0"/>
+                        </StackPanel>
+                        
+                        <!-- Filtro por departamento -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                            <TextBlock Text="Departamento:" VerticalAlignment="Center" 
+                                       Margin="0,0,8,0" Style="{StaticResource BodyTextSecondary}"/>
+                            <ComboBox ItemsSource="{Binding Departamentos}"
+                                      SelectedItem="{Binding SelectedDepartamento}"
+                                      DisplayMemberPath="Nombre"
+                                      Style="{StaticResource StandardComboBox}" Width="180"/>
+                        </StackPanel>
+                        
+                        <!-- Filtro por estado -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
+                            <TextBlock Text="Estado:" VerticalAlignment="Center" 
+                                       Margin="0,0,8,0" Style="{StaticResource BodyTextSecondary}"/>
+                            <ComboBox ItemsSource="{Binding Estados}"
+                                      SelectedValue="{Binding SelectedEstado}"
+                                      SelectedValuePath="Valor"
+                                      DisplayMemberPath="Nombre"
+                                      Style="{StaticResource StandardComboBox}" Width="160"/>
+                        </StackPanel>
+                        
+                        <!-- Botón limpiar filtros -->
+                        <Button Content="✖ Limpiar" Command="{Binding ClearFiltersCommand}"
+                                Style="{StaticResource SecondaryButton}" Height="35" Padding="15,0" Margin="0,0,0,5"/>
+                    </WrapPanel>
+                </Grid>
+            </Border>
+        
+            <!-- Indicador de carga -->
+            <Border Grid.Row="3" Background="{StaticResource PrimaryLightBrush}" Padding="10" Margin="0,0,0,10" CornerRadius="{StaticResource SmallRadius}"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="⏳" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="13" Foreground="{StaticResource PrimaryDarkBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        
+            <!-- Lista de empleados -->
+            <Border Grid.Row="4" Style="{StaticResource CardFlat}" Padding="0">
+                <DataGrid ItemsSource="{Binding Empleados}"
+                          SelectedItem="{Binding SelectedEmpleado}"
+                          Style="{StaticResource StandardDataGrid}">
+                    
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Código" Binding="{Binding Codigo}" Width="90"/>
+                        <DataGridTextColumn Header="Cédula" Binding="{Binding Cedula}" Width="110"/>
+                        <DataGridTextColumn Header="Nombre Completo" Binding="{Binding NombreCompleto}" Width="*"/>
+                        <DataGridTextColumn Header="Departamento" Binding="{Binding Departamento.Nombre}" Width="140"/>
+                        <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo.Nombre}" Width="140"/>
+                        <DataGridTextColumn Header="Ingreso" Binding="{Binding FechaIngreso, StringFormat=dd/MM/yyyy}" Width="90"/>
+                        
+                        <DataGridTemplateColumn Header="Estado" Width="110">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Padding="8,4" CornerRadius="3" HorizontalAlignment="Left">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Estado}" Value="PendienteAprobacion">
-                                                        <Setter Property="Text" Value="⏳ Pendiente"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource WarningDarkBrush}"/>
+                                                        <Setter Property="Background" Value="{StaticResource WarningLightBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Activo">
-                                                        <Setter Property="Text" Value="✅ Activo"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource SuccessDarkBrush}"/>
+                                                        <Setter Property="Background" Value="{StaticResource SuccessLightBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="EnVacaciones">
-                                                        <Setter Property="Text" Value="🏖️ Vacaciones"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
+                                                        <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="EnLicencia">
-                                                        <Setter Property="Text" Value="📋 Licencia"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource WarningDarkBrush}"/>
+                                                        <Setter Property="Background" Value="{StaticResource WarningLightBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Suspendido">
-                                                        <Setter Property="Text" Value="⚠️ Suspendido"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource DangerDarkerBrush}"/>
+                                                        <Setter Property="Background" Value="{StaticResource DangerLightBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Retirado">
-                                                        <Setter Property="Text" Value="🚪 Retirado"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource GrayBlueDarkBrush}"/>
+                                                        <Setter Property="Background" Value="{StaticResource GrayBlueBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="Rechazado">
-                                                        <Setter Property="Text" Value="❌ Rechazado"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource DangerDarkerBrush}"/>
+                                                        <Setter Property="Background" Value="{StaticResource DangerSoftBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Border>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    
-                    <!-- Columna de acciones -->
-                    <DataGridTemplateColumn Header="Acciones" Width="180">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <Button Content="👁" 
-                                            Command="{Binding DataContext.ViewEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            Style="{StaticResource IconButtonView}" Margin="2,0"/>
-                                    <Button Content="✏️"
-                                            Command="{Binding DataContext.EditEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            Style="{StaticResource IconButtonEdit}" Margin="2,0"/>
-                                    <Button Content="⏸️"
-                                            Command="{Binding DataContext.DeactivateEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            Style="{StaticResource IconButtonDeactivate}" Margin="2,0"/>
-                                    <Button Content="❌"
-                                            Command="{Binding DataContext.DeleteEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                            Style="{StaticResource IconButtonDelete}" Margin="2,0"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
-        </Border>
+                                        </Border.Style>
+                                        <TextBlock FontSize="11" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="PendienteAprobacion">
+                                                            <Setter Property="Text" Value="⏳ Pendiente"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource WarningDarkBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="Activo">
+                                                            <Setter Property="Text" Value="✅ Activo"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource SuccessDarkBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="EnVacaciones">
+                                                            <Setter Property="Text" Value="🏖️ Vacaciones"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="EnLicencia">
+                                                            <Setter Property="Text" Value="📋 Licencia"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource WarningDarkBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="Suspendido">
+                                                            <Setter Property="Text" Value="⚠️ Suspendido"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource DangerDarkerBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="Retirado">
+                                                            <Setter Property="Text" Value="🚪 Retirado"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource GrayBlueDarkBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Estado}" Value="Rechazado">
+                                                            <Setter Property="Text" Value="❌ Rechazado"/>
+                                                            <Setter Property="Foreground" Value="{StaticResource DangerDarkerBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        
+                        <!-- Columna de acciones -->
+                        <DataGridTemplateColumn Header="Acciones" Width="180">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <Button Content="👁" 
+                                                Command="{Binding DataContext.ViewEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                Style="{StaticResource IconButtonView}" Margin="2,0"/>
+                                        <Button Content="✏️"
+                                                Command="{Binding DataContext.EditEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                Style="{StaticResource IconButtonEdit}" Margin="2,0"/>
+                                        <Button Content="⏸️"
+                                                Command="{Binding DataContext.DeactivateEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                Style="{StaticResource IconButtonDeactivate}" Margin="2,0"/>
+                                        <Button Content="❌"
+                                                Command="{Binding DataContext.DeleteEmpleadoCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                Style="{StaticResource IconButtonDelete}" Margin="2,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
         
-        <!-- Barra de estado -->
-        <Border Grid.Row="4" Style="{StaticResource StatusBar}" Margin="0,10,0,0">
-            <Grid>
-                <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" Style="{StaticResource BodyTextSecondary}">
-                    <Run Text="Total:"/>
-                    <Run Text="{Binding TotalEmpleados, Mode=OneWay}" FontWeight="Bold"/>
-                    <Run Text="empleado(s)"/>
-                    <Run Text=" | Pendientes:"/>
-                    <Run Text="{Binding TotalPendientes, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/>
-                </TextBlock>
-                <TextBlock Text="{Binding StatusMessage}" HorizontalAlignment="Right" 
-                           VerticalAlignment="Center" Style="{StaticResource CaptionText}"/>
-            </Grid>
-        </Border>
+            <!-- Barra de estado -->
+            <Border Grid.Row="5" Style="{StaticResource StatusBar}" Margin="0,10,0,0">
+                <Grid>
+                    <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" Style="{StaticResource BodyTextSecondary}">
+                        <Run Text="Total:"/>
+                        <Run Text="{Binding TotalEmpleados, Mode=OneWay}" FontWeight="Bold"/>
+                        <Run Text="empleado(s)"/>
+                        <Run Text=" | Pendientes:"/>
+                        <Run Text="{Binding TotalPendientes, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource WarningBrush}"/>
+                    </TextBlock>
+                    <TextBlock Text="{Binding StatusMessage}" HorizontalAlignment="Right" 
+                               VerticalAlignment="Center" Style="{StaticResource CaptionText}"/>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

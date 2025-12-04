@@ -33,11 +33,11 @@ public class ContratoService : IContratoService
         try
         {
             var contratos = await _contratoRepository.GetByEmpleadoIdAsync(empleadoId);
-            return ServiceResult<IEnumerable<Contrato>>.SuccessResult(contratos);
+            return ServiceResult<IEnumerable<Contrato>>.Ok(contratos);
         }
         catch (Exception ex)
         {
-            return ServiceResult<IEnumerable<Contrato>>.FailureResult($"Error al obtener contratos: {ex.Message}");
+            return ServiceResult<IEnumerable<Contrato>>.Fail($"Error al obtener contratos: {ex.Message}");
         }
     }
     
@@ -47,13 +47,13 @@ public class ContratoService : IContratoService
         {
             var contrato = await _contratoRepository.GetByIdAsync(id);
             if (contrato == null)
-                return ServiceResult<Contrato>.FailureResult("Contrato no encontrado");
+                return ServiceResult<Contrato>.Fail("Contrato no encontrado");
                 
-            return ServiceResult<Contrato>.SuccessResult(contrato);
+            return ServiceResult<Contrato>.Ok(contrato);
         }
         catch (Exception ex)
         {
-            return ServiceResult<Contrato>.FailureResult($"Error al obtener contrato: {ex.Message}");
+            return ServiceResult<Contrato>.Fail($"Error al obtener contrato: {ex.Message}");
         }
     }
     
@@ -63,18 +63,18 @@ public class ContratoService : IContratoService
         {
             var errors = ValidarContrato(contrato);
             if (errors.Any())
-                return ServiceResult<Contrato>.FailureResult(errors);
+                return ServiceResult<Contrato>.Fail(errors);
             
             // Verificar que el empleado exista
             var empleado = await _empleadoRepository.GetByIdAsync(contrato.EmpleadoId);
             if (empleado == null)
-                return ServiceResult<Contrato>.FailureResult("Empleado no encontrado");
+                return ServiceResult<Contrato>.Fail("Empleado no encontrado");
             
             // Verificar si ya tiene un contrato activo
             var contratoActivo = await _contratoRepository.GetContratoActivoByEmpleadoIdAsync(contrato.EmpleadoId);
             if (contratoActivo != null)
             {
-                return ServiceResult<Contrato>.FailureResult(
+                return ServiceResult<Contrato>.Fail(
                     "El empleado ya tiene un contrato activo. Debe finalizarlo o renovarlo primero.");
             }
             
@@ -85,11 +85,11 @@ public class ContratoService : IContratoService
             await _contratoRepository.AddAsync(contrato);
             await _contratoRepository.SaveChangesAsync();
             
-            return ServiceResult<Contrato>.SuccessResult(contrato, "Contrato creado exitosamente");
+            return ServiceResult<Contrato>.Ok(contrato, "Contrato creado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<Contrato>.FailureResult($"Error al crear contrato: {ex.Message}");
+            return ServiceResult<Contrato>.Fail($"Error al crear contrato: {ex.Message}");
         }
     }
     
@@ -99,11 +99,11 @@ public class ContratoService : IContratoService
         {
             var existing = await _contratoRepository.GetByIdAsync(contrato.Id);
             if (existing == null)
-                return ServiceResult<Contrato>.FailureResult("Contrato no encontrado");
+                return ServiceResult<Contrato>.Fail("Contrato no encontrado");
             
             var errors = ValidarContrato(contrato);
             if (errors.Any())
-                return ServiceResult<Contrato>.FailureResult(errors);
+                return ServiceResult<Contrato>.Fail(errors);
             
             // Actualizar campos
             existing.TipoContrato = contrato.TipoContrato;
@@ -118,11 +118,11 @@ public class ContratoService : IContratoService
             await _contratoRepository.UpdateAsync(existing);
             await _contratoRepository.SaveChangesAsync();
             
-            return ServiceResult<Contrato>.SuccessResult(existing, "Contrato actualizado exitosamente");
+            return ServiceResult<Contrato>.Ok(existing, "Contrato actualizado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<Contrato>.FailureResult($"Error al actualizar contrato: {ex.Message}");
+            return ServiceResult<Contrato>.Fail($"Error al actualizar contrato: {ex.Message}");
         }
     }
     
@@ -132,22 +132,22 @@ public class ContratoService : IContratoService
         {
             var contrato = await _contratoRepository.GetByIdAsync(id);
             if (contrato == null)
-                return ServiceResult<bool>.FailureResult("Contrato no encontrado");
+                return ServiceResult<bool>.Fail("Contrato no encontrado");
             
             // No permitir eliminar contratos finalizados
             if (contrato.Estado == EstadoContrato.Finalizado)
             {
-                return ServiceResult<bool>.FailureResult("No se puede eliminar un contrato finalizado");
+                return ServiceResult<bool>.Fail("No se puede eliminar un contrato finalizado");
             }
             
             await _contratoRepository.DeleteAsync(id);
             await _contratoRepository.SaveChangesAsync();
             
-            return ServiceResult<bool>.SuccessResult(true, "Contrato eliminado exitosamente");
+            return ServiceResult<bool>.Ok(true, "Contrato eliminado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<bool>.FailureResult($"Error al eliminar contrato: {ex.Message}");
+            return ServiceResult<bool>.Fail($"Error al eliminar contrato: {ex.Message}");
         }
     }
     
@@ -156,11 +156,11 @@ public class ContratoService : IContratoService
         try
         {
             var contrato = await _contratoRepository.GetContratoActivoByEmpleadoIdAsync(empleadoId);
-            return ServiceResult<Contrato?>.SuccessResult(contrato);
+            return ServiceResult<Contrato?>.Ok(contrato);
         }
         catch (Exception ex)
         {
-            return ServiceResult<Contrato?>.FailureResult($"Error al obtener contrato activo: {ex.Message}");
+            return ServiceResult<Contrato?>.Fail($"Error al obtener contrato activo: {ex.Message}");
         }
     }
     
@@ -176,19 +176,19 @@ public class ContratoService : IContratoService
             
             var contratoActual = await _contratoRepository.GetByIdAsync(contratoActualId);
             if (contratoActual == null)
-                return ServiceResult<Contrato>.FailureResult("Contrato actual no encontrado");
+                return ServiceResult<Contrato>.Fail("Contrato actual no encontrado");
             
             if (contratoActual.Estado != EstadoContrato.Activo)
-                return ServiceResult<Contrato>.FailureResult("Solo se pueden renovar contratos activos");
+                return ServiceResult<Contrato>.Fail("Solo se pueden renovar contratos activos");
             
             var errors = ValidarContrato(nuevoContrato);
             if (errors.Any())
-                return ServiceResult<Contrato>.FailureResult(errors);
+                return ServiceResult<Contrato>.Fail(errors);
             
             // La fecha de inicio del nuevo contrato debe ser posterior a la fecha fin del actual
             if (contratoActual.FechaFin.HasValue && nuevoContrato.FechaInicio < contratoActual.FechaFin.Value)
             {
-                return ServiceResult<Contrato>.FailureResult(
+                return ServiceResult<Contrato>.Fail(
                     "La fecha de inicio del nuevo contrato debe ser posterior a la fecha de fin del contrato actual");
             }
             
@@ -225,7 +225,7 @@ public class ContratoService : IContratoService
                 }
                 
                 _logger?.LogInformation("Contrato {ContratoId} renovado exitosamente", contratoActualId);
-                return ServiceResult<Contrato>.SuccessResult(nuevoContrato, "Contrato renovado exitosamente");
+                return ServiceResult<Contrato>.Ok(nuevoContrato, "Contrato renovado exitosamente");
             }
             catch
             {
@@ -240,7 +240,7 @@ public class ContratoService : IContratoService
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al renovar contrato {ContratoId}", contratoActualId);
-            return ServiceResult<Contrato>.FailureResult($"Error al renovar contrato: {ex.Message}");
+            return ServiceResult<Contrato>.Fail($"Error al renovar contrato: {ex.Message}");
         }
     }
     
@@ -253,13 +253,13 @@ public class ContratoService : IContratoService
         {
             var contrato = await _contratoRepository.GetByIdAsync(contratoId);
             if (contrato == null)
-                return ServiceResult<bool>.FailureResult("Contrato no encontrado");
+                return ServiceResult<bool>.Fail("Contrato no encontrado");
             
             if (contrato.Estado != EstadoContrato.Activo)
-                return ServiceResult<bool>.FailureResult("Solo se pueden finalizar contratos activos");
+                return ServiceResult<bool>.Fail("Solo se pueden finalizar contratos activos");
             
             if (fechaFin < contrato.FechaInicio)
-                return ServiceResult<bool>.FailureResult("La fecha de finalización no puede ser anterior a la fecha de inicio");
+                return ServiceResult<bool>.Fail("La fecha de finalización no puede ser anterior a la fecha de inicio");
             
             contrato.Estado = EstadoContrato.Finalizado;
             contrato.FechaFin = fechaFin;
@@ -268,11 +268,11 @@ public class ContratoService : IContratoService
             await _contratoRepository.UpdateAsync(contrato);
             await _contratoRepository.SaveChangesAsync();
             
-            return ServiceResult<bool>.SuccessResult(true, "Contrato finalizado exitosamente");
+            return ServiceResult<bool>.Ok(true, "Contrato finalizado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<bool>.FailureResult($"Error al finalizar contrato: {ex.Message}");
+            return ServiceResult<bool>.Fail($"Error al finalizar contrato: {ex.Message}");
         }
     }
     
@@ -284,11 +284,11 @@ public class ContratoService : IContratoService
         try
         {
             var contratos = await _contratoRepository.GetContratosProximosAVencerAsync(diasAnticipacion);
-            return ServiceResult<IEnumerable<Contrato>>.SuccessResult(contratos);
+            return ServiceResult<IEnumerable<Contrato>>.Ok(contratos);
         }
         catch (Exception ex)
         {
-            return ServiceResult<IEnumerable<Contrato>>.FailureResult($"Error al obtener contratos: {ex.Message}");
+            return ServiceResult<IEnumerable<Contrato>>.Fail($"Error al obtener contratos: {ex.Message}");
         }
     }
     
@@ -300,11 +300,11 @@ public class ContratoService : IContratoService
         try
         {
             var contratos = await _contratoRepository.GetAllActiveAsync();
-            return ServiceResult<IEnumerable<Contrato>>.SuccessResult(contratos);
+            return ServiceResult<IEnumerable<Contrato>>.Ok(contratos);
         }
         catch (Exception ex)
         {
-            return ServiceResult<IEnumerable<Contrato>>.FailureResult($"Error: {ex.Message}");
+            return ServiceResult<IEnumerable<Contrato>>.Fail($"Error: {ex.Message}");
         }
     }
     

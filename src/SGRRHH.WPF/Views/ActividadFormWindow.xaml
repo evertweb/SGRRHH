@@ -1,0 +1,106 @@
+<Window x:Class="SGRRHH.WPF.Views.ActividadFormWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="{Binding WindowTitle}" 
+        Height="500" Width="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource BackgroundBrush}">
+    
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+    </Window.Resources>
+    
+    <Grid Margin="25">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Título -->
+        <TextBlock Grid.Row="0" Text="{Binding WindowTitle}" 
+                   Style="{StaticResource HeaderTitle}" Margin="0,0,0,20"/>
+        
+        <!-- Formulario -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Código -->
+                <TextBlock Text="Código *" Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="{Binding Codigo, UpdateSourceTrigger=PropertyChanged}" 
+                         Style="{StaticResource StandardTextBox}" Margin="0,5,0,15"
+                         IsReadOnly="True" Background="{StaticResource BackgroundBrush}"/>
+                
+                <!-- Nombre -->
+                <TextBlock Text="Nombre *" Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
+                         Style="{StaticResource StandardTextBox}" Margin="0,5,0,15"
+                         MaxLength="100"/>
+                
+                <!-- Categoría -->
+                <TextBlock Text="Categoría *" Style="{StaticResource FieldLabel}"/>
+                <ComboBox ItemsSource="{Binding CategoriasDisponibles}"
+                          SelectedItem="{Binding CategoriaSeleccionada}"
+                          Style="{StaticResource StandardComboBox}" Margin="0,5,0,15"/>
+                
+                <!-- Descripción -->
+                <TextBlock Text="Descripción" Style="{StaticResource FieldLabel}"/>
+                <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}" 
+                         Height="80" Margin="0,5,0,15" TextWrapping="Wrap" AcceptsReturn="True"
+                         VerticalContentAlignment="Top" MaxLength="500"/>
+                
+                <!-- Orden y Requiere Proyecto -->
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <TextBlock Text="Orden de visualización" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Text="{Binding Orden, UpdateSourceTrigger=PropertyChanged}" 
+                                 Style="{StaticResource StandardTextBox}" Margin="0,5,0,0"
+                                 HorizontalContentAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="¿Requiere proyecto?" Style="{StaticResource FieldLabel}"/>
+                        <CheckBox IsChecked="{Binding RequiereProyecto}" 
+                                  Content="Sí, debe seleccionar proyecto" Margin="0,10,0,0" 
+                                  VerticalContentAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+                
+                <!-- Info -->
+                <Border Style="{StaticResource AlertPanel}" Margin="0,10,0,0">
+                    <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource WarningDarkerBrush}">
+                        <Run FontWeight="SemiBold">💡 Tip:</Run>
+                        <Run Text=" Si la actividad requiere proyecto, el usuario deberá seleccionar un proyecto al registrarla en el control diario."/>
+                    </TextBlock>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Botones -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Cancelar" Width="100"
+                    Command="{Binding CancelCommand}"
+                    Style="{StaticResource SecondaryButton}" Margin="0,0,10,0"/>
+            <Button Content="💾 Guardar" Width="120"
+                    Command="{Binding SaveCommand}"
+                    Style="{StaticResource PrimaryButton}"/>
+        </StackPanel>
+        
+        <!-- Loading overlay -->
+        <Border Grid.RowSpan="3" Background="#80FFFFFF" 
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="200" Height="5"/>
+                <TextBlock Text="Guardando..." Margin="0,10,0,0" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

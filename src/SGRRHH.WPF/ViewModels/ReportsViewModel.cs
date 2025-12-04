@@ -15,7 +15,7 @@ public class ReportDefinition
     public bool RequiresEmpleado { get; set; }
 }
 
-public partial class ReportsViewModel : ObservableObject
+public partial class ReportsViewModel : ViewModelBase
 {
     private readonly IEmpleadoService _empleadoService;
     private readonly IControlDiarioService _controlDiarioService;
@@ -45,12 +45,6 @@ public partial class ReportsViewModel : ObservableObject
     private object? _reportResults;
 
     public bool HasResults => ReportResults != null;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
 
     public ReportsViewModel(
         IEmpleadoService empleadoService,

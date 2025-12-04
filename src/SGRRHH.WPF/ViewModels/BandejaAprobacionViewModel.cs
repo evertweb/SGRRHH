@@ -12,9 +12,10 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para la bandeja de aprobación de permisos (para aprobadores/admin)
 /// </summary>
-public partial class BandejaAprobacionViewModel : ObservableObject
+public partial class BandejaAprobacionViewModel : ViewModelBase
 {
     private readonly IPermisoService _permisoService;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private ObservableCollection<Permiso> _permisosPendientes = new();
@@ -48,9 +49,10 @@ public partial class BandejaAprobacionViewModel : ObservableObject
     /// </summary>
     public event EventHandler? PermisoProcessed;
     
-    public BandejaAprobacionViewModel(IPermisoService permisoService)
+    public BandejaAprobacionViewModel(IPermisoService permisoService, IDialogService dialogService)
     {
         _permisoService = permisoService;
+        _dialogService = dialogService;
     }
     
     public async Task LoadDataAsync()
@@ -74,7 +76,7 @@ public partial class BandejaAprobacionViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al cargar permisos pendientes: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar permisos pendientes: {ex.Message}", "Error");
         }
         finally
         {
@@ -124,16 +126,12 @@ public partial class BandejaAprobacionViewModel : ObservableObject
     {
         if (SelectedPermiso == null) return;
         
-        var result = MessageBox.Show(
+        if (_dialogService.Confirm(
             $"¿Está seguro de aprobar el permiso {SelectedPermiso.NumeroActa}?\n\n" +
             $"Empleado: {SelectedPermiso.Empleado.NombreCompleto}\n" +
             $"Tipo: {SelectedPermiso.TipoPermiso.Nombre}\n" +
             $"Fechas: {SelectedPermiso.FechaInicio:dd/MM/yyyy} - {SelectedPermiso.FechaFin:dd/MM/yyyy}",
-            "Confirmar Aprobación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-            
-        if (result == MessageBoxResult.Yes)
+            "Confirmar Aprobación"))
         {
             IsLoading = true;
             
@@ -146,11 +144,9 @@ public partial class BandejaAprobacionViewModel : ObservableObject
                     
                 if (approveResult.Success)
                 {
-                    MessageBox.Show(
+                    _dialogService.ShowSuccess(
                         $"Permiso {SelectedPermiso.NumeroActa} aprobado exitosamente",
-                        "Éxito",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                        "Éxito");
                         
                     CancelAction();
                     await LoadDataAsync();
@@ -158,12 +154,12 @@ public partial class BandejaAprobacionViewModel : ObservableObject
                 }
                 else
                 {
-                    MessageBox.Show($"Error: {string.Join(", ", approveResult.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error: {string.Join(", ", approveResult.Errors)}", "Error");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error: {ex.Message}", "Error");
             }
             finally
             {
@@ -179,19 +175,15 @@ public partial class BandejaAprobacionViewModel : ObservableObject
         
         if (string.IsNullOrWhiteSpace(MotivoRechazo))
         {
-            MessageBox.Show("Debe ingresar el motivo del rechazo", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("Debe ingresar el motivo del rechazo", "Validación");
             return;
         }
         
-        var result = MessageBox.Show(
+        if (_dialogService.ConfirmWarning(
             $"¿Está seguro de rechazar el permiso {SelectedPermiso.NumeroActa}?\n\n" +
             $"Empleado: {SelectedPermiso.Empleado.NombreCompleto}\n" +
             $"Motivo del rechazo: {MotivoRechazo}",
-            "Confirmar Rechazo",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-            
-        if (result == MessageBoxResult.Yes)
+            "Confirmar Rechazo"))
         {
             IsLoading = true;
             
@@ -204,11 +196,9 @@ public partial class BandejaAprobacionViewModel : ObservableObject
                     
                 if (rejectResult.Success)
                 {
-                    MessageBox.Show(
+                    _dialogService.ShowInfo(
                         $"Permiso {SelectedPermiso.NumeroActa} rechazado",
-                        "Información",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                        "Información");
                         
                     CancelAction();
                     await LoadDataAsync();
@@ -216,12 +206,12 @@ public partial class BandejaAprobacionViewModel : ObservableObject
                 }
                 else
                 {
-                    MessageBox.Show($"Error: {string.Join(", ", rejectResult.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error: {string.Join(", ", rejectResult.Errors)}", "Error");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error: {ex.Message}", "Error");
             }
             finally
             {
@@ -235,17 +225,13 @@ public partial class BandejaAprobacionViewModel : ObservableObject
     {
         if (!PermisosPendientes.Any())
         {
-            MessageBox.Show("No hay permisos pendientes", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("No hay permisos pendientes", "Información");
             return;
         }
         
-        var result = MessageBox.Show(
+        if (_dialogService.Confirm(
             $"¿Está seguro de aprobar todos los {PermisosPendientes.Count} permisos pendientes?",
-            "Confirmar Aprobación Masiva",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-            
-        if (result == MessageBoxResult.Yes)
+            "Confirmar Aprobación Masiva"))
         {
             IsLoading = true;
             int aprobados = 0;
@@ -267,20 +253,25 @@ public partial class BandejaAprobacionViewModel : ObservableObject
                     }
                 }
                 
-                MessageBox.Show(
-                    $"Proceso completado:\n\n" +
-                    $"Aprobados: {aprobados}\n" +
-                    $"Errores: {errores}",
-                    "Resultado",
-                    MessageBoxButton.OK,
-                    errores > 0 ? MessageBoxImage.Warning : MessageBoxImage.Information);
+                if (errores > 0)
+                    _dialogService.ShowWarning(
+                        $"Proceso completado:\n\n" +
+                        $"Aprobados: {aprobados}\n" +
+                        $"Errores: {errores}",
+                        "Resultado");
+                else
+                    _dialogService.ShowSuccess(
+                        $"Proceso completado:\n\n" +
+                        $"Aprobados: {aprobados}\n" +
+                        $"Errores: {errores}",
+                        "Resultado");
                     
                 await LoadDataAsync();
                 PermisoProcessed?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error: {ex.Message}", "Error");
             }
             finally
             {

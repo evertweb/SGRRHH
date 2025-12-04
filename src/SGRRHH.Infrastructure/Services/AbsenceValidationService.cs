@@ -56,11 +56,11 @@ public class AbsenceValidationService : IAbsenceValidationService
             var existeSolapamiento = await _permisoRepository.ExisteSolapamientoAsync(
                 empleadoId, fechaInicio, fechaFin, excludeId);
             
-            return ServiceResult<bool>.SuccessResult(existeSolapamiento);
+            return ServiceResult<bool>.Ok(existeSolapamiento);
         }
         catch (Exception ex)
         {
-            return ServiceResult<bool>.FailureResult($"Error al verificar permisos: {ex.Message}");
+            return ServiceResult<bool>.Fail($"Error al verificar permisos: {ex.Message}");
         }
     }
 
@@ -75,11 +75,11 @@ public class AbsenceValidationService : IAbsenceValidationService
             var existeTraslape = await _vacacionRepository.ExisteTraslapeAsync(
                 empleadoId, fechaInicio, fechaFin, excludeId);
             
-            return ServiceResult<bool>.SuccessResult(existeTraslape);
+            return ServiceResult<bool>.Ok(existeTraslape);
         }
         catch (Exception ex)
         {
-            return ServiceResult<bool>.FailureResult($"Error al verificar vacaciones: {ex.Message}");
+            return ServiceResult<bool>.Fail($"Error al verificar vacaciones: {ex.Message}");
         }
     }
 }

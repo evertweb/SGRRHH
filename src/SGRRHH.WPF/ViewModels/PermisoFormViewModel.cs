@@ -14,11 +14,12 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para el formulario de solicitud/edición de permiso
 /// </summary>
-public partial class PermisoFormViewModel : ObservableObject
+public partial class PermisoFormViewModel : ViewModelBase
 {
     private readonly IPermisoService _permisoService;
     private readonly IEmpleadoService _empleadoService;
     private readonly ITipoPermisoService _tipoPermisoService;
+    private readonly IDialogService _dialogService;
     
     private int? _permisoId;
     private bool _isEditing;
@@ -84,11 +85,13 @@ public partial class PermisoFormViewModel : ObservableObject
     public PermisoFormViewModel(
         IPermisoService permisoService,
         IEmpleadoService empleadoService,
-        ITipoPermisoService tipoPermisoService)
+        ITipoPermisoService tipoPermisoService,
+        IDialogService dialogService)
     {
         _permisoService = permisoService;
         _empleadoService = empleadoService;
         _tipoPermisoService = tipoPermisoService;
+        _dialogService = dialogService;
     }
     
     public async Task InitializeForCreateAsync()
@@ -137,7 +140,7 @@ public partial class PermisoFormViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al cargar datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar datos: {ex.Message}", "Error");
         }
         finally
         {
@@ -166,7 +169,7 @@ public partial class PermisoFormViewModel : ObservableObject
         }
         else
         {
-            MessageBox.Show("No se pudo cargar el permiso", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("No se pudo cargar el permiso", "Error");
             CloseRequested?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -198,11 +201,11 @@ public partial class PermisoFormViewModel : ObservableObject
                 DocumentoSoportePath = destPath;
                 HasDocument = true;
                 
-                MessageBox.Show("Documento adjuntado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Documento adjuntado exitosamente", "Éxito");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al adjuntar documento: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al adjuntar documento: {ex.Message}", "Error");
             }
         }
     }
@@ -212,13 +215,7 @@ public partial class PermisoFormViewModel : ObservableObject
     {
         if (!string.IsNullOrEmpty(DocumentoSoportePath))
         {
-            var result = MessageBox.Show(
-                "¿Desea eliminar el documento adjunto?",
-                "Confirmar",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-                
-            if (result == MessageBoxResult.Yes)
+            if (_dialogService.Confirm("¿Desea eliminar el documento adjunto?", "Confirmar"))
             {
                 // Eliminar archivo si existe y es edición
                 if (!_isEditing && File.Exists(DocumentoSoportePath))
@@ -239,19 +236,16 @@ public partial class PermisoFormViewModel : ObservableObject
         var validationErrors = ValidateForm();
         if (validationErrors.Any())
         {
-            MessageBox.Show(
+            _dialogService.ShowWarning(
                 "Por favor corrija los siguientes errores:\n\n• " + string.Join("\n• ", validationErrors),
-                "Validación",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                "Validación");
             return;
         }
         
         // Verificación adicional de null (aunque la validación ya lo cubre)
         if (SelectedEmpleado == null || SelectedTipoPermiso == null)
         {
-            MessageBox.Show("Datos incompletos. Verifique empleado y tipo de permiso.", "Error", 
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("Datos incompletos. Verifique empleado y tipo de permiso.", "Error");
             return;
         }
         
@@ -279,12 +273,12 @@ public partial class PermisoFormViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Permiso actualizado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Permiso actualizado exitosamente", "Éxito");
                     SaveCompleted?.Invoke(this, true);
                 }
                 else
                 {
-                    MessageBox.Show($"Error: {string.Join(", ", result.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error: {string.Join(", ", result.Errors)}", "Error");
                 }
             }
             else
@@ -293,18 +287,18 @@ public partial class PermisoFormViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show($"Permiso solicitado exitosamente.\n\nNúmero de acta: {result.Data?.NumeroActa}", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess($"Permiso solicitado exitosamente.\n\nNúmero de acta: {result.Data?.NumeroActa}", "Éxito");
                     SaveCompleted?.Invoke(this, true);
                 }
                 else
                 {
-                    MessageBox.Show($"Error: {string.Join(", ", result.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error: {string.Join(", ", result.Errors)}", "Error");
                 }
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}", "Error");
         }
         finally
         {

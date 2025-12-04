@@ -21,7 +21,7 @@ public class DocumentTemplateDefinition
     public bool RequiresPermiso { get; init; }
 }
 
-public partial class DocumentsViewModel : ObservableObject
+public partial class DocumentsViewModel : ViewModelBase
 {
     private readonly IEmpleadoService _empleadoService;
     private readonly IPermisoService _permisoService;
@@ -55,12 +55,6 @@ public partial class DocumentsViewModel : ObservableObject
     private CompanyInfo _companyInfo = new();
 
     [ObservableProperty]
-    private bool _isBusy;
-
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-
-    [ObservableProperty]
     private string? _previewFilePath;
 
     public DocumentsViewModel(
@@ -83,7 +77,7 @@ public partial class DocumentsViewModel : ObservableObject
     {
         try
         {
-            IsBusy = true;
+            IsLoading = true;
             StatusMessage = "Cargando catálogos...";
 
             var empleados = await _empleadoService.GetAllAsync();
@@ -107,7 +101,7 @@ public partial class DocumentsViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            IsLoading = false;
         }
     }
 
@@ -134,7 +128,7 @@ public partial class DocumentsViewModel : ObservableObject
 
         try
         {
-            IsBusy = true;
+            IsLoading = true;
             StatusMessage = "Generando documento...";
             PreviewFilePath = null;
 
@@ -182,7 +176,7 @@ public partial class DocumentsViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
+            IsLoading = false;
         }
     }
 

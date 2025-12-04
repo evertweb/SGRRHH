@@ -8,8 +8,11 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para la vista de Catálogos
 /// </summary>
-public partial class CatalogosViewModel : ObservableObject
+public partial class CatalogosViewModel : ViewModelBase
 {
+    [ObservableProperty]
+    private DateTime fechaActual = DateTime.Now;
+    
     public CatalogosViewModel()
     {
     }

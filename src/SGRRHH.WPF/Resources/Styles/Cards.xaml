@@ -156,4 +156,7 @@
         <Setter Property="Background" Value="{StaticResource WarningLightBrush}"/>
     </Style>
     
+    <!-- === CARD PANEL (Alias para Card) === -->
+    <Style x:Key="CardPanel" TargetType="Border" BasedOn="{StaticResource Card}"/>
+    
 </ResourceDictionary>

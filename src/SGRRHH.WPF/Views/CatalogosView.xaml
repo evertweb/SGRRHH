@@ -3,121 +3,184 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900"
-             Background="#FAFAFA">
+             Background="{StaticResource BackgroundBrush}">
     
-    <Grid Margin="20">
+    <UserControl.Resources>
+        <!-- Estilo para las tarjetas de opción -->
+        <Style x:Key="OptionCardStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="16"
+                                Padding="25,30">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter TargetName="border" Property="BorderThickness" Value="2"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <!-- Encabezado -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,30">
-            <TextBlock Text="📁 Catálogos del Sistema" FontSize="24" FontWeight="Bold" Foreground="#37474F"/>
-            <TextBlock Text="Seleccione una categoría para administrar los datos maestros" 
-                       FontSize="14" Foreground="#757575" Margin="0,5,0,0"/>
+        <!-- Contenido principal centrado -->
+        <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="900">
+            <!-- Saludo -->
+            <TextBlock Text="📁" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+            <TextBlock Text="¡Catálogos del Sistema!" FontSize="32" FontWeight="Bold" 
+                       Foreground="{StaticResource TextPrimaryBrush}" 
+                       HorizontalAlignment="Center" Margin="0,0,0,5"/>
+            <TextBlock Text="¿Qué deseas administrar hoy?" FontSize="18" 
+                       Foreground="{StaticResource TextSecondaryBrush}" 
+                       HorizontalAlignment="Center" Margin="0,0,0,50"/>
+            
+            <!-- Opciones - Primera fila -->
+            <Grid HorizontalAlignment="Center" Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="200"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Departamentos -->
+                <Button Grid.Column="0" Style="{StaticResource OptionCardStyle}"
+                        Command="{Binding NavigateToDepartamentosCommand}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Width="70" Height="70" CornerRadius="35" 
+                                Background="{StaticResource InfoLightBrush}" 
+                                Margin="0,0,0,15">
+                            <TextBlock Text="🏢" FontSize="32" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Departamentos" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                        <TextBlock Text="Gestión de áreas&#x0a;organizacionales" 
+                                   FontSize="12" TextAlignment="Center"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   LineHeight="18"/>
+                    </StackPanel>
+                </Button>
+                
+                <!-- Cargos -->
+                <Button Grid.Column="2" Style="{StaticResource OptionCardStyle}"
+                        Command="{Binding NavigateToCargosCommand}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Width="70" Height="70" CornerRadius="35" 
+                                Background="{StaticResource SuccessLightBrush}" 
+                                Margin="0,0,0,15">
+                            <TextBlock Text="💼" FontSize="32" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Cargos" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                        <TextBlock Text="Puestos y funciones&#x0a;laborales" 
+                                   FontSize="12" TextAlignment="Center"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   LineHeight="18"/>
+                    </StackPanel>
+                </Button>
+                
+                <!-- Proyectos -->
+                <Button Grid.Column="4" Style="{StaticResource OptionCardStyle}"
+                        Command="{Binding NavigateToProyectosCommand}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Width="70" Height="70" CornerRadius="35" 
+                                Background="{StaticResource WarningLightBrush}" 
+                                Margin="0,0,0,15">
+                            <TextBlock Text="🚀" FontSize="32" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Proyectos" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                        <TextBlock Text="Gestión de proyectos&#x0a;activos" 
+                                   FontSize="12" TextAlignment="Center"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   LineHeight="18"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+            
+            <!-- Opciones - Segunda fila -->
+            <Grid HorizontalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="200"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Actividades -->
+                <Button Grid.Column="0" Style="{StaticResource OptionCardStyle}"
+                        Command="{Binding NavigateToActividadesCommand}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Width="70" Height="70" CornerRadius="35" 
+                                Background="{StaticResource PrimaryLightBrush}" 
+                                Margin="0,0,0,15">
+                            <TextBlock Text="📝" FontSize="32" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Actividades" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                        <TextBlock Text="Tipos de actividades&#x0a;laborales" 
+                                   FontSize="12" TextAlignment="Center"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   LineHeight="18"/>
+                    </StackPanel>
+                </Button>
+                
+                <!-- Tipos de Permiso -->
+                <Button Grid.Column="2" Style="{StaticResource OptionCardStyle}"
+                        Command="{Binding NavigateToTiposPermisoCommand}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Width="70" Height="70" CornerRadius="35" 
+                                Background="{StaticResource DangerLightBrush}" 
+                                Margin="0,0,0,15">
+                            <TextBlock Text="📋" FontSize="32" 
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="Tipos de Permiso" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                        <TextBlock Text="Categorías de permisos&#x0a;laborales" 
+                                   FontSize="12" TextAlignment="Center"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   LineHeight="18"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
         </StackPanel>
         
-        <!-- Cards de catálogos -->
-        <WrapPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Top">
-            
-            <!-- Departamentos -->
-            <Border Background="White" CornerRadius="12" Padding="25" Margin="10" Width="220" Height="180"
-                    BorderBrush="#E0E0E0" BorderThickness="1" Cursor="Hand">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" BlurRadius="10" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
-                <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToDepartamentosCommand}"/>
-                </Border.InputBindings>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="🏢" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                    <TextBlock Text="Departamentos" FontSize="16" FontWeight="SemiBold" 
-                               Foreground="#1565C0" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Gestión de áreas organizacionales" FontSize="11" 
-                               Foreground="#757575" HorizontalAlignment="Center" TextWrapping="Wrap"
-                               TextAlignment="Center" Margin="0,5,0,0"/>
-                </StackPanel>
-            </Border>
-            
-            <!-- Cargos -->
-            <Border Background="White" CornerRadius="12" Padding="25" Margin="10" Width="220" Height="180"
-                    BorderBrush="#E0E0E0" BorderThickness="1" Cursor="Hand">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" BlurRadius="10" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
-                <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToCargosCommand}"/>
-                </Border.InputBindings>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="💼" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                    <TextBlock Text="Cargos" FontSize="16" FontWeight="SemiBold" 
-                               Foreground="#2E7D32" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Puestos y funciones laborales" FontSize="11" 
-                               Foreground="#757575" HorizontalAlignment="Center" TextWrapping="Wrap"
-                               TextAlignment="Center" Margin="0,5,0,0"/>
-                </StackPanel>
-            </Border>
-            
-            <!-- Proyectos -->
-            <Border Background="White" CornerRadius="12" Padding="25" Margin="10" Width="220" Height="180"
-                    BorderBrush="#E0E0E0" BorderThickness="1" Cursor="Hand">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" BlurRadius="10" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
-                <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToProyectosCommand}"/>
-                </Border.InputBindings>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="🚀" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                    <TextBlock Text="Proyectos" FontSize="16" FontWeight="SemiBold" 
-                               Foreground="#E65100" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Gestión de proyectos activos" FontSize="11" 
-                               Foreground="#757575" HorizontalAlignment="Center" TextWrapping="Wrap"
-                               TextAlignment="Center" Margin="0,5,0,0"/>
-                </StackPanel>
-            </Border>
-            
-            <!-- Actividades -->
-            <Border Background="White" CornerRadius="12" Padding="25" Margin="10" Width="220" Height="180"
-                    BorderBrush="#E0E0E0" BorderThickness="1" Cursor="Hand">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" BlurRadius="10" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
-                <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToActividadesCommand}"/>
-                </Border.InputBindings>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="📝" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                    <TextBlock Text="Actividades" FontSize="16" FontWeight="SemiBold" 
-                               Foreground="#7B1FA2" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Tipos de actividades laborales" FontSize="11" 
-                               Foreground="#757575" HorizontalAlignment="Center" TextWrapping="Wrap"
-                               TextAlignment="Center" Margin="0,5,0,0"/>
-                </StackPanel>
-            </Border>
-            
-            <!-- Tipos de Permiso -->
-            <Border Background="White" CornerRadius="12" Padding="25" Margin="10" Width="220" Height="180"
-                    BorderBrush="#E0E0E0" BorderThickness="1" Cursor="Hand">
-                <Border.Effect>
-                    <DropShadowEffect Color="Gray" BlurRadius="10" ShadowDepth="0" Opacity="0.1"/>
-                </Border.Effect>
-                <Border.InputBindings>
-                    <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToTiposPermisoCommand}"/>
-                </Border.InputBindings>
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="📋" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                    <TextBlock Text="Tipos de Permiso" FontSize="16" FontWeight="SemiBold" 
-                               Foreground="#C62828" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Categorías de permisos laborales" FontSize="11" 
-                               Foreground="#757575" HorizontalAlignment="Center" TextWrapping="Wrap"
-                               TextAlignment="Center" Margin="0,5,0,0"/>
-                </StackPanel>
-            </Border>
-            
-        </WrapPanel>
+        <!-- Footer con fecha actual -->
+        <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" Padding="20,15">
+            <TextBlock HorizontalAlignment="Center" Foreground="{StaticResource TextTertiaryBrush}"
+                       Text="{Binding FechaActual, StringFormat='📅 {0:dddd, dd MMMM yyyy}'}"/>
+        </Border>
     </Grid>
 </UserControl>

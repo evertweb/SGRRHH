@@ -15,10 +15,11 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para gestión de seguridad y passkeys
 /// </summary>
-public partial class SeguridadViewModel : ObservableObject
+public partial class SeguridadViewModel : ViewModelBase
 {
     private readonly IWindowsHelloService _windowsHelloService;
     private readonly IFirebaseAuthService _firebaseAuthService;
+    private readonly IDialogService _dialogService;
     private readonly Usuario _currentUser;
 
     [ObservableProperty]
@@ -34,11 +35,8 @@ public partial class SeguridadViewModel : ObservableObject
     private PasskeyInfo? _selectedPasskey;
 
     [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
     private string _mensaje = string.Empty;
-
+    
     [ObservableProperty]
     private bool _hasError;
 
@@ -50,10 +48,12 @@ public partial class SeguridadViewModel : ObservableObject
 
     public SeguridadViewModel(
         IWindowsHelloService windowsHelloService,
-        IFirebaseAuthService firebaseAuthService)
+        IFirebaseAuthService firebaseAuthService,
+        IDialogService dialogService)
     {
         _windowsHelloService = windowsHelloService;
         _firebaseAuthService = firebaseAuthService;
+        _dialogService = dialogService;
 
         // Obtener usuario actual de App
         _currentUser = App.CurrentUser ?? throw new InvalidOperationException("No hay usuario autenticado");
@@ -215,14 +215,10 @@ public partial class SeguridadViewModel : ObservableObject
         }
 
         // Confirmar
-        var result = MessageBox.Show(
+        if (!_dialogService.ConfirmWarning(
             $"¿Está seguro de eliminar la passkey del dispositivo '{passkey.DeviceName}'?\n\n" +
             $"Esta acción no se puede deshacer.",
-            "Confirmar eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
-
-        if (result != MessageBoxResult.Yes)
+            "Confirmar eliminación"))
             return;
 
         try

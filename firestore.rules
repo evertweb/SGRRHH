@@ -126,10 +126,12 @@ service cloud.firestore {
     
     // ============================================
     // COLECCIÓN: vacaciones
+    // Solo Admin y Operador pueden crear/modificar
+    // Aprobador (Ingeniera) solo puede ver
     // ============================================
     match /vacaciones/{vacacionId} {
       allow read: if hasAccess();
-      allow create, update: if hasAccess();
+      allow create, update: if isAdmin() || isOperador();
       allow delete: if isAdmin();
     }
     
@@ -151,10 +153,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
       
       // Subcolección de detalles
+      // Solo Admin puede eliminar detalles
       match /detalles/{detalleId} {
         allow read: if hasAccess();
         allow create, update: if hasAccess();
-        allow delete: if isAdmin() || isOperador();
+        allow delete: if isAdmin();
       }
     }
     

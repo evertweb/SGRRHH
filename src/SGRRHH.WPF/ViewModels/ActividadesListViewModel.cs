@@ -1,6 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
 using System.Collections.ObjectModel;
@@ -11,9 +10,11 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para la lista de actividades
 /// </summary>
-public partial class ActividadesListViewModel : ObservableObject
+public partial class ActividadesListViewModel : ViewModelBase
 {
     private readonly IActividadService _actividadService;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private ObservableCollection<Actividad> _actividades = new();
@@ -31,42 +32,71 @@ public partial class ActividadesListViewModel : ObservableObject
     private string? _selectedCategoria;
     
     [ObservableProperty]
-    private bool _isLoading;
-    
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-    
-    [ObservableProperty]
     private int _totalActividades;
     
-    // Campos para el formulario
+    // Propiedades de navegación de vistas
     [ObservableProperty]
-    private bool _isEditing;
+    private bool _isHomeVisible = true;
     
     [ObservableProperty]
-    private int _editingId;
+    private bool _isListViewVisible;
     
-    [ObservableProperty]
-    private string _codigo = string.Empty;
+    /// <summary>
+    /// Texto de la fecha actual para el footer
+    /// </summary>
+    public string CurrentDateText => DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"));
     
-    [ObservableProperty]
-    private string _nombre = string.Empty;
+    // Lista de categorías predefinidas
+    private static readonly string[] CategoriasPredefinidas = new[]
+    {
+        "Administrativa",
+        "Técnica",
+        "Campo",
+        "Reuniones",
+        "Capacitación",
+        "Supervisión",
+        "Documentación",
+        "Mantenimiento",
+        "Soporte",
+        "Otro"
+    };
     
-    [ObservableProperty]
-    private string _descripcion = string.Empty;
+    /// <summary>
+    /// Evento para solicitar creación de actividad (abre ventana modal)
+    /// </summary>
+    public event EventHandler? CreateActividadRequested;
     
-    [ObservableProperty]
-    private string _categoria = string.Empty;
+    /// <summary>
+    /// Evento para solicitar edición de actividad (abre ventana modal)
+    /// </summary>
+    public event EventHandler<Actividad>? EditActividadRequested;
     
-    [ObservableProperty]
-    private bool _requiereProyecto;
-    
-    [ObservableProperty]
-    private int _orden = 1;
-    
-    public ActividadesListViewModel(IActividadService actividadService)
+    public ActividadesListViewModel(IActividadService actividadService, IServiceProvider serviceProvider, IDialogService dialogService)
     {
         _actividadService = actividadService;
+        _serviceProvider = serviceProvider;
+        _dialogService = dialogService;
+    }
+    
+    /// <summary>
+    /// Muestra la pantalla de inicio
+    /// </summary>
+    [RelayCommand]
+    private void ShowHome()
+    {
+        IsHomeVisible = true;
+        IsListViewVisible = false;
+    }
+    
+    /// <summary>
+    /// Muestra la lista de actividades
+    /// </summary>
+    [RelayCommand]
+    private async Task ShowListAsync()
+    {
+        IsHomeVisible = false;
+        IsListViewVisible = true;
+        await LoadDataAsync();
     }
     
     /// <summary>
@@ -79,28 +109,52 @@ public partial class ActividadesListViewModel : ObservableObject
         
         try
         {
-            // Cargar categorías para el filtro
-            var categorias = await _actividadService.GetCategoriasAsync();
-            Categorias.Clear();
-            Categorias.Add("Todas");
-            foreach (var cat in categorias)
-            {
-                Categorias.Add(cat);
-            }
-            
+            await LoadCategoriasAsync();
             await SearchActividadesAsync();
-            var nextCode = await _actividadService.GetNextCodigoAsync();
-            Codigo = nextCode;
         }
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
-            MessageBox.Show($"Error al cargar los datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar los datos: {ex.Message}");
         }
         finally
         {
             IsLoading = false;
         }
+    }
+    
+    private async Task LoadCategoriasAsync()
+    {
+        Categorias.Clear();
+        Categorias.Add("Todas");
+        
+        // Agregar categorías predefinidas
+        foreach (var cat in CategoriasPredefinidas)
+        {
+            if (!Categorias.Contains(cat))
+            {
+                Categorias.Add(cat);
+            }
+        }
+        
+        // Agregar categorías existentes en la BD
+        try
+        {
+            var categoriasExistentes = await _actividadService.GetCategoriasAsync();
+            foreach (var cat in categoriasExistentes)
+            {
+                if (!string.IsNullOrWhiteSpace(cat) && !Categorias.Contains(cat))
+                {
+                    Categorias.Add(cat);
+                }
+            }
+        }
+        catch
+        {
+            // Ignorar errores al cargar categorías
+        }
+        
+        SelectedCategoria = "Todas";
     }
     
     /// <summary>
@@ -129,7 +183,7 @@ public partial class ActividadesListViewModel : ObservableObject
                 resultado = await _actividadService.GetAllAsync();
             }
             
-            // Aplicar filtros adicionales
+            // Aplicar filtros adicionales si hay búsqueda y categoría
             if (!string.IsNullOrWhiteSpace(SelectedCategoria) && SelectedCategoria != "Todas" && 
                 !string.IsNullOrWhiteSpace(SearchText))
             {
@@ -137,7 +191,7 @@ public partial class ActividadesListViewModel : ObservableObject
             }
             
             Actividades.Clear();
-            foreach (var actividad in resultado)
+            foreach (var actividad in resultado.OrderBy(a => a.Orden).ThenBy(a => a.Nombre))
             {
                 Actividades.Add(actividad);
             }
@@ -167,111 +221,27 @@ public partial class ActividadesListViewModel : ObservableObject
     }
     
     /// <summary>
-    /// Prepara el formulario para crear nueva actividad
+    /// Abre ventana para crear nueva actividad
     /// </summary>
     [RelayCommand]
-    private async Task NewActividadAsync()
+    private void NewActividad()
     {
-        IsEditing = false;
-        EditingId = 0;
-        Codigo = await _actividadService.GetNextCodigoAsync();
-        Nombre = string.Empty;
-        Descripcion = string.Empty;
-        Categoria = string.Empty;
-        RequiereProyecto = false;
-        Orden = 1;
+        CreateActividadRequested?.Invoke(this, EventArgs.Empty);
     }
     
     /// <summary>
-    /// Prepara el formulario para editar actividad
+    /// Abre ventana para editar actividad seleccionada
     /// </summary>
     [RelayCommand]
     private void EditActividad()
     {
         if (SelectedActividad == null)
         {
-            MessageBox.Show("Seleccione una actividad para editar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione una actividad para editar.");
             return;
         }
         
-        IsEditing = true;
-        EditingId = SelectedActividad.Id;
-        Codigo = SelectedActividad.Codigo;
-        Nombre = SelectedActividad.Nombre;
-        Descripcion = SelectedActividad.Descripcion ?? string.Empty;
-        Categoria = SelectedActividad.Categoria ?? string.Empty;
-        RequiereProyecto = SelectedActividad.RequiereProyecto;
-        Orden = SelectedActividad.Orden;
-    }
-    
-    /// <summary>
-    /// Guarda la actividad (crear o actualizar)
-    /// </summary>
-    [RelayCommand]
-    private async Task SaveActividadAsync()
-    {
-        if (string.IsNullOrWhiteSpace(Nombre))
-        {
-            MessageBox.Show("El nombre de la actividad es obligatorio", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-        
-        IsLoading = true;
-        
-        try
-        {
-            var actividad = new Actividad
-            {
-                Id = EditingId,
-                Codigo = Codigo,
-                Nombre = Nombre.Trim(),
-                Descripcion = Descripcion,
-                Categoria = Categoria,
-                RequiereProyecto = RequiereProyecto,
-                Orden = Orden
-            };
-            
-            ServiceResult result;
-            
-            if (IsEditing)
-            {
-                result = await _actividadService.UpdateAsync(actividad);
-            }
-            else
-            {
-                var createResult = await _actividadService.CreateAsync(actividad);
-                result = createResult;
-            }
-            
-            if (result.Success)
-            {
-                MessageBox.Show(result.Message, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-                
-                // Recargar categorías
-                var categorias = await _actividadService.GetCategoriasAsync();
-                Categorias.Clear();
-                Categorias.Add("Todas");
-                foreach (var cat in categorias)
-                {
-                    Categorias.Add(cat);
-                }
-                
-                await SearchActividadesAsync();
-                await NewActividadAsync();
-            }
-            else
-            {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error al guardar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        EditActividadRequested?.Invoke(this, SelectedActividad);
     }
     
     /// <summary>
@@ -282,17 +252,14 @@ public partial class ActividadesListViewModel : ObservableObject
     {
         if (SelectedActividad == null)
         {
-            MessageBox.Show("Seleccione una actividad para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione una actividad para eliminar.");
             return;
         }
         
-        var confirm = MessageBox.Show(
-            $"¿Está seguro de eliminar la actividad '{SelectedActividad.Nombre}'?",
-            "Confirmar eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-            
-        if (confirm != MessageBoxResult.Yes) return;
+        if (!_dialogService.ConfirmWarning(
+            $"¿Está seguro de eliminar la actividad '{SelectedActividad.Nombre}'?\n\nEsta acción no se puede deshacer.",
+            "Confirmar eliminación"))
+            return;
         
         IsLoading = true;
         
@@ -302,17 +269,17 @@ public partial class ActividadesListViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show(result.Message, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
-                await SearchActividadesAsync();
+                _dialogService.ShowSuccess("Actividad eliminada exitosamente.");
+                await LoadDataAsync();
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message ?? "Error al eliminar la actividad.");
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al eliminar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al eliminar: {ex.Message}");
         }
         finally
         {
@@ -320,18 +287,9 @@ public partial class ActividadesListViewModel : ObservableObject
         }
     }
     
-    /// <summary>
-    /// Cancela la edición
-    /// </summary>
-    [RelayCommand]
-    private async Task CancelEditAsync()
-    {
-        await NewActividadAsync();
-    }
-    
     partial void OnSelectedCategoriaChanged(string? value)
     {
-        if (value != null)
+        if (value != null && !IsLoading)
         {
             _ = SearchActividadesAsync();
         }

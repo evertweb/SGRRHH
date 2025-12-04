@@ -174,4 +174,19 @@ public interface IControlDiarioService
     /// Obtiene las horas trabajadas en el mes actual
     /// </summary>
     Task<decimal> GetHorasMesActualAsync(int empleadoId);
+    
+    /// <summary>
+    /// Obtiene registros de todos los empleados para un mes/año específico
+    /// </summary>
+    Task<IEnumerable<RegistroDiario>> GetByMesAnioAsync(int mes, int anio);
+    
+    /// <summary>
+    /// Obtiene registros de un empleado para un mes/año específico
+    /// </summary>
+    Task<IEnumerable<RegistroDiario>> GetByEmpleadoMesAnioAsync(int empleadoId, int mes, int anio);
+    
+    /// <summary>
+    /// Elimina un registro diario completo
+    /// </summary>
+    Task<ServiceResult> DeleteRegistroAsync(int registroId);
 }

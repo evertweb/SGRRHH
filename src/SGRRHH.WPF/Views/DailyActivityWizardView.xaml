@@ -1,0 +1,672 @@
+<UserControl x:Class="SGRRHH.WPF.Views.DailyActivityWizardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
+             xmlns:views="clr-namespace:SGRRHH.WPF.Views"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="{StaticResource BackgroundBrush}">
+    
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
+        <converters:StringToVisibilityConverter x:Key="StringToVisConverter"/>
+        <converters:TimeSpanToStringConverter x:Key="TimeSpanToStringConverter"/>
+        
+        <!-- Estilo para las tarjetas de opción -->
+        <Style x:Key="OptionCardStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="16"
+                                Padding="30,40">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter TargetName="border" Property="BorderThickness" Value="2"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Estilo para items de actividad -->
+        <Style x:Key="ActivityListBoxItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Border" 
+                                Background="{StaticResource SurfaceBrush}" 
+                                BorderBrush="{StaticResource BorderBrush}" 
+                                BorderThickness="1" 
+                                CornerRadius="8" 
+                                Margin="0,0,0,10" 
+                                Padding="15"
+                                Cursor="Hand">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- ==================== PANTALLA DE BIENVENIDA ==================== -->
+        <Grid Visibility="{Binding IsHomeVisible, Converter={StaticResource BoolToVisConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="700">
+                <!-- Saludo -->
+                <TextBlock Text="👋" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock Text="¡Bienvenido!" FontSize="32" FontWeight="Bold" 
+                           Foreground="{StaticResource TextPrimaryBrush}" 
+                           HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBlock Text="¿Qué deseas hacer hoy?" FontSize="18" 
+                           Foreground="{StaticResource TextSecondaryBrush}" 
+                           HorizontalAlignment="Center" Margin="0,0,0,50"/>
+                
+                <!-- Opciones -->
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280"/>
+                        <ColumnDefinition Width="30"/>
+                        <ColumnDefinition Width="280"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Opción: Crear Registro -->
+                    <Button Grid.Column="0" Style="{StaticResource OptionCardStyle}"
+                            Command="{Binding ShowWizardCommand}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Border Width="80" Height="80" CornerRadius="40" 
+                                    Background="{StaticResource SuccessLightBrush}" 
+                                    Margin="0,0,0,20">
+                                <TextBlock Text="➕" FontSize="36" 
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Crear Registro" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="Registra las actividades&#x0a;del día paso a paso" 
+                                       FontSize="13" TextAlignment="Center"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       LineHeight="20"/>
+                        </StackPanel>
+                    </Button>
+                    
+                    <!-- Opción: Ver Registros -->
+                    <Button Grid.Column="2" Style="{StaticResource OptionCardStyle}"
+                            Command="{Binding ShowDashboardCommand}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <Border Width="80" Height="80" CornerRadius="40" 
+                                    Background="{StaticResource InfoLightBrush}" 
+                                    Margin="0,0,0,20">
+                                <TextBlock Text="📊" FontSize="36" 
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Ver Registros" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                            <TextBlock Text="Consulta y administra&#x0a;los registros existentes" 
+                                       FontSize="13" TextAlignment="Center"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       LineHeight="20"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </StackPanel>
+            
+            <!-- Footer con fecha actual -->
+            <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" Padding="20,15">
+                <TextBlock HorizontalAlignment="Center" Foreground="{StaticResource TextTertiaryBrush}">
+                    <Run Text="📅"/>
+                    <Run Text="{Binding CurrentDateText, Mode=OneWay}"/>
+                </TextBlock>
+            </Border>
+        </Grid>
+
+        <!-- ==================== WIZARD CONTAINER ==================== -->
+        <Grid Visibility="{Binding IsWizardVisible, Converter={StaticResource BoolToVisConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header del Wizard -->
+            <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" Padding="20,15" 
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- Botón Volver -->
+                    <Button Grid.Column="0" Content="← Volver" 
+                            Command="{Binding GoHomeCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            Padding="15,8" Margin="0,0,20,0"/>
+                    
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding StepTitle}" FontSize="18" FontWeight="SemiBold" 
+                                   Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding StepDescription}" FontSize="13" 
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0"/>
+                        
+                        <!-- Barra de progreso -->
+                        <Grid Margin="0,12,0,0">
+                            <ProgressBar Value="{Binding ProgressPercentage}" Maximum="100" Height="6" 
+                                         Foreground="{StaticResource PrimaryBrush}" 
+                                         Background="{StaticResource BorderLightBrush}" 
+                                         BorderThickness="0"/>
+                            <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0}%'}" 
+                                       HorizontalAlignment="Right" VerticalAlignment="Center" 
+                                       FontSize="11" Margin="0,-18,0,0" 
+                                       Foreground="{StaticResource TextTertiaryBrush}"/>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Content del Wizard -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20">
+                <StackPanel MaxWidth="800" HorizontalAlignment="Center">
+                    
+                    <!-- Step 1: Seleccionar Empleados -->
+                    <StackPanel Visibility="{Binding IsSelectEmployeesVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="Seleccione los empleados:" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                        
+                        <ItemsControl ItemsSource="{Binding AllEmpleados, Mode=OneWay}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Command="{Binding DataContext.ToggleEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                              CommandParameter="{Binding .}" Margin="0,0,10,10" Padding="10,5"
+                                              Style="{StaticResource CheckBoxCardStyle}" MinWidth="150">
+                                        <CheckBox.IsChecked>
+                                            <MultiBinding Converter="{StaticResource CollectionContainsConverter}" Mode="OneWay">
+                                                <Binding Path="." />
+                                                <Binding Path="DataContext.SelectedEmpleados" RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
+                                            </MultiBinding>
+                                        </CheckBox.IsChecked>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <Border Width="60" Height="60" CornerRadius="30" Margin="0,0,0,8" Background="{StaticResource SurfaceBrush}">
+                                                <Grid>
+                                                    <TextBlock Text="👤" FontSize="30" HorizontalAlignment="Center" 
+                                                               VerticalAlignment="Center" Foreground="{StaticResource GrayBrush}"
+                                                               Visibility="{Binding FotoPath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}"/>
+                                                    <Border CornerRadius="30">
+                                                        <Border.Background>
+                                                            <ImageBrush ImageSource="{Binding FotoPath}" Stretch="UniformToFill"/>
+                                                        </Border.Background>
+                                                        <Border.Visibility>
+                                                            <Binding Path="FotoPath" Converter="{StaticResource NotNullToVisibilityConverter}"/>
+                                                        </Border.Visibility>
+                                                    </Border>
+                                                </Grid>
+                                            </Border>
+                                            <TextBlock Text="{Binding NombreCompleto}" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Cargo.Nombre}" FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" 
+                                                       TextAlignment="Center" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </CheckBox>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        
+                        <Border Style="{StaticResource InfoPanel}" Margin="0,15,0,0">
+                            <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="13">
+                                <Run Text="Empleados seleccionados: " FontWeight="SemiBold"/>
+                                <Run Text="{Binding SelectedEmpleados.Count, Mode=OneWay}"/>
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Step 2: Seleccionar Fecha -->
+                    <StackPanel Visibility="{Binding IsSelectDateVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="Seleccione la fecha:" Style="{StaticResource FormLabel}" Margin="0,0,0,10"/>
+                        <DatePicker SelectedDate="{Binding SelectedDate}" Style="{StaticResource StandardDatePicker}" Width="200" HorizontalAlignment="Left"/>
+                    </StackPanel>
+
+                    <!-- Step 3: Hora de Entrada -->
+                    <StackPanel Visibility="{Binding IsEnterEntradaVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="¿A qué hora entró?" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+
+                        <Border Style="{StaticResource CardPanel}" Padding="40,30">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="🕐" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                                <Grid Width="300">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Hora" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding HoraEntradaHorasText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource StandardTextBox}"
+                                                 HorizontalContentAlignment="Center" FontSize="32" FontWeight="Bold" Height="70"
+                                                 MaxLength="2"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Column="1" Text=":" FontSize="32" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Minutos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding HoraEntradaMinutosText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource StandardTextBox}"
+                                                 HorizontalContentAlignment="Center" FontSize="32" FontWeight="Bold" Height="70"
+                                                 MaxLength="2"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="Formato 24 horas (Ejemplo: 08:30)"
+                                           HorizontalAlignment="Center" Foreground="{StaticResource TextTertiaryBrush}"
+                                           FontStyle="Italic" Margin="0,20,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Step 4: Hora de Salida -->
+                    <StackPanel Visibility="{Binding IsEnterSalidaVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="¿A qué hora salió?" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+
+                        <Border Style="{StaticResource CardPanel}" Padding="40,30">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="🕔" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                                <Grid Width="300">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Hora" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding HoraSalidaHorasText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource StandardTextBox}"
+                                                 HorizontalContentAlignment="Center" FontSize="32" FontWeight="Bold" Height="70"
+                                                 MaxLength="2"/>
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Column="1" Text=":" FontSize="32" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Minutos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBox Text="{Binding HoraSalidaMinutosText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource StandardTextBox}"
+                                                 HorizontalContentAlignment="Center" FontSize="32" FontWeight="Bold" Height="70"
+                                                 MaxLength="2"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="Formato 24 horas (Ejemplo: 17:30)"
+                                           HorizontalAlignment="Center" Foreground="{StaticResource TextTertiaryBrush}"
+                                           FontStyle="Italic" Margin="0,20,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Step 5: Seleccionar Actividad -->
+                    <StackPanel Visibility="{Binding IsSelectActivityVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="Seleccione la actividad:" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                        
+                        <ListBox ItemsSource="{Binding AllActividades, Mode=OneWay}" 
+                                 SelectedItem="{Binding SelectedActivity}" 
+                                 ItemContainerStyle="{StaticResource ActivityListBoxItemStyle}"
+                                 BorderThickness="0" Background="Transparent" 
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" 
+                                                Background="{StaticResource PrimaryLightBrush}" Margin="0,0,15,0">
+                                            <TextBlock Text="📋" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18"/>
+                                        </Border>
+                                        
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" FontSize="15" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <Border Background="{StaticResource BackgroundBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
+                                                    <TextBlock Text="{Binding Categoria}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                </Border>
+                                                <TextBlock Text="{Binding Descripcion}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" 
+                                                           TextTrimming="CharacterEllipsis" MaxWidth="400" VerticalAlignment="Center"
+                                                           Visibility="{Binding Descripcion, Converter={StaticResource StringToVisConverter}}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+
+                    <!-- Step 4: Seleccionar Proyecto -->
+                    <StackPanel Visibility="{Binding IsSelectProjectVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="Seleccione el proyecto (opcional):" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                        
+                        <Border Style="{StaticResource CardPanel}" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="Proyecto Asociado" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <ComboBox ItemsSource="{Binding AllProyectos, Mode=OneWay}" 
+                                          SelectedItem="{Binding SelectedProject}" 
+                                          DisplayMemberPath="Nombre" 
+                                          Style="{StaticResource StandardComboBox}"
+                                          Height="45" FontSize="14"/>
+                                <TextBlock Text="Si la actividad no pertenece a un proyecto específico, seleccione 'Sin proyecto'." 
+                                           FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Step 7: Horas Calculadas Automáticamente -->
+                    <StackPanel Visibility="{Binding IsEnterHoursVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="Horas trabajadas" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+
+                        <Border Style="{StaticResource CardPanel}" Padding="40,30">
+                            <StackPanel HorizontalAlignment="Center">
+                                <!-- Icono e indicador de cálculo automático -->
+                                <TextBlock Text="⚡" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                                <TextBlock Text="Cálculo Automático" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+                                <!-- Display de horas calculadas -->
+                                <Border Background="{StaticResource SuccessLightBrush}" CornerRadius="16" Padding="30,20" Margin="0,0,0,20">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding Hours, StringFormat='0.0'}" FontSize="56" FontWeight="Bold"
+                                                   Foreground="{StaticResource SuccessDarkBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="HORAS" FontSize="14" FontWeight="Bold"
+                                                   Foreground="{StaticResource SuccessDarkBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Explicación del cálculo -->
+                                <Border Background="{StaticResource InfoLightBrush}" CornerRadius="8" Padding="20,15">
+                                    <StackPanel>
+                                        <TextBlock Text="📊 Detalle del cálculo:" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource InfoDarkBrush}" Margin="0,0,0,8"/>
+                                        <TextBlock Text="{Binding HorasCalculadasText}" TextWrapping="Wrap" FontSize="13"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Opción para ajustar manualmente (opcional) -->
+                                <Expander Header="⚙️ Ajustar manualmente" Margin="0,15,0,0" HorizontalAlignment="Center">
+                                    <StackPanel Margin="0,10,0,0">
+                                        <TextBlock Text="Solo si necesita modificar el cálculo:" FontSize="11"
+                                                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,10" HorizontalAlignment="Center"/>
+                                        <Grid Width="300">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Slider Grid.Column="0" Value="{Binding Hours}" Minimum="0.5" Maximum="12" TickFrequency="0.5"
+                                                    IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,0,20,0"/>
+
+                                            <TextBlock Grid.Column="1" Text="{Binding Hours, StringFormat='0.0 h'}" FontSize="16" FontWeight="SemiBold"
+                                                       VerticalAlignment="Center" Foreground="{StaticResource PrimaryBrush}"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Expander>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Step 6: Descripción -->
+                    <StackPanel Visibility="{Binding IsEnterDescriptionVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="Describa la actividad realizada:" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                        
+                        <Border Style="{StaticResource CardPanel}" Padding="0">
+                            <Grid>
+                                <TextBox Text="{Binding Description}" Style="{StaticResource StandardTextBox}" 
+                                         Height="150" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top"
+                                         BorderThickness="0" FontSize="14"/>
+                                
+                                <TextBlock Text="Escriba aquí los detalles de lo realizado..." IsHitTestVisible="False"
+                                           Foreground="{StaticResource TextDisabledBrush}" Margin="15,15,0,0"
+                                           Visibility="{Binding Description, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}"/>
+                            </Grid>
+                        </Border>
+                        <TextBlock Text="Sea breve pero específico sobre las tareas completadas." 
+                                   Foreground="{StaticResource TextTertiaryBrush}" FontSize="12" Margin="5,5,0,0"/>
+                    </StackPanel>
+
+                    <!-- Step 7: Resumen -->
+                    <StackPanel Visibility="{Binding IsReviewVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="Revise los datos antes de guardar:" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                        
+                        <Border Style="{StaticResource CardPanel}" Padding="0" Margin="0,0,0,15" BorderBrush="{StaticResource PrimaryBrush}" BorderThickness="1">
+                            <StackPanel>
+                                <Border Background="{StaticResource PrimaryLightBrush}" Padding="20,15" CornerRadius="8,8,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="RESUMEN DE ACTIVIDAD" FontSize="12" FontWeight="Bold" Foreground="{StaticResource PrimaryDarkBrush}"/>
+                                            <TextBlock Text="{Binding SelectedDate, StringFormat='dddd, dd MMMM yyyy'}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                                <TextBlock Text="🕐" FontSize="12" Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding HoraEntrada, Converter={StaticResource TimeSpanToStringConverter}}" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text=" - " FontSize="13" Margin="3,0"/>
+                                                <TextBlock Text="{Binding HoraSalida, Converter={StaticResource TimeSpanToStringConverter}}" FontSize="13" FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" CornerRadius="4" Padding="10,5">
+                                            <TextBlock FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}">
+                                                <Run Text="{Binding Hours, StringFormat='0.0'}"/>
+                                                <Run Text=" Horas"/>
+                                            </TextBlock>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                
+                                <Border Padding="25">
+                                    <StackPanel>
+                                        <TextBlock Text="Empleados" Style="{StaticResource FormLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <ItemsControl ItemsSource="{Binding SelectedEmpleados, Mode=OneWay}" Margin="0,5,0,20">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="15" Padding="12,6" Margin="0,0,8,8" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="👤" Margin="0,0,5,0" FontSize="12"/>
+                                                            <TextBlock Text="{Binding NombreCompleto}" FontWeight="SemiBold" FontSize="13"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+
+                                        <Grid Margin="0,0,0,20">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                                                <TextBlock Text="Actividad" Style="{StaticResource FormLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                <TextBlock Text="{Binding SelectedActivity.Nombre}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                                <Border Background="{StaticResource InfoLightBrush}" HorizontalAlignment="Left" CornerRadius="4" Padding="6,2" Margin="0,5,0,0">
+                                                    <TextBlock Text="{Binding SelectedActivity.Categoria}" FontSize="11" Foreground="{StaticResource InfoDarkBrush}"/>
+                                                </Border>
+                                            </StackPanel>
+                                            
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="Proyecto" Style="{StaticResource FormLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="📂" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding SelectedProject.Nombre}" FontSize="15" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <TextBlock Text="Descripción" Style="{StaticResource FormLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
+                                        <Border Background="{StaticResource BackgroundBrush}" CornerRadius="6" Padding="15">
+                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontStyle="Italic" FontSize="14" LineHeight="20"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Status Message -->
+                    <Border Style="{StaticResource AlertPanel}" Margin="0,20,0,0"
+                           Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisConverter}}">
+                        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Footer del Wizard -->
+            <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" Padding="20,15"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="1" Command="{Binding PreviousStepCommand}" Margin="0,0,10,0" Width="100"
+                            Style="{StaticResource SecondaryButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="←" Margin="0,0,5,0"/>
+                            <TextBlock Text="Atrás"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2" Command="{Binding NextStepCommand}" Width="130"
+                            Style="{StaticResource PrimaryButton}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding NextButtonText}"/>
+                            <TextBlock Text=" →" Visibility="{Binding IsLastStep, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ==================== DASHBOARD CONTAINER ==================== -->
+        <Grid Visibility="{Binding IsDashboardVisible, Converter={StaticResource BoolToVisConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Header del Dashboard -->
+            <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" Padding="20,15" 
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Button Grid.Column="0" Content="← Volver" 
+                            Command="{Binding GoHomeCommand}"
+                            Style="{StaticResource SecondaryButton}"
+                            Padding="15,8" Margin="0,0,20,0"/>
+                    
+                    <TextBlock Grid.Column="1" Text="📊 Registros de Actividades" 
+                               FontSize="18" FontWeight="SemiBold" 
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+            
+            <!-- Dashboard Content -->
+            <views:ControlDiarioView Grid.Row="1" DataContext="{Binding DashboardViewModel}"/>
+        </Grid>
+
+        <!-- ==================== LOADING OVERLAY ==================== -->
+        <Grid Background="#80000000" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}">
+            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="12" Padding="30" 
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <ProgressBar IsIndeterminate="True" Width="180" Height="4" Margin="0,0,0,15"/>
+                    <TextBlock Text="Guardando..." HorizontalAlignment="Center" FontSize="14"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ==================== SUCCESS OVERLAY ==================== -->
+        <Grid Background="#95FFFFFF" Visibility="{Binding IsSuccessVisible, Converter={StaticResource BoolToVisConverter}}">
+            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="20" Padding="50,40" 
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="{StaticResource SuccessBrush}" BorderThickness="0">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.15" Color="Black"/>
+                </Border.Effect>
+                <StackPanel HorizontalAlignment="Center">
+                    <!-- Icono Animado (Simulado) -->
+                    <Border Width="100" Height="100" CornerRadius="50" Background="{StaticResource SuccessLightBrush}" Margin="0,0,0,25">
+                        <TextBlock Text="✓" FontSize="50" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    
+                    <TextBlock Text="¡Registro Guardado!" FontSize="26" FontWeight="Bold" 
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    
+                    <TextBlock Text="{Binding SuccessMessage}" FontSize="16" 
+                               Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" 
+                               TextAlignment="Center" MaxWidth="300" TextWrapping="Wrap"/>
+                               
+                    <TextBlock Text="Volviendo al menú principal..." FontSize="13" 
+                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center" 
+                               Margin="0,25,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

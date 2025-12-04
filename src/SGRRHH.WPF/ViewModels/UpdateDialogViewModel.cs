@@ -10,7 +10,7 @@ namespace SGRRHH.WPF.ViewModels;
 /// ViewModel para el diálogo de actualización
 /// Flujo simplificado: siempre en primer plano, sin opción de instalar al cerrar
 /// </summary>
-public partial class UpdateDialogViewModel : ObservableObject
+public partial class UpdateDialogViewModel : ViewModelBase
 {
     private readonly IUpdateService _updateService;
     

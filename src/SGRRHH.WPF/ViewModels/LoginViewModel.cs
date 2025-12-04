@@ -10,7 +10,7 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para la ventana de Login
 /// </summary>
-public partial class LoginViewModel : ObservableObject
+public partial class LoginViewModel : ViewModelBase
 {
     private readonly IAuthService _authService;
     private readonly IWindowsHelloService? _windowsHelloService;
@@ -23,9 +23,6 @@ public partial class LoginViewModel : ObservableObject
     
     [ObservableProperty]
     private string _errorMessage = string.Empty;
-    
-    [ObservableProperty]
-    private bool _isLoading;
     
     [ObservableProperty]
     private bool _hasError;

@@ -12,10 +12,11 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para el chat moderno usando Sendbird
 /// </summary>
-public partial class ChatViewModel : ObservableObject, IDisposable
+public partial class ChatViewModel : ViewModelBase, IDisposable
 {
     private readonly ISendbirdChatService _sendbirdService;
     private readonly IUsuarioService _usuarioService;
+    private readonly IDialogService _dialogService;
     private readonly System.Timers.Timer _pollingTimer;
     private readonly System.Timers.Timer _channelsRefreshTimer;
     private bool _disposed;
@@ -104,10 +105,12 @@ public partial class ChatViewModel : ObservableObject, IDisposable
 
     public ChatViewModel(
         ISendbirdChatService sendbirdService,
-        IUsuarioService usuarioService)
+        IUsuarioService usuarioService,
+        IDialogService dialogService)
     {
         _sendbirdService = sendbirdService;
         _usuarioService = usuarioService;
+        _dialogService = dialogService;
 
         // Suscribirse a eventos
         _sendbirdService.MessageReceived += OnMessageReceived;
@@ -142,9 +145,9 @@ public partial class ChatViewModel : ObservableObject, IDisposable
 
             if (!connected)
             {
-                MessageBox.Show(
+                _dialogService.ShowError(
                     "No se pudo conectar al servidor de chat. Por favor, verifica tu conexión.",
-                    "Error de conexión", MessageBoxButton.OK, MessageBoxImage.Error);
+                    "Error de conexión");
                 return;
             }
 
@@ -176,8 +179,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error al inicializar ChatViewModel: {ex.Message}");
-            MessageBox.Show("Error al inicializar el chat. Intente nuevamente.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("Error al inicializar el chat. Intente nuevamente.", "Error");
         }
         finally
         {
@@ -416,8 +418,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error al cargar mensajes del canal: {ex.Message}");
-            MessageBox.Show("Error al cargar los mensajes. Intente nuevamente.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("Error al cargar los mensajes. Intente nuevamente.", "Error");
         }
         finally
         {
@@ -448,8 +449,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
             }
             else
             {
-                MessageBox.Show("No se pudo enviar el mensaje. Intente nuevamente.",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError("No se pudo enviar el mensaje. Intente nuevamente.", "Error");
                 MessageText = messageContent; // Restaurar el mensaje
             }
         }
@@ -457,8 +457,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
         {
             MessageText = messageContent; // Restaurar el mensaje si falla
             System.Diagnostics.Debug.WriteLine($"Error al enviar mensaje: {ex.Message}");
-            MessageBox.Show("Error al enviar el mensaje. Intente nuevamente.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("Error al enviar el mensaje. Intente nuevamente.", "Error");
         }
     }
 
@@ -572,14 +571,13 @@ public partial class ChatViewModel : ObservableObject, IDisposable
                                $"Usuario destino: {otherUserName}\n" +
                                $"ID: {otherUserId}\n\n" +
                                $"Revisa la ventana Output/Debug para más detalles.";
-                MessageBox.Show(errorMsg, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(errorMsg, "Error");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error al crear conversación: {ex.Message}");
-            MessageBox.Show("Error al crear la conversación. Intente nuevamente.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("Error al crear la conversación. Intente nuevamente.", "Error");
         }
         finally
         {
@@ -620,16 +618,14 @@ public partial class ChatViewModel : ObservableObject, IDisposable
                 }
                 else
                 {
-                    MessageBox.Show("No se pudo enviar el archivo. Verifique el tamaño (máx 25 MB).",
-                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError("No se pudo enviar el archivo. Verifique el tamaño (máx 25 MB).", "Error");
                 }
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error al adjuntar archivo: {ex.Message}");
-            MessageBox.Show("Error al enviar el archivo. Intente nuevamente.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("Error al enviar el archivo. Intente nuevamente.", "Error");
         }
         finally
         {
@@ -660,15 +656,13 @@ public partial class ChatViewModel : ObservableObject, IDisposable
                 var bytes = await client.GetByteArrayAsync(message.FileUrl);
                 await File.WriteAllBytesAsync(saveFileDialog.FileName, bytes);
 
-                MessageBox.Show("Archivo descargado correctamente",
-                    "Descarga completa", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Archivo descargado correctamente", "Descarga completa");
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error al descargar archivo: {ex.Message}");
-            MessageBox.Show("Error al descargar el archivo. Intente nuevamente.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("Error al descargar el archivo. Intente nuevamente.", "Error");
         }
         finally
         {
@@ -764,7 +758,7 @@ public partial class ChatViewModel : ObservableObject, IDisposable
 /// <summary>
 /// ViewModel para representar un canal en la lista
 /// </summary>
-public partial class ChannelViewModel : ObservableObject
+public partial class ChannelViewModel : ViewModelBase
 {
     [ObservableProperty]
     private string _url = string.Empty;

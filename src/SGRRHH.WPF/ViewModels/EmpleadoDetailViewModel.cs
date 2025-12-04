@@ -9,7 +9,7 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para ver el detalle/expediente de un empleado
 /// </summary>
-public partial class EmpleadoDetailViewModel : ObservableObject
+public partial class EmpleadoDetailViewModel : ViewModelBase
 {
     private readonly IEmpleadoService _empleadoService;
     

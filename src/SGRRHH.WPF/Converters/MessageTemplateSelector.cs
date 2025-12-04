@@ -1,6 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
-using SGRRHH.WPF.ViewModels;
+using SGRRHH.Core.Interfaces;
 
 namespace SGRRHH.WPF.Converters;
 
@@ -22,9 +22,9 @@ public class MessageTemplateSelector : DataTemplateSelector
     
     public override DataTemplate? SelectTemplate(object item, DependencyObject container)
     {
-        if (item is ChatMessageViewModel message)
+        if (item is SendbirdMessage message)
         {
-            return message.IsMine ? MyMessageTemplate : ReceivedMessageTemplate;
+            return message.IsMyMessage ? MyMessageTemplate : ReceivedMessageTemplate;
         }
         
         return base.SelectTemplate(item, container);

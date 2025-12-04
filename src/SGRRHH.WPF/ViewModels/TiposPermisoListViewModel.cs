@@ -12,9 +12,10 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para el catálogo de tipos de permiso
 /// </summary>
-public partial class TiposPermisoListViewModel : ObservableObject
+public partial class TiposPermisoListViewModel : ViewModelBase
 {
     private readonly ITipoPermisoService _tipoPermisoService;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private ObservableCollection<TipoPermiso> _tiposPermiso = new();
@@ -23,10 +24,22 @@ public partial class TiposPermisoListViewModel : ObservableObject
     private TipoPermiso? _selectedTipoPermiso;
     
     [ObservableProperty]
-    private bool _isLoading;
+    private bool _showInactivos;
+    
+    // Propiedades de navegación de vistas
+    [ObservableProperty]
+    private bool _isHomeVisible = true;
     
     [ObservableProperty]
-    private bool _showInactivos;
+    private bool _isFormViewVisible;
+    
+    [ObservableProperty]
+    private bool _isListViewVisible;
+    
+    /// <summary>
+    /// Texto de la fecha actual para el footer
+    /// </summary>
+    public string CurrentDateText => DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"));
     
     // Propiedades del formulario
     [ObservableProperty]
@@ -86,9 +99,45 @@ public partial class TiposPermisoListViewModel : ObservableObject
         "#424242"  // Grey
     };
     
-    public TiposPermisoListViewModel(ITipoPermisoService tipoPermisoService)
+    public TiposPermisoListViewModel(ITipoPermisoService tipoPermisoService, IDialogService dialogService)
     {
         _tipoPermisoService = tipoPermisoService;
+        _dialogService = dialogService;
+    }
+    
+    /// <summary>
+    /// Muestra la pantalla de inicio
+    /// </summary>
+    [RelayCommand]
+    private void ShowHome()
+    {
+        IsHomeVisible = true;
+        IsFormViewVisible = false;
+        IsListViewVisible = false;
+    }
+    
+    /// <summary>
+    /// Muestra el formulario para crear nuevo tipo de permiso
+    /// </summary>
+    [RelayCommand]
+    private void ShowForm()
+    {
+        IsHomeVisible = false;
+        IsFormViewVisible = true;
+        IsListViewVisible = false;
+        Create();
+    }
+    
+    /// <summary>
+    /// Muestra la lista de tipos de permiso
+    /// </summary>
+    [RelayCommand]
+    private async Task ShowListAsync()
+    {
+        IsHomeVisible = false;
+        IsFormViewVisible = false;
+        IsListViewVisible = true;
+        await LoadDataAsync();
     }
     
     public async Task LoadDataAsync()
@@ -112,7 +161,7 @@ public partial class TiposPermisoListViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al cargar tipos de permiso: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al cargar tipos de permiso: {ex.Message}");
         }
         finally
         {
@@ -125,7 +174,7 @@ public partial class TiposPermisoListViewModel : ObservableObject
     {
         _editingId = null;
         IsEditing = false;
-        FormTitle = "Nuevo Tipo de Permiso";
+        FormTitle = "➕ Nuevo Tipo de Permiso";
         
         // Limpiar formulario
         Nombre = string.Empty;
@@ -147,7 +196,7 @@ public partial class TiposPermisoListViewModel : ObservableObject
         
         _editingId = tipoPermiso.Id;
         IsEditing = true;
-        FormTitle = "Editar Tipo de Permiso";
+        FormTitle = "✏️ Editar Tipo de Permiso";
         
         // Cargar datos
         Nombre = tipoPermiso.Nombre;
@@ -159,7 +208,10 @@ public partial class TiposPermisoListViewModel : ObservableObject
         EsCompensable = tipoPermiso.EsCompensable;
         Activo = tipoPermiso.Activo;
         
-        IsFormVisible = true;
+        // Cambiar a vista de formulario
+        IsHomeVisible = false;
+        IsFormViewVisible = true;
+        IsListViewVisible = false;
     }
     
     [RelayCommand]
@@ -168,13 +220,13 @@ public partial class TiposPermisoListViewModel : ObservableObject
         // Validaciones
         if (string.IsNullOrWhiteSpace(Nombre))
         {
-            MessageBox.Show("El nombre es requerido", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("El nombre es requerido", "Validación");
             return;
         }
         
         if (DiasPorDefecto < 0)
         {
-            MessageBox.Show("Los días por defecto no pueden ser negativos", "Validación", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _dialogService.ShowWarning("Los días por defecto no pueden ser negativos", "Validación");
             return;
         }
         
@@ -201,13 +253,13 @@ public partial class TiposPermisoListViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Tipo de permiso actualizado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Tipo de permiso actualizado exitosamente");
                     IsFormVisible = false;
-                    await LoadDataAsync();
+                    ShowHome();
                 }
                 else
                 {
-                    MessageBox.Show($"Error: {string.Join(", ", result.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error: {string.Join(", ", result.Errors)}");
                 }
             }
             else
@@ -216,19 +268,19 @@ public partial class TiposPermisoListViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Tipo de permiso creado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Tipo de permiso creado exitosamente");
                     IsFormVisible = false;
-                    await LoadDataAsync();
+                    ShowHome();
                 }
                 else
                 {
-                    MessageBox.Show($"Error: {string.Join(", ", result.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error: {string.Join(", ", result.Errors)}");
                 }
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}");
         }
         finally
         {
@@ -240,6 +292,7 @@ public partial class TiposPermisoListViewModel : ObservableObject
     private void CancelForm()
     {
         IsFormVisible = false;
+        ShowHome();
     }
     
     [RelayCommand]
@@ -247,13 +300,11 @@ public partial class TiposPermisoListViewModel : ObservableObject
     {
         if (tipoPermiso == null) return;
         
-        var result = MessageBox.Show(
+        var confirmado = _dialogService.Confirm(
             $"¿Está seguro de desactivar el tipo de permiso '{tipoPermiso.Nombre}'?",
-            "Confirmar desactivación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Confirmar desactivación");
             
-        if (result == MessageBoxResult.Yes)
+        if (confirmado)
         {
             IsLoading = true;
             
@@ -263,17 +314,17 @@ public partial class TiposPermisoListViewModel : ObservableObject
                 
                 if (deleteResult.Success)
                 {
-                    MessageBox.Show("Tipo de permiso desactivado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Tipo de permiso desactivado exitosamente");
                     await LoadDataAsync();
                 }
                 else
                 {
-                    MessageBox.Show($"Error: {string.Join(", ", deleteResult.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError($"Error: {string.Join(", ", deleteResult.Errors)}");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error: {ex.Message}");
             }
             finally
             {
@@ -297,13 +348,13 @@ public partial class TiposPermisoListViewModel : ObservableObject
         }
         else
         {
-            MessageBox.Show($"Error: {string.Join(", ", result.Errors)}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {string.Join(", ", result.Errors)}");
         }
     }
     
     partial void OnShowInactivosChanged(bool value)
     {
         LoadDataAsync().SafeFireAndForget(onError: ex => 
-            MessageBox.Show($"Error al cargar datos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error));
+            _dialogService.ShowError($"Error al cargar datos: {ex.Message}"));
     }
 }

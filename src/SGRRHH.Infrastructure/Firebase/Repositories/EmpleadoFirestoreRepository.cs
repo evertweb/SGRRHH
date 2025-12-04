@@ -487,31 +487,7 @@ public class EmpleadoFirestoreRepository : FirestoreRepository<Empleado>, IEmple
     /// </summary>
     public async Task<string> GetNextCodigoAsync()
     {
-        try
-        {
-            var query = Collection.OrderByDescending("codigo").Limit(10);
-            var snapshot = await query.GetSnapshotAsync();
-            
-            int maxNumber = 0;
-            foreach (var doc in snapshot.Documents)
-            {
-                if (doc.TryGetValue<string>("codigo", out var codigo) &&
-                    codigo.StartsWith(CODE_PREFIX))
-                {
-                    if (int.TryParse(codigo.Replace(CODE_PREFIX, ""), out int num))
-                    {
-                        if (num > maxNumber) maxNumber = num;
-                    }
-                }
-            }
-            
-            return $"{CODE_PREFIX}{(maxNumber + 1):D3}";
-        }
-        catch (Exception ex)
-        {
-            _logger?.LogError(ex, "Error al obtener siguiente código de empleado");
-            return $"{CODE_PREFIX}001";
-        }
+        return await GetNextCodigoAsync(CODE_PREFIX);
     }
     
     /// <summary>

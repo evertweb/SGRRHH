@@ -485,5 +485,44 @@ public abstract class FirestoreRepository<T> : IFirestoreRepository<T>, IReposit
         return Firestore.StartBatch();
     }
     
+    /// <summary>
+    /// Obtiene el siguiente código disponible con formato PREFIX + número (ej: DEP001, CAR002).
+    /// Este método está en la clase base para evitar duplicación en cada repositorio.
+    /// </summary>
+    /// <param name="prefix">Prefijo del código (ej: "DEP", "CAR", "EMP")</param>
+    /// <param name="digits">Cantidad de dígitos para el número (default: 3)</param>
+    /// <returns>Siguiente código disponible</returns>
+    protected async Task<string> GetNextCodigoAsync(string prefix, int digits = 3)
+    {
+        try
+        {
+            var query = Collection.OrderByDescending("codigo").Limit(10);
+            var snapshot = await query.GetSnapshotAsync();
+            
+            int maxNumber = 0;
+            foreach (var doc in snapshot.Documents)
+            {
+                if (doc.TryGetValue<string>("codigo", out var codigo) && 
+                    !string.IsNullOrEmpty(codigo) && 
+                    codigo.StartsWith(prefix))
+                {
+                    var numberPart = codigo.Substring(prefix.Length);
+                    if (int.TryParse(numberPart, out int num) && num > maxNumber)
+                    {
+                        maxNumber = num;
+                    }
+                }
+            }
+            
+            return $"{prefix}{(maxNumber + 1).ToString($"D{digits}")}";
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al obtener siguiente código con prefijo {Prefix} en {Collection}", 
+                prefix, _collectionName);
+            return $"{prefix}{"1".PadLeft(digits, '0')}";
+        }
+    }
+    
     #endregion
 }

@@ -107,6 +107,16 @@ public enum TipoDocumentoEmpleado
     Capacitacion = 20,
     
     /// <summary>
+    /// Contrato de trabajo firmado
+    /// </summary>
+    ContratoFirmado = 21,
+    
+    /// <summary>
+    /// Foto del empleado
+    /// </summary>
+    Foto = 22,
+    
+    /// <summary>
     /// Otro documento
     /// </summary>
     Otro = 99

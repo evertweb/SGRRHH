@@ -15,11 +15,12 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para el formulario de empleado (crear/editar)
 /// </summary>
-public partial class EmpleadoFormViewModel : ObservableObject
+public partial class EmpleadoFormViewModel : ViewModelBase
 {
     private readonly IEmpleadoService _empleadoService;
     private readonly IDepartamentoService _departamentoService;
     private readonly ICargoService _cargoService;
+    private readonly IDialogService _dialogService;
     
     private int _empleadoId;
     private bool _isEditing;
@@ -29,8 +30,10 @@ public partial class EmpleadoFormViewModel : ObservableObject
     [ObservableProperty]
     private string _windowTitle = "Nuevo Empleado";
     
-    [ObservableProperty]
-    private bool _isLoading;
+    /// <summary>
+    /// Indica si estamos editando un empleado existente (vs. crear uno nuevo)
+    /// </summary>
+    public bool IsEditMode => _isEditing;
     
     // Datos del empleado
     [ObservableProperty]
@@ -162,14 +165,21 @@ public partial class EmpleadoFormViewModel : ObservableObject
     /// </summary>
     public event EventHandler? CloseRequested;
     
+    /// <summary>
+    /// Evento para abrir la ventana de documentos del empleado recién creado
+    /// </summary>
+    public event EventHandler<int>? OpenDocumentosRequested;
+    
     public EmpleadoFormViewModel(
         IEmpleadoService empleadoService, 
         IDepartamentoService departamentoService,
-        ICargoService cargoService)
+        ICargoService cargoService,
+        IDialogService dialogService)
     {
         _empleadoService = empleadoService;
         _departamentoService = departamentoService;
         _cargoService = cargoService;
+        _dialogService = dialogService;
     }
     
     /// <summary>
@@ -325,7 +335,7 @@ public partial class EmpleadoFormViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error al cargar la imagen: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error al cargar la imagen: {ex.Message}");
             }
         }
     }
@@ -339,6 +349,18 @@ public partial class EmpleadoFormViewModel : ObservableObject
         _newFotoData = null;
         _newFotoExtension = null;
         FotoPath = null;
+    }
+    
+    /// <summary>
+    /// Abre la ventana de documentos del empleado
+    /// </summary>
+    [RelayCommand]
+    private void OpenDocumentos()
+    {
+        if (_empleadoId > 0)
+        {
+            OpenDocumentosRequested?.Invoke(this, _empleadoId);
+        }
     }
     
     /// <summary>
@@ -438,11 +460,9 @@ public partial class EmpleadoFormViewModel : ObservableObject
         var validationErrors = ValidateForm();
         if (validationErrors.Any())
         {
-            MessageBox.Show(
+            _dialogService.ShowWarning(
                 "Por favor corrija los siguientes errores:\n\n• " + string.Join("\n• ", validationErrors),
-                "Validación",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+                "Validación");
             return;
         }
         
@@ -516,18 +536,42 @@ public partial class EmpleadoFormViewModel : ObservableObject
                     await _empleadoService.SaveFotoAsync(_empleadoId, _newFotoData, _newFotoExtension);
                 }
                 
-                MessageBox.Show(result.Message, "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
                 SaveCompleted?.Invoke(this, EventArgs.Empty);
+                
+                // Si es un empleado nuevo, preguntar si desea cargar documentos
+                if (!_isEditing)
+                {
+                    var cargarDocumentos = _dialogService.Confirm(
+                        $"Empleado '{Nombres} {Apellidos}' creado exitosamente.\n\n" +
+                        "¿Desea cargar los documentos requeridos ahora?\n\n" +
+                        "Documentos requeridos:\n" +
+                        "• Cédula de ciudadanía\n" +
+                        "• Hoja de vida\n" +
+                        "• Examen médico de ingreso\n" +
+                        "• Afiliaciones (EPS, AFP, ARL)",
+                        "Cargar Documentos");
+                    
+                    if (cargarDocumentos)
+                    {
+                        // Disparar evento para abrir ventana de documentos
+                        OpenDocumentosRequested?.Invoke(this, _empleadoId);
+                    }
+                }
+                else
+                {
+                    _dialogService.ShowSuccess(result.Message);
+                }
+                
                 CloseRequested?.Invoke(this, EventArgs.Empty);
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al guardar: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error al guardar: {ex.Message}");
         }
         finally
         {

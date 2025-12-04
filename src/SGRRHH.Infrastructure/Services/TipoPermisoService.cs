@@ -21,11 +21,11 @@ public class TipoPermisoService : ITipoPermisoService
         try
         {
             var tiposPermiso = await _repository.GetAllAsync();
-            return ServiceResult<IEnumerable<TipoPermiso>>.SuccessResult(tiposPermiso);
+            return ServiceResult<IEnumerable<TipoPermiso>>.Ok(tiposPermiso);
         }
         catch (Exception ex)
         {
-            return ServiceResult<IEnumerable<TipoPermiso>>.FailureResult($"Error al obtener tipos de permiso: {ex.Message}");
+            return ServiceResult<IEnumerable<TipoPermiso>>.Fail($"Error al obtener tipos de permiso: {ex.Message}");
         }
     }
 
@@ -34,11 +34,11 @@ public class TipoPermisoService : ITipoPermisoService
         try
         {
             var tiposPermiso = await _repository.GetActivosAsync();
-            return ServiceResult<IEnumerable<TipoPermiso>>.SuccessResult(tiposPermiso);
+            return ServiceResult<IEnumerable<TipoPermiso>>.Ok(tiposPermiso);
         }
         catch (Exception ex)
         {
-            return ServiceResult<IEnumerable<TipoPermiso>>.FailureResult($"Error al obtener tipos de permiso activos: {ex.Message}");
+            return ServiceResult<IEnumerable<TipoPermiso>>.Fail($"Error al obtener tipos de permiso activos: {ex.Message}");
         }
     }
 
@@ -49,14 +49,14 @@ public class TipoPermisoService : ITipoPermisoService
             var tipoPermiso = await _repository.GetByIdAsync(id);
             if (tipoPermiso == null)
             {
-                return ServiceResult<TipoPermiso>.FailureResult("Tipo de permiso no encontrado");
+                return ServiceResult<TipoPermiso>.Fail("Tipo de permiso no encontrado");
             }
 
-            return ServiceResult<TipoPermiso>.SuccessResult(tipoPermiso);
+            return ServiceResult<TipoPermiso>.Ok(tipoPermiso);
         }
         catch (Exception ex)
         {
-            return ServiceResult<TipoPermiso>.FailureResult($"Error al obtener tipo de permiso: {ex.Message}");
+            return ServiceResult<TipoPermiso>.Fail($"Error al obtener tipo de permiso: {ex.Message}");
         }
     }
 
@@ -84,16 +84,16 @@ public class TipoPermisoService : ITipoPermisoService
 
             if (errores.Any())
             {
-                return ServiceResult<TipoPermiso>.FailureResult(errores);
+                return ServiceResult<TipoPermiso>.Fail(errores);
             }
 
             // Crear
             var created = await _repository.AddAsync(tipoPermiso);
-            return ServiceResult<TipoPermiso>.SuccessResult(created, "Tipo de permiso creado exitosamente");
+            return ServiceResult<TipoPermiso>.Ok(created, "Tipo de permiso creado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<TipoPermiso>.FailureResult($"Error al crear tipo de permiso: {ex.Message}");
+            return ServiceResult<TipoPermiso>.Fail($"Error al crear tipo de permiso: {ex.Message}");
         }
     }
 
@@ -107,7 +107,7 @@ public class TipoPermisoService : ITipoPermisoService
             var existing = await _repository.GetByIdAsync(tipoPermiso.Id);
             if (existing == null)
             {
-                return ServiceResult<TipoPermiso>.FailureResult("Tipo de permiso no encontrado");
+                return ServiceResult<TipoPermiso>.Fail("Tipo de permiso no encontrado");
             }
 
             if (string.IsNullOrWhiteSpace(tipoPermiso.Nombre))
@@ -127,16 +127,16 @@ public class TipoPermisoService : ITipoPermisoService
 
             if (errores.Any())
             {
-                return ServiceResult<TipoPermiso>.FailureResult(errores);
+                return ServiceResult<TipoPermiso>.Fail(errores);
             }
 
             // Actualizar
             await _repository.UpdateAsync(tipoPermiso);
-            return ServiceResult<TipoPermiso>.SuccessResult(tipoPermiso, "Tipo de permiso actualizado exitosamente");
+            return ServiceResult<TipoPermiso>.Ok(tipoPermiso, "Tipo de permiso actualizado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<TipoPermiso>.FailureResult($"Error al actualizar tipo de permiso: {ex.Message}");
+            return ServiceResult<TipoPermiso>.Fail($"Error al actualizar tipo de permiso: {ex.Message}");
         }
     }
 
@@ -147,18 +147,18 @@ public class TipoPermisoService : ITipoPermisoService
             var tipoPermiso = await _repository.GetByIdAsync(id);
             if (tipoPermiso == null)
             {
-                return ServiceResult<bool>.FailureResult("Tipo de permiso no encontrado");
+                return ServiceResult<bool>.Fail("Tipo de permiso no encontrado");
             }
 
             // Soft delete - marcar como inactivo en lugar de eliminar
             tipoPermiso.Activo = false;
             await _repository.UpdateAsync(tipoPermiso);
 
-            return ServiceResult<bool>.SuccessResult(true, "Tipo de permiso desactivado exitosamente");
+            return ServiceResult<bool>.Ok(true, "Tipo de permiso desactivado exitosamente");
         }
         catch (Exception ex)
         {
-            return ServiceResult<bool>.FailureResult($"Error al eliminar tipo de permiso: {ex.Message}");
+            return ServiceResult<bool>.Fail($"Error al eliminar tipo de permiso: {ex.Message}");
         }
     }
 }

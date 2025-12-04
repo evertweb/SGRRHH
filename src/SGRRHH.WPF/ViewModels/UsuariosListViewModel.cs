@@ -11,18 +11,16 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para la gestión de usuarios
 /// </summary>
-public partial class UsuariosListViewModel : ObservableObject
+public partial class UsuariosListViewModel : ViewModelBase
 {
     private readonly IUsuarioService _usuarioService;
+    private readonly IDialogService _dialogService;
     
     [ObservableProperty]
     private ObservableCollection<Usuario> _usuarios = new();
     
     [ObservableProperty]
     private Usuario? _selectedUsuario;
-    
-    [ObservableProperty]
-    private bool _isLoading;
     
     [ObservableProperty]
     private string? _mensaje;
@@ -61,9 +59,10 @@ public partial class UsuariosListViewModel : ObservableObject
     // Lista de roles para el ComboBox
     public List<RolUsuario> Roles { get; } = Enum.GetValues<RolUsuario>().ToList();
     
-    public UsuariosListViewModel(IUsuarioService usuarioService)
+    public UsuariosListViewModel(IUsuarioService usuarioService, IDialogService dialogService)
     {
         _usuarioService = usuarioService;
+        _dialogService = dialogService;
     }
     
     public async Task LoadDataAsync()
@@ -110,7 +109,7 @@ public partial class UsuariosListViewModel : ObservableObject
     {
         if (SelectedUsuario == null)
         {
-            MessageBox.Show("Seleccione un usuario para editar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un usuario para editar");
             return;
         }
         
@@ -145,13 +144,13 @@ public partial class UsuariosListViewModel : ObservableObject
                 // Validar campos requeridos para creación
                 if (string.IsNullOrWhiteSpace(EditUsername))
                 {
-                    MessageBox.Show("El nombre de usuario es requerido", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError("El nombre de usuario es requerido");
                     return;
                 }
                 
                 if (string.IsNullOrWhiteSpace(EditPassword))
                 {
-                    MessageBox.Show("La contraseña es requerida", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError("La contraseña es requerida");
                     return;
                 }
                 
@@ -164,14 +163,14 @@ public partial class UsuariosListViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Usuario creado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Usuario creado exitosamente");
                     IsEditing = false;
                     IsCreating = false;
                     await LoadDataAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
             else
@@ -187,19 +186,19 @@ public partial class UsuariosListViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show("Usuario actualizado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess("Usuario actualizado exitosamente");
                     IsEditing = false;
                     await LoadDataAsync();
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}");
         }
         finally
         {
@@ -212,7 +211,7 @@ public partial class UsuariosListViewModel : ObservableObject
     {
         if (SelectedUsuario == null)
         {
-            MessageBox.Show("Seleccione un usuario", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un usuario");
             return;
         }
         
@@ -224,7 +223,7 @@ public partial class UsuariosListViewModel : ObservableObject
             
             if (string.IsNullOrWhiteSpace(newPassword))
             {
-                MessageBox.Show("La contraseña no puede estar vacía", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError("La contraseña no puede estar vacía");
                 return;
             }
             
@@ -236,16 +235,16 @@ public partial class UsuariosListViewModel : ObservableObject
                 
                 if (result.Success)
                 {
-                    MessageBox.Show($"Contraseña restablecida para {SelectedUsuario.Username}", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                    _dialogService.ShowSuccess($"Contraseña restablecida para {SelectedUsuario.Username}");
                 }
                 else
                 {
-                    MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _dialogService.ShowError(result.Message);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError($"Error: {ex.Message}");
             }
             finally
             {
@@ -259,20 +258,18 @@ public partial class UsuariosListViewModel : ObservableObject
     {
         if (SelectedUsuario == null)
         {
-            MessageBox.Show("Seleccione un usuario", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un usuario");
             return;
         }
         
         var nuevoEstado = !SelectedUsuario.Activo;
         var accion = nuevoEstado ? "activar" : "desactivar";
         
-        var confirmacion = MessageBox.Show(
+        var confirmado = _dialogService.Confirm(
             $"¿Está seguro de {accion} al usuario '{SelectedUsuario.Username}'?",
-            "Confirmar",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
+            "Confirmar");
         
-        if (confirmacion != MessageBoxResult.Yes)
+        if (!confirmado)
             return;
         
         IsLoading = true;
@@ -287,12 +284,12 @@ public partial class UsuariosListViewModel : ObservableObject
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}");
         }
         finally
         {
@@ -305,24 +302,22 @@ public partial class UsuariosListViewModel : ObservableObject
     {
         if (SelectedUsuario == null)
         {
-            MessageBox.Show("Seleccione un usuario para eliminar", "Información", MessageBoxButton.OK, MessageBoxImage.Information);
+            _dialogService.ShowInfo("Seleccione un usuario para eliminar");
             return;
         }
         
         // Verificar que no sea el usuario actual
         if (App.CurrentUser?.Id == SelectedUsuario.Id)
         {
-            MessageBox.Show("No puede eliminar su propio usuario", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError("No puede eliminar su propio usuario");
             return;
         }
         
-        var confirmacion = MessageBox.Show(
+        var confirmado = _dialogService.ConfirmWarning(
             $"¿Está seguro de eliminar al usuario '{SelectedUsuario.Username}'?\n\nEsta acción no se puede deshacer.",
-            "Confirmar Eliminación",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning);
+            "Confirmar Eliminación");
         
-        if (confirmacion != MessageBoxResult.Yes)
+        if (!confirmado)
             return;
         
         IsLoading = true;
@@ -333,17 +328,17 @@ public partial class UsuariosListViewModel : ObservableObject
             
             if (result.Success)
             {
-                MessageBox.Show("Usuario eliminado exitosamente", "Éxito", MessageBoxButton.OK, MessageBoxImage.Information);
+                _dialogService.ShowSuccess("Usuario eliminado exitosamente");
                 await LoadDataAsync();
             }
             else
             {
-                MessageBox.Show(result.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _dialogService.ShowError(result.Message);
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            _dialogService.ShowError($"Error: {ex.Message}");
         }
         finally
         {

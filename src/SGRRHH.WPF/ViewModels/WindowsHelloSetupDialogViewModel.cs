@@ -13,7 +13,7 @@ namespace SGRRHH.WPF.ViewModels;
 /// <summary>
 /// ViewModel para el diálogo de configuración de Windows Hello post-login
 /// </summary>
-public partial class WindowsHelloSetupDialogViewModel : ObservableObject
+public partial class WindowsHelloSetupDialogViewModel : ViewModelBase
 {
     private readonly IWindowsHelloService _windowsHelloService;
     private readonly IFirebaseAuthService _firebaseAuthService;
