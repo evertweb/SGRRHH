@@ -5,151 +5,113 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Configurar Windows Hello"
-        Height="340" Width="450"
+        Height="320" Width="420"
         WindowStartupLocation="CenterOwner"
         WindowStyle="None"
-        AllowsTransparency="True"
-        Background="Transparent"
+        AllowsTransparency="False"
+        Background="#C0C0C0"
         ResizeMode="NoResize">
     
-    <Border Background="{StaticResource BackgroundBrush}" 
-            CornerRadius="10" 
-            BorderBrush="{StaticResource PrimaryBrush}" 
-            BorderThickness="2">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            
-            <!-- Encabezado -->
-            <Border Grid.Row="0" 
-                    Background="{StaticResource PrimaryBrush}" 
-                    CornerRadius="8,8,0,0"
-                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
-                <Grid Margin="15,12">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="🔐" FontSize="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="Configurar Windows Hello" 
-                                   FontSize="16" 
-                                   FontWeight="Bold" 
-                                   Foreground="White" 
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button Content="✕" 
-                            HorizontalAlignment="Right" 
-                            Background="Transparent" 
-                            BorderThickness="0"
-                            Foreground="White" 
-                            FontSize="14" 
-                            Cursor="Hand"
-                            Command="{Binding RemindLaterCommand}"
-                            Padding="5,0"/>
-                </Grid>
-            </Border>
-            
-            <!-- Contenido principal -->
-            <StackPanel Grid.Row="1" Margin="25,20">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    
+    <Border BorderThickness="2" BorderBrush="#808080" Background="#C0C0C0">
+        <Border BorderThickness="2" BorderBrush="White" Margin="0,0,2,2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 
-                <!-- Pregunta principal -->
-                <TextBlock Text="¿Desea activar Windows Hello para inicios de sesión más rápidos y seguros?"
-                           TextWrapping="Wrap"
-                           FontSize="14"
-                           Foreground="{StaticResource TextPrimaryBrush}"
-                           Margin="0,0,0,20"/>
-                
-                <!-- Beneficios -->
-                <StackPanel Margin="0,0,0,10">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="✓" 
-                                   Foreground="{StaticResource SuccessBrush}" 
-                                   FontWeight="Bold" 
-                                   FontSize="14"
-                                   Margin="0,0,10,0"/>
-                        <TextBlock Text="Ingrese con huella dactilar, rostro o PIN"
-                                   FontSize="13"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
-                    </StackPanel>
-                    
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="✓" 
-                                   Foreground="{StaticResource SuccessBrush}" 
-                                   FontWeight="Bold" 
-                                   FontSize="14"
-                                   Margin="0,0,10,0"/>
-                        <TextBlock Text="No necesita recordar su contraseña"
-                                   FontSize="13"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
-                    </StackPanel>
-                    
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <TextBlock Text="✓" 
-                                   Foreground="{StaticResource SuccessBrush}" 
-                                   FontWeight="Bold" 
-                                   FontSize="14"
-                                   Margin="0,0,10,0"/>
-                        <TextBlock Text="Más seguro que contraseñas tradicionales"
-                                   FontSize="13"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
-                    </StackPanel>
-                </StackPanel>
-                
-                <!-- Mensaje de error -->
-                <Border Background="{StaticResource DangerLightBrush}" 
-                        CornerRadius="5" 
-                        Padding="10" 
-                        Margin="0,10,0,0"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <TextBlock Text="{Binding ErrorMessage}" 
-                               Foreground="{StaticResource DangerBrush}" 
-                               TextWrapping="Wrap" 
-                               FontSize="12"/>
+                <!-- Encabezado Legacy -->
+                <Border Grid.Row="0" Background="#000080" Padding="5,3"
+                        MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="[*]" FontFamily="Courier New" FontSize="10" 
+                                       Foreground="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Configurar Windows Hello" FontFamily="Tahoma" FontSize="11" 
+                                       FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button Content="X" HorizontalAlignment="Right"
+                                Command="{Binding RemindLaterCommand}"
+                                FontFamily="Tahoma" FontSize="9" FontWeight="Bold"
+                                Width="18" Height="18" Padding="0"
+                                Style="{StaticResource LegacyButtonStyle}"/>
+                    </Grid>
                 </Border>
                 
-                <!-- Indicador de carga -->
-                <StackPanel Orientation="Horizontal" 
-                            HorizontalAlignment="Center"
-                            Margin="0,15,0,0"
-                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <TextBlock Text="⏳ Configurando Windows Hello..." 
-                               Foreground="{StaticResource TextSecondaryBrush}" 
-                               FontSize="12"/>
-                </StackPanel>
-            </StackPanel>
-            
-            <!-- Botones de acción -->
-            <Border Grid.Row="2" 
-                    Background="{StaticResource SurfaceBrush}" 
-                    CornerRadius="0,0,8,8"
-                    Padding="20,15">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="Configurar Ahora"
-                            Command="{Binding ConfigureNowCommand}"
-                            IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
-                            Style="{StaticResource SuccessButton}"
-                            Padding="20,10"
-                            FontSize="13"
-                            FontWeight="SemiBold"
-                            Margin="0,0,10,0"/>
-                    
-                    <Button Content="Más Tarde"
-                            Command="{Binding RemindLaterCommand}"
-                            IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
-                            Style="{StaticResource SecondaryButton}"
-                            Padding="20,10"
-                            FontSize="13"
-                            Margin="0,0,10,0"/>
-                    
-                    <Button Content="No Preguntar"
-                            Command="{Binding NeverAskCommand}"
-                            IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
-                            Style="{StaticResource SecondaryButton}"
-                            Padding="20,10"
-                            FontSize="13"
-                            Foreground="{StaticResource TextSecondaryBrush}"/>
-                </StackPanel>
-            </Border>
-        </Grid>
+                <!-- Contenido principal -->
+                <Border Grid.Row="1" Background="White" Margin="10" Padding="15"
+                        BorderThickness="2" BorderBrush="#808080">
+                    <Border BorderThickness="2" BorderBrush="#404040" Margin="-2,-2,0,0" Padding="15">
+                        <StackPanel>
+                            <!-- Pregunta principal -->
+                            <TextBlock Text="Desea activar Windows Hello para inicios de sesion mas rapidos y seguros?"
+                                       TextWrapping="Wrap" FontFamily="Tahoma" FontSize="10"
+                                       Foreground="#000000" Margin="0,0,0,15"/>
+                            
+                            <!-- Beneficios -->
+                            <Border Background="#E0E0E0" Padding="10" Margin="0,0,0,10"
+                                    BorderThickness="1" BorderBrush="#808080">
+                                <StackPanel>
+                                    <TextBlock Text="BENEFICIOS:" FontFamily="Tahoma" FontSize="9" 
+                                               FontWeight="Bold" Foreground="#000080" Margin="0,0,0,5"/>
+                                    <TextBlock Text="[X] Ingrese con huella, rostro o PIN" FontFamily="Tahoma" FontSize="9" Foreground="#404040"/>
+                                    <TextBlock Text="[X] No necesita recordar contrasena" FontFamily="Tahoma" FontSize="9" Foreground="#404040"/>
+                                    <TextBlock Text="[X] Mas seguro que contrasenas tradicionales" FontFamily="Tahoma" FontSize="9" Foreground="#404040"/>
+                                </StackPanel>
+                            </Border>
+                            
+                            <!-- Mensaje de error -->
+                            <Border Background="#FFCCCC" BorderThickness="1" BorderBrush="#800000"
+                                    Padding="8" Margin="0,0,0,10"
+                                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="{Binding ErrorMessage}" Foreground="#800000" 
+                                           FontFamily="Tahoma" FontSize="9" TextWrapping="Wrap"/>
+                            </Border>
+                            
+                            <!-- Indicador de carga -->
+                            <TextBlock Text="Configurando Windows Hello..." FontFamily="Tahoma" FontSize="9"
+                                       FontStyle="Italic" Foreground="#808080" HorizontalAlignment="Center"
+                                       Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        </StackPanel>
+                    </Border>
+                </Border>
+                
+                <!-- Botones de acción -->
+                <Border Grid.Row="2" Background="#E0E0E0" BorderThickness="0,1,0,0" 
+                        BorderBrush="#808080" Padding="10,8">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="Configurar"
+                                Command="{Binding ConfigureNowCommand}"
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
+                                Style="{StaticResource LegacyButtonStyle}"
+                                FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
+                                Padding="12,4" Margin="0,0,8,0"/>
+                        
+                        <Button Content="Mas Tarde"
+                                Command="{Binding RemindLaterCommand}"
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
+                                Style="{StaticResource LegacyButtonStyle}"
+                                FontFamily="Tahoma" FontSize="10"
+                                Padding="12,4" Margin="0,0,8,0"/>
+                        
+                        <Button Content="No Preguntar"
+                                Command="{Binding NeverAskCommand}"
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
+                                Style="{StaticResource LegacyButtonStyle}"
+                                FontFamily="Tahoma" FontSize="10"
+                                Padding="12,4"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
     </Border>
 </Window>

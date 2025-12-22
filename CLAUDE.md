@@ -143,13 +143,12 @@ All services, repositories, and ViewModels registered in `App.xaml.cs` using Mic
 - **AuditLog** - Audit trail for important actions
 
 ### Seed Data
-On first run, `DatabaseInitializer.cs` creates:
-- 3 default users (admin/admin123, secretaria/secretaria123, ingeniera/ingeniera123)
-- Sample departments (Administración, Ingeniería, Operaciones)
-- Sample job positions
-- 13 Colombian permission types (Calamidad, Médico, Luto, Lactancia, etc.)
+Los usuarios del sistema se gestionan directamente en Firebase:
+- Los usuarios deben crearse desde Firebase Console o el panel de administración
+- Las credenciales por defecto fueron **eliminadas** del código fuente por seguridad
+- Los departamentos, cargos y tipos de permiso se gestionan desde la app
 
-**IMPORTANT:** Change default passwords in production.
+**NOTA:** Las credenciales antiguas (admin123, secretaria123, ingeniera123) fueron removidas del código. Si aún existen en Firebase, cambiar las contraseñas.
 
 ## Navigation & Messaging
 
@@ -256,11 +255,11 @@ Specific error types (SQLite, IO, UnauthorizedAccess) have friendly Spanish mess
 
 ## Known Issues & Warnings
 
-**Build Warnings:**
-- 4 warnings in `PermisoFormViewModel.cs:256-257` - Possible null reference on SelectedTipoPermiso properties
-- These are safe in practice due to UI validation, but could be fixed with null-conditional operators
+**Build Warnings (2 total):**
+- `NU1701` en `CredentialManagement 1.0.2` - Paquete restaurado usando .NET Framework en lugar de net8.0
+  - No afecta funcionalidad, es un warning de compatibilidad
 
-**Version:** 1.0.0 (completed, production-ready)
+**Version:** 1.1.12 (production-ready)
 
 ## Testing
 

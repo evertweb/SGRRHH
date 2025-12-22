@@ -8,15 +8,24 @@ namespace SGRRHH.Infrastructure.Firebase.Repositories;
 /// <summary>
 /// Implementación del repositorio de Departamentos para Firestore.
 /// Colección: "departamentos"
+/// Incluye cache en memoria para reducir round-trips.
 /// </summary>
 public class DepartamentoFirestoreRepository : FirestoreRepository<Departamento>, IDepartamentoRepository
 {
     private const string COLLECTION_NAME = "departamentos";
     private const string CODE_PREFIX = "DEP";
-    
-    public DepartamentoFirestoreRepository(FirebaseInitializer firebase, ILogger<DepartamentoFirestoreRepository>? logger = null) 
+    private const string CACHE_KEY_ALL_ACTIVE = "departamentos_all_active";
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
+
+    private readonly ICacheService? _cache;
+
+    public DepartamentoFirestoreRepository(
+        FirebaseInitializer firebase,
+        ICacheService? cache = null,
+        ILogger<DepartamentoFirestoreRepository>? logger = null)
         : base(firebase, COLLECTION_NAME, logger)
     {
+        _cache = cache;
     }
     
     #region Entity <-> Document Mapping
@@ -253,24 +262,48 @@ public class DepartamentoFirestoreRepository : FirestoreRepository<Departamento>
     }
     
     /// <summary>
-    /// Obtiene todos los departamentos activos ordenados por nombre
+    /// Obtiene todos los departamentos activos ordenados por nombre.
+    /// Usa cache en memoria con expiración de 10 minutos.
     /// </summary>
     public override async Task<IEnumerable<Departamento>> GetAllActiveAsync()
     {
         try
         {
-            var query = Collection
-                .WhereEqualTo("activo", true)
-                .OrderBy("nombre");
-            var snapshot = await query.GetSnapshotAsync();
-            
-            return snapshot.Documents.Select(DocumentToEntity).ToList();
+            // Intentar obtener del cache primero
+            if (_cache != null)
+            {
+                return await _cache.GetOrCreateAsync(
+                    CACHE_KEY_ALL_ACTIVE,
+                    async () => await FetchAllActiveFromFirestoreAsync(),
+                    CacheExpiration);
+            }
+
+            // Sin cache, ir directo a Firestore
+            return await FetchAllActiveFromFirestoreAsync();
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al obtener departamentos activos");
             throw;
         }
+    }
+
+    private async Task<IEnumerable<Departamento>> FetchAllActiveFromFirestoreAsync()
+    {
+        var query = Collection
+            .WhereEqualTo("activo", true)
+            .OrderBy("nombre");
+        var snapshot = await query.GetSnapshotAsync();
+
+        return snapshot.Documents.Select(DocumentToEntity).ToList();
+    }
+
+    /// <summary>
+    /// Invalida el cache de departamentos. Llamar después de Add/Update/Delete.
+    /// </summary>
+    public void InvalidateCache()
+    {
+        _cache?.InvalidateByPrefix("departamentos");
     }
     
     #endregion

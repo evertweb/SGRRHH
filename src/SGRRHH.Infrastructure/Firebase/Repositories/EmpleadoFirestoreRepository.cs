@@ -9,18 +9,28 @@ namespace SGRRHH.Infrastructure.Firebase.Repositories;
 /// <summary>
 /// Implementación del repositorio de Empleados para Firestore.
 /// Colección: "empleados"
-/// 
+///
 /// Campos desnormalizados para evitar múltiples queries:
 /// - cargoNombre, departamentoNombre, supervisorNombre
+///
+/// Incluye cache en memoria para optimizar búsquedas.
 /// </summary>
 public class EmpleadoFirestoreRepository : FirestoreRepository<Empleado>, IEmpleadoRepository
 {
     private const string COLLECTION_NAME = "empleados";
     private const string CODE_PREFIX = "EMP";
-    
-    public EmpleadoFirestoreRepository(FirebaseInitializer firebase, ILogger<EmpleadoFirestoreRepository>? logger = null)
+    private const string CACHE_KEY_ALL_ACTIVE = "empleados_all_active";
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(5);
+
+    private readonly ICacheService? _cache;
+
+    public EmpleadoFirestoreRepository(
+        FirebaseInitializer firebase,
+        ICacheService? cache = null,
+        ILogger<EmpleadoFirestoreRepository>? logger = null)
         : base(firebase, COLLECTION_NAME, logger)
     {
+        _cache = cache;
     }
     
     #region Entity <-> Document Mapping
@@ -511,26 +521,48 @@ public class EmpleadoFirestoreRepository : FirestoreRepository<Empleado>, IEmple
     }
     
     /// <summary>
-    /// Obtiene todos los empleados activos ordenados
+    /// Obtiene todos los empleados activos ordenados.
+    /// Usa cache en memoria con expiración de 5 minutos para optimizar búsquedas.
     /// </summary>
     public override async Task<IEnumerable<Empleado>> GetAllActiveAsync()
     {
         try
         {
-            var query = Collection.WhereEqualTo("activo", true);
-            var snapshot = await query.GetSnapshotAsync();
-            
-            return snapshot.Documents
-                .Select(DocumentToEntity)
-                .OrderBy(e => e.Apellidos)
-                .ThenBy(e => e.Nombres)
-                .ToList();
+            if (_cache != null)
+            {
+                return await _cache.GetOrCreateAsync(
+                    CACHE_KEY_ALL_ACTIVE,
+                    FetchAllActiveFromFirestoreAsync,
+                    CacheExpiration);
+            }
+
+            return await FetchAllActiveFromFirestoreAsync();
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al obtener empleados activos");
             throw;
         }
+    }
+
+    private async Task<IEnumerable<Empleado>> FetchAllActiveFromFirestoreAsync()
+    {
+        var query = Collection.WhereEqualTo("activo", true);
+        var snapshot = await query.GetSnapshotAsync();
+
+        return snapshot.Documents
+            .Select(DocumentToEntity)
+            .OrderBy(e => e.Apellidos)
+            .ThenBy(e => e.Nombres)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Invalida el cache de empleados. Llamar después de Add/Update/Delete.
+    /// </summary>
+    public void InvalidateCache()
+    {
+        _cache?.InvalidateByPrefix("empleados");
     }
     
     #endregion

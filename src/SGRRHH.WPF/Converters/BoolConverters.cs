@@ -92,7 +92,7 @@ public class BoolToEditTextConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -115,7 +115,7 @@ public class LessThanConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -135,6 +135,6 @@ public class BoolToCurrentDeviceConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }

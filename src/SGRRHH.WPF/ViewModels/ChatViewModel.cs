@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Timers;
@@ -360,7 +361,7 @@ public partial class ChatViewModel : ViewModelBase, IDisposable
                 }
 
                 // Actualizar contador total de no leídos
-                _ = UpdateUnreadCountAsync();
+                UpdateUnreadCountAsync().SafeFireAndForget(showErrorMessage: false);
             });
         }
         catch (Exception ex)
@@ -373,7 +374,7 @@ public partial class ChatViewModel : ViewModelBase, IDisposable
     {
         if (value != null)
         {
-            _ = LoadChannelMessagesAsync(value);
+            LoadChannelMessagesAsync(value).SafeFireAndForget();
         }
         else
         {
@@ -686,7 +687,7 @@ public partial class ChatViewModel : ViewModelBase, IDisposable
                     // Marcar como leído si no es mío
                     if (!message.IsMyMessage)
                     {
-                        _ = _sendbirdService.MarkChannelAsReadAsync(message.ChannelUrl);
+                        _sendbirdService.MarkChannelAsReadAsync(message.ChannelUrl).SafeFireAndForget(showErrorMessage: false);
                     }
                 }
             }
@@ -748,7 +749,7 @@ public partial class ChatViewModel : ViewModelBase, IDisposable
         {
             _pollingTimer?.Dispose();
             _channelsRefreshTimer?.Dispose();
-            _ = CleanupAsync().ConfigureAwait(false);
+            CleanupAsync().SafeFireAndForget(showErrorMessage: false);
         }
 
         _disposed = true;

@@ -4,166 +4,18 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="1100">
+             d:DesignHeight="700" d:DesignWidth="1100"
+             Background="#C0C0C0">
     
     <UserControl.Resources>
-        <!-- Estilos locales -->
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="Margin" Value="5"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1"/>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-        </Style>
-        
-        <Style x:Key="InfoLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#7F8C8D"/>
-            <Setter Property="Margin" Value="0,5,0,2"/>
-        </Style>
-        
-        <Style x:Key="InfoValueStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-        </Style>
-        
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#3498DB"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2980B9"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Background" Value="#BDC3C7"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#ECF0F1"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#D5DBDB"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="SuccessButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#27AE60"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1E8449"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="WarningButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#F39C12"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#D68910"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="DangerButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#E74C3C"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#C0392B"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </UserControl.Resources>
     
-    <Grid Background="#F5F6FA">
+    <Grid>
         <!-- ========== PANTALLA DE BIENVENIDA ========== -->
         <Grid Visibility="{Binding IsHomeVisible, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.RowDefinitions>
@@ -171,140 +23,62 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             
-            <!-- Contenido principal de bienvenida -->
-            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <!-- Emoji y título -->
-                <TextBlock Text="📄" FontSize="72" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                <TextBlock Text="¡Gestión de Contratos!" 
-                           FontSize="32" FontWeight="Bold" 
-                           Foreground="#2C3E50" 
-                           HorizontalAlignment="Center"/>
-                <TextBlock Text="¿Qué deseas hacer hoy?" 
-                           FontSize="18" 
-                           Foreground="#7F8C8D" 
-                           HorizontalAlignment="Center" 
-                           Margin="0,10,0,40"/>
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="500">
+                <TextBlock Text="[CONTRATOS]" FontFamily="Courier New" FontSize="24" FontWeight="Bold"
+                           Foreground="#000080" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock Text="GESTION DE CONTRATOS" FontFamily="Tahoma" FontSize="14" FontWeight="Bold" 
+                           Foreground="#000000" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBlock Text="Seleccione una opcion:" FontFamily="Tahoma" FontSize="10" 
+                           Foreground="#404040" HorizontalAlignment="Center" Margin="0,0,0,30"/>
                 
-                <!-- Tarjetas de opciones -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <!-- Tarjeta Nuevo Contrato -->
-                    <Button Command="{Binding NuevoContratoCommand}" 
-                            Cursor="Hand" 
-                            Margin="15">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="CardBorder" 
-                                        Background="White" 
-                                        CornerRadius="16" 
-                                        Width="200" Height="180"
-                                        BorderBrush="#E0E0E0" BorderThickness="1">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.15"/>
-                                    </Border.Effect>
-                                    <Grid>
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <!-- Círculo verde con icono -->
-                                            <Border Background="#27AE60" 
-                                                    CornerRadius="30" 
-                                                    Width="60" Height="60" 
-                                                    HorizontalAlignment="Center"
-                                                    Margin="0,0,0,15">
-                                                <TextBlock Text="➕" 
-                                                           FontSize="28" 
-                                                           Foreground="White"
-                                                           HorizontalAlignment="Center" 
-                                                           VerticalAlignment="Center"/>
-                                            </Border>
-                                            <TextBlock Text="Nuevo Contrato" 
-                                                       FontSize="16" 
-                                                       FontWeight="SemiBold" 
-                                                       Foreground="#2C3E50"
-                                                       HorizontalAlignment="Center"/>
-                                            <TextBlock Text="Crear un contrato nuevo" 
-                                                       FontSize="12" 
-                                                       Foreground="#95A5A6"
-                                                       HorizontalAlignment="Center"
-                                                       Margin="0,5,0,0"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="CardBorder" Property="BorderBrush" Value="#27AE60"/>
-                                        <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
+                    <!-- Opción: Nuevo Contrato -->
+                    <Border Background="White" BorderThickness="2" BorderBrush="#808080"
+                            Padding="20,15" Margin="0,0,15,0" Cursor="Hand" Width="180">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding NuevoContratoCommand}"/>
+                        </Border.InputBindings>
+                        <StackPanel HorizontalAlignment="Center">
+                            <Border Background="#008000" Width="50" Height="50" 
+                                    HorizontalAlignment="Center" Margin="0,0,0,10">
+                                <TextBlock Text="[+]" FontFamily="Courier New" FontSize="20" FontWeight="Bold"
+                                           Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Nuevo Contrato" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
+                                       Foreground="#000000" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <TextBlock Text="Crear un contrato nuevo" FontFamily="Tahoma" FontSize="8"
+                                       Foreground="#808080" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                     
-                    <!-- Tarjeta Ver Contratos -->
-                    <Button Command="{Binding ShowContentCommand}" 
-                            Cursor="Hand" 
-                            Margin="15">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="CardBorder" 
-                                        Background="White" 
-                                        CornerRadius="16" 
-                                        Width="200" Height="180"
-                                        BorderBrush="#E0E0E0" BorderThickness="1">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.15"/>
-                                    </Border.Effect>
-                                    <Grid>
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <!-- Círculo azul con icono -->
-                                            <Border Background="#3498DB" 
-                                                    CornerRadius="30" 
-                                                    Width="60" Height="60" 
-                                                    HorizontalAlignment="Center"
-                                                    Margin="0,0,0,15">
-                                                <TextBlock Text="📋" 
-                                                           FontSize="28" 
-                                                           Foreground="White"
-                                                           HorizontalAlignment="Center" 
-                                                           VerticalAlignment="Center"/>
-                                            </Border>
-                                            <TextBlock Text="Ver Contratos" 
-                                                       FontSize="16" 
-                                                       FontWeight="SemiBold" 
-                                                       Foreground="#2C3E50"
-                                                       HorizontalAlignment="Center"/>
-                                            <TextBlock Text="Gestionar contratos existentes" 
-                                                       FontSize="12" 
-                                                       Foreground="#95A5A6"
-                                                       HorizontalAlignment="Center"
-                                                       Margin="0,5,0,0"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="CardBorder" Property="BorderBrush" Value="#3498DB"/>
-                                        <Setter TargetName="CardBorder" Property="BorderThickness" Value="2"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
+                    <!-- Opción: Ver Contratos -->
+                    <Border Background="White" BorderThickness="2" BorderBrush="#808080"
+                            Padding="20,15" Cursor="Hand" Width="180">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowContentCommand}"/>
+                        </Border.InputBindings>
+                        <StackPanel HorizontalAlignment="Center">
+                            <Border Background="#000080" Width="50" Height="50" 
+                                    HorizontalAlignment="Center" Margin="0,0,0,10">
+                                <TextBlock Text="[=]" FontFamily="Courier New" FontSize="20" FontWeight="Bold"
+                                           Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="Ver Contratos" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
+                                       Foreground="#000000" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <TextBlock Text="Gestionar existentes" FontFamily="Tahoma" FontSize="8"
+                                       Foreground="#808080" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </StackPanel>
             
-            <!-- Footer con fecha -->
-            <Border Grid.Row="1" 
-                    Background="#ECF0F1" 
-                    Padding="20,15" 
-                    Margin="20,0,20,20"
-                    CornerRadius="8">
-                <TextBlock Text="{Binding CurrentDateText}" 
-                           FontSize="14" 
-                           Foreground="#7F8C8D"
-                           HorizontalAlignment="Center"/>
+            <Border Grid.Row="1" Background="#E0E0E0" Padding="10,8" BorderThickness="0,1,0,0" BorderBrush="#808080">
+                <TextBlock Text="{Binding CurrentDateText}" HorizontalAlignment="Center" 
+                           FontFamily="Tahoma" FontSize="9" Foreground="#404040"/>
             </Border>
         </Grid>
         
-        <!-- ========== CONTENIDO PRINCIPAL (Vista existente) ========== -->
+        <!-- ========== CONTENIDO PRINCIPAL ========== -->
         <Grid Visibility="{Binding IsContentVisible, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -312,447 +86,409 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             
-            <!-- Botón para volver a la pantalla de bienvenida -->
-            <Button Grid.Row="0" 
-                    Command="{Binding ShowHomeCommand}" 
-                    HorizontalAlignment="Left"
-                    Margin="10,10,10,5"
-                    Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="BackBorder" 
-                                Background="#ECF0F1" 
-                                CornerRadius="6" 
-                                Padding="12,8">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="←" FontSize="14" Foreground="#7F8C8D" Margin="0,0,8,0"/>
-                                <TextBlock Text="Volver al inicio" FontSize="13" Foreground="#7F8C8D"/>
-                            </StackPanel>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="BackBorder" Property="Background" Value="#D5DBDB"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
-        
-            <!-- Alertas de contratos por vencer -->
-            <Border Grid.Row="1" Style="{StaticResource CardStyle}" 
-                Background="#FFF8E1" Margin="10,10,10,5"
-                Visibility="{Binding ContratosProximosAVencer.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
-            <StackPanel>
-                <TextBlock Text="⚠️ Contratos Próximos a Vencer (30 días)" 
-                           FontWeight="SemiBold" Foreground="#F57C00" Margin="0,0,0,10"/>
-                <ItemsControl ItemsSource="{Binding ContratosProximosAVencer}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border Background="#FFECB3" CornerRadius="4" Padding="10" Margin="0,0,0,5">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="{Binding Empleado.NombreCompleto}" FontWeight="Medium"/>
-                                        <TextBlock Foreground="#795548">
-                                            <Run Text="Vence:"/>
-                                            <Run Text="{Binding FechaFin, StringFormat=dd/MM/yyyy}"/>
-                                            <Run Text=" - "/>
-                                            <Run Text="{Binding TipoContrato}"/>
-                                        </TextBlock>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </StackPanel>
-        </Border>
-        
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="350"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <!-- Header -->
+            <Border Grid.Row="0" Background="#000080" Padding="10,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Button Grid.Column="0" Content="&lt;- Volver" 
+                            Command="{Binding ShowHomeCommand}"
+                            Style="{StaticResource LegacyButtonStyle}"
+                            FontFamily="Tahoma" FontSize="9" Padding="10,3" Margin="0,0,15,0"/>
+                    
+                    <TextBlock Grid.Column="1" Text="[CONTRATOS] GESTION DE CONTRATOS" 
+                               FontFamily="Courier New" FontSize="12" FontWeight="Bold" 
+                               Foreground="White" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
             
-            <!-- Panel izquierdo -->
-            <Grid Grid.Column="0" Margin="10,5,5,10">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                
-                <!-- Selección de empleado -->
-                <Border Grid.Row="0" Style="{StaticResource CardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="Seleccionar Empleado" Style="{StaticResource HeaderTextStyle}"/>
-                        <ComboBox ItemsSource="{Binding Empleados}"
-                                  SelectedItem="{Binding SelectedEmpleado}"
-                                  DisplayMemberPath="NombreCompleto"
-                                  Margin="0,5,0,0"
-                                  Padding="10,8"/>
-                    </StackPanel>
-                </Border>
-                
-                <!-- Contrato activo -->
-                <Border Grid.Row="1" Style="{StaticResource CardStyle}"
-                        Visibility="{Binding ContratoActivo, Converter={StaticResource NullToVisibilityConverter}}">
-                    <StackPanel>
-                        <TextBlock Text="📋 Contrato Activo" Style="{StaticResource HeaderTextStyle}"/>
-                        
-                        <Grid Margin="0,10,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
-                                <TextBlock Text="Tipo" Style="{StaticResource InfoLabelStyle}"/>
-                                <TextBlock Text="{Binding ContratoActivo.TipoContrato}" Style="{StaticResource InfoValueStyle}"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,10">
-                                <TextBlock Text="Cargo" Style="{StaticResource InfoLabelStyle}"/>
-                                <TextBlock Text="{Binding ContratoActivo.Cargo.Nombre}" Style="{StaticResource InfoValueStyle}"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
-                                <TextBlock Text="Fecha Inicio" Style="{StaticResource InfoLabelStyle}"/>
-                                <TextBlock Text="{Binding ContratoActivo.FechaInicio, StringFormat=dd/MM/yyyy}" Style="{StaticResource InfoValueStyle}"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,10">
-                                <TextBlock Text="Fecha Fin" Style="{StaticResource InfoLabelStyle}"/>
-                                <TextBlock Style="{StaticResource InfoValueStyle}">
-                                    <TextBlock.Text>
-                                        <Binding Path="ContratoActivo.FechaFin" StringFormat="dd/MM/yyyy" FallbackValue="Indefinido"/>
-                                    </TextBlock.Text>
-                                </TextBlock>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,0,0,10">
-                                <TextBlock Text="Salario" Style="{StaticResource InfoLabelStyle}"/>
-                                <TextBlock Text="{Binding ContratoActivo.Salario, StringFormat=C0}" 
-                                           Style="{StaticResource InfoValueStyle}"
-                                           FontSize="18" Foreground="#27AE60"/>
-                            </StackPanel>
-                            
-                            <Border Grid.Row="3" Grid.ColumnSpan="2" 
-                                    CornerRadius="4" Padding="10" Margin="0,5,0,0">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="Background" Value="#E8F5E9"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding DiasRestantesContrato}" Value="-1">
-                                                <Setter Property="Background" Value="#E3F2FD"/>
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding DiasRestantesContrato, Converter={StaticResource LessThanConverter}, ConverterParameter=30}" Value="True">
-                                                <Setter Property="Background" Value="#FFF3E0"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <TextBlock VerticalAlignment="Center" Margin="0,0,5,0">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="Días restantes:"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding DiasRestantesContrato}" Value="-1">
-                                                        <Setter Property="Text" Value="Contrato:"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
+            <!-- Alertas -->
+            <Border Grid.Row="1" Background="#FFFFCC" BorderThickness="1" BorderBrush="#CC6600" 
+                    Padding="8" Margin="8,8,8,0"
+                    Visibility="{Binding ContratosProximosAVencer.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="[!] CONTRATOS PROXIMOS A VENCER (30 dias)" 
+                               FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#CC6600"/>
+                    <ItemsControl ItemsSource="{Binding ContratosProximosAVencer}" Margin="0,5,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#FFE0B0" BorderThickness="1" BorderBrush="#808080" Padding="6" Margin="0,0,0,3">
+                                    <TextBlock FontFamily="Tahoma" FontSize="9">
+                                        <Run Text="{Binding Empleado.NombreCompleto}" FontWeight="Bold"/>
+                                        <Run Text=" - Vence: "/>
+                                        <Run Text="{Binding FechaFin, StringFormat=dd/MM/yyyy}"/>
+                                        <Run Text=" ("/>
+                                        <Run Text="{Binding TipoContrato}"/>
+                                        <Run Text=")"/>
                                     </TextBlock>
-                                    <TextBlock FontSize="20" FontWeight="Bold" VerticalAlignment="Center">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="{Binding DiasRestantesContrato}"/>
-                                                <Setter Property="Foreground" Value="#388E3C"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding DiasRestantesContrato}" Value="-1">
-                                                        <Setter Property="Text" Value="Indefinido"/>
-                                                        <Setter Property="Foreground" Value="#1976D2"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding DiasRestantesContrato, Converter={StaticResource LessThanConverter}, ConverterParameter=30}" Value="True">
-                                                        <Setter Property="Foreground" Value="#F57C00"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        
+            <Grid Grid.Row="2" Margin="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="280"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Panel izquierdo -->
+                <Grid Grid.Column="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Selección de empleado -->
+                    <Border Grid.Row="0" BorderThickness="1" BorderBrush="#808080" Background="White">
+                        <StackPanel>
+                            <Border Background="#000080" Padding="6,4">
+                                <TextBlock Text="SELECCIONAR EMPLEADO" FontFamily="Tahoma" FontSize="9" 
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            <Border Padding="8">
+                                <ComboBox ItemsSource="{Binding Empleados}"
+                                          SelectedItem="{Binding SelectedEmpleado}"
+                                          DisplayMemberPath="NombreCompleto"
+                                          FontFamily="Tahoma" FontSize="9" Height="22"/>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Contrato activo -->
+                    <Border Grid.Row="1" BorderThickness="1" BorderBrush="#808080" Background="White" Margin="0,8,0,0"
+                            Visibility="{Binding ContratoActivo, Converter={StaticResource NullToVisibilityConverter}}">
+                        <StackPanel>
+                            <Border Background="#000080" Padding="6,4">
+                                <TextBlock Text="CONTRATO ACTIVO" FontFamily="Tahoma" FontSize="9" 
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            <Grid Margin="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,5,8">
+                                    <TextBlock Text="Tipo:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                    <TextBlock Text="{Binding ContratoActivo.TipoContrato}" FontFamily="Tahoma" FontSize="9" FontWeight="Bold"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                    <TextBlock Text="Cargo:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                    <TextBlock Text="{Binding ContratoActivo.Cargo.Nombre}" FontFamily="Tahoma" FontSize="9" FontWeight="Bold"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,5,8">
+                                    <TextBlock Text="Inicio:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                    <TextBlock Text="{Binding ContratoActivo.FechaInicio, StringFormat=dd/MM/yyyy}" FontFamily="Tahoma" FontSize="9"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
+                                    <TextBlock Text="Fin:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                    <TextBlock FontFamily="Tahoma" FontSize="9">
+                                        <TextBlock.Text>
+                                            <Binding Path="ContratoActivo.FechaFin" StringFormat="dd/MM/yyyy" FallbackValue="Indefinido"/>
+                                        </TextBlock.Text>
                                     </TextBlock>
                                 </StackPanel>
+                                
+                                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,0,0,8">
+                                    <TextBlock Text="Salario:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                    <TextBlock Text="{Binding ContratoActivo.Salario, StringFormat=C0}" 
+                                               FontFamily="Courier New" FontSize="14" FontWeight="Bold" Foreground="#008000"/>
+                                </StackPanel>
+                                
+                                <Border Grid.Row="3" Grid.ColumnSpan="2" Background="#E0E0FF" BorderThickness="1" 
+                                        BorderBrush="#808080" Padding="8" Margin="0,0,0,8">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <TextBlock Text="Dias restantes: " FontFamily="Tahoma" FontSize="9" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding DiasRestantesContrato}" 
+                                                   FontFamily="Courier New" FontSize="14" FontWeight="Bold" 
+                                                   Foreground="#000080" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                
+                                <Button Grid.Row="4" Grid.ColumnSpan="2" Content="Ver Contrato Firmado" 
+                                        Command="{Binding VerArchivoContratoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Padding="8,4"
+                                        Visibility="{Binding ContratoActivo.ArchivoAdjuntoPath, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Botones de acción -->
+                    <Border Grid.Row="2" BorderThickness="1" BorderBrush="#808080" Background="White" 
+                            Margin="0,8,0,0" VerticalAlignment="Top">
+                        <StackPanel>
+                            <Border Background="#000080" Padding="6,4">
+                                <TextBlock Text="ACCIONES" FontFamily="Tahoma" FontSize="9" 
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            <StackPanel Margin="8">
+                                <Button Content="Nuevo Contrato" Command="{Binding NuevoContratoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Padding="8,4" Margin="0,0,0,5" HorizontalAlignment="Stretch"/>
+                                <Button Content="Editar Seleccionado" Command="{Binding EditarContratoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Padding="8,4" Margin="0,0,0,5" HorizontalAlignment="Stretch"/>
+                                <Button Content="Renovar Contrato" Command="{Binding RenovarContratoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Padding="8,4" Margin="0,0,0,5" HorizontalAlignment="Stretch"/>
+                                <Button Content="Finalizar Contrato" Command="{Binding FinalizarContratoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Padding="8,4" Margin="0,0,0,5" HorizontalAlignment="Stretch"/>
+                                <Button Content="Eliminar" Command="{Binding EliminarContratoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Padding="8,4" HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+                
+                <!-- Panel derecho -->
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Historial de contratos -->
+                    <Border Grid.Row="0" BorderThickness="1" BorderBrush="#808080" Background="White">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Border Grid.Row="0" Background="#000080" Padding="6,4">
+                                <TextBlock Text="HISTORIAL DE CONTRATOS" FontFamily="Tahoma" FontSize="9" 
+                                           FontWeight="Bold" Foreground="White"/>
                             </Border>
                             
-                            <!-- Botón para ver contrato firmado -->
-                            <Button Grid.Row="4" Grid.ColumnSpan="2" 
-                                    Content="📄 Ver Contrato Firmado" 
-                                    Command="{Binding VerArchivoContratoCommand}"
-                                    Style="{StaticResource PrimaryButtonStyle}"
-                                    Margin="0,10,0,0"
-                                    Visibility="{Binding ContratoActivo.ArchivoAdjuntoPath, Converter={StaticResource NullToVisibilityConverter}}"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-                
-                <!-- Botones de acción -->
-                <Border Grid.Row="2" Style="{StaticResource CardStyle}" VerticalAlignment="Top">
-                    <StackPanel>
-                        <TextBlock Text="Acciones" Style="{StaticResource HeaderTextStyle}"/>
-                        
-                        <Button Content="➕ Nuevo Contrato" 
-                                Command="{Binding NuevoContratoCommand}"
-                                Style="{StaticResource PrimaryButtonStyle}"
-                                Margin="0,5,0,5"/>
-                        
-                        <Button Content="✏️ Editar Seleccionado" 
-                                Command="{Binding EditarContratoCommand}"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Margin="0,5,0,5"/>
-                        
-                        <Button Content="🔄 Renovar Contrato" 
-                                Command="{Binding RenovarContratoCommand}"
-                                Style="{StaticResource SuccessButtonStyle}"
-                                Margin="0,5,0,5"/>
-                        
-                        <Button Content="⏹️ Finalizar Contrato" 
-                                Command="{Binding FinalizarContratoCommand}"
-                                Style="{StaticResource WarningButtonStyle}"
-                                Margin="0,5,0,5"/>
-                        
-                        <Button Content="🗑️ Eliminar" 
-                                Command="{Binding EliminarContratoCommand}"
-                                Style="{StaticResource DangerButtonStyle}"
-                                Margin="0,5,0,0"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
-            
-            <!-- Panel derecho -->
-            <Grid Grid.Column="1" Margin="5,5,10,10">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <!-- Historial de contratos -->
-                <Border Grid.Row="0" Style="{StaticResource CardStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        
-                        <TextBlock Grid.Row="0" Text="📚 Historial de Contratos" Style="{StaticResource HeaderTextStyle}"/>
-                        
-                        <DataGrid Grid.Row="1" 
-                                  ItemsSource="{Binding Contratos}"
-                                  SelectedItem="{Binding SelectedContrato}"
-                                  AutoGenerateColumns="False"
-                                  IsReadOnly="True"
-                                  SelectionMode="Single"
-                                  GridLinesVisibility="Horizontal"
-                                  HeadersVisibility="Column"
-                                  BorderThickness="0"
-                                  Background="Transparent"
-                                  RowBackground="White"
-                                  AlternatingRowBackground="#F8F9FA">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Tipo" Binding="{Binding TipoContrato}" Width="110"/>
-                                <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo.Nombre}" Width="150"/>
-                                <DataGridTextColumn Header="Inicio" Binding="{Binding FechaInicio, StringFormat=dd/MM/yyyy}" Width="90"/>
-                                <DataGridTextColumn Header="Fin" Binding="{Binding FechaFin, StringFormat=dd/MM/yyyy}" Width="90"/>
-                                <DataGridTextColumn Header="Salario" Binding="{Binding Salario, StringFormat=C0}" Width="120"/>
-                                <DataGridTemplateColumn Header="Estado" Width="100">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border CornerRadius="4" Padding="8,4" HorizontalAlignment="Left">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Estado}" Value="Activo">
-                                                                <Setter Property="Background" Value="#E8F5E9"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Estado}" Value="Finalizado">
-                                                                <Setter Property="Background" Value="#FFEBEE"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Estado}" Value="Renovado">
-                                                                <Setter Property="Background" Value="#E3F2FD"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <TextBlock Text="{Binding Estado}" FontSize="12">
+                            <DataGrid Grid.Row="1" 
+                                      ItemsSource="{Binding Contratos}"
+                                      SelectedItem="{Binding SelectedContrato}"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      SelectionMode="Single"
+                                      GridLinesVisibility="All"
+                                      HeadersVisibility="Column"
+                                      BorderThickness="0"
+                                      Background="White"
+                                      RowBackground="White"
+                                      AlternatingRowBackground="#E8E8E8"
+                                      FontFamily="Tahoma" FontSize="9"
+                                      ColumnHeaderHeight="22"
+                                      RowHeight="20">
+                                <DataGrid.ColumnHeaderStyle>
+                                    <Style TargetType="DataGridColumnHeader">
+                                        <Setter Property="Background" Value="#C0C0C0"/>
+                                        <Setter Property="Foreground" Value="#000080"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="FontFamily" Value="Tahoma"/>
+                                        <Setter Property="FontSize" Value="9"/>
+                                        <Setter Property="Padding" Value="4,2"/>
+                                        <Setter Property="BorderBrush" Value="#808080"/>
+                                        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                    </Style>
+                                </DataGrid.ColumnHeaderStyle>
+                                <DataGrid.CellStyle>
+                                    <Style TargetType="DataGridCell">
+                                        <Setter Property="Padding" Value="4,2"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter Property="Background" Value="#000080"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.CellStyle>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Tipo" Binding="{Binding TipoContrato}" Width="90"/>
+                                    <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo.Nombre}" Width="120"/>
+                                    <DataGridTextColumn Header="Inicio" Binding="{Binding FechaInicio, StringFormat=dd/MM/yyyy}" Width="75"/>
+                                    <DataGridTextColumn Header="Fin" Binding="{Binding FechaFin, StringFormat=dd/MM/yyyy}" Width="75"/>
+                                    <DataGridTextColumn Header="Salario" Binding="{Binding Salario, StringFormat=C0}" Width="90"/>
+                                    <DataGridTemplateColumn Header="Estado" Width="70">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Estado}" FontFamily="Tahoma" FontSize="9">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#000000"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding Estado}" Value="Activo">
-                                                                    <Setter Property="Foreground" Value="#388E3C"/>
+                                                                    <Setter Property="Foreground" Value="#008000"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding Estado}" Value="Finalizado">
-                                                                    <Setter Property="Foreground" Value="#D32F2F"/>
+                                                                    <Setter Property="Foreground" Value="#CC0000"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding Estado}" Value="Renovado">
-                                                                    <Setter Property="Foreground" Value="#1976D2"/>
+                                                                    <Setter Property="Foreground" Value="#000080"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="📎" Width="50">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Content="📄" 
-                                                    Command="{Binding DataContext.VerArchivoContratoCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    Visibility="{Binding ArchivoAdjuntoPath, Converter={StaticResource NullToVisibilityConverter}}"
-                                                    Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                                    ToolTip="Ver contrato firmado"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Observaciones" Binding="{Binding Observaciones}" Width="*"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-                </Border>
-                
-                <!-- Formulario de contrato -->
-                <Border Grid.Row="1" Style="{StaticResource CardStyle}" 
-                        Visibility="{Binding IsFormVisible, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource HeaderTextStyle}">
-                            <TextBlock.Text>
-                                <MultiBinding StringFormat="{}📝 {0} Contrato">
-                                    <Binding Path="IsEditing" Converter="{StaticResource BoolToEditTextConverter}"/>
-                                </MultiBinding>
-                            </TextBlock.Text>
-                        </TextBlock>
-                        
-                        <Grid Margin="0,10,0,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="Adj" Width="35">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="*" 
+                                                        Command="{Binding DataContext.VerArchivoContratoCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        Visibility="{Binding ArchivoAdjuntoPath, Converter={StaticResource NullToVisibilityConverter}}"
+                                                        Style="{StaticResource LegacyButtonStyle}"
+                                                        FontFamily="Courier New" FontSize="8" Padding="2,1"
+                                                        ToolTip="Ver contrato firmado"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Observaciones" Binding="{Binding Observaciones}" Width="*"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Formulario de contrato -->
+                    <Border Grid.Row="1" BorderThickness="1" BorderBrush="#808080" Background="White" Margin="0,8,0,0"
+                            Visibility="{Binding IsFormVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             
-                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
-                                <TextBlock Text="Tipo de Contrato *" Style="{StaticResource InfoLabelStyle}"/>
-                                <ComboBox ItemsSource="{Binding TiposContrato}"
-                                          SelectedItem="{Binding FormTipoContrato}"
-                                          Padding="8" Margin="0,5,0,0"/>
-                            </StackPanel>
+                            <Border Grid.Row="0" Background="#000080" Padding="6,4">
+                                <TextBlock FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="White">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="[+] NUEVO CONTRATO"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                    <Setter Property="Text" Value="[Ed] EDITAR CONTRATO"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
                             
-                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,10">
-                                <TextBlock Text="Fecha Inicio *" Style="{StaticResource InfoLabelStyle}"/>
-                                <DatePicker SelectedDate="{Binding FormFechaInicio}" 
-                                            Padding="8" Margin="0,5,0,0"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,10,10">
-                                <TextBlock Text="Fecha Fin" Style="{StaticResource InfoLabelStyle}"/>
-                                <DatePicker SelectedDate="{Binding FormFechaFin}" 
-                                            Padding="8" Margin="0,5,0,0"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="0" Grid.Column="3" Margin="0,0,0,10">
-                                <TextBlock Text="Salario *" Style="{StaticResource InfoLabelStyle}"/>
-                                <TextBox Text="{Binding FormSalario, UpdateSourceTrigger=PropertyChanged, StringFormat=N0}"
-                                         Padding="8" Margin="0,5,0,0"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,10,10">
-                                <TextBlock Text="Cargo *" Style="{StaticResource InfoLabelStyle}"/>
-                                <ComboBox ItemsSource="{Binding Cargos}"
-                                          SelectedItem="{Binding FormCargo}"
-                                          DisplayMemberPath="Nombre"
-                                          Padding="8" Margin="0,5,0,0"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,0,0,10">
-                                <TextBlock Text="Observaciones" Style="{StaticResource InfoLabelStyle}"/>
-                                <TextBox Text="{Binding FormObservaciones, UpdateSourceTrigger=PropertyChanged}"
-                                         Padding="8" Margin="0,5,0,0"/>
-                            </StackPanel>
-                            
-                            <!-- Archivo adjunto del contrato firmado -->
-                            <StackPanel Grid.Row="2" Grid.ColumnSpan="4" Margin="0,0,0,10">
-                                <TextBlock Text="📎 Contrato Firmado (PDF)" Style="{StaticResource InfoLabelStyle}"/>
-                                <Grid Margin="0,5,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox Grid.Column="0" 
-                                             Text="{Binding FormArchivoAdjuntoPath, Mode=OneWay}" 
-                                             IsReadOnly="True"
-                                             Padding="8"
-                                             Background="#F8F9FA"/>
-                                    <Button Grid.Column="1" Content="📁 Seleccionar" 
-                                            Command="{Binding SeleccionarArchivoCommand}"
-                                            Style="{StaticResource SecondaryButtonStyle}"
-                                            Margin="5,0,0,0"/>
-                                    <Button Grid.Column="2" Content="👁️ Ver" 
-                                            Command="{Binding VerArchivoCommand}"
-                                            Style="{StaticResource PrimaryButtonStyle}"
-                                            Margin="5,0,0,0"
-                                            Visibility="{Binding FormArchivoAdjuntoPath, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                    <Button Grid.Column="3" Content="🗑️" 
-                                            Command="{Binding EliminarArchivoCommand}"
-                                            Style="{StaticResource DangerButtonStyle}"
-                                            Margin="5,0,0,0"
-                                            Visibility="{Binding FormArchivoAdjuntoPath, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                </Grid>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Row="3" Grid.ColumnSpan="4" 
-                                        Orientation="Horizontal" 
-                                        HorizontalAlignment="Right"
-                                        Margin="0,10,0,0">
-                                <Button Content="Cancelar" 
-                                        Command="{Binding CancelarFormularioCommand}"
-                                        Style="{StaticResource SecondaryButtonStyle}"
-                                        Margin="0,0,10,0"/>
-                                <Button Content="Guardar" 
-                                        Command="{Binding GuardarContratoCommand}"
-                                        Style="{StaticResource PrimaryButtonStyle}"/>
-                            </StackPanel>
+                            <Grid Grid.Row="1" Margin="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
+                                    <TextBlock Text="Tipo Contrato *" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding TiposContrato}" SelectedItem="{Binding FormTipoContrato}"
+                                              FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,8,8">
+                                    <TextBlock Text="Fecha Inicio *" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                    <DatePicker SelectedDate="{Binding FormFechaInicio}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,8,8">
+                                    <TextBlock Text="Fecha Fin" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                    <DatePicker SelectedDate="{Binding FormFechaFin}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="0" Grid.Column="3" Margin="0,0,0,8">
+                                    <TextBlock Text="Salario *" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                    <TextBox Text="{Binding FormSalario, UpdateSourceTrigger=PropertyChanged, StringFormat=N0}"
+                                             Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,8,8">
+                                    <TextBlock Text="Cargo *" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding Cargos}" SelectedItem="{Binding FormCargo}" 
+                                              DisplayMemberPath="Nombre" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Margin="0,0,0,8">
+                                    <TextBlock Text="Observaciones" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                    <TextBox Text="{Binding FormObservaciones, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="2" Grid.ColumnSpan="4" Margin="0,0,0,8">
+                                    <TextBlock Text="Contrato Firmado (PDF):" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" Text="{Binding FormArchivoAdjuntoPath, Mode=OneWay}" 
+                                                 IsReadOnly="True" Style="{StaticResource LegacyTextBoxStyle}"
+                                                 Background="#E0E0E0" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                        <Button Grid.Column="1" Content="..." Command="{Binding SeleccionarArchivoCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}"
+                                                Width="25" Height="22" Margin="3,0,0,0" FontFamily="Tahoma" FontSize="9"/>
+                                        <Button Grid.Column="2" Content="X" Command="{Binding EliminarArchivoCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}"
+                                                Width="22" Height="22" Margin="3,0,0,0" FontFamily="Tahoma" FontSize="9"
+                                                Visibility="{Binding FormArchivoAdjuntoPath, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                    </Grid>
+                                </StackPanel>
+                                
+                                <StackPanel Grid.Row="3" Grid.ColumnSpan="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="Cancelar" Command="{Binding CancelarFormularioCommand}"
+                                            Style="{StaticResource LegacyButtonStyle}"
+                                            FontFamily="Tahoma" FontSize="9" Padding="12,4" Margin="0,0,8,0"/>
+                                    <Button Content="Guardar" Command="{Binding GuardarContratoCommand}"
+                                            Style="{StaticResource LegacyButtonStyle}"
+                                            FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Padding="12,4"/>
+                                </StackPanel>
+                            </Grid>
                         </Grid>
-                    </StackPanel>
-                </Border>
+                    </Border>
+                </Grid>
             </Grid>
-        </Grid>
         </Grid>
         
         <!-- Loading overlay -->
-        <Border Background="#80000000" 
-                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="Cargando..." Foreground="White" FontSize="18"/>
-            </StackPanel>
-        </Border>
+        <Grid Background="#80000000" 
+              Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Background="#C0C0C0" BorderThickness="2" BorderBrush="#808080" Padding="25" 
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="[...] Cargando" FontFamily="Courier New" FontSize="12" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <ProgressBar IsIndeterminate="True" Width="150" Height="18"/>
+                    <TextBlock Text="Por favor espere..." FontFamily="Tahoma" FontSize="9"
+                               HorizontalAlignment="Center" Foreground="#404040" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

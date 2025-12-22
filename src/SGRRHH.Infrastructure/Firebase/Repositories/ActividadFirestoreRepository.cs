@@ -8,15 +8,25 @@ namespace SGRRHH.Infrastructure.Firebase.Repositories;
 /// <summary>
 /// Implementación del repositorio de Actividades para Firestore.
 /// Colección: "actividades"
+/// Incluye cache en memoria para reducir round-trips.
 /// </summary>
 public class ActividadFirestoreRepository : FirestoreRepository<Actividad>, IActividadRepository
 {
     private const string COLLECTION_NAME = "actividades";
     private const string CODE_PREFIX = "ACT-";
-    
-    public ActividadFirestoreRepository(FirebaseInitializer firebase, ILogger<ActividadFirestoreRepository>? logger = null) 
+    private const string CACHE_KEY_ALL_ACTIVE = "actividades_all_active";
+    private const string CACHE_KEY_CATEGORIAS = "actividades_categorias";
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
+
+    private readonly ICacheService? _cache;
+
+    public ActividadFirestoreRepository(
+        FirebaseInitializer firebase,
+        ICacheService? cache = null,
+        ILogger<ActividadFirestoreRepository>? logger = null)
         : base(firebase, COLLECTION_NAME, logger)
     {
+        _cache = cache;
     }
     
     #region Entity <-> Document Mapping
@@ -64,29 +74,51 @@ public class ActividadFirestoreRepository : FirestoreRepository<Actividad>, IAct
     #endregion
     
     #region IActividadRepository Implementation
-    
+
     /// <summary>
-    /// Obtiene todas las actividades activas ordenadas por categoría, orden y nombre
+    /// Obtiene todas las actividades activas ordenadas por categoría, orden y nombre.
+    /// Usa cache en memoria con expiración de 10 minutos.
     /// </summary>
     public override async Task<IEnumerable<Actividad>> GetAllActiveAsync()
     {
         try
         {
-            var query = Collection.WhereEqualTo("activo", true);
-            var snapshot = await query.GetSnapshotAsync();
-            
-            return snapshot.Documents
-                .Select(DocumentToEntity)
-                .OrderBy(a => a.Categoria ?? "")
-                .ThenBy(a => a.Orden)
-                .ThenBy(a => a.Nombre)
-                .ToList();
+            if (_cache != null)
+            {
+                return await _cache.GetOrCreateAsync(
+                    CACHE_KEY_ALL_ACTIVE,
+                    FetchAllActiveFromFirestoreAsync,
+                    CacheExpiration);
+            }
+
+            return await FetchAllActiveFromFirestoreAsync();
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al obtener actividades activas");
             throw;
         }
+    }
+
+    private async Task<IEnumerable<Actividad>> FetchAllActiveFromFirestoreAsync()
+    {
+        var query = Collection.WhereEqualTo("activo", true);
+        var snapshot = await query.GetSnapshotAsync();
+
+        return snapshot.Documents
+            .Select(DocumentToEntity)
+            .OrderBy(a => a.Categoria ?? "")
+            .ThenBy(a => a.Orden)
+            .ThenBy(a => a.Nombre)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Invalida el cache de actividades.
+    /// </summary>
+    public void InvalidateCache()
+    {
+        _cache?.InvalidateByPrefix("actividades");
     }
     
     /// <summary>

@@ -4,6 +4,7 @@ using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 using SGRRHH.WPF.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -557,7 +558,7 @@ public partial class EmpleadosListViewModel : ViewModelBase
     {
         if (value != null)
         {
-            _ = SearchEmpleadosAsync();
+            SearchEmpleadosAsync().SafeFireAndForget(showErrorMessage: false);
         }
     }
 }

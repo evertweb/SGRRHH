@@ -4,216 +4,244 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Actualización Disponible"
-        Height="500" Width="500"
+        Title="Actualización Disponible - SGRRHH"
+        Height="450" Width="450"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
-        WindowStyle="SingleBorderWindow"
-        Background="{DynamicResource SurfaceBrush}">
+        WindowStyle="None"
+        Background="#C0C0C0">
     
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        </ResourceDictionary>
     </Window.Resources>
     
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        <!-- Encabezado -->
-        <StackPanel Grid.Row="0" Margin="0,0,0,15">
-            <TextBlock Text="🚀 Nueva Versión Disponible"
-                       FontSize="22"
-                       FontWeight="Bold"
-                       Foreground="{DynamicResource PrimaryBrush}"/>
-            
-            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                <TextBlock Text="Versión actual: " Opacity="0.7"/>
-                <TextBlock Text="{Binding CurrentVersion}" FontWeight="SemiBold"/>
-                <TextBlock Text="  →  " Opacity="0.5"/>
-                <TextBlock Text="Nueva versión: " Opacity="0.7"/>
-                <TextBlock Text="{Binding NewVersion}" 
-                           FontWeight="Bold" 
-                           Foreground="{DynamicResource PrimaryBrush}"/>
-            </StackPanel>
-            
-            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                <TextBlock Text="📅 Publicada: " Opacity="0.7"/>
-                <TextBlock Text="{Binding ReleaseDate, StringFormat={}{0:dd/MM/yyyy HH:mm}}"/>
-                <TextBlock Text="  |  " Opacity="0.3"/>
-                <TextBlock Text="💾 Tamaño: " Opacity="0.7"/>
-                <TextBlock Text="{Binding DownloadSize}"/>
-            </StackPanel>
-            
-            <!-- Indicador de obligatoria -->
-            <Border Visibility="{Binding IsMandatory, Converter={StaticResource BoolToVis}}"
-                    Background="{DynamicResource WarningLightBrush}"
-                    BorderBrush="{DynamicResource WarningBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="10,5"
-                    Margin="0,10,0,0">
-                <TextBlock Text="⚠️ Esta es una actualización obligatoria"
-                           Foreground="{DynamicResource WarningDarkerBrush}"
-                           FontWeight="SemiBold"/>
-            </Border>
-        </StackPanel>
-        
-        <!-- Separador -->
-        <Separator Grid.Row="1" Margin="0,0,0,10"/>
-        
-        <!-- Notas de versión -->
-        <GroupBox Grid.Row="2" Header="📋 Notas de la versión" Margin="0,0,0,15">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="5">
-                <TextBlock Text="{Binding ReleaseNotes}"
-                           TextWrapping="Wrap"
-                           LineHeight="22"/>
-            </ScrollViewer>
-        </GroupBox>
-        
-        <!-- Progreso de descarga -->
-        <Border Grid.Row="3" 
-                Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"
-                Background="{DynamicResource PrimaryLightBrush}"
-                CornerRadius="4"
-                Padding="15"
-                Margin="0,0,0,15">
-            <StackPanel>
-                <TextBlock Text="{Binding StatusMessage}" 
-                           FontWeight="SemiBold"
-                           Margin="0,0,0,8"/>
-                <ProgressBar Value="{Binding DownloadProgress}"
-                             Height="20"
-                             Minimum="0"
-                             Maximum="100"/>
-                <TextBlock Text="{Binding DownloadProgress, StringFormat={}{0}%}"
-                           HorizontalAlignment="Center"
-                           Margin="0,5,0,0"/>
-            </StackPanel>
-        </Border>
-        
-        <!-- Mensaje de error -->
-        <Border Grid.Row="3"
-                Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"
-                Background="{DynamicResource DangerLightBrush}"
-                BorderBrush="{DynamicResource DangerBrush}"
-                BorderThickness="1"
-                CornerRadius="4"
-                Padding="15"
-                Margin="0,0,0,15">
-            <StackPanel>
-                <TextBlock Text="❌ Error durante la actualización"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource DangerDarkerBrush}"/>
-                <TextBlock Text="{Binding ErrorMessage}"
-                           Foreground="{DynamicResource DangerDarkerBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,5,0,0"/>
-            </StackPanel>
-        </Border>
-        
-        <!-- Descarga completada -->
-        <Border Grid.Row="3"
-                Visibility="{Binding DownloadCompleted, Converter={StaticResource BoolToVis}}"
-                Background="{DynamicResource SuccessLightBrush}"
-                BorderBrush="{DynamicResource SuccessBrush}"
-                BorderThickness="1"
-                CornerRadius="4"
-                Padding="15"
-                Margin="0,0,0,15">
-            <StackPanel>
-                <TextBlock Text="✅ ¡Descarga completada!"
-                           FontWeight="Bold"
-                           FontSize="14"
-                           Foreground="{DynamicResource SuccessDarkerBrush}"/>
-                <TextBlock Text="{Binding StatusMessage}"
-                           Foreground="{DynamicResource SuccessDarkerBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,8,0,0"/>
-            </StackPanel>
-        </Border>
-        
-        <!-- Botones -->
-        <StackPanel Grid.Row="4" 
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Right">
-            
-            <!-- Botón Omitir (solo si no es obligatoria, no hay descarga completada y puede cerrar) -->
-            <Button Content="Omitir esta versión"
-                    Margin="0,0,10,0"
-                    Padding="15,8"
-                    Command="{Binding SkipVersionCommand}"
-                    IsEnabled="{Binding CanClose}">
-                <Button.Style>
-                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsMandatory}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
-            
-            <!-- Botón Recordar después (solo si no es obligatoria, no hay descarga completada) -->
-            <Button Content="Recordar después"
-                    Margin="0,0,10,0"
-                    Padding="15,8"
-                    Command="{Binding RemindLaterCommand}"
-                    IsEnabled="{Binding CanClose}">
-                <Button.Style>
-                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsMandatory}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
+    <!-- Borde exterior 3D (Outset) -->
+    <Border BorderThickness="2" BorderBrush="White">
+        <Border BorderThickness="2" BorderBrush="#808080" Margin="0,0,2,2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>  <!-- Barra de título -->
+                    <RowDefinition Height="*"/>     <!-- Contenido -->
+                </Grid.RowDefinitions>
+                
+                <!-- Barra de título azul navy -->
+                <Grid Grid.Row="0" Background="#000080" Height="22" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="[UPDATE] Actualización Disponible" 
+                               Foreground="White" FontFamily="Tahoma" FontSize="11" FontWeight="Bold"
+                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    <!-- Botón cerrar (condicionado) -->
+                    <Button Grid.Column="1" Style="{StaticResource LegacyButtonStyle}" 
+                            Width="18" Height="16" Margin="2"
+                            Click="CloseButton_Click"
+                            IsEnabled="{Binding CanClose}">
+                        <TextBlock Text="r" FontFamily="Marlett" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
+                </Grid>
+                
+                <!-- Contenido principal -->
+                <Grid Grid.Row="1" Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>  <!-- Encabezado -->
+                        <RowDefinition Height="Auto"/>  <!-- Separador -->
+                        <RowDefinition Height="*"/>     <!-- Notas de versión -->
+                        <RowDefinition Height="Auto"/>  <!-- Estado (progreso/error/completado) -->
+                        <RowDefinition Height="Auto"/>  <!-- Botones -->
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Encabezado -->
+                    <StackPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock Text="[!] NUEVA VERSION DISPONIBLE" 
+                                   FontFamily="Courier New" FontSize="14" FontWeight="Bold"
+                                   Foreground="#000080"/>
+                        
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Version actual:" FontFamily="Tahoma" FontSize="9" Foreground="#808080"/>
+                                <TextBlock Text="{Binding CurrentVersion}" FontFamily="Courier New" FontSize="11" FontWeight="Bold"/>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Nueva version:" FontFamily="Tahoma" FontSize="9" Foreground="#808080"/>
+                                <TextBlock Text="{Binding NewVersion}" FontFamily="Courier New" FontSize="11" FontWeight="Bold" Foreground="#008000"/>
+                            </StackPanel>
+                        </Grid>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <TextBlock Text="Publicada: " FontFamily="Tahoma" FontSize="9" Foreground="#808080"/>
+                            <TextBlock Text="{Binding ReleaseDate, StringFormat=dd/MM/yyyy HH:mm}" FontFamily="Tahoma" FontSize="9"/>
+                            <TextBlock Text="  |  Tamaño: " FontFamily="Tahoma" FontSize="9" Foreground="#808080"/>
+                            <TextBlock Text="{Binding DownloadSize}" FontFamily="Tahoma" FontSize="9"/>
+                        </StackPanel>
+                        
+                        <!-- Indicador de obligatoria -->
+                        <Border Visibility="{Binding IsMandatory, Converter={StaticResource BoolToVis}}"
+                                Background="#FFFFCC" BorderThickness="2" BorderBrush="#CC6600"
+                                Padding="8,5" Margin="0,10,0,0">
+                            <TextBlock Text="[!] ACTUALIZACION OBLIGATORIA" 
+                                       FontFamily="Courier New" FontSize="10" FontWeight="Bold"
+                                       Foreground="#CC6600"/>
+                        </Border>
+                    </StackPanel>
+                    
+                    <!-- Separador -->
+                    <Border Grid.Row="1" Height="2" Background="#808080" Margin="0,0,0,10"/>
+                    
+                    <!-- Notas de versión -->
+                    <Border Grid.Row="2" BorderThickness="1" BorderBrush="#808080" Background="White" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Border Grid.Row="0" Background="#000080" Padding="8,4">
+                                <TextBlock Text="[INFO] NOTAS DE VERSION" FontFamily="Courier New" FontSize="9" 
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="8">
+                                <TextBlock Text="{Binding ReleaseNotes}"
+                                           TextWrapping="Wrap" LineHeight="18"
+                                           FontFamily="Tahoma" FontSize="9"/>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Progreso de descarga -->
+                    <Border Grid.Row="3" 
+                            Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}"
+                            Background="#E0E0FF" BorderThickness="1" BorderBrush="#000080"
+                            Padding="10" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="{Binding StatusMessage}" 
+                                       FontFamily="Tahoma" FontSize="9" FontWeight="Bold"
+                                       Margin="0,0,0,5"/>
+                            <ProgressBar Value="{Binding DownloadProgress}"
+                                         Height="16" Minimum="0" Maximum="100"
+                                         Background="White" Foreground="#000080"/>
+                            <TextBlock Text="{Binding DownloadProgress, StringFormat={}{0}%}"
+                                       HorizontalAlignment="Center" FontFamily="Courier New" FontSize="10"
+                                       Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Mensaje de error -->
+                    <Border Grid.Row="3"
+                            Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"
+                            Background="#FFE0E0" BorderThickness="2" BorderBrush="#CC0000"
+                            Padding="10" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="[X] ERROR EN LA ACTUALIZACION"
+                                       FontFamily="Courier New" FontSize="10" FontWeight="Bold"
+                                       Foreground="#CC0000"/>
+                            <TextBlock Text="{Binding ErrorMessage}"
+                                       FontFamily="Tahoma" FontSize="9" Foreground="#CC0000"
+                                       TextWrapping="Wrap" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Descarga completada -->
+                    <Border Grid.Row="3"
+                            Visibility="{Binding DownloadCompleted, Converter={StaticResource BoolToVis}}"
+                            Background="#E0FFE0" BorderThickness="2" BorderBrush="#008000"
+                            Padding="10" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="[OK] DESCARGA COMPLETADA"
+                                       FontFamily="Courier New" FontSize="11" FontWeight="Bold"
+                                       Foreground="#008000"/>
+                            <TextBlock Text="{Binding StatusMessage}"
+                                       FontFamily="Tahoma" FontSize="9" Foreground="#008000"
+                                       TextWrapping="Wrap" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Botones -->
+                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                        
+                        <!-- Botón Omitir -->
+                        <Button Content="Omitir" Margin="0,0,5,0" Padding="10,5"
+                                FontFamily="Tahoma" FontSize="9"
+                                Command="{Binding SkipVersionCommand}"
+                                IsEnabled="{Binding CanClose}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource LegacyButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMandatory}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        
+                        <!-- Botón Recordar después -->
+                        <Button Content="Despues" Margin="0,0,5,0" Padding="10,5"
+                                FontFamily="Tahoma" FontSize="9"
+                                Command="{Binding RemindLaterCommand}"
+                                IsEnabled="{Binding CanClose}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource LegacyButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsMandatory}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
 
-            <!-- Botón Actualizar ahora (antes de descargar) -->
-            <Button Padding="20,8"
-                    Content="🔄 Descargar actualización"
-                    Command="{Binding UpdateNowCommand}"
-                    Background="{DynamicResource PrimaryBrush}"
-                    Foreground="{DynamicResource TextInverseBrush}"
-                    IsEnabled="{Binding CanClose}">
-                <Button.Style>
-                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
-                        <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding IsDownloading}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
+                        <!-- Botón Descargar -->
+                        <Button Padding="12,5"
+                                FontFamily="Tahoma" FontSize="9" FontWeight="Bold"
+                                Command="{Binding UpdateNowCommand}"
+                                IsEnabled="{Binding CanClose}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource LegacyButtonStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding DownloadCompleted}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsDownloading}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <TextBlock Text="[>>] Descargar" FontFamily="Courier New" FontSize="10"/>
+                        </Button>
 
-            <!-- Botón Instalar y Reiniciar (después de descargar) -->
-            <Button Padding="20,8"
-                    Content="🚀 Instalar y reiniciar"
-                    Command="{Binding InstallAndRestartCommand}"
-                    Background="{DynamicResource SuccessBrush}"
-                    Foreground="{DynamicResource TextInverseBrush}"
-                    FontWeight="Bold"
-                    Visibility="{Binding DownloadCompleted, Converter={StaticResource BoolToVis}}"
-                    IsEnabled="{Binding CanClose}"/>
-        </StackPanel>
-    </Grid>
+                        <!-- Botón Instalar y Reiniciar -->
+                        <Button Padding="12,5"
+                                Style="{StaticResource LegacyButtonStyle}"
+                                FontFamily="Tahoma" FontSize="9" FontWeight="Bold"
+                                Command="{Binding InstallAndRestartCommand}"
+                                Visibility="{Binding DownloadCompleted, Converter={StaticResource BoolToVis}}"
+                                IsEnabled="{Binding CanClose}">
+                            <TextBlock Text="[OK] Instalar" FontFamily="Courier New" FontSize="10" Foreground="#008000" FontWeight="Bold"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Border>
 </Window>

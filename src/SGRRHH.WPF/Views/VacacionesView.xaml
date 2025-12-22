@@ -3,587 +3,402 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:SGRRHH.WPF.Controls"
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="1100">
+             d:DesignHeight="700" d:DesignWidth="1100"
+             Background="#C0C0C0">
     
     <UserControl.Resources>
-        <!-- Estilos locales -->
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="Margin" Value="5"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1"/>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-        </Style>
-        
-        <Style x:Key="InfoLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#7F8C8D"/>
-            <Setter Property="Margin" Value="0,5,0,2"/>
-        </Style>
-        
-        <Style x:Key="InfoValueStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-        </Style>
-        
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#3498DB"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#2980B9"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Background" Value="#BDC3C7"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#ECF0F1"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#D5DBDB"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="SuccessButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#27AE60"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1E8449"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <Style x:Key="DangerButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#E74C3C"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#C0392B"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </UserControl.Resources>
     
-    <Grid Background="#F5F6FA">
+    <Grid>
         <!-- ==================== PANTALLA DE BIENVENIDA ==================== -->
         <Grid Visibility="{Binding IsHomeVisible, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             
+            <!-- Header -->
+            <Border Grid.Row="0" Background="#000080" Padding="10,5">
+                <TextBlock Text="--- MODULO DE VACACIONES ---" FontFamily="Tahoma" FontSize="12" 
+                           FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+            </Border>
+            
             <!-- Contenido central -->
-            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <!-- Emoji y título -->
-                <TextBlock Text="🏖️" FontSize="80" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                <TextBlock Text="¡Gestión de Vacaciones!" 
-                           FontSize="36" FontWeight="Bold" 
-                           Foreground="#2C3E50" 
-                           HorizontalAlignment="Center"/>
-                <TextBlock Text="¿Qué deseas hacer hoy?" 
-                           FontSize="18" 
-                           Foreground="#7F8C8D" 
-                           HorizontalAlignment="Center"
-                           Margin="0,10,0,40"/>
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="VACACIONES" FontFamily="Courier New" FontSize="36" FontWeight="Bold" 
+                           Foreground="#000080" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock Text="Seleccione una opcion:" FontFamily="Tahoma" FontSize="12" 
+                           Foreground="#404040" HorizontalAlignment="Center" Margin="0,0,0,30"/>
                 
                 <!-- Tarjetas de acción -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <!-- Tarjeta: Solicitar Vacaciones -->
-                    <Button Command="{Binding SolicitarVacacionesCommand}" 
-                            Cursor="Hand" Margin="15">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="CardBorder" 
-                                        Background="White" 
-                                        CornerRadius="16" 
-                                        Width="220" Height="180"
-                                        BorderBrush="#27AE60" BorderThickness="2">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.15" Color="#27AE60"/>
-                                    </Border.Effect>
-                                    <Grid>
-                                        <!-- Franja superior verde -->
-                                        <Border Background="#27AE60" CornerRadius="14,14,0,0" 
-                                                VerticalAlignment="Top" Height="8"/>
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <Border Background="#E8F8F0" CornerRadius="50" 
-                                                    Width="70" Height="70" Margin="0,0,0,15">
-                                                <TextBlock Text="➕" FontSize="32" 
-                                                           HorizontalAlignment="Center" 
-                                                           VerticalAlignment="Center"/>
-                                            </Border>
-                                            <TextBlock Text="Solicitar Vacaciones" 
-                                                       FontSize="16" FontWeight="SemiBold" 
-                                                       Foreground="#2C3E50" 
-                                                       HorizontalAlignment="Center"/>
-                                            <TextBlock Text="Programar nuevas fechas" 
-                                                       FontSize="12" Foreground="#95A5A6" 
-                                                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="CardBorder" Property="Background" Value="#F0FFF4"/>
-                                        <Setter TargetName="CardBorder" Property="Effect">
-                                            <Setter.Value>
-                                                <DropShadowEffect BlurRadius="25" ShadowDepth="6" Opacity="0.25" Color="#27AE60"/>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
+                    <!-- Solicitar Vacaciones -->
+                    <Border BorderThickness="2" BorderBrush="#808080" Background="#E0E0E0" 
+                            Margin="0,0,20,0" Cursor="Hand">
+                        <Border BorderThickness="2" BorderBrush="White" Margin="0,0,2,2" Padding="15">
+                            <Border.InputBindings>
+                                <MouseBinding MouseAction="LeftClick" Command="{Binding SolicitarVacacionesCommand}"/>
+                            </Border.InputBindings>
+                            <StackPanel Width="160">
+                                <TextBlock Text="[+]" FontFamily="Courier New" FontSize="32" FontWeight="Bold" 
+                                           Foreground="#008000" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                <TextBlock Text="SOLICITAR" FontFamily="Tahoma" FontSize="12" FontWeight="Bold"
+                                           Foreground="#000000" HorizontalAlignment="Center"/>
+                                <TextBlock Text="VACACIONES" FontFamily="Tahoma" FontSize="12" FontWeight="Bold"
+                                           Foreground="#000000" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Programar fechas" FontFamily="Tahoma" FontSize="9"
+                                           Foreground="#808080" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Border>
                     
-                    <!-- Tarjeta: Ver Historial -->
-                    <Button Command="{Binding ShowContentCommand}" 
-                            Cursor="Hand" Margin="15">
-                        <Button.Template>
-                            <ControlTemplate TargetType="Button">
-                                <Border x:Name="CardBorder" 
-                                        Background="White" 
-                                        CornerRadius="16" 
-                                        Width="220" Height="180"
-                                        BorderBrush="#3498DB" BorderThickness="2">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.15" Color="#3498DB"/>
-                                    </Border.Effect>
-                                    <Grid>
-                                        <!-- Franja superior azul -->
-                                        <Border Background="#3498DB" CornerRadius="14,14,0,0" 
-                                                VerticalAlignment="Top" Height="8"/>
-                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <Border Background="#EBF5FB" CornerRadius="50" 
-                                                    Width="70" Height="70" Margin="0,0,0,15">
-                                                <TextBlock Text="📅" FontSize="32" 
-                                                           HorizontalAlignment="Center" 
-                                                           VerticalAlignment="Center"/>
-                                            </Border>
-                                            <TextBlock Text="Ver Historial" 
-                                                       FontSize="16" FontWeight="SemiBold" 
-                                                       Foreground="#2C3E50" 
-                                                       HorizontalAlignment="Center"/>
-                                            <TextBlock Text="Consultar vacaciones" 
-                                                       FontSize="12" Foreground="#95A5A6" 
-                                                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="CardBorder" Property="Background" Value="#EBF5FB"/>
-                                        <Setter TargetName="CardBorder" Property="Effect">
-                                            <Setter.Value>
-                                                <DropShadowEffect BlurRadius="25" ShadowDepth="6" Opacity="0.25" Color="#3498DB"/>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Button.Template>
-                    </Button>
+                    <!-- Ver Historial -->
+                    <Border BorderThickness="2" BorderBrush="#808080" Background="#E0E0E0" Cursor="Hand">
+                        <Border BorderThickness="2" BorderBrush="White" Margin="0,0,2,2" Padding="15">
+                            <Border.InputBindings>
+                                <MouseBinding MouseAction="LeftClick" Command="{Binding ShowContentCommand}"/>
+                            </Border.InputBindings>
+                            <StackPanel Width="160">
+                                <TextBlock Text="[=]" FontFamily="Courier New" FontSize="32" FontWeight="Bold" 
+                                           Foreground="#000080" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                <TextBlock Text="VER" FontFamily="Tahoma" FontSize="12" FontWeight="Bold"
+                                           Foreground="#000000" HorizontalAlignment="Center"/>
+                                <TextBlock Text="HISTORIAL" FontFamily="Tahoma" FontSize="12" FontWeight="Bold"
+                                           Foreground="#000000" HorizontalAlignment="Center"/>
+                                <TextBlock Text="Consultar vacaciones" FontFamily="Tahoma" FontSize="9"
+                                           Foreground="#808080" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Border>
                 </StackPanel>
             </StackPanel>
             
             <!-- Footer con fecha -->
-            <Border Grid.Row="1" Background="#ECF0F1" Padding="20,15">
-                <TextBlock Text="{Binding CurrentDateText}" 
-                           FontSize="14" 
-                           Foreground="#7F8C8D" 
-                           HorizontalAlignment="Center"/>
+            <Border Grid.Row="2" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="#808080" Padding="10,5">
+                <TextBlock Text="{Binding CurrentDateText}" FontFamily="Tahoma" FontSize="10" 
+                           Foreground="#404040" HorizontalAlignment="Center"/>
             </Border>
         </Grid>
         
         <!-- ==================== CONTENIDO PRINCIPAL ==================== -->
-        <Grid Visibility="{Binding IsContentVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+        <Grid Visibility="{Binding IsContentVisible, Converter={StaticResource BoolToVisibilityConverter}}" Margin="5">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="350"/>
+                <ColumnDefinition Width="280"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
         
             <!-- Panel izquierdo: Selección de empleado y resumen -->
-            <Grid Grid.Column="0" Margin="10">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+            <Grid Grid.Column="0" Margin="0,0,5,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
             
-            <!-- Selección de empleado -->
-            <Border Grid.Row="0" Style="{StaticResource CardStyle}">
-                <StackPanel>
-                    <TextBlock Text="Seleccionar Empleado" Style="{StaticResource HeaderTextStyle}"/>
-                    <ComboBox ItemsSource="{Binding Empleados}"
-                              SelectedItem="{Binding SelectedEmpleado}"
-                              DisplayMemberPath="NombreCompleto"
-                              Margin="0,5,0,0"
-                              Padding="10,8"/>
-                </StackPanel>
-            </Border>
+                <!-- Selección de empleado -->
+                <Border Grid.Row="0" BorderThickness="1" BorderBrush="#808080" Background="White" Margin="0,0,0,5">
+                    <StackPanel>
+                        <Border Background="#000080" Padding="8,5">
+                            <TextBlock Text="SELECCIONAR EMPLEADO" FontFamily="Tahoma" FontSize="10" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
+                        <Border Padding="10">
+                            <ComboBox ItemsSource="{Binding Empleados}"
+                                      SelectedItem="{Binding SelectedEmpleado}"
+                                      DisplayMemberPath="NombreCompleto"
+                                      FontFamily="Tahoma" FontSize="9" Height="22"/>
+                        </Border>
+                    </StackPanel>
+                </Border>
             
-            <!-- Resumen de vacaciones -->
-            <Border Grid.Row="1" Style="{StaticResource CardStyle}" 
-                    Visibility="{Binding ResumenVacaciones, Converter={StaticResource NullToVisibilityConverter}}">
-                <StackPanel>
-                    <TextBlock Text="📊 Resumen de Vacaciones" Style="{StaticResource HeaderTextStyle}"/>
-                    
-                    <Grid Margin="0,10,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                <!-- Resumen de vacaciones -->
+                <Border Grid.Row="1" BorderThickness="1" BorderBrush="#808080" Background="White" Margin="0,0,0,5"
+                        Visibility="{Binding ResumenVacaciones, Converter={StaticResource NullToVisibilityConverter}}">
+                    <StackPanel>
+                        <Border Background="#000080" Padding="8,5">
+                            <TextBlock Text="[i] RESUMEN DE VACACIONES" FontFamily="Courier New" FontSize="10" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
+                        <Grid Margin="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                         
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
-                            <TextBlock Text="Antigüedad" Style="{StaticResource InfoLabelStyle}"/>
-                            <TextBlock Style="{StaticResource InfoValueStyle}">
-                                <Run Text="{Binding ResumenVacaciones.AntiguedadAnos}"/>
-                                <Run Text=" años"/>
-                            </TextBlock>
-                        </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,5,8">
+                                <TextBlock Text="Antiguedad:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                <TextBlock FontFamily="Tahoma" FontSize="10" FontWeight="Bold">
+                                    <Run Text="{Binding ResumenVacaciones.AntiguedadAnos}"/>
+                                    <Run Text=" años"/>
+                                </TextBlock>
+                            </StackPanel>
                         
-                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,10">
-                            <TextBlock Text="Periodo Actual" Style="{StaticResource InfoLabelStyle}"/>
-                            <TextBlock Text="{Binding ResumenVacaciones.PeriodoActual}" Style="{StaticResource InfoValueStyle}"/>
-                        </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                <TextBlock Text="Periodo:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                <TextBlock Text="{Binding ResumenVacaciones.PeriodoActual}" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
+                            </StackPanel>
                         
-                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
-                            <TextBlock Text="Días Ganados" Style="{StaticResource InfoLabelStyle}"/>
-                            <TextBlock Text="{Binding ResumenVacaciones.DiasGanadosPeriodo}" 
-                                       Style="{StaticResource InfoValueStyle}"
-                                       Foreground="#27AE60"/>
-                        </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,5,8">
+                                <TextBlock Text="Dias Ganados:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                <TextBlock Text="{Binding ResumenVacaciones.DiasGanadosPeriodo}" 
+                                           FontFamily="Courier New" FontSize="12" FontWeight="Bold" Foreground="#008000"/>
+                            </StackPanel>
                         
-                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,10">
-                            <TextBlock Text="Días Tomados" Style="{StaticResource InfoLabelStyle}"/>
-                            <TextBlock Text="{Binding ResumenVacaciones.DiasTomadosPeriodo}" 
-                                       Style="{StaticResource InfoValueStyle}"
-                                       Foreground="#E74C3C"/>
-                        </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
+                                <TextBlock Text="Dias Tomados:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                <TextBlock Text="{Binding ResumenVacaciones.DiasTomadosPeriodo}" 
+                                           FontFamily="Courier New" FontSize="12" FontWeight="Bold" Foreground="#CC0000"/>
+                            </StackPanel>
                         
-                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
-                            <TextBlock Text="Disponibles Periodo" Style="{StaticResource InfoLabelStyle}"/>
-                            <TextBlock Text="{Binding ResumenVacaciones.DiasDisponiblesPeriodo}" 
-                                       Style="{StaticResource InfoValueStyle}"
-                                       Foreground="#3498DB"/>
-                        </StackPanel>
+                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,5,8">
+                                <TextBlock Text="Disponibles:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                <TextBlock Text="{Binding ResumenVacaciones.DiasDisponiblesPeriodo}" 
+                                           FontFamily="Courier New" FontSize="12" FontWeight="Bold" Foreground="#000080"/>
+                            </StackPanel>
                         
-                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,10">
-                            <TextBlock Text="Acumulados" Style="{StaticResource InfoLabelStyle}"/>
-                            <TextBlock Text="{Binding ResumenVacaciones.DiasAcumuladosAnteriores}" 
-                                       Style="{StaticResource InfoValueStyle}"
-                                       Foreground="#9B59B6"/>
-                        </StackPanel>
+                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,8">
+                                <TextBlock Text="Acumulados:" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                                <TextBlock Text="{Binding ResumenVacaciones.DiasAcumuladosAnteriores}" 
+                                           FontFamily="Courier New" FontSize="12" FontWeight="Bold" Foreground="#800080"/>
+                            </StackPanel>
                         
-                        <Border Grid.Row="3" Grid.ColumnSpan="2" 
-                                Background="#E8F6F3" CornerRadius="4" Padding="10" Margin="0,5,0,0">
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <TextBlock Text="TOTAL DISPONIBLE: " 
-                                           FontWeight="SemiBold" 
-                                           Foreground="#16A085"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding ResumenVacaciones.TotalDiasDisponibles}" 
-                                           FontSize="24" 
-                                           FontWeight="Bold" 
-                                           Foreground="#16A085"/>
-                                <TextBlock Text=" días" 
-                                           VerticalAlignment="Center"
-                                           Foreground="#16A085"/>
+                            <Border Grid.Row="3" Grid.ColumnSpan="2" Background="#E0FFE0" BorderThickness="2" BorderBrush="#008000" Padding="8" Margin="0,5,0,0">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="TOTAL: " FontFamily="Tahoma" FontSize="10" FontWeight="Bold" 
+                                               Foreground="#008000" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ResumenVacaciones.TotalDiasDisponibles}" 
+                                               FontFamily="Courier New" FontSize="18" FontWeight="Bold" Foreground="#008000"/>
+                                    <TextBlock Text=" dias" FontFamily="Tahoma" FontSize="10" 
+                                               Foreground="#008000" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            
+                <!-- Botones de acción -->
+                <Border Grid.Row="2" BorderThickness="1" BorderBrush="#808080" Background="White" VerticalAlignment="Top">
+                    <StackPanel>
+                        <Border Background="#000080" Padding="8,5">
+                            <Grid>
+                                <TextBlock Text="ACCIONES" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                <Button Content="&lt;&lt; Inicio" Command="{Binding ShowHomeCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="8" Padding="8,2"
+                                        HorizontalAlignment="Right"/>
+                            </Grid>
+                        </Border>
+                        <Border Padding="10">
+                            <StackPanel>
+                            <controls:LegacyAsyncButton Content="Nueva Vacacion" Command="{Binding NuevaVacacionCommand}"
+                                        Margin="0,0,0,5" HorizontalAlignment="Stretch"/>
+                                <controls:LegacyAsyncButton Content="Editar Seleccionada" Command="{Binding EditarVacacionCommand}"
+                                        Margin="0,0,0,5" HorizontalAlignment="Stretch"/>
+                                <controls:LegacyAsyncButton Content="Marcar Disfrutada" Command="{Binding MarcarDisfrutadaCommand}"
+                                        IsLoading="{Binding IsLoading}" Margin="0,0,0,5" HorizontalAlignment="Stretch"/>
+                                <controls:LegacyAsyncButton Content="Eliminar" Command="{Binding EliminarVacacionCommand}"
+                                        IsLoading="{Binding IsLoading}" HorizontalAlignment="Stretch"/>
                             </StackPanel>
                         </Border>
-                    </Grid>
-                </StackPanel>
-            </Border>
-            
-            <!-- Botones de acción -->
-            <Border Grid.Row="2" Style="{StaticResource CardStyle}" VerticalAlignment="Top">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Acciones" Style="{StaticResource HeaderTextStyle}" VerticalAlignment="Center"/>
-                        <Button Content="🏠 Inicio" 
-                                Command="{Binding ShowHomeCommand}"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Margin="15,0,0,0"
-                                Padding="10,5"
-                                VerticalAlignment="Center"/>
                     </StackPanel>
-                    
-                    <Button Content="➕ Nueva Vacación" 
-                            Command="{Binding NuevaVacacionCommand}"
-                            Style="{StaticResource PrimaryButtonStyle}"
-                            Margin="0,5,0,5"/>
-                    
-                    <Button Content="✏️ Editar Seleccionada" 
-                            Command="{Binding EditarVacacionCommand}"
-                            Style="{StaticResource SecondaryButtonStyle}"
-                            Margin="0,5,0,5"/>
-                    
-                    <Button Content="✅ Marcar como Disfrutada" 
-                            Command="{Binding MarcarDisfrutadaCommand}"
-                            Style="{StaticResource SuccessButtonStyle}"
-                            Margin="0,5,0,5"/>
-                    
-                    <Button Content="🗑️ Eliminar" 
-                            Command="{Binding EliminarVacacionCommand}"
-                            Style="{StaticResource DangerButtonStyle}"
-                            Margin="0,5,0,0"/>
-                </StackPanel>
-            </Border>
-        </Grid>
+                </Border>
+            </Grid>
         
-        <!-- Panel derecho: Lista de vacaciones y formulario -->
-        <Grid Grid.Column="1" Margin="10">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+            <!-- Panel derecho: Lista de vacaciones y formulario -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
             
-            <!-- Lista de vacaciones -->
-            <Border Grid.Row="0" Style="{StaticResource CardStyle}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <!-- Lista de vacaciones -->
+                <Border Grid.Row="0" BorderThickness="1" BorderBrush="#808080" Background="White">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
                     
-                    <TextBlock Grid.Row="0" Text="📅 Historial de Vacaciones" Style="{StaticResource HeaderTextStyle}"/>
+                        <Border Grid.Row="0" Background="#000080" Padding="8,5">
+                            <TextBlock Text="[=] HISTORIAL DE VACACIONES" FontFamily="Courier New" FontSize="10" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
                     
-                    <DataGrid Grid.Row="1" 
-                              ItemsSource="{Binding Vacaciones}"
-                              SelectedItem="{Binding SelectedVacacion}"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              SelectionMode="Single"
-                              GridLinesVisibility="Horizontal"
-                              HeadersVisibility="Column"
-                              BorderThickness="0"
-                              Background="Transparent"
-                              RowBackground="White"
-                              AlternatingRowBackground="#F8F9FA">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Periodo" Binding="{Binding PeriodoCorrespondiente}" Width="80"/>
-                            <DataGridTextColumn Header="Fecha Inicio" Binding="{Binding FechaInicio, StringFormat=dd/MM/yyyy}" Width="100"/>
-                            <DataGridTextColumn Header="Fecha Fin" Binding="{Binding FechaFin, StringFormat=dd/MM/yyyy}" Width="100"/>
-                            <DataGridTextColumn Header="Días" Binding="{Binding DiasTomados}" Width="60"/>
-                            <DataGridTemplateColumn Header="Estado" Width="120">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Border CornerRadius="4" Padding="8,4" HorizontalAlignment="Left">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Estado}" Value="Programada">
-                                                            <Setter Property="Background" Value="#E3F2FD"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Estado}" Value="Disfrutada">
-                                                            <Setter Property="Background" Value="#E8F5E9"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Estado}" Value="Cancelada">
-                                                            <Setter Property="Background" Value="#FFEBEE"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <TextBlock Text="{Binding Estado}" FontSize="12">
+                        <DataGrid Grid.Row="1" 
+                                  ItemsSource="{Binding Vacaciones}"
+                                  SelectedItem="{Binding SelectedVacacion}"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  SelectionMode="Single" SelectionUnit="FullRow"
+                                  GridLinesVisibility="All" HeadersVisibility="Column"
+                                  RowHeight="22" FontFamily="Tahoma" FontSize="10"
+                                  Background="White" AlternatingRowBackground="#F0F0F0"
+                                  CanUserAddRows="False" CanUserDeleteRows="False"
+                                  BorderThickness="0">
+                            
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="#000080"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="FontFamily" Value="Tahoma"/>
+                                    <Setter Property="FontSize" Value="9"/>
+                                    <Setter Property="Padding" Value="5,3"/>
+                                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                    <Setter Property="BorderBrush" Value="#404040"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="Padding" Value="5,2"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="#000080"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.CellStyle>
+                            
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="PERIODO" Binding="{Binding PeriodoCorrespondiente}" Width="70"/>
+                                <DataGridTextColumn Header="INICIO" Binding="{Binding FechaInicio, StringFormat=dd/MM/yyyy}" Width="80"/>
+                                <DataGridTextColumn Header="FIN" Binding="{Binding FechaFin, StringFormat=dd/MM/yyyy}" Width="80"/>
+                                <DataGridTextColumn Header="DIAS" Binding="{Binding DiasTomados}" Width="45"/>
+                                <DataGridTemplateColumn Header="ESTADO" Width="90">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock FontFamily="Tahoma" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding Estado}"/>
+                                                        <Setter Property="Foreground" Value="#808080"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding Estado}" Value="Programada">
-                                                                <Setter Property="Foreground" Value="#1976D2"/>
+                                                                <Setter Property="Foreground" Value="#000080"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding Estado}" Value="Disfrutada">
-                                                                <Setter Property="Foreground" Value="#388E3C"/>
+                                                                <Setter Property="Foreground" Value="#008000"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding Estado}" Value="Cancelada">
-                                                                <Setter Property="Foreground" Value="#D32F2F"/>
+                                                                <Setter Property="Foreground" Value="#CC0000"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                        </Border>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Observaciones" Binding="{Binding Observaciones}" Width="*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
-            
-            <!-- Formulario de vacación -->
-            <Border Grid.Row="1" Style="{StaticResource CardStyle}" 
-                    Visibility="{Binding IsFormVisible, Converter={StaticResource BoolToVisibilityConverter}}">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource HeaderTextStyle}">
-                        <TextBlock.Text>
-                            <MultiBinding StringFormat="{}🏖️ {0} Vacación">
-                                <Binding Path="IsEditing" Converter="{StaticResource BoolToEditTextConverter}"/>
-                            </MultiBinding>
-                        </TextBlock.Text>
-                    </TextBlock>
-                    
-                    <Grid Margin="0,10,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
-                            <TextBlock Text="Fecha Inicio *" Style="{StaticResource InfoLabelStyle}"/>
-                            <DatePicker SelectedDate="{Binding FormFechaInicio}" 
-                                        Padding="8" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,10,10">
-                            <TextBlock Text="Fecha Fin *" Style="{StaticResource InfoLabelStyle}"/>
-                            <DatePicker SelectedDate="{Binding FormFechaFin}" 
-                                        Padding="8" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,10,10">
-                            <TextBlock Text="Periodo *" Style="{StaticResource InfoLabelStyle}"/>
-                            <ComboBox ItemsSource="{Binding PeriodosDisponibles}"
-                                      SelectedItem="{Binding FormPeriodo}"
-                                      Padding="8" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Row="0" Grid.Column="3" Margin="0,0,0,10">
-                            <TextBlock Text="Estado" Style="{StaticResource InfoLabelStyle}"/>
-                            <ComboBox ItemsSource="{Binding EstadosVacacion}"
-                                      SelectedItem="{Binding FormEstado}"
-                                      Padding="8" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,10,10">
-                            <TextBlock Text="Observaciones" Style="{StaticResource InfoLabelStyle}"/>
-                            <TextBox Text="{Binding FormObservaciones, UpdateSourceTrigger=PropertyChanged}"
-                                     Padding="8" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        
-                        <Border Grid.Row="1" Grid.Column="3" 
-                                Background="#FFF3E0" CornerRadius="4" Padding="10" 
-                                VerticalAlignment="Center" Margin="0,0,0,10">
-                            <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="Días hábiles" FontSize="12" Foreground="#F57C00" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding FormDiasCalculados}" 
-                                           FontSize="24" FontWeight="Bold" Foreground="#E65100" 
-                                           HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-                        
-                        <StackPanel Grid.Row="2" Grid.ColumnSpan="4" 
-                                    Orientation="Horizontal" 
-                                    HorizontalAlignment="Right"
-                                    Margin="0,10,0,0">
-                            <Button Content="Cancelar" 
-                                    Command="{Binding CancelarFormularioCommand}"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Margin="0,0,10,0"/>
-                            <Button Content="Guardar" 
-                                    Command="{Binding GuardarVacacionCommand}"
-                                    Style="{StaticResource PrimaryButtonStyle}"/>
-                        </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="OBSERVACIONES" Binding="{Binding Observaciones}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </Grid>
-                </StackPanel>
-            </Border>
-        </Grid>
+                </Border>
+            
+                <!-- Formulario de vacación -->
+                <Border Grid.Row="1" BorderThickness="1" BorderBrush="#808080" Background="White" Margin="0,5,0,0"
+                        Visibility="{Binding IsFormVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <Border Background="#000080" Padding="8,5">
+                            <TextBlock FontFamily="Courier New" FontSize="10" FontWeight="Bold" Foreground="White">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}[FORM] {0} Vacacion">
+                                        <Binding Path="IsEditing" Converter="{StaticResource BoolToEditTextConverter}"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Border>
+                        <Grid Margin="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="100"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                        
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,10">
+                                <TextBlock Text="Fecha Inicio: *" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
+                                <DatePicker SelectedDate="{Binding FormFechaInicio}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                            </StackPanel>
+                        
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,8,10">
+                                <TextBlock Text="Fecha Fin: *" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
+                                <DatePicker SelectedDate="{Binding FormFechaFin}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                            </StackPanel>
+                        
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,8,10">
+                                <TextBlock Text="Periodo: *" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding PeriodosDisponibles}"
+                                          SelectedItem="{Binding FormPeriodo}"
+                                          FontFamily="Tahoma" FontSize="9" Height="22"/>
+                            </StackPanel>
+                        
+                            <StackPanel Grid.Row="0" Grid.Column="3" Margin="0,0,0,10">
+                                <TextBlock Text="Dias Hab.:" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
+                                <Border Background="#FFFFCC" BorderThickness="2" BorderBrush="#CC8800" Height="22">
+                                    <TextBlock Text="{Binding FormDiasCalculados}" 
+                                               FontFamily="Courier New" FontSize="12" FontWeight="Bold" Foreground="#CC8800"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+                        
+                            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,8,10">
+                                <TextBlock Text="Observaciones:" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
+                                <TextBox Text="{Binding FormObservaciones, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                            </StackPanel>
+                        
+                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,8,10">
+                                <TextBlock Text="Estado:" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,3"/>
+                                <ComboBox ItemsSource="{Binding EstadosVacacion}"
+                                          SelectedItem="{Binding FormEstado}"
+                                          FontFamily="Tahoma" FontSize="9" Height="22"/>
+                            </StackPanel>
+                        
+                            <StackPanel Grid.Row="2" Grid.ColumnSpan="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+                                <controls:LegacyAsyncButton Content="Cancelar" Command="{Binding CancelarFormularioCommand}"
+                                        Margin="0,0,8,0"/>
+                                <controls:LegacyAsyncButton Content="Guardar" Command="{Binding GuardarVacacionCommand}"
+                                        IsLoading="{Binding IsLoading}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
         
         <!-- Loading overlay -->
         <Border Background="#80000000" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="Cargando..." Foreground="White" FontSize="18"/>
-            </StackPanel>
+            <Border Background="#C0C0C0" BorderThickness="2" BorderBrush="#808080" Padding="20"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="[...] Cargando" FontFamily="Courier New" FontSize="12" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <ProgressBar IsIndeterminate="True" Width="120" Height="16"/>
+                </StackPanel>
+            </Border>
         </Border>
     </Grid>
 </UserControl>

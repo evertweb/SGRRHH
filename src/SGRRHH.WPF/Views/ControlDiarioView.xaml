@@ -4,200 +4,152 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
+             xmlns:controls="clr-namespace:SGRRHH.WPF.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="768" d:DesignWidth="1024"
-             Background="{StaticResource SurfaceBrush}">
+             Background="#C0C0C0">
     
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
-        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
-        <converters:CollectionContainsConverter x:Key="CollectionContainsConverter"/>
-        <converters:TimeSpanToStringConverter x:Key="TimeSpanToStringConverter"/>
-
-        <!-- Estilo local para tarjetas de estadísticas -->
-        <Style x:Key="StatCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource BackgroundBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderLightBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="15,10"/>
-            <Setter Property="Margin" Value="10,0,0,0"/>
-            <Setter Property="MinWidth" Value="140"/>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
+            <converters:CollectionContainsConverter x:Key="CollectionContainsConverter"/>
+            <converters:TimeSpanToStringConverter x:Key="TimeSpanToStringConverter"/>
+        </ResourceDictionary>
     </UserControl.Resources>
     
-    <Grid Margin="24">
+    <Grid Margin="5">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Header + Stats -->
-            <RowDefinition Height="Auto"/> <!-- Filters + Main Actions -->
-            <RowDefinition Height="*"/>    <!-- DataGrid Content -->
-            <RowDefinition Height="Auto"/> <!-- Footer/Status -->
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Stats + Filters -->
+            <RowDefinition Height="*"/>    <!-- DataGrid -->
+            <RowDefinition Height="Auto"/> <!-- Status Bar -->
         </Grid.RowDefinitions>
         
-        <!-- 1. HEADER & STATS -->
-        <Grid Grid.Row="0" Margin="0,0,0,24">
+        <!-- 1. HEADER -->
+        <Border Grid.Row="0" Background="#000080" Padding="10,5" Margin="0,0,0,5">
+            <TextBlock Text="--- CONTROL DIARIO DE ACTIVIDADES ---" FontFamily="Tahoma" FontSize="12" 
+                       FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+        </Border>
+        
+        <!-- 2. STATS + FILTERS -->
+        <Grid Grid.Row="1" Margin="0,0,0,5">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
-            <!-- Título y Subtítulo -->
-            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                <TextBlock Text="Control Diario" 
-                           FontSize="28" FontWeight="Bold" 
-                           Foreground="{StaticResource TextPrimaryBrush}"/>
-                <TextBlock Text="Gestión y monitoreo de registros de actividad" 
-                           FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" 
-                           Margin="0,4,0,0"/>
+            <!-- Estadísticas (izquierda) -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <!-- Total registros -->
+                <Border BorderThickness="1" BorderBrush="#808080" Background="White" Padding="10,5" Margin="0,0,5,0">
+                    <Border BorderThickness="1" BorderBrush="#DFDFDF">
+                        <StackPanel Margin="5,0">
+                            <TextBlock Text="TOTAL REGISTROS" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                            <TextBlock Text="{Binding TotalRegistros}" FontFamily="Courier New" FontSize="18" 
+                                       FontWeight="Bold" Foreground="#000080"/>
+                        </StackPanel>
+                    </Border>
+                </Border>
+                
+                <!-- Horas mes -->
+                <Border BorderThickness="1" BorderBrush="#808080" Background="White" Padding="10,5">
+                    <Border BorderThickness="1" BorderBrush="#DFDFDF">
+                        <StackPanel Margin="5,0">
+                            <TextBlock Text="HORAS MES" FontFamily="Tahoma" FontSize="8" Foreground="#808080"/>
+                            <TextBlock Text="{Binding HorasMesActual, StringFormat=N1}" FontFamily="Courier New" FontSize="18" 
+                                       FontWeight="Bold" Foreground="#008000"/>
+                        </StackPanel>
+                    </Border>
+                </Border>
             </StackPanel>
             
-            <!-- Tarjetas de Estadísticas -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Style="{StaticResource StatCardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="TOTAL REGISTROS" FontSize="10" FontWeight="Bold" 
-                                   Foreground="{StaticResource TextTertiaryBrush}"/>
-                        <TextBlock Text="{Binding TotalRegistros}" FontSize="24" FontWeight="Bold" 
-                                   Foreground="{StaticResource PrimaryBrush}" Margin="0,4,0,0"/>
-                    </StackPanel>
-                </Border>
-                
-                <Border Style="{StaticResource StatCardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="HORAS MES" FontSize="10" FontWeight="Bold" 
-                                   Foreground="{StaticResource TextTertiaryBrush}"/>
-                        <TextBlock Text="{Binding HorasMesActual, StringFormat=N1}" FontSize="24" FontWeight="Bold" 
-                                   Foreground="{StaticResource SuccessBrush}" Margin="0,4,0,0"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
+            <!-- Filtros (centro/derecha) -->
+            <Border Grid.Column="1" Grid.ColumnSpan="2" BorderThickness="1" BorderBrush="#808080" Background="White" 
+                    Margin="10,0,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <Border Grid.Row="0" Background="#E0E0E0" Padding="5,2" BorderThickness="0,0,0,1" BorderBrush="#808080">
+                        <TextBlock Text="FILTROS" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
+                    </Border>
+                    
+                    <WrapPanel Grid.Row="1" Margin="10,8">
+                        <!-- Empleado -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,0">
+                            <TextBlock Text="Empleado:" FontFamily="Tahoma" FontSize="10" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ComboBox Width="200" Height="20"
+                                      ItemsSource="{Binding Empleados, Mode=OneWay}" 
+                                      SelectedItem="{Binding SelectedEmpleado}"
+                                      DisplayMemberPath="NombreCompleto"
+                                      FontFamily="Tahoma" FontSize="10"/>
+                        </StackPanel>
+                        
+                        <!-- Mes -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,0">
+                            <TextBlock Text="Mes:" FontFamily="Tahoma" FontSize="10" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ComboBox Width="120" Height="20"
+                                      ItemsSource="{Binding Meses}" 
+                                      SelectedItem="{Binding SelectedMes}"
+                                      FontFamily="Tahoma" FontSize="10"/>
+                        </StackPanel>
+                        
+                        <!-- Año -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,15,0">
+                            <TextBlock Text="Año:" FontFamily="Tahoma" FontSize="10" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ComboBox Width="80" Height="20"
+                                      ItemsSource="{Binding Anios}" 
+                                      SelectedItem="{Binding SelectedAnio}"
+                                      FontFamily="Tahoma" FontSize="10"/>
+                        </StackPanel>
+                        
+                        <!-- Botones -->
+                        <controls:LegacyAsyncButton Content="Actualizar" Command="{Binding RefreshCommand}"
+                                IsLoading="{Binding IsLoading}" Margin="0,0,5,0"/>
+                        <controls:LegacyAsyncButton Content="Exportar" Command="{Binding ExportCommand}"
+                                IsLoading="{Binding IsLoading}"/>
+                    </WrapPanel>
+                </Grid>
+            </Border>
         </Grid>
         
-        <!-- 2. FILTERS & MAIN ACTIONS -->
-        <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" 
-                CornerRadius="8" Padding="16" Margin="0,0,0,16"
-                BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/> <!-- Filters -->
-                    <ColumnDefinition Width="*"/>    <!-- Spacer -->
-                    <ColumnDefinition Width="Auto"/> <!-- Actions -->
-                </Grid.ColumnDefinitions>
-                
-                <!-- Filtros (Izquierda) -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <!-- Empleado -->
-                    <StackPanel Margin="0,0,16,0">
-                        <TextBlock Text="Empleado" FontSize="11" FontWeight="SemiBold" 
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <ComboBox Width="240" Height="36"
-                                  ItemsSource="{Binding Empleados, Mode=OneWay}" 
-                                  SelectedItem="{Binding SelectedEmpleado}"
-                                  DisplayMemberPath="NombreCompleto"
-                                  Style="{StaticResource StandardComboBox}"/>
-                    </StackPanel>
-                    
-                    <!-- Mes -->
-                    <StackPanel Margin="0,0,16,0">
-                        <TextBlock Text="Mes" FontSize="11" FontWeight="SemiBold" 
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <ComboBox Width="140" Height="36"
-                                  ItemsSource="{Binding Meses}" 
-                                  SelectedItem="{Binding SelectedMes}"
-                                  Style="{StaticResource StandardComboBox}"/>
-                    </StackPanel>
-                    
-                    <!-- Año -->
-                    <StackPanel>
-                        <TextBlock Text="Año" FontSize="11" FontWeight="SemiBold" 
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4"/>
-                        <ComboBox Width="100" Height="36"
-                                  ItemsSource="{Binding Anios}" 
-                                  SelectedItem="{Binding SelectedAnio}"
-                                  Style="{StaticResource StandardComboBox}"/>
-                    </StackPanel>
-                </StackPanel>
-                
-                <!-- Acciones Principales (Derecha) -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom">
-                    <Button Command="{Binding RefreshCommand}"
-                            Style="{StaticResource SecondaryButton}" 
-                            Height="36" Margin="0,0,12,0" Padding="16,0">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🔄" Margin="0,0,8,0"/>
-                            <TextBlock Text="Actualizar"/>
-                        </StackPanel>
-                    </Button>
-                    
-                    <Button Command="{Binding ExportCommand}"
-                            Style="{StaticResource PrimaryButton}"
-                            Height="36" Padding="16,0">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="📥" Margin="0,0,8,0"/>
-                            <TextBlock Text="Exportar"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-        
-        <!-- 3. DATA GRID SECTION -->
-        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" 
-                CornerRadius="8" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1"
-                ClipToBounds="True">
+        <!-- 3. DATA GRID -->
+        <Border Grid.Row="2" BorderThickness="1" BorderBrush="#808080">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/> <!-- Toolbar -->
-                    <RowDefinition Height="*"/>    <!-- Grid -->
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 
-                <!-- Toolbar de Tabla -->
-                <Border Grid.Row="0" BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,0,0,1"
-                        Padding="16,12" Background="{StaticResource BackgroundBrush}">
+                <!-- Toolbar -->
+                <Border Grid.Row="0" Background="#E0E0E0" BorderThickness="0,0,0,1" BorderBrush="#808080" Padding="5">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
-                        <!-- Contador -->
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Resultados:" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,5,0"/>
+                            <TextBlock Text="Resultados: " FontFamily="Tahoma" FontSize="10" Foreground="#808080"/>
                             <TextBlock Text="{Binding RegistrosFiltrados.Count, Mode=OneWay, FallbackValue=0}" 
-                                       FontWeight="Bold" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                       FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
                         </StackPanel>
                         
-                        <!-- Acciones de Registro -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <Button Command="{Binding ViewRegistroCommand}"
-                                    Style="{StaticResource SecondaryButton}"
-                                    Height="32" Margin="0,0,8,0" Padding="12,0"
-                                    ToolTip="Ver detalles">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="👁️" Margin="0,0,6,0" FontSize="11"/>
-                                    <TextBlock Text="Ver" FontSize="12"/>
-                                </StackPanel>
-                            </Button>
-                            
-                            <Button Command="{Binding EditRegistroCommand}"
-                                    Style="{StaticResource WarningButton}"
-                                    Height="32" Margin="0,0,8,0" Padding="12,0"
-                                    ToolTip="Editar registro">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="✏️" Margin="0,0,6,0" FontSize="11"/>
-                                    <TextBlock Text="Editar" FontSize="12"/>
-                                </StackPanel>
-                            </Button>
-                            
-                            <Button Command="{Binding DeleteRegistroCommand}"
-                                    Style="{StaticResource DangerButton}"
-                                    Height="32" Padding="12,0"
-                                    ToolTip="Eliminar registro">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="🗑️" Margin="0,0,6,0" FontSize="11"/>
-                                    <TextBlock Text="Eliminar" FontSize="12"/>
-                                </StackPanel>
-                            </Button>
+                            <controls:LegacyAsyncButton Content="Ver" Command="{Binding ViewRegistroCommand}"
+                                    IsLoading="{Binding IsLoading}" Margin="0,0,3,0"/>
+                            <controls:LegacyAsyncButton Content="Editar" Command="{Binding EditRegistroCommand}"
+                                    IsLoading="{Binding IsLoading}" Margin="0,0,3,0"/>
+                            <controls:LegacyAsyncButton Content="Eliminar" Command="{Binding DeleteRegistroCommand}"
+                                    IsLoading="{Binding IsLoading}"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -206,19 +158,52 @@
                 <DataGrid Grid.Row="1"
                           ItemsSource="{Binding RegistrosFiltrados, Mode=OneWay}"
                           SelectedItem="{Binding SelectedRegistro}"
-                          Style="{StaticResource StandardDataGrid}"
                           AutoGenerateColumns="False"
                           IsReadOnly="True"
                           SelectionMode="Single"
                           CanUserAddRows="False"
                           CanUserDeleteRows="False"
-                          GridLinesVisibility="Horizontal"
+                          GridLinesVisibility="All"
                           HeadersVisibility="Column"
-                          RowHeight="48"
-                          BorderThickness="0">
+                          RowHeight="22"
+                          FontFamily="Tahoma"
+                          FontSize="10"
+                          Background="White"
+                          AlternatingRowBackground="#F0F0F0"
+                          BorderThickness="0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Auto">
+                    
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#000080"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="FontFamily" Value="Tahoma"/>
+                            <Setter Property="FontSize" Value="10"/>
+                            <Setter Property="Padding" Value="5,3"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                            <Setter Property="BorderBrush" Value="#404040"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    
+                    <DataGrid.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Padding" Value="5,2"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="#000080"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.CellStyle>
+                    
                     <DataGrid.Columns>
-                        <!-- Checkbox para selección múltiple -->
-                        <DataGridTemplateColumn Header="☑" Width="50">
+                        <!-- Checkbox -->
+                        <DataGridTemplateColumn Header="[X]" Width="35">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -236,109 +221,84 @@
                         </DataGridTemplateColumn>
 
                         <!-- Fecha -->
-                        <DataGridTemplateColumn Header="Fecha" Width="140">
+                        <DataGridTemplateColumn Header="FECHA" Width="100">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <StackPanel VerticalAlignment="Center" Margin="10,0">
-                                        <TextBlock Text="{Binding Fecha, StringFormat=dd/MM/yyyy}" 
-                                                   FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                        <TextBlock Text="{Binding Fecha, StringFormat=dddd}" 
-                                                   FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Fecha, StringFormat=dd/MM/yyyy}" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Fecha, StringFormat=ddd}" FontSize="9" Foreground="#808080"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         
                         <!-- Empleado -->
-                        <DataGridTextColumn Header="Empleado" Binding="{Binding Empleado.NombreCompleto}" Width="*">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="VerticalAlignment" Value="Center"/>
-                                    <Setter Property="Margin" Value="10,0"/>
-                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="EMPLEADO" Binding="{Binding Empleado.NombreCompleto}" Width="*"/>
                         
                         <!-- Horario -->
-                        <DataGridTemplateColumn Header="Horario" Width="140">
+                        <DataGridTemplateColumn Header="HORARIO" Width="100">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="4" Padding="8,4" HorizontalAlignment="Left">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding HoraEntrada, Converter={StaticResource TimeSpanToStringConverter}}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                            <TextBlock Text=" - " Foreground="{StaticResource TextTertiaryBrush}"/>
-                                            <TextBlock Text="{Binding HoraSalida, Converter={StaticResource TimeSpanToStringConverter}}" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        </StackPanel>
-                                    </Border>
+                                    <TextBlock VerticalAlignment="Center" FontFamily="Courier New">
+                                        <Run Text="{Binding HoraEntrada, Converter={StaticResource TimeSpanToStringConverter}}"/>
+                                        <Run Text="-"/>
+                                        <Run Text="{Binding HoraSalida, Converter={StaticResource TimeSpanToStringConverter}}"/>
+                                    </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         
                         <!-- Horas -->
-                        <DataGridTextColumn Header="Horas" Width="80" IsReadOnly="True">
+                        <DataGridTextColumn Header="HRS" Width="50">
                             <DataGridTextColumn.Binding>
                                 <Binding Path="TotalHoras" StringFormat="N1" Mode="OneWay"/>
                             </DataGridTextColumn.Binding>
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    <Setter Property="FontFamily" Value="Courier New"/>
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
                                     <Setter Property="VerticalAlignment" Value="Center"/>
-                                    <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                    <Setter Property="Foreground" Value="#000080"/>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
                         
                         <!-- Actividades -->
-                        <DataGridTemplateColumn Header="Actividades" Width="100">
+                        <DataGridTemplateColumn Header="ACT" Width="50">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Background="{StaticResource PrimaryLightBrush}" CornerRadius="10" Padding="8,2" HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding DetallesActividades.Count, StringFormat={}{0} items, FallbackValue='0 items', TargetNullValue='0 items'}"
-                                                   FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource PrimaryDarkBrush}"/>
-                                    </Border>
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                               FontFamily="Courier New" FontWeight="Bold">
+                                        <Run Text="{Binding DetallesActividades.Count, FallbackValue='0', TargetNullValue='0'}"/>
+                                    </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
                         
                         <!-- Estado -->
-                        <DataGridTemplateColumn Header="Estado" Width="120">
+                        <DataGridTemplateColumn Header="ESTADO" Width="90">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border CornerRadius="12" Padding="10,4" HorizontalAlignment="Center">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="{StaticResource WarningLightBrush}"/>
+                                    <TextBlock FontFamily="Tahoma" FontSize="9" FontWeight="Bold" 
+                                               HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="BORRADOR"/>
+                                                <Setter Property="Foreground" Value="#B8860B"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Estado}" Value="1">
-                                                        <Setter Property="Background" Value="{StaticResource SuccessLightBrush}"/>
+                                                        <Setter Property="Text" Value="COMPLETADO"/>
+                                                        <Setter Property="Foreground" Value="#008000"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Estado}" Value="2">
-                                                        <Setter Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
+                                                        <Setter Property="Text" Value="APROBADO"/>
+                                                        <Setter Property="Foreground" Value="#000080"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
-                                        </Border.Style>
-                                        <TextBlock FontSize="11" FontWeight="SemiBold">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Text" Value="Borrador"/>
-                                                    <Setter Property="Foreground" Value="{StaticResource WarningDarkBrush}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Estado}" Value="1">
-                                                            <Setter Property="Text" Value="Completado"/>
-                                                            <Setter Property="Foreground" Value="{StaticResource SuccessDarkBrush}"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Estado}" Value="2">
-                                                            <Setter Property="Text" Value="Aprobado"/>
-                                                            <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Border>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
@@ -346,34 +306,44 @@
                 </DataGrid>
                 
                 <!-- Empty state -->
-                <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" 
+                <Border Grid.Row="1" Background="White" 
                         Visibility="{Binding HasNoRegistros, Converter={StaticResource BoolToVisConverter}}">
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="📭" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,16"/>
-                        <TextBlock Text="No hay registros encontrados" FontSize="18" FontWeight="SemiBold" 
-                                   Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Intenta cambiar los filtros de búsqueda" 
-                                   FontSize="14" Foreground="{StaticResource TextSecondaryBrush}" 
-                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        <TextBlock Text="[SIN DATOS]" FontFamily="Courier New" FontSize="14" 
+                                   FontWeight="Bold" Foreground="#808080" HorizontalAlignment="Center"/>
+                        <TextBlock Text="No hay registros encontrados" FontFamily="Tahoma" FontSize="10" 
+                                   Foreground="#808080" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        <TextBlock Text="Intente cambiar los filtros de busqueda" FontFamily="Tahoma" FontSize="10" 
+                                   Foreground="#808080" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
             </Grid>
         </Border>
         
-        <!-- 4. FOOTER / STATUS -->
-        <Grid Grid.Row="3" Margin="0,12,0,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="Estado:" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,5,0"/>
-                <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource TextSecondaryBrush}"/>
-            </StackPanel>
-            
-            <ProgressBar Grid.Column="1" IsIndeterminate="True" Width="150" Height="4" 
-                         Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}"/>
-        </Grid>
+        <!-- 4. STATUS BAR -->
+        <Border Grid.Row="3" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="#808080" Margin="0,5,0,0" Padding="5,3">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Border BorderThickness="1" BorderBrush="#808080" Padding="5,1" Margin="0,0,10,0">
+                        <Border BorderThickness="1" BorderBrush="#DFDFDF">
+                            <TextBlock FontFamily="Tahoma" FontSize="10" Margin="3,0">
+                                <Run Text="Estado: "/>
+                                <Run Text="{Binding StatusMessage}"/>
+                            </TextBlock>
+                        </Border>
+                    </Border>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}">
+                    <TextBlock Text="Cargando..." FontFamily="Tahoma" FontSize="10" FontStyle="Italic" Foreground="#808080"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>

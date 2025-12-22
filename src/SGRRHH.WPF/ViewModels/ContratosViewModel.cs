@@ -5,6 +5,7 @@ using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -203,7 +204,7 @@ public partial class ContratosViewModel : ViewModelBase
     {
         if (value != null)
         {
-            _ = LoadContratosEmpleadoAsync();
+            LoadContratosEmpleadoAsync().SafeFireAndForget(showErrorMessage: false);
         }
         else
         {

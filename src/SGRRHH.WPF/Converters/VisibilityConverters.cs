@@ -20,7 +20,7 @@ public class IntToVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -40,7 +40,7 @@ public class DashboardVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -60,7 +60,7 @@ public class NotDashboardVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -78,7 +78,7 @@ public class NullToVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -95,7 +95,7 @@ public class NotNullToVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -111,7 +111,7 @@ public class IsNullOrEmptyToVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -127,7 +127,7 @@ public class StringToVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -147,6 +147,6 @@ public class ZeroToVisibilityConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }

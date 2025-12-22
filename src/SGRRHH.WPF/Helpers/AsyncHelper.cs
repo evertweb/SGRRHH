@@ -132,4 +132,36 @@ public static class AsyncHelper
             // Silenciar errores de logging
         }
     }
+    
+    /// <summary>
+    /// Creates a debounced version of an async action.
+    /// Useful for search operations to avoid rapid-fire async calls.
+    /// </summary>
+    /// <param name="action">The async action to debounce</param>
+    /// <param name="delay">Delay before executing the action</param>
+    /// <returns>A debounced function that can be called repeatedly</returns>
+    public static Func<Task> Debounce(Func<Task> action, TimeSpan delay)
+    {
+        CancellationTokenSource? cts = null;
+        
+        return async () =>
+        {
+            cts?.Cancel();
+            cts = new CancellationTokenSource();
+            var token = cts.Token;
+            
+            try
+            {
+                await Task.Delay(delay, token).ConfigureAwait(false);
+                if (!token.IsCancellationRequested)
+                {
+                    await action().ConfigureAwait(false);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when debouncing - ignore
+            }
+        };
+    }
 }

@@ -7,75 +7,53 @@
              xmlns:views="clr-namespace:SGRRHH.WPF.Views"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
-             Background="{StaticResource BackgroundBrush}">
+             Background="#C0C0C0">
     
     <UserControl.Resources>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
-        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
-        <converters:StringToVisibilityConverter x:Key="StringToVisConverter"/>
-        <converters:TimeSpanToStringConverter x:Key="TimeSpanToStringConverter"/>
-        
-        <!-- Estilo para las tarjetas de opción -->
-        <Style x:Key="OptionCardStyle" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" 
-                                Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}" 
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="16"
-                                Padding="30,40">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
-                                <Setter TargetName="border" Property="BorderThickness" Value="2"/>
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <!-- Estilo para items de actividad -->
-        <Style x:Key="ActivityListBoxItemStyle" TargetType="ListBoxItem">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Border" 
-                                Background="{StaticResource SurfaceBrush}" 
-                                BorderBrush="{StaticResource BorderBrush}" 
-                                BorderThickness="1" 
-                                CornerRadius="8" 
-                                Margin="0,0,0,10" 
-                                Padding="15"
-                                Cursor="Hand">
-                            <ContentPresenter/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{StaticResource PrimaryLightBrush}"/>
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
-                                <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisConverter"/>
+            <converters:StringToVisibilityConverter x:Key="StringToVisConverter"/>
+            <converters:TimeSpanToStringConverter x:Key="TimeSpanToStringConverter"/>
+            
+            <!-- Estilo Legacy para tarjetas de opción -->
+            <Style x:Key="LegacyOptionCardStyle" TargetType="Button" BasedOn="{StaticResource LegacyButtonStyle}">
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Padding" Value="15,20"/>
+            </Style>
+            
+            <!-- Estilo Legacy para items de actividad -->
+            <Style x:Key="LegacyActivityListBoxItemStyle" TargetType="ListBoxItem">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Border" 
+                                    Background="White" 
+                                    BorderBrush="#808080" 
+                                    BorderThickness="1" 
+                                    Margin="0,0,0,4" 
+                                    Padding="8"
+                                    Cursor="Hand">
+                                <ContentPresenter/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#C0C0FF"/>
+                                    <Setter TargetName="Border" Property="BorderBrush" Value="#000080"/>
+                                    <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Border" Property="Background" Value="#E0E0E0"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <Grid>
@@ -86,70 +64,65 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             
-            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="700">
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="500">
                 <!-- Saludo -->
-                <TextBlock Text="👋" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                <TextBlock Text="¡Bienvenido!" FontSize="32" FontWeight="Bold" 
-                           Foreground="{StaticResource TextPrimaryBrush}" 
-                           HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                <TextBlock Text="¿Qué deseas hacer hoy?" FontSize="18" 
-                           Foreground="{StaticResource TextSecondaryBrush}" 
-                           HorizontalAlignment="Center" Margin="0,0,0,50"/>
+                <TextBlock Text="[WIZARD]" FontFamily="Courier New" FontSize="24" FontWeight="Bold"
+                           Foreground="#000080" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <TextBlock Text="REGISTRO DE ACTIVIDADES" FontFamily="Tahoma" FontSize="14" FontWeight="Bold" 
+                           Foreground="#000000" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                <TextBlock Text="Seleccione una opcion:" FontFamily="Tahoma" FontSize="10" 
+                           Foreground="#404040" HorizontalAlignment="Center" Margin="0,0,0,30"/>
                 
                 <!-- Opciones -->
-                <Grid HorizontalAlignment="Center">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="280"/>
-                        <ColumnDefinition Width="30"/>
-                        <ColumnDefinition Width="280"/>
-                    </Grid.ColumnDefinitions>
-                    
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <!-- Opción: Crear Registro -->
-                    <Button Grid.Column="0" Style="{StaticResource OptionCardStyle}"
-                            Command="{Binding ShowWizardCommand}">
+                    <Border Background="White" BorderThickness="2" BorderBrush="#808080"
+                            Padding="20,15" Margin="0,0,15,0" Cursor="Hand" Width="180">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowWizardCommand}"/>
+                        </Border.InputBindings>
                         <StackPanel HorizontalAlignment="Center">
-                            <Border Width="80" Height="80" CornerRadius="40" 
-                                    Background="{StaticResource SuccessLightBrush}" 
-                                    Margin="0,0,0,20">
-                                <TextBlock Text="➕" FontSize="36" 
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Background="#008000" Width="50" Height="50" 
+                                    HorizontalAlignment="Center" Margin="0,0,0,10">
+                                <TextBlock Text="[+]" FontFamily="Courier New" FontSize="20" FontWeight="Bold"
+                                           Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <TextBlock Text="Crear Registro" FontSize="18" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                            <TextBlock Text="Registra las actividades&#x0a;del día paso a paso" 
-                                       FontSize="13" TextAlignment="Center"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                       LineHeight="20"/>
+                            <TextBlock Text="Crear Registro" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
+                                       Foreground="#000000" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <TextBlock Text="Registrar actividades" FontFamily="Tahoma" FontSize="8"
+                                       Foreground="#808080" HorizontalAlignment="Center"/>
+                            <TextBlock Text="del dia paso a paso" FontFamily="Tahoma" FontSize="8"
+                                       Foreground="#808080" HorizontalAlignment="Center"/>
                         </StackPanel>
-                    </Button>
+                    </Border>
                     
                     <!-- Opción: Ver Registros -->
-                    <Button Grid.Column="2" Style="{StaticResource OptionCardStyle}"
-                            Command="{Binding ShowDashboardCommand}">
+                    <Border Background="White" BorderThickness="2" BorderBrush="#808080"
+                            Padding="20,15" Cursor="Hand" Width="180">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowDashboardCommand}"/>
+                        </Border.InputBindings>
                         <StackPanel HorizontalAlignment="Center">
-                            <Border Width="80" Height="80" CornerRadius="40" 
-                                    Background="{StaticResource InfoLightBrush}" 
-                                    Margin="0,0,0,20">
-                                <TextBlock Text="📊" FontSize="36" 
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Border Background="#000080" Width="50" Height="50" 
+                                    HorizontalAlignment="Center" Margin="0,0,0,10">
+                                <TextBlock Text="[=]" FontFamily="Courier New" FontSize="20" FontWeight="Bold"
+                                           Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
-                            <TextBlock Text="Ver Registros" FontSize="18" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                            <TextBlock Text="Consulta y administra&#x0a;los registros existentes" 
-                                       FontSize="13" TextAlignment="Center"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                       LineHeight="20"/>
+                            <TextBlock Text="Ver Registros" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
+                                       Foreground="#000000" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                            <TextBlock Text="Consultar y administrar" FontFamily="Tahoma" FontSize="8"
+                                       Foreground="#808080" HorizontalAlignment="Center"/>
+                            <TextBlock Text="registros existentes" FontFamily="Tahoma" FontSize="8"
+                                       Foreground="#808080" HorizontalAlignment="Center"/>
                         </StackPanel>
-                    </Button>
-                </Grid>
+                    </Border>
+                </StackPanel>
             </StackPanel>
             
             <!-- Footer con fecha actual -->
-            <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" Padding="20,15">
-                <TextBlock HorizontalAlignment="Center" Foreground="{StaticResource TextTertiaryBrush}">
-                    <Run Text="📅"/>
+            <Border Grid.Row="1" Background="#E0E0E0" Padding="10,8" BorderThickness="0,1,0,0" BorderBrush="#808080">
+                <TextBlock HorizontalAlignment="Center" FontFamily="Tahoma" FontSize="9" Foreground="#404040">
+                    <Run Text="Fecha: "/>
                     <Run Text="{Binding CurrentDateText, Mode=OneWay}"/>
                 </TextBlock>
             </Border>
@@ -164,48 +137,46 @@
             </Grid.RowDefinitions>
 
             <!-- Header del Wizard -->
-            <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" Padding="20,15" 
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Border Grid.Row="0" Background="#000080" Padding="10,8">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     
                     <!-- Botón Volver -->
-                    <Button Grid.Column="0" Content="← Volver" 
+                    <Button Grid.Column="0" Content="&lt;- Volver" 
                             Command="{Binding GoHomeCommand}"
-                            Style="{StaticResource SecondaryButton}"
-                            Padding="15,8" Margin="0,0,20,0"/>
+                            Style="{StaticResource LegacyButtonStyle}"
+                            FontFamily="Tahoma" FontSize="9" Padding="10,3" Margin="0,0,15,0"/>
                     
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding StepTitle}" FontSize="18" FontWeight="SemiBold" 
-                                   Foreground="{StaticResource TextPrimaryBrush}"/>
-                        <TextBlock Text="{Binding StepDescription}" FontSize="13" 
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0"/>
-                        
-                        <!-- Barra de progreso -->
-                        <Grid Margin="0,12,0,0">
-                            <ProgressBar Value="{Binding ProgressPercentage}" Maximum="100" Height="6" 
-                                         Foreground="{StaticResource PrimaryBrush}" 
-                                         Background="{StaticResource BorderLightBrush}" 
-                                         BorderThickness="0"/>
-                            <TextBlock Text="{Binding ProgressPercentage, StringFormat='{}{0}%'}" 
-                                       HorizontalAlignment="Right" VerticalAlignment="Center" 
-                                       FontSize="11" Margin="0,-18,0,0" 
-                                       Foreground="{StaticResource TextTertiaryBrush}"/>
-                        </Grid>
+                        <TextBlock Text="{Binding StepTitle}" FontFamily="Tahoma" FontSize="11" FontWeight="Bold" 
+                                   Foreground="White"/>
+                        <TextBlock Text="{Binding StepDescription}" FontFamily="Tahoma" FontSize="9" 
+                                   Foreground="#C0C0FF" Margin="0,2,0,0"/>
                     </StackPanel>
+                    
+                    <!-- Progreso -->
+                    <Border Grid.Column="2" Background="White" Padding="8,4">
+                        <TextBlock FontFamily="Courier New" FontSize="10" FontWeight="Bold" Foreground="#000080">
+                            <Run Text="{Binding ProgressPercentage, Mode=OneWay}"/>
+                            <Run Text="%"/>
+                        </TextBlock>
+                    </Border>
                 </Grid>
             </Border>
 
             <!-- Content del Wizard -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20">
-                <StackPanel MaxWidth="800" HorizontalAlignment="Center">
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="8">
+                <Border Background="White" BorderThickness="1" BorderBrush="#808080" Padding="15">
+                <StackPanel MaxWidth="700" HorizontalAlignment="Center">
                     
                     <!-- Step 1: Seleccionar Empleados -->
-                    <StackPanel Visibility="{Binding IsSelectEmployeesVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
-                        <TextBlock Text="Seleccione los empleados:" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                    <StackPanel Visibility="{Binding IsSelectEmployeesVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,15">
+                        <TextBlock Text="Seleccione los empleados:" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,10"/>
                         
                         <ItemsControl ItemsSource="{Binding AllEmpleados, Mode=OneWay}">
                             <ItemsControl.ItemsPanel>
@@ -216,144 +187,148 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <CheckBox Command="{Binding DataContext.ToggleEmployeeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                              CommandParameter="{Binding .}" Margin="0,0,10,10" Padding="10,5"
-                                              Style="{StaticResource CheckBoxCardStyle}" MinWidth="150">
+                                              CommandParameter="{Binding .}" Margin="0,0,8,8" 
+                                              FontFamily="Tahoma" FontSize="9">
                                         <CheckBox.IsChecked>
                                             <MultiBinding Converter="{StaticResource CollectionContainsConverter}" Mode="OneWay">
                                                 <Binding Path="." />
                                                 <Binding Path="DataContext.SelectedEmpleados" RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
                                             </MultiBinding>
                                         </CheckBox.IsChecked>
-                                        <StackPanel HorizontalAlignment="Center">
-                                            <Border Width="60" Height="60" CornerRadius="30" Margin="0,0,0,8" Background="{StaticResource SurfaceBrush}">
-                                                <Grid>
-                                                    <TextBlock Text="👤" FontSize="30" HorizontalAlignment="Center" 
-                                                               VerticalAlignment="Center" Foreground="{StaticResource GrayBrush}"
-                                                               Visibility="{Binding FotoPath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}"/>
-                                                    <Border CornerRadius="30">
-                                                        <Border.Background>
-                                                            <ImageBrush ImageSource="{Binding FotoPath}" Stretch="UniformToFill"/>
-                                                        </Border.Background>
-                                                        <Border.Visibility>
-                                                            <Binding Path="FotoPath" Converter="{StaticResource NotNullToVisibilityConverter}"/>
-                                                        </Border.Visibility>
-                                                    </Border>
-                                                </Grid>
-                                            </Border>
-                                            <TextBlock Text="{Binding NombreCompleto}" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding Cargo.Nombre}" FontSize="11" Foreground="{StaticResource TextTertiaryBrush}" 
-                                                       TextAlignment="Center" Margin="0,2,0,0" TextWrapping="Wrap"/>
-                                        </StackPanel>
+                                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="8,5" MinWidth="120">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="[U]" FontFamily="Courier New" FontSize="10" FontWeight="Bold"
+                                                           Foreground="#000080" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding NombreCompleto}" FontFamily="Tahoma" FontSize="9" 
+                                                               FontWeight="Bold" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Cargo.Nombre}" FontFamily="Tahoma" FontSize="8" 
+                                                               Foreground="#808080" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
                                     </CheckBox>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         
-                        <Border Style="{StaticResource InfoPanel}" Margin="0,15,0,0">
-                            <TextBlock Foreground="{StaticResource TextPrimaryBrush}" FontSize="13">
-                                <Run Text="Empleados seleccionados: " FontWeight="SemiBold"/>
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="8" Margin="0,10,0,0">
+                            <TextBlock FontFamily="Tahoma" FontSize="9" Foreground="#404040">
+                                <Run Text="Empleados seleccionados: " FontWeight="Bold"/>
                                 <Run Text="{Binding SelectedEmpleados.Count, Mode=OneWay}"/>
                             </TextBlock>
                         </Border>
                     </StackPanel>
 
                     <!-- Step 2: Seleccionar Fecha -->
-                    <StackPanel Visibility="{Binding IsSelectDateVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
-                        <TextBlock Text="Seleccione la fecha:" Style="{StaticResource FormLabel}" Margin="0,0,0,10"/>
-                        <DatePicker SelectedDate="{Binding SelectedDate}" Style="{StaticResource StandardDatePicker}" Width="200" HorizontalAlignment="Left"/>
+                    <StackPanel Visibility="{Binding IsSelectDateVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,15">
+                        <TextBlock Text="Seleccione la fecha:" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,8"/>
+                        <DatePicker SelectedDate="{Binding SelectedDate}" Width="150" HorizontalAlignment="Left"
+                                    FontFamily="Tahoma" FontSize="9"/>
                     </StackPanel>
 
                     <!-- Step 3: Hora de Entrada -->
-                    <StackPanel Visibility="{Binding IsEnterEntradaVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
-                        <TextBlock Text="¿A qué hora entró?" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                    <StackPanel Visibility="{Binding IsEnterEntradaVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,15">
+                        <TextBlock Text="Hora de Entrada:" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,10"/>
 
-                        <Border Style="{StaticResource CardPanel}" Padding="40,30">
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="20">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="🕐" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                                <TextBlock Text="[ENTRADA]" FontFamily="Courier New" FontSize="14" FontWeight="Bold"
+                                           Foreground="#000080" HorizontalAlignment="Center" Margin="0,0,0,15"/>
 
-                                <Grid Width="300">
+                                <Grid Width="200">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Hora" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Hora" FontFamily="Tahoma" FontSize="8" Foreground="#404040" 
+                                                   HorizontalAlignment="Center" Margin="0,0,0,3"/>
                                         <TextBox Text="{Binding HoraEntradaHorasText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 Style="{StaticResource StandardTextBox}"
-                                                 HorizontalContentAlignment="Center" FontSize="32" FontWeight="Bold" Height="70"
-                                                 MaxLength="2"/>
+                                                 Style="{StaticResource LegacyTextBoxStyle}"
+                                                 HorizontalContentAlignment="Center" FontFamily="Courier New" 
+                                                 FontSize="24" FontWeight="Bold" Height="40" MaxLength="2"/>
                                     </StackPanel>
 
-                                    <TextBlock Grid.Column="1" Text=":" FontSize="32" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+                                    <TextBlock Grid.Column="1" Text=":" FontFamily="Courier New" FontSize="24" FontWeight="Bold" 
+                                               VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="5,0,5,8"/>
 
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Minutos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Min" FontFamily="Tahoma" FontSize="8" Foreground="#404040" 
+                                                   HorizontalAlignment="Center" Margin="0,0,0,3"/>
                                         <TextBox Text="{Binding HoraEntradaMinutosText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 Style="{StaticResource StandardTextBox}"
-                                                 HorizontalContentAlignment="Center" FontSize="32" FontWeight="Bold" Height="70"
-                                                 MaxLength="2"/>
+                                                 Style="{StaticResource LegacyTextBoxStyle}"
+                                                 HorizontalContentAlignment="Center" FontFamily="Courier New" 
+                                                 FontSize="24" FontWeight="Bold" Height="40" MaxLength="2"/>
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock Text="Formato 24 horas (Ejemplo: 08:30)"
-                                           HorizontalAlignment="Center" Foreground="{StaticResource TextTertiaryBrush}"
-                                           FontStyle="Italic" Margin="0,20,0,0"/>
+                                <TextBlock Text="Formato 24h (Ej: 08:30)" FontFamily="Tahoma" FontSize="8"
+                                           HorizontalAlignment="Center" Foreground="#808080" Margin="0,10,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
 
                     <!-- Step 4: Hora de Salida -->
-                    <StackPanel Visibility="{Binding IsEnterSalidaVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
-                        <TextBlock Text="¿A qué hora salió?" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                    <StackPanel Visibility="{Binding IsEnterSalidaVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,15">
+                        <TextBlock Text="Hora de Salida:" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,10"/>
 
-                        <Border Style="{StaticResource CardPanel}" Padding="40,30">
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="20">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="🕔" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                                <TextBlock Text="[SALIDA]" FontFamily="Courier New" FontSize="14" FontWeight="Bold"
+                                           Foreground="#000080" HorizontalAlignment="Center" Margin="0,0,0,15"/>
 
-                                <Grid Width="300">
+                                <Grid Width="200">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Hora" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Hora" FontFamily="Tahoma" FontSize="8" Foreground="#404040" 
+                                                   HorizontalAlignment="Center" Margin="0,0,0,3"/>
                                         <TextBox Text="{Binding HoraSalidaHorasText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 Style="{StaticResource StandardTextBox}"
-                                                 HorizontalContentAlignment="Center" FontSize="32" FontWeight="Bold" Height="70"
-                                                 MaxLength="2"/>
+                                                 Style="{StaticResource LegacyTextBoxStyle}"
+                                                 HorizontalContentAlignment="Center" FontFamily="Courier New" 
+                                                 FontSize="24" FontWeight="Bold" Height="40" MaxLength="2"/>
                                     </StackPanel>
 
-                                    <TextBlock Grid.Column="1" Text=":" FontSize="32" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+                                    <TextBlock Grid.Column="1" Text=":" FontFamily="Courier New" FontSize="24" FontWeight="Bold" 
+                                               VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="5,0,5,8"/>
 
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Minutos" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                        <TextBlock Text="Min" FontFamily="Tahoma" FontSize="8" Foreground="#404040" 
+                                                   HorizontalAlignment="Center" Margin="0,0,0,3"/>
                                         <TextBox Text="{Binding HoraSalidaMinutosText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                 Style="{StaticResource StandardTextBox}"
-                                                 HorizontalContentAlignment="Center" FontSize="32" FontWeight="Bold" Height="70"
-                                                 MaxLength="2"/>
+                                                 Style="{StaticResource LegacyTextBoxStyle}"
+                                                 HorizontalContentAlignment="Center" FontFamily="Courier New" 
+                                                 FontSize="24" FontWeight="Bold" Height="40" MaxLength="2"/>
                                     </StackPanel>
                                 </Grid>
 
-                                <TextBlock Text="Formato 24 horas (Ejemplo: 17:30)"
-                                           HorizontalAlignment="Center" Foreground="{StaticResource TextTertiaryBrush}"
-                                           FontStyle="Italic" Margin="0,20,0,0"/>
+                                <TextBlock Text="Formato 24h (Ej: 17:30)" FontFamily="Tahoma" FontSize="8"
+                                           HorizontalAlignment="Center" Foreground="#808080" Margin="0,10,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
 
                     <!-- Step 5: Seleccionar Actividad -->
-                    <StackPanel Visibility="{Binding IsSelectActivityVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
-                        <TextBlock Text="Seleccione la actividad:" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                    <StackPanel Visibility="{Binding IsSelectActivityVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,15">
+                        <TextBlock Text="Seleccione la actividad:" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,10"/>
                         
                         <ListBox ItemsSource="{Binding AllActividades, Mode=OneWay}" 
                                  SelectedItem="{Binding SelectedActivity}" 
-                                 ItemContainerStyle="{StaticResource ActivityListBoxItemStyle}"
-                                 BorderThickness="0" Background="Transparent" 
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                 ItemContainerStyle="{StaticResource LegacyActivityListBoxItemStyle}"
+                                 BorderThickness="1" BorderBrush="#808080" Background="White" 
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 MaxHeight="250">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>
@@ -362,19 +337,18 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         
-                                        <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20" 
-                                                Background="{StaticResource PrimaryLightBrush}" Margin="0,0,15,0">
-                                            <TextBlock Text="📋" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18"/>
-                                        </Border>
+                                        <TextBlock Grid.Column="0" Text="[A]" FontFamily="Courier New" FontSize="10" 
+                                                   FontWeight="Bold" Foreground="#000080" 
+                                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
                                         
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" FontSize="15" Foreground="{StaticResource TextPrimaryBrush}"/>
-                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                                <Border Background="{StaticResource BackgroundBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,8,0">
-                                                    <TextBlock Text="{Binding Categoria}" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                                </Border>
-                                                <TextBlock Text="{Binding Descripcion}" FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" 
-                                                           TextTrimming="CharacterEllipsis" MaxWidth="400" VerticalAlignment="Center"
+                                            <TextBlock Text="{Binding Nombre}" FontFamily="Tahoma" FontSize="9" 
+                                                       FontWeight="Bold" Foreground="#000000"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                <TextBlock Text="{Binding Categoria}" FontFamily="Tahoma" FontSize="8" 
+                                                           Foreground="#808080" Margin="0,0,10,0"/>
+                                                <TextBlock Text="{Binding Descripcion}" FontFamily="Tahoma" FontSize="8" 
+                                                           Foreground="#808080" TextTrimming="CharacterEllipsis" MaxWidth="300"
                                                            Visibility="{Binding Descripcion, Converter={StaticResource StringToVisConverter}}"/>
                                             </StackPanel>
                                         </StackPanel>
@@ -384,71 +358,72 @@
                         </ListBox>
                     </StackPanel>
 
-                    <!-- Step 4: Seleccionar Proyecto -->
-                    <StackPanel Visibility="{Binding IsSelectProjectVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
-                        <TextBlock Text="Seleccione el proyecto (opcional):" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                    <!-- Step 6: Seleccionar Proyecto -->
+                    <StackPanel Visibility="{Binding IsSelectProjectVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,15">
+                        <TextBlock Text="Proyecto (opcional):" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,10"/>
                         
-                        <Border Style="{StaticResource CardPanel}" Padding="20">
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="15">
                             <StackPanel>
-                                <TextBlock Text="Proyecto Asociado" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <TextBlock Text="Proyecto Asociado:" FontFamily="Tahoma" FontSize="9" 
+                                           FontWeight="Bold" Margin="0,0,0,8"/>
                                 <ComboBox ItemsSource="{Binding AllProyectos, Mode=OneWay}" 
                                           SelectedItem="{Binding SelectedProject}" 
                                           DisplayMemberPath="Nombre" 
-                                          Style="{StaticResource StandardComboBox}"
-                                          Height="45" FontSize="14"/>
-                                <TextBlock Text="Si la actividad no pertenece a un proyecto específico, seleccione 'Sin proyecto'." 
-                                           FontSize="12" Foreground="{StaticResource TextTertiaryBrush}" Margin="0,10,0,0"/>
+                                          FontFamily="Tahoma" FontSize="9" Height="24"/>
+                                <TextBlock Text="Si no aplica, seleccione 'Sin proyecto'." 
+                                           FontFamily="Tahoma" FontSize="8" Foreground="#808080" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
 
                     <!-- Step 7: Horas Calculadas Automáticamente -->
-                    <StackPanel Visibility="{Binding IsEnterHoursVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
-                        <TextBlock Text="Horas trabajadas" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                    <StackPanel Visibility="{Binding IsEnterHoursVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,15">
+                        <TextBlock Text="Horas Trabajadas:" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,10"/>
 
-                        <Border Style="{StaticResource CardPanel}" Padding="40,30">
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="20">
                             <StackPanel HorizontalAlignment="Center">
-                                <!-- Icono e indicador de cálculo automático -->
-                                <TextBlock Text="⚡" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,15"/>
-                                <TextBlock Text="Cálculo Automático" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{StaticResource SuccessBrush}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                                <!-- Indicador de cálculo automático -->
+                                <TextBlock Text="[CALCULO AUTOMATICO]" FontFamily="Courier New" FontSize="10" FontWeight="Bold"
+                                           Foreground="#008000" HorizontalAlignment="Center" Margin="0,0,0,15"/>
 
                                 <!-- Display de horas calculadas -->
-                                <Border Background="{StaticResource SuccessLightBrush}" CornerRadius="16" Padding="30,20" Margin="0,0,0,20">
+                                <Border Background="White" BorderThickness="2" BorderBrush="#000080" Padding="20,15" Margin="0,0,0,15">
                                     <StackPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding Hours, StringFormat='0.0'}" FontSize="56" FontWeight="Bold"
-                                                   Foreground="{StaticResource SuccessDarkBrush}" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="HORAS" FontSize="14" FontWeight="Bold"
-                                                   Foreground="{StaticResource SuccessDarkBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                        <TextBlock Text="{Binding Hours, StringFormat='0.0'}" FontFamily="Courier New" FontSize="36" FontWeight="Bold"
+                                                   Foreground="#000080" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="HORAS" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
+                                                   Foreground="#000080" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </Border>
 
                                 <!-- Explicación del cálculo -->
-                                <Border Background="{StaticResource InfoLightBrush}" CornerRadius="8" Padding="20,15">
+                                <Border Background="#FFFFCC" BorderThickness="1" BorderBrush="#808080" Padding="12,8">
                                     <StackPanel>
-                                        <TextBlock Text="📊 Detalle del cálculo:" FontSize="12" FontWeight="SemiBold"
-                                                   Foreground="{StaticResource InfoDarkBrush}" Margin="0,0,0,8"/>
-                                        <TextBlock Text="{Binding HorasCalculadasText}" TextWrapping="Wrap" FontSize="13"
-                                                   Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="[i] Detalle:" FontFamily="Courier New" FontSize="9" FontWeight="Bold"
+                                                   Foreground="#404040" Margin="0,0,0,5"/>
+                                        <TextBlock Text="{Binding HorasCalculadasText}" TextWrapping="Wrap" FontFamily="Tahoma" FontSize="8"
+                                                   Foreground="#404040" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Opción para ajustar manualmente (opcional) -->
-                                <Expander Header="⚙️ Ajustar manualmente" Margin="0,15,0,0" HorizontalAlignment="Center">
-                                    <StackPanel Margin="0,10,0,0">
-                                        <TextBlock Text="Solo si necesita modificar el cálculo:" FontSize="11"
-                                                   Foreground="{StaticResource TextTertiaryBrush}" Margin="0,0,0,10" HorizontalAlignment="Center"/>
-                                        <Grid Width="300">
+                                <!-- Opción para ajustar manualmente -->
+                                <Expander Header="[+] Ajustar manualmente" FontFamily="Tahoma" FontSize="8" Margin="0,12,0,0" HorizontalAlignment="Center">
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock Text="Solo si necesita modificar:" FontFamily="Tahoma" FontSize="8"
+                                                   Foreground="#808080" Margin="0,0,0,8" HorizontalAlignment="Center"/>
+                                        <Grid Width="250">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
 
                                             <Slider Grid.Column="0" Value="{Binding Hours}" Minimum="0.5" Maximum="12" TickFrequency="0.5"
-                                                    IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                                                    IsSnapToTickEnabled="True" VerticalAlignment="Center" Margin="0,0,15,0"/>
 
-                                            <TextBlock Grid.Column="1" Text="{Binding Hours, StringFormat='0.0 h'}" FontSize="16" FontWeight="SemiBold"
-                                                       VerticalAlignment="Center" Foreground="{StaticResource PrimaryBrush}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Hours, StringFormat='0.0 h'}" FontFamily="Courier New" FontSize="12" FontWeight="Bold"
+                                                       VerticalAlignment="Center" Foreground="#000080"/>
                                         </Grid>
                                     </StackPanel>
                                 </Expander>
@@ -456,66 +431,68 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Step 6: Descripción -->
-                    <StackPanel Visibility="{Binding IsEnterDescriptionVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
-                        <TextBlock Text="Describa la actividad realizada:" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                    <!-- Step 8: Descripción -->
+                    <StackPanel Visibility="{Binding IsEnterDescriptionVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,15">
+                        <TextBlock Text="Descripcion de la actividad:" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,10"/>
                         
-                        <Border Style="{StaticResource CardPanel}" Padding="0">
-                            <Grid>
-                                <TextBox Text="{Binding Description}" Style="{StaticResource StandardTextBox}" 
-                                         Height="150" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top"
-                                         BorderThickness="0" FontSize="14"/>
-                                
-                                <TextBlock Text="Escriba aquí los detalles de lo realizado..." IsHitTestVisible="False"
-                                           Foreground="{StaticResource TextDisabledBrush}" Margin="15,15,0,0"
-                                           Visibility="{Binding Description, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}"/>
-                            </Grid>
-                        </Border>
-                        <TextBlock Text="Sea breve pero específico sobre las tareas completadas." 
-                                   Foreground="{StaticResource TextTertiaryBrush}" FontSize="12" Margin="5,5,0,0"/>
+                        <Grid>
+                            <TextBox Text="{Binding Description}" Style="{StaticResource LegacyTextBoxStyle}" 
+                                     Height="120" TextWrapping="Wrap" AcceptsReturn="True" VerticalContentAlignment="Top"
+                                     FontFamily="Tahoma" FontSize="9" Padding="8"/>
+                            
+                            <TextBlock Text="Escriba aqui los detalles..." IsHitTestVisible="False"
+                                       FontFamily="Tahoma" FontSize="9" Foreground="#808080" Margin="10,10,0,0"
+                                       Visibility="{Binding Description, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}"/>
+                        </Grid>
+                        <TextBlock Text="Sea breve pero especifico sobre las tareas realizadas." 
+                                   FontFamily="Tahoma" FontSize="8" Foreground="#808080" Margin="0,5,0,0"/>
                     </StackPanel>
 
-                    <!-- Step 7: Resumen -->
-                    <StackPanel Visibility="{Binding IsReviewVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
-                        <TextBlock Text="Revise los datos antes de guardar:" Style="{StaticResource FormLabel}" Margin="0,0,0,15"/>
+                    <!-- Step 9: Resumen -->
+                    <StackPanel Visibility="{Binding IsReviewVisible, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,15">
+                        <TextBlock Text="Revise los datos antes de guardar:" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,10"/>
                         
-                        <Border Style="{StaticResource CardPanel}" Padding="0" Margin="0,0,0,15" BorderBrush="{StaticResource PrimaryBrush}" BorderThickness="1">
+                        <Border Background="White" BorderThickness="2" BorderBrush="#000080" Margin="0,0,0,10">
                             <StackPanel>
-                                <Border Background="{StaticResource PrimaryLightBrush}" Padding="20,15" CornerRadius="8,8,0,0">
+                                <!-- Header del resumen -->
+                                <Border Background="#000080" Padding="10,8">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="RESUMEN DE ACTIVIDAD" FontSize="12" FontWeight="Bold" Foreground="{StaticResource PrimaryDarkBrush}"/>
-                                            <TextBlock Text="{Binding SelectedDate, StringFormat='dddd, dd MMMM yyyy'}" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,2,0,0"/>
-                                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                                <TextBlock Text="🕐" FontSize="12" Margin="0,0,5,0"/>
-                                                <TextBlock Text="{Binding HoraEntrada, Converter={StaticResource TimeSpanToStringConverter}}" FontSize="13" FontWeight="SemiBold"/>
-                                                <TextBlock Text=" - " FontSize="13" Margin="3,0"/>
-                                                <TextBlock Text="{Binding HoraSalida, Converter={StaticResource TimeSpanToStringConverter}}" FontSize="13" FontWeight="SemiBold"/>
+                                            <TextBlock Text="[RESUMEN DE ACTIVIDAD]" FontFamily="Courier New" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                            <TextBlock Text="{Binding SelectedDate, StringFormat='dddd, dd MMMM yyyy'}" FontFamily="Tahoma" FontSize="9" Foreground="#E0E0E0" Margin="0,2,0,0"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <TextBlock Text="Horario: " FontFamily="Tahoma" FontSize="8" Foreground="#E0E0E0"/>
+                                                <TextBlock Text="{Binding HoraEntrada, Converter={StaticResource TimeSpanToStringConverter}}" FontFamily="Courier New" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                                                <TextBlock Text=" - " FontFamily="Tahoma" FontSize="9" Foreground="White"/>
+                                                <TextBlock Text="{Binding HoraSalida, Converter={StaticResource TimeSpanToStringConverter}}" FontFamily="Courier New" FontSize="9" FontWeight="Bold" Foreground="White"/>
                                             </StackPanel>
                                         </StackPanel>
-                                        <Border Grid.Column="1" Background="{StaticResource SurfaceBrush}" CornerRadius="4" Padding="10,5">
-                                            <TextBlock FontWeight="Bold" Foreground="{StaticResource PrimaryBrush}">
+                                        <Border Grid.Column="1" Background="White" Padding="10,5">
+                                            <TextBlock FontFamily="Courier New" FontWeight="Bold" Foreground="#000080" FontSize="11">
                                                 <Run Text="{Binding Hours, StringFormat='0.0'}"/>
-                                                <Run Text=" Horas"/>
+                                                <Run Text=" Hrs"/>
                                             </TextBlock>
                                         </Border>
                                     </Grid>
                                 </Border>
                                 
-                                <Border Padding="25">
+                                <!-- Contenido del resumen -->
+                                <Border Padding="15">
                                     <StackPanel>
-                                        <TextBlock Text="Empleados" Style="{StaticResource FormLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <ItemsControl ItemsSource="{Binding SelectedEmpleados, Mode=OneWay}" Margin="0,5,0,20">
+                                        <TextBlock Text="Empleados:" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#404040"/>
+                                        <ItemsControl ItemsSource="{Binding SelectedEmpleados, Mode=OneWay}" Margin="0,5,0,15">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="15" Padding="12,6" Margin="0,0,8,8" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                                    <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="8,4" Margin="0,0,5,5">
                                                         <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="👤" Margin="0,0,5,0" FontSize="12"/>
-                                                            <TextBlock Text="{Binding NombreCompleto}" FontWeight="SemiBold" FontSize="13"/>
+                                                            <TextBlock Text="[U]" FontFamily="Courier New" FontSize="8" FontWeight="Bold" Foreground="#000080" Margin="0,0,5,0"/>
+                                                            <TextBlock Text="{Binding NombreCompleto}" FontFamily="Tahoma" FontSize="8" FontWeight="Bold"/>
                                                         </StackPanel>
                                                     </Border>
                                                 </DataTemplate>
@@ -527,32 +504,32 @@
                                             </ItemsControl.ItemsPanel>
                                         </ItemsControl>
 
-                                        <Grid Margin="0,0,0,20">
+                                        <Grid Margin="0,0,0,15">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             
-                                            <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                                                <TextBlock Text="Actividad" Style="{StaticResource FormLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                                <TextBlock Text="{Binding SelectedActivity.Nombre}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                                <Border Background="{StaticResource InfoLightBrush}" HorizontalAlignment="Left" CornerRadius="4" Padding="6,2" Margin="0,5,0,0">
-                                                    <TextBlock Text="{Binding SelectedActivity.Categoria}" FontSize="11" Foreground="{StaticResource InfoDarkBrush}"/>
+                                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                                <TextBlock Text="Actividad:" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#404040"/>
+                                                <TextBlock Text="{Binding SelectedActivity.Nombre}" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                                <Border Background="#FFFFCC" BorderThickness="1" BorderBrush="#808080" HorizontalAlignment="Left" Padding="5,2" Margin="0,5,0,0">
+                                                    <TextBlock Text="{Binding SelectedActivity.Categoria}" FontFamily="Tahoma" FontSize="8" Foreground="#404040"/>
                                                 </Border>
                                             </StackPanel>
                                             
                                             <StackPanel Grid.Column="1">
-                                                <TextBlock Text="Proyecto" Style="{StaticResource FormLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="📂" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding SelectedProject.Nombre}" FontSize="15" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Proyecto:" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#404040"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                    <TextBlock Text="[P]" FontFamily="Courier New" FontSize="8" FontWeight="Bold" Foreground="#000080" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding SelectedProject.Nombre}" FontFamily="Tahoma" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </Grid>
 
-                                        <TextBlock Text="Descripción" Style="{StaticResource FormLabel}" FontWeight="SemiBold" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                        <Border Background="{StaticResource BackgroundBrush}" CornerRadius="6" Padding="15">
-                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontStyle="Italic" FontSize="14" LineHeight="20"/>
+                                        <TextBlock Text="Descripcion:" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#404040"/>
+                                        <Border Background="#F0F0F0" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,5,0,0">
+                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontFamily="Tahoma" FontSize="9" FontStyle="Italic"/>
                                         </Border>
                                     </StackPanel>
                                 </Border>
@@ -561,16 +538,19 @@
                     </StackPanel>
 
                     <!-- Status Message -->
-                    <Border Style="{StaticResource AlertPanel}" Margin="0,20,0,0"
+                    <Border Background="#FFFFCC" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,15,0,0"
                            Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisConverter}}">
-                        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="[!]" FontFamily="Courier New" FontSize="10" FontWeight="Bold" Foreground="#FF6600" Margin="0,0,8,0"/>
+                            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" FontFamily="Tahoma" FontSize="9"/>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
+                </Border>
             </ScrollViewer>
 
             <!-- Footer del Wizard -->
-            <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" Padding="20,15"
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+            <Border Grid.Row="2" Background="#C0C0C0" Padding="15,10" BorderBrush="#808080" BorderThickness="0,1,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -578,19 +558,16 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Grid.Column="1" Command="{Binding PreviousStepCommand}" Margin="0,0,10,0" Width="100"
-                            Style="{StaticResource SecondaryButton}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="←" Margin="0,0,5,0"/>
-                            <TextBlock Text="Atrás"/>
-                        </StackPanel>
+                    <Button Grid.Column="1" Command="{Binding PreviousStepCommand}" Margin="0,0,8,0"
+                            Style="{StaticResource LegacyButtonStyle}" Padding="15,6">
+                        <TextBlock Text="&lt;- Atras" FontFamily="Tahoma" FontSize="9"/>
                     </Button>
 
-                    <Button Grid.Column="2" Command="{Binding NextStepCommand}" Width="130"
-                            Style="{StaticResource PrimaryButton}">
+                    <Button Grid.Column="2" Command="{Binding NextStepCommand}"
+                            Style="{StaticResource LegacyButtonStyle}" Padding="15,6">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding NextButtonText}"/>
-                            <TextBlock Text=" →" Visibility="{Binding IsLastStep, Converter={StaticResource InverseBoolToVisConverter}}"/>
+                            <TextBlock Text="{Binding NextButtonText}" FontFamily="Tahoma" FontSize="9"/>
+                            <TextBlock Text=" ->" FontFamily="Tahoma" FontSize="9" Visibility="{Binding IsLastStep, Converter={StaticResource InverseBoolToVisConverter}}"/>
                         </StackPanel>
                     </Button>
                 </Grid>
@@ -605,23 +582,21 @@
             </Grid.RowDefinitions>
             
             <!-- Header del Dashboard -->
-            <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" Padding="20,15" 
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
+            <Border Grid.Row="0" Background="#000080" Padding="15,10" BorderBrush="#808080" BorderThickness="0,0,0,1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     
-                    <Button Grid.Column="0" Content="← Volver" 
+                    <Button Grid.Column="0" Content="&lt;- Volver" 
                             Command="{Binding GoHomeCommand}"
-                            Style="{StaticResource SecondaryButton}"
-                            Padding="15,8" Margin="0,0,20,0"/>
+                            Style="{StaticResource LegacyButtonStyle}"
+                            Padding="12,5" Margin="0,0,15,0"/>
                     
-                    <TextBlock Grid.Column="1" Text="📊 Registros de Actividades" 
-                               FontSize="18" FontWeight="SemiBold" 
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" Text="[REGISTROS] Actividades Diarias" 
+                               FontFamily="Courier New" FontSize="12" FontWeight="Bold" 
+                               Foreground="White" VerticalAlignment="Center"/>
                 </Grid>
             </Border>
             
@@ -631,40 +606,38 @@
 
         <!-- ==================== LOADING OVERLAY ==================== -->
         <Grid Background="#80000000" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}">
-            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="12" Padding="30" 
+            <Border Background="#C0C0C0" BorderThickness="2" BorderBrush="#808080" Padding="25" 
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
-                    <ProgressBar IsIndeterminate="True" Width="180" Height="4" Margin="0,0,0,15"/>
-                    <TextBlock Text="Guardando..." HorizontalAlignment="Center" FontSize="14"/>
+                    <TextBlock Text="[...] Guardando" FontFamily="Courier New" FontSize="12" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <ProgressBar IsIndeterminate="True" Width="150" Height="18"/>
+                    <TextBlock Text="Por favor espere..." FontFamily="Tahoma" FontSize="9"
+                               HorizontalAlignment="Center" Foreground="#404040" Margin="0,10,0,0"/>
                 </StackPanel>
             </Border>
         </Grid>
 
         <!-- ==================== SUCCESS OVERLAY ==================== -->
-        <Grid Background="#95FFFFFF" Visibility="{Binding IsSuccessVisible, Converter={StaticResource BoolToVisConverter}}">
-            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="20" Padding="50,40" 
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    BorderBrush="{StaticResource SuccessBrush}" BorderThickness="0">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.15" Color="Black"/>
-                </Border.Effect>
+        <Grid Background="#90FFFFFF" Visibility="{Binding IsSuccessVisible, Converter={StaticResource BoolToVisConverter}}">
+            <Border Background="#C0C0C0" BorderThickness="3" BorderBrush="#008000" Padding="40,30" 
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel HorizontalAlignment="Center">
-                    <!-- Icono Animado (Simulado) -->
-                    <Border Width="100" Height="100" CornerRadius="50" Background="{StaticResource SuccessLightBrush}" Margin="0,0,0,25">
-                        <TextBlock Text="✓" FontSize="50" FontWeight="Bold" Foreground="{StaticResource SuccessBrush}" 
+                    <!-- Icono de exito -->
+                    <Border Width="80" Height="80" Background="White" BorderThickness="2" BorderBrush="#008000" Margin="0,0,0,20">
+                        <TextBlock Text="[OK]" FontFamily="Courier New" FontSize="20" FontWeight="Bold" Foreground="#008000" 
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     
-                    <TextBlock Text="¡Registro Guardado!" FontSize="26" FontWeight="Bold" 
-                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="Registro Guardado" FontFamily="Tahoma" FontSize="16" FontWeight="Bold" 
+                               Foreground="#008000" HorizontalAlignment="Center" Margin="0,0,0,8"/>
                     
-                    <TextBlock Text="{Binding SuccessMessage}" FontSize="16" 
-                               Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" 
-                               TextAlignment="Center" MaxWidth="300" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding SuccessMessage}" FontFamily="Tahoma" FontSize="10" 
+                               Foreground="#404040" HorizontalAlignment="Center" 
+                               TextAlignment="Center" MaxWidth="280" TextWrapping="Wrap"/>
                                
-                    <TextBlock Text="Volviendo al menú principal..." FontSize="13" 
-                               Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center" 
-                               Margin="0,25,0,0"/>
+                    <TextBlock Text="Volviendo al menu principal..." FontFamily="Tahoma" FontSize="9" 
+                               Foreground="#808080" HorizontalAlignment="Center" Margin="0,20,0,0"/>
                 </StackPanel>
             </Border>
         </Grid>

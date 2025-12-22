@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -291,7 +292,7 @@ public partial class ActividadesListViewModel : ViewModelBase
     {
         if (value != null && !IsLoading)
         {
-            _ = SearchActividadesAsync();
+            SearchActividadesAsync().SafeFireAndForget(showErrorMessage: false);
         }
     }
 }

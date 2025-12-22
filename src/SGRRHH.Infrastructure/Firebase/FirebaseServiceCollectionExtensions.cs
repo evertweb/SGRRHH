@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,31 +16,49 @@ public static class FirebaseServiceCollectionExtensions
     /// <summary>
     /// Registra todos los repositorios de Firestore para catálogos.
     /// Fase 2 de la migración: Departamentos, Cargos, Actividades, Proyectos, TiposPermiso, Configuracion.
+    /// Incluye cache en memoria para optimizar rendimiento.
     /// </summary>
     /// <param name="services">Colección de servicios</param>
     /// <param name="firebase">Inicializador de Firebase</param>
     /// <returns>La colección de servicios para encadenamiento</returns>
     public static IServiceCollection AddFirestoreCatalogRepositories(this IServiceCollection services, FirebaseInitializer firebase)
     {
-        // Registrar repositorios de catálogos (Fase 2)
-        services.AddScoped<IDepartamentoRepository>(sp => 
-            new DepartamentoFirestoreRepository(firebase, sp.GetService<ILogger<DepartamentoFirestoreRepository>>()));
-        
-        services.AddScoped<ICargoRepository>(sp => 
-            new CargoFirestoreRepository(firebase, sp.GetService<ILogger<CargoFirestoreRepository>>()));
-        
-        services.AddScoped<IActividadRepository>(sp => 
-            new ActividadFirestoreRepository(firebase, sp.GetService<ILogger<ActividadFirestoreRepository>>()));
-        
-        services.AddScoped<IProyectoRepository>(sp => 
-            new ProyectoFirestoreRepository(firebase, sp.GetService<ILogger<ProyectoFirestoreRepository>>()));
-        
-        services.AddScoped<ITipoPermisoRepository>(sp => 
-            new TipoPermisoFirestoreRepository(firebase, sp.GetService<ILogger<TipoPermisoFirestoreRepository>>()));
-        
-        services.AddScoped<IConfiguracionRepository>(sp => 
-            new ConfiguracionFirestoreRepository(firebase, sp.GetService<ILogger<ConfiguracionFirestoreRepository>>()));
-        
+        // Registrar repositorios de catálogos (Fase 2) con cache
+        services.AddScoped<IDepartamentoRepository>(sp =>
+            new DepartamentoFirestoreRepository(
+                firebase,
+                sp.GetService<ICacheService>(),
+                sp.GetService<ILogger<DepartamentoFirestoreRepository>>()));
+
+        services.AddScoped<ICargoRepository>(sp =>
+            new CargoFirestoreRepository(
+                firebase,
+                sp.GetService<ICacheService>(),
+                sp.GetService<ILogger<CargoFirestoreRepository>>()));
+
+        services.AddScoped<IActividadRepository>(sp =>
+            new ActividadFirestoreRepository(
+                firebase,
+                sp.GetService<ICacheService>(),
+                sp.GetService<ILogger<ActividadFirestoreRepository>>()));
+
+        services.AddScoped<IProyectoRepository>(sp =>
+            new ProyectoFirestoreRepository(
+                firebase,
+                sp.GetService<ICacheService>(),
+                sp.GetService<ILogger<ProyectoFirestoreRepository>>()));
+
+        services.AddScoped<ITipoPermisoRepository>(sp =>
+            new TipoPermisoFirestoreRepository(
+                firebase,
+                sp.GetService<ICacheService>(),
+                sp.GetService<ILogger<TipoPermisoFirestoreRepository>>()));
+
+        services.AddScoped<IConfiguracionRepository>(sp =>
+            new ConfiguracionFirestoreRepository(
+                firebase,
+                sp.GetService<ILogger<ConfiguracionFirestoreRepository>>()));
+
         return services;
     }
     
@@ -113,21 +132,28 @@ public static class FirebaseServiceCollectionExtensions
     /// <summary>
     /// Registra los repositorios de Firestore para entidades principales.
     /// Fase 3 de la migración: Empleados, Usuarios, Permisos, Vacaciones, Contratos, DocumentosEmpleado.
+    /// Incluye cache para EmpleadoRepository.
     /// </summary>
     /// <param name="services">Colección de servicios</param>
     /// <param name="firebase">Inicializador de Firebase</param>
     /// <returns>La colección de servicios para encadenamiento</returns>
     public static IServiceCollection AddFirestoreMainEntityRepositories(this IServiceCollection services, FirebaseInitializer firebase)
     {
-        // Registrar repositorios de entidades principales (Fase 3)
-        services.AddScoped<IEmpleadoRepository>(sp => 
-            new EmpleadoFirestoreRepository(firebase, sp.GetService<ILogger<EmpleadoFirestoreRepository>>()));
+        // Registrar repositorios de entidades principales (Fase 3) con cache
+        services.AddScoped<IEmpleadoRepository>(sp =>
+            new EmpleadoFirestoreRepository(
+                firebase,
+                sp.GetService<ICacheService>(),
+                sp.GetService<ILogger<EmpleadoFirestoreRepository>>()));
         
         services.AddScoped<IUsuarioRepository>(sp => 
             new UsuarioFirestoreRepository(firebase, sp.GetService<ILogger<UsuarioFirestoreRepository>>()));
         
-        services.AddScoped<IPermisoRepository>(sp => 
+        // Registrar PermisoFirestoreRepository como concreto para acceso a ConvertFromSnapshot
+        services.AddScoped<PermisoFirestoreRepository>(sp =>
             new PermisoFirestoreRepository(firebase, sp.GetService<ILogger<PermisoFirestoreRepository>>()));
+        // Registrar también como interfaz
+        services.AddScoped<IPermisoRepository>(sp => sp.GetRequiredService<PermisoFirestoreRepository>());
         
         services.AddScoped<IVacacionRepository>(sp => 
             new VacacionFirestoreRepository(firebase, sp.GetService<ILogger<VacacionFirestoreRepository>>()));
@@ -156,38 +182,6 @@ public static class FirebaseServiceCollectionExtensions
         
         services.AddScoped<IAuditLogRepository>(sp => 
             new AuditLogFirestoreRepository(firebase, sp.GetService<ILogger<AuditLogFirestoreRepository>>()));
-        
-        return services;
-    }
-    
-    /// <summary>
-    /// Registra los repositorios y servicios de Chat y Presencia.
-    /// Fase 7: Sistema de chat y usuarios online.
-    /// </summary>
-    /// <param name="services">Colección de servicios</param>
-    /// <param name="firebase">Inicializador de Firebase</param>
-    /// <returns>La colección de servicios para encadenamiento</returns>
-    public static IServiceCollection AddChatAndPresenceServices(this IServiceCollection services, FirebaseInitializer firebase)
-    {
-        // Registrar repositorios como Scoped
-        services.AddScoped<PresenceFirestoreRepository>(sp => 
-            new PresenceFirestoreRepository(firebase, sp.GetService<ILogger<PresenceFirestoreRepository>>()));
-        
-        services.AddScoped<ChatMessageFirestoreRepository>(sp => 
-            new ChatMessageFirestoreRepository(firebase, sp.GetService<ILogger<ChatMessageFirestoreRepository>>()));
-        
-        // Registrar servicios como Transient para que cada vista tenga su instancia
-        services.AddTransient<IPresenceService>(sp =>
-        {
-            var presenceRepo = new PresenceFirestoreRepository(firebase, sp.GetService<ILogger<PresenceFirestoreRepository>>());
-            return new PresenceService(presenceRepo, sp.GetService<ILogger<PresenceService>>());
-        });
-        
-        services.AddTransient<IChatService>(sp =>
-        {
-            var chatRepo = new ChatMessageFirestoreRepository(firebase, sp.GetService<ILogger<ChatMessageFirestoreRepository>>());
-            return new ChatService(chatRepo, sp.GetService<ILogger<ChatService>>());
-        });
         
         return services;
     }
@@ -224,10 +218,18 @@ public static class FirebaseServiceCollectionExtensions
     /// <returns>La colección de servicios para encadenamiento</returns>
     public static IServiceCollection AddFirebaseServices(this IServiceCollection services, FirebaseConfig config, FirebaseInitializer firebase, string currentVersion)
     {
+        // Registrar MemoryCache y CacheService para optimización de rendimiento
+        services.AddMemoryCache();
+        services.AddSingleton<ICacheService, CacheService>();
+
+        // Registrar servicio de listeners en tiempo real
+        services.AddSingleton<IFirestoreListenerService>(sp =>
+            new FirestoreListenerService(firebase, sp.GetService<ILogger<FirestoreListenerService>>()));
+
         // Registrar configuración y inicializador como singletons
         services.AddSingleton(config);
         services.AddSingleton(firebase);
-        
+
         // Registrar FirestoreDb desde el inicializador de Firebase
         services.AddSingleton(sp => firebase.Firestore ?? throw new InvalidOperationException("FirestoreDb no inicializado"));
         
@@ -249,9 +251,6 @@ public static class FirebaseServiceCollectionExtensions
         
         // Registrar todos los repositorios de Firestore (Fases 2, 3, 4)
         services.AddFirestoreRepositories(firebase);
-        
-        // Registrar servicios de Chat y Presencia (Fase 7)
-        services.AddChatAndPresenceServices(firebase);
         
         // Registrar servicios de aplicación
         services.AddFirebaseApplicationServices();

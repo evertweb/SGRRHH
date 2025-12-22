@@ -8,30 +8,18 @@
         xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}" 
-        Height="650" Width="550"
+        Height="620" Width="520"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{StaticResource GrayLightBrush}">
+        Background="#C0C0C0">
     
     <Window.Resources>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        
-        <Style x:Key="FormLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        </Style>
-        
-        <Style x:Key="FormFieldStyle" TargetType="FrameworkElement">
-            <Setter Property="Margin" Value="0,0,0,15"/>
-            <Setter Property="Height" Value="35"/>
-        </Style>
-        
-        <Style x:Key="RequiredIndicatorStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Margin" Value="3,0,0,0"/>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        </ResourceDictionary>
     </Window.Resources>
     
     <Grid>
@@ -39,13 +27,17 @@
         <Border Background="#80000000" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                 Panel.ZIndex="100">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="⏳" FontSize="40"/>
-                <TextBlock Text="Procesando..." Foreground="{StaticResource TextInverseBrush}" FontSize="16" Margin="0,10,0,0"/>
-            </StackPanel>
+            <Border Background="#C0C0C0" BorderThickness="2" BorderBrush="#808080" Padding="20"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="[...] Procesando" FontFamily="Courier New" FontSize="12" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <ProgressBar IsIndeterminate="True" Width="120" Height="16"/>
+                </StackPanel>
+            </Border>
         </Border>
         
-        <Grid Margin="25">
+        <Grid Margin="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -53,43 +45,43 @@
             </Grid.RowDefinitions>
             
             <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                <TextBlock Text="{Binding WindowTitle}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource PrimaryDarkBrush}"/>
-                <TextBlock Text="Complete los datos del permiso" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0"/>
-            </StackPanel>
+            <Border Grid.Row="0" Background="#000080" Padding="15,10">
+                <StackPanel>
+                    <TextBlock Text="{Binding WindowTitle}" FontFamily="Tahoma" FontSize="14" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="Complete los datos del permiso" FontFamily="Tahoma" FontSize="9" Foreground="#E0E0E0" Margin="0,3,0,0"/>
+                </StackPanel>
+            </Border>
             
             <!-- Formulario -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="15">
                 <StackPanel>
                     <!-- Empleado -->
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Empleado" Style="{StaticResource FormLabelStyle}"/>
-                            <TextBlock Text="*" Style="{StaticResource RequiredIndicatorStyle}"/>
+                    <StackPanel Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                            <TextBlock Text="Empleado:" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock Text=" *" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Foreground="#CC0000"/>
                         </StackPanel>
                         <ComboBox ItemsSource="{Binding Empleados}" 
                                   SelectedItem="{Binding SelectedEmpleado}"
                                   DisplayMemberPath="NombreCompleto"
-                                  Style="{StaticResource FormFieldStyle}"
+                                  FontFamily="Tahoma" FontSize="9" Height="22"
                                   IsEditable="True"/>
                     </StackPanel>
                     
                     <!-- Tipo de Permiso -->
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Tipo de Permiso" Style="{StaticResource FormLabelStyle}"/>
-                            <TextBlock Text="*" Style="{StaticResource RequiredIndicatorStyle}"/>
+                    <StackPanel Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                            <TextBlock Text="Tipo de Permiso:" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock Text=" *" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Foreground="#CC0000"/>
                         </StackPanel>
                         <ComboBox ItemsSource="{Binding TiposPermiso}" 
                                   SelectedItem="{Binding SelectedTipoPermiso}"
-                                  Style="{StaticResource FormFieldStyle}">
+                                  FontFamily="Tahoma" FontSize="9" Height="22">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <Border Width="12" Height="12" CornerRadius="6" 
-                                                Background="{Binding Color}" 
-                                                Margin="0,0,8,0"/>
-                                        <TextBlock Text="{Binding Nombre}"/>
+                                        <Border Width="10" Height="10" Background="{Binding Color}" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{Binding Nombre}" FontFamily="Tahoma" FontSize="9"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
@@ -97,37 +89,37 @@
                     </StackPanel>
                     
                     <!-- Info del tipo de permiso -->
-                    <Border Background="{StaticResource PrimaryLightBrush}" CornerRadius="5" Padding="10" Margin="0,0,0,15"
+                    <Border Background="#FFFFCC" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,0,0,12"
                             Visibility="{Binding SelectedTipoPermiso, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedTipoPermiso.Descripcion}" 
-                                       TextWrapping="Wrap" Foreground="{StaticResource InfoBrush}" FontSize="12"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                <TextBlock Text="📋 Requiere documento: " FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock FontSize="11" FontWeight="SemiBold">
+                                       TextWrapping="Wrap" FontFamily="Tahoma" FontSize="9" Foreground="#404040"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <TextBlock Text="[DOC] Requiere documento: " FontFamily="Courier New" FontSize="8" Foreground="#404040"/>
+                                <TextBlock FontFamily="Courier New" FontSize="8" FontWeight="Bold">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Text" Value="No"/>
-                                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                            <Setter Property="Text" Value="NO"/>
+                                            <Setter Property="Foreground" Value="#808080"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding RequiereDocumento}" Value="True">
-                                                    <Setter Property="Text" Value="Sí"/>
-                                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                                    <Setter Property="Text" Value="SI"/>
+                                                    <Setter Property="Foreground" Value="#CC0000"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
                                 </TextBlock>
-                                <TextBlock Text="   |   🔄 Compensable: " FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock FontSize="11" FontWeight="SemiBold">
+                                <TextBlock Text="   |   [COMP] Compensable: " FontFamily="Courier New" FontSize="8" Foreground="#404040"/>
+                                <TextBlock FontFamily="Courier New" FontSize="8" FontWeight="Bold">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="Text" Value="No"/>
-                                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                            <Setter Property="Text" Value="NO"/>
+                                            <Setter Property="Foreground" Value="#808080"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding EsCompensable}" Value="True">
-                                                    <Setter Property="Text" Value="Sí"/>
-                                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
+                                                    <Setter Property="Text" Value="SI"/>
+                                                    <Setter Property="Foreground" Value="#CC8800"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -138,66 +130,68 @@
                     </Border>
                     
                     <!-- Fechas -->
-                    <Grid>
+                    <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="10"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="20"/>
-                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="10"/>
+                            <ColumnDefinition Width="70"/>
                         </Grid.ColumnDefinitions>
                         
                         <StackPanel Grid.Column="0">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Fecha Inicio" Style="{StaticResource FormLabelStyle}"/>
-                                <TextBlock Text="*" Style="{StaticResource RequiredIndicatorStyle}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                <TextBlock Text="Fecha Inicio:" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text=" *" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Foreground="#CC0000"/>
                             </StackPanel>
-                            <DatePicker SelectedDate="{Binding FechaInicio}" Style="{StaticResource FormFieldStyle}"/>
+                            <DatePicker SelectedDate="{Binding FechaInicio}" FontFamily="Tahoma" FontSize="9" Height="22"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="2">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Fecha Fin" Style="{StaticResource FormLabelStyle}"/>
-                                <TextBlock Text="*" Style="{StaticResource RequiredIndicatorStyle}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                <TextBlock Text="Fecha Fin:" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text=" *" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Foreground="#CC0000"/>
                             </StackPanel>
-                            <DatePicker SelectedDate="{Binding FechaFin}" Style="{StaticResource FormFieldStyle}"/>
+                            <DatePicker SelectedDate="{Binding FechaFin}" FontFamily="Tahoma" FontSize="9" Height="22"/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="4">
-                            <TextBlock Text="Total Días" Style="{StaticResource FormLabelStyle}"/>
-                            <Border Background="{StaticResource SuccessLightBrush}" CornerRadius="5" Height="35">
+                            <TextBlock Text="Total Dias:" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Margin="0,0,0,3"/>
+                            <Border Background="White" BorderThickness="2" BorderBrush="#008000" Height="22">
                                 <TextBlock Text="{Binding TotalDias}" 
                                            VerticalAlignment="Center" HorizontalAlignment="Center"
-                                           FontSize="16" FontWeight="Bold" Foreground="{StaticResource SuccessDarkBrush}"/>
+                                           FontFamily="Courier New" FontSize="12" FontWeight="Bold" Foreground="#008000"/>
                             </Border>
                         </StackPanel>
                     </Grid>
                     
                     <!-- Motivo -->
-                    <StackPanel Margin="0,0,0,15">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Motivo" Style="{StaticResource FormLabelStyle}"/>
-                            <TextBlock Text="*" Style="{StaticResource RequiredIndicatorStyle}"/>
+                    <StackPanel Margin="0,0,0,12">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                            <TextBlock Text="Motivo:" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
+                            <TextBlock Text=" *" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Foreground="#CC0000"/>
                         </StackPanel>
                         <TextBox Text="{Binding Motivo, UpdateSourceTrigger=PropertyChanged}" 
-                                 Height="80" TextWrapping="Wrap" AcceptsReturn="True"
-                                 Padding="10" BorderBrush="{StaticResource BorderBrush}"/>
+                                 Style="{StaticResource LegacyTextBoxStyle}"
+                                 Height="60" TextWrapping="Wrap" AcceptsReturn="True"
+                                 FontFamily="Tahoma" FontSize="9" VerticalContentAlignment="Top" Padding="5"/>
                     </StackPanel>
                     
                     <!-- Observaciones -->
-                    <StackPanel Margin="0,0,0,15">
-                        <TextBlock Text="Observaciones (opcional)" Style="{StaticResource FormLabelStyle}"/>
+                    <StackPanel Margin="0,0,0,12">
+                        <TextBlock Text="Observaciones (opcional):" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Margin="0,0,0,3"/>
                         <TextBox Text="{Binding Observaciones, UpdateSourceTrigger=PropertyChanged}" 
-                                 Height="60" TextWrapping="Wrap" AcceptsReturn="True"
-                                 Padding="10" BorderBrush="{StaticResource BorderBrush}"/>
+                                 Style="{StaticResource LegacyTextBoxStyle}"
+                                 Height="45" TextWrapping="Wrap" AcceptsReturn="True"
+                                 FontFamily="Tahoma" FontSize="9" VerticalContentAlignment="Top" Padding="5"/>
                     </StackPanel>
                     
                     <!-- Documento soporte -->
-                    <Border Background="{StaticResource BackgroundBrush}" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                    <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,0,0,12">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <TextBlock Text="📎 Documento Soporte" Style="{StaticResource FormLabelStyle}"/>
-                                <TextBlock Text="*" Style="{StaticResource RequiredIndicatorStyle}"
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <TextBlock Text="[DOC] Documento Soporte:" FontFamily="Courier New" FontSize="9" FontWeight="Bold"/>
+                                <TextBlock Text=" *" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Foreground="#CC0000"
                                            Visibility="{Binding RequiereDocumento, Converter={StaticResource BoolToVisibilityConverter}}"/>
                             </StackPanel>
                             
@@ -209,44 +203,44 @@
                                 </Grid.ColumnDefinitions>
                                 
                                 <TextBox Text="{Binding DocumentoSoportePath}" IsReadOnly="True" 
-                                         Style="{StaticResource StandardTextBox}"/>
-                                <Button Grid.Column="1" Content="📂 Seleccionar" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="8" Height="20"/>
+                                <Button Grid.Column="1" Content="Seleccionar..." 
                                         Command="{Binding SelectDocumentCommand}"
-                                        Style="{StaticResource PrimaryButton}"
-                                        Margin="10,0,0,0" Padding="15,8"/>
-                                <Button Grid.Column="2" Content="❌" 
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Padding="8,3" Margin="5,0,0,0"/>
+                                <Button Grid.Column="2" Content="X" 
                                         Command="{Binding RemoveDocumentCommand}"
                                         Visibility="{Binding HasDocument, Converter={StaticResource BoolToVisibilityConverter}}"
-                                        Style="{StaticResource DangerOutlineButton}"
-                                        Margin="5,0,0,0" Padding="10,8"/>
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Padding="5,3" Margin="3,0,0,0"/>
                             </Grid>
                         </StackPanel>
                     </Border>
                     
                     <!-- Fecha de compensación (si aplica) -->
-                    <Border Background="{StaticResource WarningLightBrush}" CornerRadius="5" Padding="15" Margin="0,0,0,15"
+                    <Border Background="#FFFFCC" BorderThickness="1" BorderBrush="#CC8800" Padding="10" Margin="0,0,0,10"
                             Visibility="{Binding EsCompensable, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel>
-                            <TextBlock Text="🔄 Este permiso es compensable" FontWeight="SemiBold" Foreground="{StaticResource WarningBrush}" Margin="0,0,0,10"/>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Fecha de Compensación" Style="{StaticResource FormLabelStyle}"/>
-                                <TextBlock Text="*" Style="{StaticResource RequiredIndicatorStyle}"/>
+                            <TextBlock Text="[!] Este permiso es compensable" FontFamily="Courier New" FontSize="9" FontWeight="Bold" Foreground="#CC8800" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                <TextBlock Text="Fecha de Compensacion:" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text=" *" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Foreground="#CC0000"/>
                             </StackPanel>
-                            <DatePicker SelectedDate="{Binding FechaCompensacion}" Style="{StaticResource StandardDatePicker}" Width="200" HorizontalAlignment="Left"/>
+                            <DatePicker SelectedDate="{Binding FechaCompensacion}" FontFamily="Tahoma" FontSize="9" Height="22" Width="150" HorizontalAlignment="Left"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
             
             <!-- Botones -->
-            <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BorderBrush}" Padding="0,20,0,0" Margin="0,20,0,0">
+            <Border Grid.Row="2" Background="#C0C0C0" BorderThickness="0,1,0,0" BorderBrush="#808080" Padding="15,10">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="Cancelar" Command="{Binding CancelCommand}" 
-                            Style="{StaticResource SecondaryButton}"
-                            Width="120" Height="40" Margin="0,0,10,0" FontSize="14"/>
-                    <Button Content="💾 Guardar" Command="{Binding SaveCommand}" 
-                            Style="{StaticResource SuccessButton}"
-                            Width="140" Height="40" FontWeight="SemiBold" FontSize="14"/>
+                            Style="{StaticResource LegacyButtonStyle}"
+                            FontFamily="Tahoma" FontSize="10" Padding="20,5" Margin="0,0,8,0"/>
+                    <Button Content="Guardar" Command="{Binding SaveCommand}" 
+                            Style="{StaticResource LegacyButtonStyle}"
+                            FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Padding="20,5"/>
                 </StackPanel>
             </Border>
         </Grid>

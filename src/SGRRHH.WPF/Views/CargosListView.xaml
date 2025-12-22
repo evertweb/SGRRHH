@@ -3,181 +3,118 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:SGRRHH.WPF.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900"
-             Background="{StaticResource BackgroundBrush}">
+             Background="#C0C0C0">
     
-    <Grid>
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Margin="5">
         <!-- ============================================ -->
         <!-- PANTALLA DE BIENVENIDA (Home) -->
         <!-- ============================================ -->
-        <Grid Visibility="{Binding IsHomeVisible, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-            
-            <!-- Contenido principal centrado -->
-            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <!-- Emoji y Título -->
-                <TextBlock Text="💼" FontSize="72" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                <TextBlock Text="¡Gestión de Cargos!" 
-                           FontSize="32" FontWeight="Bold" 
-                           Foreground="{StaticResource TextPrimaryBrush}"
-                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                <TextBlock Text="¿Qué deseas hacer hoy?" 
-                           FontSize="18" 
-                           Foreground="{StaticResource TextSecondaryBrush}"
-                           HorizontalAlignment="Center" Margin="0,0,0,40"/>
+        <Border Visibility="{Binding IsHomeVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+                BorderThickness="1" BorderBrush="#808080" Background="White">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 
-                <!-- Tarjetas de acción -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <!-- Tarjeta: Nuevo Cargo -->
-                    <Border Background="{StaticResource SurfaceBrush}" 
-                            CornerRadius="16" 
-                            Padding="30,25" 
-                            Margin="0,0,20,0"
-                            Cursor="Hand"
-                            BorderThickness="2"
-                            BorderBrush="Transparent">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect BlurRadius="15" ShadowDepth="3" Opacity="0.15" Color="#000000"/>
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="BorderBrush" Value="{StaticResource SuccessBrush}"/>
-                                        <Setter Property="Effect">
-                                            <Setter.Value>
-                                                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.25" Color="#22C55E"/>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Border.InputBindings>
-                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowFormCommand}"/>
-                        </Border.InputBindings>
-                        <StackPanel Width="180">
-                            <Border Background="{StaticResource SuccessLightBrush}" 
-                                    CornerRadius="12" 
-                                    Width="64" Height="64" 
-                                    HorizontalAlignment="Center" 
-                                    Margin="0,0,0,15">
-                                <TextBlock Text="➕" FontSize="28" 
-                                           HorizontalAlignment="Center" 
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                            <TextBlock Text="Nuevo Cargo" 
-                                       FontSize="16" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       HorizontalAlignment="Center" Margin="0,0,0,6"/>
-                            <TextBlock Text="Crear un nuevo cargo o puesto" 
-                                       FontSize="12"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap" TextAlignment="Center"
-                                       HorizontalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
+                <Border Grid.Row="0" Background="#000080" Padding="10,5">
+                    <TextBlock Text="--- MODULO DE CARGOS ---" FontFamily="Tahoma" FontSize="12" 
+                               FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                </Border>
+                
+                <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="CARGOS" FontFamily="Courier New" FontSize="36" FontWeight="Bold" 
+                               Foreground="#000080" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="Seleccione una opcion:" FontFamily="Tahoma" FontSize="12" 
+                               Foreground="#404040" HorizontalAlignment="Center" Margin="0,0,0,30"/>
                     
-                    <!-- Tarjeta: Ver Cargos -->
-                    <Border Background="{StaticResource SurfaceBrush}" 
-                            CornerRadius="16" 
-                            Padding="30,25"
-                            Cursor="Hand"
-                            BorderThickness="2"
-                            BorderBrush="Transparent">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect BlurRadius="15" ShadowDepth="3" Opacity="0.15" Color="#000000"/>
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="BorderBrush" Value="{StaticResource PurpleBrush}"/>
-                                        <Setter Property="Effect">
-                                            <Setter.Value>
-                                                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.25" Color="#9333EA"/>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Border.InputBindings>
-                            <MouseBinding MouseAction="LeftClick" Command="{Binding ShowListCommand}"/>
-                        </Border.InputBindings>
-                        <StackPanel Width="180">
-                            <Border Background="{StaticResource PurpleLightBrush}" 
-                                    CornerRadius="12" 
-                                    Width="64" Height="64" 
-                                    HorizontalAlignment="Center" 
-                                    Margin="0,0,0,15">
-                                <TextBlock Text="💼" FontSize="28" 
-                                           HorizontalAlignment="Center" 
-                                           VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <!-- Nuevo Cargo -->
+                        <Border BorderThickness="2" BorderBrush="#808080" Background="#E0E0E0" 
+                                Margin="0,0,20,0" Cursor="Hand">
+                            <Border BorderThickness="2" BorderBrush="White" Margin="0,0,2,2" Padding="15">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick" Command="{Binding ShowFormCommand}"/>
+                                </Border.InputBindings>
+                                <StackPanel Width="160">
+                                    <TextBlock Text="[+]" FontFamily="Courier New" FontSize="32" FontWeight="Bold" 
+                                               Foreground="#008000" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                    <TextBlock Text="NUEVO" FontFamily="Tahoma" FontSize="12" FontWeight="Bold"
+                                               Foreground="#000000" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="CARGO" FontFamily="Tahoma" FontSize="12" FontWeight="Bold"
+                                               Foreground="#000000" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Crear nuevo puesto" FontFamily="Tahoma" FontSize="9"
+                                               Foreground="#808080" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                </StackPanel>
                             </Border>
-                            <TextBlock Text="Ver Cargos" 
-                                       FontSize="16" FontWeight="SemiBold"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       HorizontalAlignment="Center" Margin="0,0,0,6"/>
-                            <TextBlock Text="Consultar y gestionar cargos" 
-                                       FontSize="12"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap" TextAlignment="Center"
-                                       HorizontalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
+                        </Border>
+                        
+                        <!-- Ver Cargos -->
+                        <Border BorderThickness="2" BorderBrush="#808080" Background="#E0E0E0" Cursor="Hand">
+                            <Border BorderThickness="2" BorderBrush="White" Margin="0,0,2,2" Padding="15">
+                                <Border.InputBindings>
+                                    <MouseBinding MouseAction="LeftClick" Command="{Binding ShowListCommand}"/>
+                                </Border.InputBindings>
+                                <StackPanel Width="160">
+                                    <TextBlock Text="[=]" FontFamily="Courier New" FontSize="32" FontWeight="Bold" 
+                                               Foreground="#000080" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                                    <TextBlock Text="VER LISTA" FontFamily="Tahoma" FontSize="12" FontWeight="Bold"
+                                               Foreground="#000000" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="CARGOS" FontFamily="Tahoma" FontSize="12" FontWeight="Bold"
+                                               Foreground="#000000" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="Consultar y gestionar" FontFamily="Tahoma" FontSize="9"
+                                               Foreground="#808080" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Border>
+                    </StackPanel>
                 </StackPanel>
-            </StackPanel>
-            
-            <!-- Footer con fecha -->
-            <Border Grid.Row="1" Padding="20,15" Background="{StaticResource SurfaceBrush}">
-                <TextBlock HorizontalAlignment="Center" 
-                           Foreground="{StaticResource TextSecondaryBrush}"
-                           FontSize="13">
-                    <Run Text="📅"/>
-                    <Run Text="{Binding CurrentDateText, Mode=OneWay}"/>
-                </TextBlock>
-            </Border>
-        </Grid>
+                
+                <Border Grid.Row="2" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="#808080" Padding="10,5">
+                    <TextBlock Text="{Binding CurrentDateText}" FontFamily="Tahoma" FontSize="10" 
+                               Foreground="#404040" HorizontalAlignment="Center"/>
+                </Border>
+            </Grid>
+        </Border>
         
         <!-- ============================================ -->
         <!-- VISTA DE FORMULARIO (Crear) -->
         <!-- ============================================ -->
-        <Grid Visibility="{Binding IsFormViewVisible, Converter={StaticResource BoolToVisibilityConverter}}"
-              Margin="20">
+        <Grid Visibility="{Binding IsFormViewVisible, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             
-            <!-- Botón volver -->
-            <Button Grid.Row="0" Command="{Binding ShowHomeCommand}"
-                    HorizontalAlignment="Left" Margin="0,0,0,15"
-                    Style="{StaticResource SecondaryButton}" Height="36" Padding="15,0">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="⬅" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="Volver al inicio" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+            <Button Grid.Row="0" Command="{Binding ShowHomeCommand}" Content="&lt;&lt; Volver al Menu"
+                    Style="{StaticResource LegacyButtonStyle}" HorizontalAlignment="Left" 
+                    FontFamily="Tahoma" FontSize="10" Padding="10,3" Margin="0,0,0,5"/>
             
-            <!-- Formulario -->
-            <Border Grid.Row="1" Style="{StaticResource Card}" Padding="30">
-                <StackPanel MaxWidth="700">
-                    <TextBlock Text="➕ Nuevo Cargo" 
-                               Style="{StaticResource SectionTitle}" 
-                               FontSize="24"
-                               Margin="0,0,0,25"/>
+            <Border Grid.Row="1" BorderThickness="1" BorderBrush="#808080" Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                     
-                    <Grid>
+                    <Border Grid.Row="0" Background="#000080" Padding="10,5">
+                        <TextBlock Text="NUEVO CARGO" FontFamily="Tahoma" FontSize="12" 
+                                   FontWeight="Bold" Foreground="White"/>
+                    </Border>
+                    
+                    <Grid Grid.Row="1" Margin="20">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="20"/>
@@ -185,239 +122,244 @@
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="15"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
                         <!-- Nombre -->
-                        <StackPanel Grid.Row="0" Grid.Column="0">
-                            <TextBlock Text="Nombre *" Style="{StaticResource FieldLabelBold}"/>
+                        <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,0,10">
+                            <TextBlock Text="Nombre *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{StaticResource StandardTextBox}"/>
+                                     Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
                         
                         <!-- Departamento -->
-                        <StackPanel Grid.Row="0" Grid.Column="2">
-                            <TextBlock Text="Departamento *" Style="{StaticResource FieldLabelBold}"/>
-                            <ComboBox Style="{StaticResource StandardComboBox}"
-                                      ItemsSource="{Binding Departamentos}"
+                        <StackPanel Grid.Column="2" Grid.Row="0" Margin="0,0,0,10">
+                            <TextBlock Text="Departamento *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                            <ComboBox ItemsSource="{Binding Departamentos}"
                                       SelectedValue="{Binding DepartamentoId}"
                                       SelectedValuePath="Id"
-                                      DisplayMemberPath="Nombre"/>
+                                      DisplayMemberPath="Nombre"
+                                      Height="22" FontFamily="Tahoma" FontSize="10"/>
                         </StackPanel>
                         
-                        <!-- Descripción -->
-                        <StackPanel Grid.Row="2" Grid.Column="0">
-                            <TextBlock Text="Descripción" Style="{StaticResource FieldLabelBold}"/>
+                        <!-- Descripcion -->
+                        <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,0,10">
+                            <TextBlock Text="Descripcion" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{StaticResource StandardTextBox}"/>
+                                     Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
                         
                         <!-- Nivel -->
-                        <StackPanel Grid.Row="2" Grid.Column="2">
-                            <TextBlock Text="Nivel Jerárquico" Style="{StaticResource FieldLabelBold}"/>
+                        <StackPanel Grid.Column="2" Grid.Row="1" Margin="0,0,0,10">
+                            <TextBlock Text="Nivel Jerarquico" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Nivel, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{StaticResource StandardTextBox}"/>
+                                     Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
-                    </Grid>
-                    
-                    <!-- Activo y Botones -->
-                    <Grid Margin="0,20,0,0">
-                        <CheckBox Content="Activo" IsChecked="{Binding Activo}" 
-                                  FontSize="14" HorizontalAlignment="Left"/>
                         
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="Cancelar" Command="{Binding CancelarCommand}"
-                                    Style="{StaticResource SecondaryButton}"
-                                    Padding="25,12" Margin="0,0,10,0" FontSize="14"/>
-                            <Button Content="💾 Guardar" Command="{Binding GuardarCommand}"
-                                    Style="{StaticResource SuccessButton}"
-                                    Padding="25,12" FontSize="14"/>
-                        </StackPanel>
+                        <!-- Activo y Botones -->
+                        <Grid Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2" Margin="0,20,0,0">
+                            <CheckBox Content="Activo" IsChecked="{Binding Activo}" 
+                                      FontFamily="Tahoma" FontSize="10" HorizontalAlignment="Left"/>
+                            
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <controls:LegacyAsyncButton Content="Cancelar" Command="{Binding CancelarCommand}" Margin="0,0,10,0"/>
+                                <controls:LegacyAsyncButton Content="Guardar" Command="{Binding GuardarCommand}" IsLoading="{Binding IsLoading}"/>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
-                </StackPanel>
+                </Grid>
             </Border>
         </Grid>
         
         <!-- ============================================ -->
         <!-- VISTA DE LISTA -->
         <!-- ============================================ -->
-        <Grid Visibility="{Binding IsListViewVisible, Converter={StaticResource BoolToVisibilityConverter}}"
-              Margin="20">
+        <Grid Visibility="{Binding IsListViewVisible, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
             
-            <!-- Botón volver -->
-            <Button Grid.Row="0" Command="{Binding ShowHomeCommand}"
-                    HorizontalAlignment="Left" Margin="0,0,0,15"
-                    Style="{StaticResource SecondaryButton}" Height="36" Padding="15,0">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="⬅" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="Volver al inicio" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+            <Button Grid.Row="0" Command="{Binding ShowHomeCommand}" Content="&lt;&lt; Volver al Menu"
+                    Style="{StaticResource LegacyButtonStyle}" HorizontalAlignment="Left" 
+                    FontFamily="Tahoma" FontSize="10" Padding="10,3" Margin="0,0,0,5"/>
             
             <!-- Header -->
-            <Border Grid.Row="1" Background="{StaticResource PurpleBrush}" CornerRadius="8" Padding="20" Margin="0,0,0,15">
+            <Border Grid.Row="1" Background="#000080" Padding="10,5" Margin="0,0,0,5">
                 <Grid>
-                    <StackPanel>
-                        <TextBlock Text="📋 Lista de Cargos" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextInverseBrush}"/>
-                        <TextBlock Foreground="{StaticResource TextInverseBrush}" Opacity="0.8" Margin="0,5,0,0">
-                            <Run Text="Total:"/>
-                            <Run Text="{Binding Cargos.Count, Mode=OneWay}"/>
-                            <Run Text="cargo(s)"/>
-                        </TextBlock>
-                    </StackPanel>
+                    <TextBlock Text="LISTA DE CARGOS" FontFamily="Tahoma" FontSize="12" 
+                               FontWeight="Bold" Foreground="White"/>
+                    <TextBlock HorizontalAlignment="Right" FontFamily="Tahoma" FontSize="10" Foreground="#C0C0FF">
+                        <Run Text="Total: "/>
+                        <Run Text="{Binding Cargos.Count, Mode=OneWay}"/>
+                        <Run Text=" registro(s)"/>
+                    </TextBlock>
                 </Grid>
             </Border>
             
-            <!-- Filtro por departamento -->
-            <Border Grid.Row="2" Style="{StaticResource CardFlat}" Padding="15" Margin="0,0,0,15">
+            <!-- Filtro -->
+            <Border Grid.Row="2" BorderThickness="1" BorderBrush="#808080" Background="White" Margin="0,0,0,5" Padding="10">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Filtrar por Departamento:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold"/>
-                    <ComboBox Width="250" Style="{StaticResource StandardComboBox}"
+                    <TextBlock Text="Filtrar por Departamento:" FontFamily="Tahoma" FontSize="10" 
+                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox Width="200" Height="20"
                               ItemsSource="{Binding Departamentos}"
                               SelectedValue="{Binding FilterDepartamentoId}"
                               SelectedValuePath="Id"
-                              DisplayMemberPath="Nombre"/>
+                              DisplayMemberPath="Nombre"
+                              FontFamily="Tahoma" FontSize="10"/>
                     <Button Content="Limpiar" Command="{Binding LimpiarFiltroCommand}"
-                            Style="{StaticResource SecondaryButton}"
-                            Padding="15,8" Margin="10,0,0,0"/>
+                            Style="{StaticResource LegacyButtonStyle}"
+                            FontFamily="Tahoma" FontSize="10" Padding="10,2" Margin="10,0,0,0"/>
                 </StackPanel>
             </Border>
             
-            <!-- Lista + mensajes -->
-            <Grid Grid.Row="3">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- Error message -->
-                <Border Grid.Row="0" Margin="0,0,0,10" Background="{StaticResource DangerLightBrush}" 
-                        CornerRadius="4" Padding="15"
-                        Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullToVisibilityConverter}}">
-                    <TextBlock Text="{Binding ErrorMessage}" Foreground="{StaticResource DangerDarkBrush}"/>
-                </Border>
-
-                <Border Grid.Row="1" Style="{StaticResource CardNoBorder}" Padding="0">
-                    <Grid>
-                        <!-- DataGrid -->
-                        <DataGrid ItemsSource="{Binding Cargos}" 
-                                  SelectedItem="{Binding SelectedCargo}"
-                                  Style="{StaticResource StandardDataGrid}">
-
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60"/>
-                                <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*"/>
-                                <DataGridTextColumn Header="Departamento" Binding="{Binding Departamento.Nombre}" Width="150"/>
-                                <DataGridTextColumn Header="Nivel" Binding="{Binding Nivel}" Width="80"/>
-                                <DataGridTemplateColumn Header="Estado" Width="100">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border Padding="8,4" CornerRadius="4" HorizontalAlignment="Center">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="{StaticResource SuccessLightBrush}"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Activo}" Value="False">
-                                                                <Setter Property="Background" Value="{StaticResource DangerLightBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </Border.Style>
-                                                <TextBlock HorizontalAlignment="Center">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="Activo"/>
-                                                            <Setter Property="Foreground" Value="{StaticResource SuccessBrush}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Activo}" Value="False">
-                                                                    <Setter Property="Text" Value="Inactivo"/>
-                                                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Acciones" Width="150">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                <Button Content="✏️" ToolTip="Editar"
-                                                        Command="{Binding DataContext.EditarCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                        Style="{StaticResource IconButtonEdit}"
-                                                        Padding="10,6" Margin="0,0,5,0"/>
-                                                <Button Content="🗑️" ToolTip="Eliminar"
-                                                        Command="{Binding DataContext.EliminarCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                        Style="{StaticResource IconButtonDelete}"
-                                                        Padding="10,6"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-
-                        <!-- Loading overlay -->
-                        <Border Background="#80FFFFFF" 
-                                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <TextBlock Text="⏳ Cargando..." FontSize="16" Foreground="{StaticResource TextSecondaryBrush}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Empty state -->
-                        <Border Background="{StaticResource SurfaceBrush}"
-                                Visibility="{Binding Cargos.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
-                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <TextBlock Text="💼" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                                <TextBlock Text="No hay cargos registrados" FontSize="16" Foreground="{StaticResource TextMutedBrush}"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </Border>
-            </Grid>
+            <!-- Error message -->
+            <Border Grid.Row="3" Margin="0,0,0,5" Background="#FFCCCC" BorderThickness="1" BorderBrush="#800000" Padding="10"
+                    Visibility="{Binding ErrorMessage, Converter={StaticResource NotNullToVisibilityConverter}}">
+                <TextBlock Text="{Binding ErrorMessage}" FontFamily="Tahoma" FontSize="10" Foreground="#800000"/>
+            </Border>
+            
+            <!-- DataGrid -->
+            <Border Grid.Row="3" BorderThickness="1" BorderBrush="#808080">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding Cargos}" 
+                              SelectedItem="{Binding SelectedCargo}"
+                              AutoGenerateColumns="False" IsReadOnly="True"
+                              GridLinesVisibility="All" HeadersVisibility="Column"
+                              RowHeight="22" FontFamily="Tahoma" FontSize="10"
+                              Background="White" AlternatingRowBackground="#F0F0F0"
+                              CanUserAddRows="False" CanUserDeleteRows="False"
+                              SelectionMode="Single" SelectionUnit="FullRow"
+                              BorderThickness="0">
+                        
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#000080"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter Property="Padding" Value="5,3"/>
+                                <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                <Setter Property="BorderBrush" Value="#404040"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        
+                        <DataGrid.CellStyle>
+                            <Style TargetType="DataGridCell">
+                                <Setter Property="Padding" Value="5,2"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#000080"/>
+                                        <Setter Property="Foreground" Value="White"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.CellStyle>
+                        
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                            <DataGridTextColumn Header="NOMBRE" Binding="{Binding Nombre}" Width="*"/>
+                            <DataGridTextColumn Header="DEPARTAMENTO" Binding="{Binding Departamento.Nombre}" Width="150"/>
+                            <DataGridTextColumn Header="NIVEL" Binding="{Binding Nivel}" Width="60"/>
+                            <DataGridTemplateColumn Header="ESTADO" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock FontFamily="Tahoma" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="ACTIVO"/>
+                                                    <Setter Property="Foreground" Value="#008000"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Activo}" Value="False">
+                                                            <Setter Property="Text" Value="INACTIVO"/>
+                                                            <Setter Property="Foreground" Value="#800000"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="ACCIONES" Width="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button Content="Editar"
+                                                    Command="{Binding DataContext.EditarCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    Style="{StaticResource LegacyButtonStyle}"
+                                                    FontFamily="Tahoma" FontSize="9" Padding="5,1" Margin="0,0,3,0"/>
+                                            <Button Content="X"
+                                                    Command="{Binding DataContext.EliminarCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    Style="{StaticResource LegacyButtonStyle}"
+                                                    FontFamily="Tahoma" FontSize="9" Padding="5,1" ToolTip="Eliminar"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    
+                    <!-- Loading -->
+                    <Border Background="#80FFFFFF" 
+                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Cargando..." FontFamily="Tahoma" FontSize="12" FontStyle="Italic"
+                                   Foreground="#808080" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    
+                    <!-- Empty state -->
+                    <Border Background="White"
+                            Visibility="{Binding Cargos.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="[SIN DATOS]" FontFamily="Courier New" FontSize="14" 
+                                       FontWeight="Bold" Foreground="#808080" HorizontalAlignment="Center"/>
+                            <TextBlock Text="No hay cargos registrados" FontFamily="Tahoma" FontSize="10" 
+                                       Foreground="#808080" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+            
+            <!-- Status bar -->
+            <Border Grid.Row="4" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="#808080" Margin="0,5,0,0" Padding="5,3">
+                <TextBlock FontFamily="Tahoma" FontSize="10">
+                    <Run Text="Registros: "/>
+                    <Run Text="{Binding Cargos.Count, Mode=OneWay}" FontWeight="Bold"/>
+                </TextBlock>
+            </Border>
         </Grid>
         
         <!-- ============================================ -->
         <!-- VISTA DE EDICIÓN -->
         <!-- ============================================ -->
-        <Grid Visibility="{Binding IsEditViewVisible, Converter={StaticResource BoolToVisibilityConverter}}"
-              Margin="20">
+        <Grid Visibility="{Binding IsEditViewVisible, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             
-            <!-- Botón volver a lista -->
-            <Button Grid.Row="0" Command="{Binding ShowListCommand}"
-                    HorizontalAlignment="Left" Margin="0,0,0,15"
-                    Style="{StaticResource SecondaryButton}" Height="36" Padding="15,0">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="⬅" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock Text="Volver a la lista" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
+            <Button Grid.Row="0" Command="{Binding ShowListCommand}" Content="&lt;&lt; Volver a la Lista"
+                    Style="{StaticResource LegacyButtonStyle}" HorizontalAlignment="Left" 
+                    FontFamily="Tahoma" FontSize="10" Padding="10,3" Margin="0,0,0,5"/>
             
-            <!-- Formulario de edición -->
-            <Border Grid.Row="1" Style="{StaticResource Card}" Padding="30">
-                <StackPanel MaxWidth="700">
-                    <TextBlock Text="✏️ Editar Cargo" 
-                               Style="{StaticResource SectionTitle}" 
-                               FontSize="24"
-                               Margin="0,0,0,25"/>
+            <Border Grid.Row="1" BorderThickness="1" BorderBrush="#808080" Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                     
-                    <Grid>
+                    <Border Grid.Row="0" Background="#000080" Padding="10,5">
+                        <TextBlock Text="EDITAR CARGO" FontFamily="Tahoma" FontSize="12" 
+                                   FontWeight="Bold" Foreground="White"/>
+                    </Border>
+                    
+                    <Grid Grid.Row="1" Margin="20">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="20"/>
@@ -425,57 +367,53 @@
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="15"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
                         <!-- Nombre -->
-                        <StackPanel Grid.Row="0" Grid.Column="0">
-                            <TextBlock Text="Nombre *" Style="{StaticResource FieldLabelBold}"/>
+                        <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,0,10">
+                            <TextBlock Text="Nombre *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{StaticResource StandardTextBox}"/>
+                                     Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
                         
                         <!-- Departamento -->
-                        <StackPanel Grid.Row="0" Grid.Column="2">
-                            <TextBlock Text="Departamento *" Style="{StaticResource FieldLabelBold}"/>
-                            <ComboBox Style="{StaticResource StandardComboBox}"
-                                      ItemsSource="{Binding Departamentos}"
+                        <StackPanel Grid.Column="2" Grid.Row="0" Margin="0,0,0,10">
+                            <TextBlock Text="Departamento *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                            <ComboBox ItemsSource="{Binding Departamentos}"
                                       SelectedValue="{Binding DepartamentoId}"
                                       SelectedValuePath="Id"
-                                      DisplayMemberPath="Nombre"/>
+                                      DisplayMemberPath="Nombre"
+                                      Height="22" FontFamily="Tahoma" FontSize="10"/>
                         </StackPanel>
                         
-                        <!-- Descripción -->
-                        <StackPanel Grid.Row="2" Grid.Column="0">
-                            <TextBlock Text="Descripción" Style="{StaticResource FieldLabelBold}"/>
+                        <!-- Descripcion -->
+                        <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,0,10">
+                            <TextBlock Text="Descripcion" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{StaticResource StandardTextBox}"/>
+                                     Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
                         
                         <!-- Nivel -->
-                        <StackPanel Grid.Row="2" Grid.Column="2">
-                            <TextBlock Text="Nivel Jerárquico" Style="{StaticResource FieldLabelBold}"/>
+                        <StackPanel Grid.Column="2" Grid.Row="1" Margin="0,0,0,10">
+                            <TextBlock Text="Nivel Jerarquico" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Nivel, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{StaticResource StandardTextBox}"/>
+                                     Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
-                    </Grid>
-                    
-                    <!-- Activo y Botones -->
-                    <Grid Margin="0,20,0,0">
-                        <CheckBox Content="Activo" IsChecked="{Binding Activo}" 
-                                  FontSize="14" HorizontalAlignment="Left"/>
                         
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="Cancelar" Command="{Binding CancelarEditCommand}"
-                                    Style="{StaticResource SecondaryButton}"
-                                    Padding="25,12" Margin="0,0,10,0" FontSize="14"/>
-                            <Button Content="💾 Actualizar" Command="{Binding GuardarCommand}"
-                                    Style="{StaticResource PrimaryButton}"
-                                    Padding="25,12" FontSize="14"/>
-                        </StackPanel>
+                        <!-- Activo y Botones -->
+                        <Grid Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2" Margin="0,20,0,0">
+                            <CheckBox Content="Activo" IsChecked="{Binding Activo}" 
+                                      FontFamily="Tahoma" FontSize="10" HorizontalAlignment="Left"/>
+                            
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <controls:LegacyAsyncButton Content="Cancelar" Command="{Binding CancelarEditCommand}" Margin="0,0,10,0"/>
+                                <controls:LegacyAsyncButton Content="Actualizar" Command="{Binding GuardarCommand}" IsLoading="{Binding IsLoading}"/>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
-                </StackPanel>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

@@ -6,396 +6,410 @@
              xmlns:local="clr-namespace:SGRRHH.WPF.ViewModels"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900"
-             Background="{DynamicResource PageBackground}">
+             Background="#C0C0C0">
     
     <UserControl.Resources>
-        <!-- Template para ConfiguracionEmpresaViewModel -->
-        <DataTemplate DataType="{x:Type local:ConfiguracionEmpresaViewModel}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="20">
-                    <TextBlock Text="Datos de la Empresa" Style="{DynamicResource PageTitle}" Margin="0,0,0,20"/>
-                    
-                    <!-- Grid de campos -->
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- Template para ConfiguracionEmpresaViewModel -->
+            <DataTemplate DataType="{x:Type local:ConfiguracionEmpresaViewModel}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border BorderThickness="1" BorderBrush="#808080" Background="White" Margin="5">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Border Grid.Row="0" Background="#000080" Padding="8,5">
+                                <TextBlock Text="DATOS DE LA EMPRESA" FontFamily="Tahoma" FontSize="10" 
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            
+                            <StackPanel Grid.Row="1" Margin="15">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="15"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,10">
+                                        <TextBlock Text="Nombre de la Empresa *" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,10">
+                                        <TextBlock Text="NIT *" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding Nit, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,10">
+                                        <TextBlock Text="Direccion" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding Direccion, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,10">
+                                        <TextBlock Text="Ciudad" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding Ciudad, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,0,10">
+                                        <TextBlock Text="Telefono" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding Telefono, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,10">
+                                        <TextBlock Text="Correo Electronico" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding Correo, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,0,10">
+                                        <TextBlock Text="Nombre Representante Legal" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding RepresentanteNombre, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="3" Grid.Column="2" Margin="0,0,0,10">
+                                        <TextBlock Text="Cargo Representante Legal" FontFamily="Tahoma" FontSize="8" Foreground="#404040" Margin="0,0,0,3"/>
+                                        <TextBox Text="{Binding RepresentanteCargo, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                    </StackPanel>
+                                    
+                                    <!-- Logo -->
+                                    <StackPanel Grid.Row="4" Grid.ColumnSpan="3" Margin="0,10,0,10">
+                                        <TextBlock Text="Logo de la Empresa" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,8"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="120" Height="80" BorderBrush="#808080" BorderThickness="1" Margin="0,0,10,0" Background="White">
+                                                <Image Source="{Binding LogoPath}" Stretch="Uniform"
+                                                       Visibility="{Binding HayLogo, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <Button Content="Seleccionar Logo" Command="{Binding SeleccionarLogoCommand}"
+                                                        Style="{StaticResource LegacyButtonStyle}"
+                                                        FontFamily="Tahoma" FontSize="9" Padding="10,4" Margin="0,0,0,5"/>
+                                                <Button Content="Eliminar Logo" Command="{Binding EliminarLogoCommand}"
+                                                        Style="{StaticResource LegacyButtonStyle}"
+                                                        FontFamily="Tahoma" FontSize="9" Padding="10,4"
+                                                        Visibility="{Binding HayLogo, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    
+                                    <StackPanel Grid.Row="5" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+                                        <Button Content="Guardar Configuracion" Command="{Binding GuardarCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}"
+                                                FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Padding="15,5"/>
+                                    </StackPanel>
+                                </Grid>
+                                
+                                <TextBlock Text="{Binding Mensaje}" Foreground="#CC0000" FontFamily="Tahoma" FontSize="9"
+                                           Margin="0,10,0,0" Visibility="{Binding Mensaje, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </ScrollViewer>
+            </DataTemplate>
+            
+            <!-- Template para BackupViewModel -->
+            <DataTemplate DataType="{x:Type local:BackupViewModel}">
+                <Border BorderThickness="1" BorderBrush="#808080" Background="White" Margin="5">
                     <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
-                        <!-- Fila 1 -->
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
-                            <TextBlock Text="Nombre de la Empresa *" Style="{DynamicResource FormLabel}"/>
-                            <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{DynamicResource StandardTextBox}"/>
-                        </StackPanel>
+                        <Border Grid.Row="0" Background="#000080" Padding="8,5">
+                            <TextBlock Text="RESPALDO DE BASE DE DATOS" FontFamily="Tahoma" FontSize="10" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
                         
-                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,10">
-                            <TextBlock Text="NIT *" Style="{DynamicResource FormLabel}"/>
-                            <TextBox Text="{Binding Nit, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{DynamicResource StandardTextBox}"/>
-                        </StackPanel>
+                        <WrapPanel Grid.Row="1" Margin="10,10,10,5">
+                            <Button Content="Crear Backup" Command="{Binding CrearBackupCommand}"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" Padding="10,4" Margin="0,0,5,5"/>
+                            <Button Content="Guardar Backup en..." Command="{Binding CrearBackupEnCommand}"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" Padding="10,4" Margin="0,0,5,5"/>
+                            <Button Content="Restaurar desde archivo..." Command="{Binding RestaurarDesdeArchivoCommand}"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" Padding="10,4" Margin="0,0,5,5"/>
+                            <Button Content="Abrir carpeta" Command="{Binding AbrirCarpetaBackupsCommand}"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" Padding="10,4" Margin="0,0,0,5"/>
+                        </WrapPanel>
                         
-                        <!-- Fila 2 -->
-                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
-                            <TextBlock Text="Dirección" Style="{DynamicResource FormLabel}"/>
-                            <TextBox Text="{Binding Direccion, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{DynamicResource StandardTextBox}"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
-                            <TextBlock Text="Ciudad" Style="{DynamicResource FormLabel}"/>
-                            <TextBox Text="{Binding Ciudad, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{DynamicResource StandardTextBox}"/>
-                        </StackPanel>
-                        
-                        <!-- Fila 3 -->
-                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
-                            <TextBlock Text="Teléfono" Style="{DynamicResource FormLabel}"/>
-                            <TextBox Text="{Binding Telefono, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{DynamicResource StandardTextBox}"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,10">
-                            <TextBlock Text="Correo Electrónico" Style="{DynamicResource FormLabel}"/>
-                            <TextBox Text="{Binding Correo, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{DynamicResource StandardTextBox}"/>
-                        </StackPanel>
-                        
-                        <!-- Fila 4 - Representante -->
-                        <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,10,10">
-                            <TextBlock Text="Nombre Representante Legal" Style="{DynamicResource FormLabel}"/>
-                            <TextBox Text="{Binding RepresentanteNombre, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{DynamicResource StandardTextBox}"/>
-                        </StackPanel>
-                        
-                        <StackPanel Grid.Row="3" Grid.Column="1" Margin="10,0,0,10">
-                            <TextBlock Text="Cargo Representante Legal" Style="{DynamicResource FormLabel}"/>
-                            <TextBox Text="{Binding RepresentanteCargo, UpdateSourceTrigger=PropertyChanged}" 
-                                     Style="{DynamicResource StandardTextBox}"/>
-                        </StackPanel>
-                        
-                        <!-- Fila 5 - Logo -->
-                        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,10">
-                            <TextBlock Text="Logo de la Empresa" FontWeight="Bold" Margin="0,0,0,10"/>
-                            <StackPanel Orientation="Horizontal">
-                                <Border Width="150" Height="100" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,15,0">
-                                    <Image Source="{Binding LogoPath}" Stretch="Uniform"
-                                           Visibility="{Binding HayLogo, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <Border Grid.Row="2" BorderThickness="1" BorderBrush="#808080" Margin="10,0,10,10">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Background="#C0C0C0" Padding="5,3" BorderThickness="0,0,0,1" BorderBrush="#808080">
+                                    <TextBlock Text="Backups disponibles" FontFamily="Tahoma" FontSize="9" FontWeight="Bold"/>
                                 </Border>
-                                <StackPanel VerticalAlignment="Center">
-                                    <Button Content="📁 Seleccionar Logo" 
-                                            Command="{Binding SeleccionarLogoCommand}"
-                                            Style="{DynamicResource SecondaryButton}" Margin="0,0,0,5"/>
-                                    <Button Content="🗑️ Eliminar Logo" 
-                                            Command="{Binding EliminarLogoCommand}"
-                                            Style="{DynamicResource DangerButton}"
-                                            Visibility="{Binding HayLogo, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </StackPanel>
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Backups}" SelectedItem="{Binding SelectedBackup}"
+                                          AutoGenerateColumns="False" IsReadOnly="True" FontFamily="Tahoma" FontSize="9"
+                                          GridLinesVisibility="All" HeadersVisibility="Column" BorderThickness="0"
+                                          RowHeight="20" ColumnHeaderHeight="22">
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="#C0C0C0"/>
+                                            <Setter Property="Foreground" Value="#000080"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Padding" Value="4,2"/>
+                                            <Setter Property="BorderBrush" Value="#808080"/>
+                                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                        </Style>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Archivo" Binding="{Binding NombreArchivo}" Width="*"/>
+                                        <DataGridTextColumn Header="Fecha" Binding="{Binding FechaCreacion, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="120"/>
+                                        <DataGridTextColumn Header="Tamaño" Binding="{Binding TamañoFormateado}" Width="80"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
                         
-                        <!-- Fila 6 - Botón Guardar -->
-                        <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" 
-                                    Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                            <Button Content="💾 Guardar Configuración" 
-                                    Command="{Binding GuardarCommand}"
-                                    Style="{DynamicResource SuccessButton}"
-                                    FontSize="14"/>
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,10,10">
+                            <Button Content="Restaurar seleccionado" Command="{Binding RestaurarBackupCommand}"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" Padding="10,4" Margin="0,0,5,0"/>
+                            <Button Content="Eliminar seleccionado" Command="{Binding EliminarBackupCommand}"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" Padding="10,4"/>
                         </StackPanel>
                     </Grid>
-                    
-                    <!-- Mensaje -->
-                    <TextBlock Text="{Binding Mensaje}" 
-                               Foreground="{DynamicResource DangerBrush}" 
-                               Margin="0,10,0,0"
-                               Visibility="{Binding Mensaje, Converter={StaticResource NullToVisibilityConverter}}"/>
-                </StackPanel>
-            </ScrollViewer>
-        </DataTemplate>
-        
-        <!-- Template para BackupViewModel -->
-        <DataTemplate DataType="{x:Type local:BackupViewModel}">
-            <Grid Margin="20">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <!-- Título -->
-                <TextBlock Grid.Row="0" Text="Respaldo de Base de Datos" Style="{DynamicResource PageTitle}" Margin="0,0,0,10"/>
-                
-                <!-- Botones de acción -->
-                <WrapPanel Grid.Row="1" Margin="0,0,0,15">
-                    <Button Content="💾 Crear Backup" 
-                            Command="{Binding CrearBackupCommand}"
-                            Style="{DynamicResource SuccessButton}" Margin="0,0,10,5"/>
-                    <Button Content="📁 Guardar Backup en..." 
-                            Command="{Binding CrearBackupEnCommand}"
-                            Style="{DynamicResource SecondaryButton}" Margin="0,0,10,5"/>
-                    <Button Content="📂 Restaurar desde archivo..." 
-                            Command="{Binding RestaurarDesdeArchivoCommand}"
-                            Style="{DynamicResource SecondaryButton}" Margin="0,0,10,5"/>
-                    <Button Content="📁 Abrir carpeta de backups" 
-                            Command="{Binding AbrirCarpetaBackupsCommand}"
-                            Style="{DynamicResource SecondaryButton}" Margin="0,0,10,5"/>
-                </WrapPanel>
-                
-                <!-- Lista de backups -->
-                <GroupBox Grid.Row="2" Header="Backups disponibles" Padding="10">
-                    <DataGrid ItemsSource="{Binding Backups}"
-                              SelectedItem="{Binding SelectedBackup}"
-                              Style="{DynamicResource StandardDataGrid}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Archivo" Binding="{Binding NombreArchivo}" Width="*"/>
-                            <DataGridTextColumn Header="Fecha" Binding="{Binding FechaCreacion, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="150"/>
-                            <DataGridTextColumn Header="Tamaño" Binding="{Binding TamañoFormateado}" Width="100"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </GroupBox>
-                
-                <!-- Botones para backup seleccionado -->
-                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                    <Button Content="♻️ Restaurar seleccionado" 
-                            Command="{Binding RestaurarBackupCommand}"
-                            Style="{DynamicResource InfoButton}" Margin="0,0,10,0"/>
-                    <Button Content="🗑️ Eliminar seleccionado" 
-                            Command="{Binding EliminarBackupCommand}"
-                            Style="{DynamicResource DangerButton}"/>
-                </StackPanel>
-            </Grid>
-        </DataTemplate>
-        
-        <!-- Template para AuditLogViewModel -->
-        <DataTemplate DataType="{x:Type local:AuditLogViewModel}">
-            <Grid Margin="20">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <!-- Título -->
-                <TextBlock Grid.Row="0" Text="Log de Auditoría" Style="{DynamicResource PageTitle}" Margin="0,0,0,10"/>
-                
-                <!-- Filtros -->
-                <WrapPanel Grid.Row="1" Margin="0,0,0,15">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
-                        <TextBlock Text="Desde:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <DatePicker SelectedDate="{Binding FechaDesde}" Width="120"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
-                        <TextBlock Text="Hasta:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <DatePicker SelectedDate="{Binding FechaHasta}" Width="120"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,15,5">
-                        <TextBlock Text="Entidad:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <ComboBox ItemsSource="{Binding Entidades}" 
-                                  SelectedItem="{Binding FiltroEntidad}"
-                                  Width="120"/>
-                    </StackPanel>
-                    <Button Content="🔍 Buscar" 
-                            Command="{Binding BuscarCommand}"
-                            Style="{DynamicResource PrimaryButton}" Margin="0,0,5,5"/>
-                    <Button Content="🔄 Limpiar" 
-                            Command="{Binding LimpiarFiltrosCommand}"
-                            Style="{DynamicResource SecondaryButton}" Margin="0,0,0,5"/>
-                </WrapPanel>
-                
-                <!-- Lista de registros -->
-                <DataGrid Grid.Row="2"
-                          ItemsSource="{Binding Registros}"
-                          Style="{DynamicResource StandardDataGrid}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Fecha/Hora" Binding="{Binding FechaHora, StringFormat='{}{0:dd/MM/yyyy HH:mm:ss}'}" Width="140"/>
-                        <DataGridTextColumn Header="Usuario" Binding="{Binding UsuarioNombre}" Width="120"/>
-                        <DataGridTextColumn Header="Acción" Binding="{Binding Accion}" Width="100"/>
-                        <DataGridTextColumn Header="Entidad" Binding="{Binding Entidad}" Width="100"/>
-                        <DataGridTextColumn Header="Descripción" Binding="{Binding Descripcion}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-                
-                <!-- Botón limpiar antiguos -->
-                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                    <TextBlock Text="{Binding Mensaje}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,15,0"/>
-                    <Button Content="🗑️ Limpiar registros antiguos (90+ días)" 
-                            Command="{Binding LimpiarRegistrosAntiguosCommand}"
-                            Style="{DynamicResource SecondaryButton}"/>
-                </StackPanel>
-            </Grid>
-        </DataTemplate>
-
-        <!-- Template para SeguridadViewModel -->
-        <DataTemplate DataType="{x:Type local:SeguridadViewModel}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="20">
-                    <TextBlock Text="Seguridad y Windows Hello" Style="{DynamicResource PageTitle}" Margin="0,0,0,20"/>
-
-                    <!-- Estado de Windows Hello -->
-                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="20" Margin="0,0,0,20"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="🔐 Windows Hello" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10"/>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <TextBlock Text="Estado: " FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding WindowsHelloStatusMessage}" VerticalAlignment="Center" Margin="5,0,0,0"/>
-                            </StackPanel>
-
-                            <TextBlock Text="{Binding DeviceName, StringFormat='Dispositivo actual: {0}'}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="12" Margin="0,0,0,15"/>
-
-                            <!-- Botones de acción -->
-                            <StackPanel Orientation="Horizontal">
-                                <!-- Botón registrar dispositivo -->
-                                <Button Content="➕ Registrar este dispositivo"
-                                        Command="{Binding RegisterPasskeyCommand}"
-                                        Style="{DynamicResource SuccessButton}"
-                                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
-                                        Visibility="{Binding HasThisDevicePasskey, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                                        Padding="15,10" FontSize="14"
-                                        Margin="0,0,10,0"/>
-
-                                <!-- Botón Asistente de Configuración -->
-                                <Button Content="🧙 Asistente de Configuración"
-                                        Command="{Binding OpenWizardCommand}"
-                                        Style="{DynamicResource PrimaryButton}"
-                                        IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
-                                        Visibility="{Binding HasThisDevicePasskey, Converter={StaticResource InverseBoolToVisibilityConverter}}"
-                                        Padding="15,10" FontSize="14"/>
-                            </StackPanel>
-
-                            <!-- Mensaje de dispositivo ya registrado -->
-                            <Border Background="{DynamicResource SuccessLightBrush}" CornerRadius="5" Padding="10"
-                                    Visibility="{Binding HasThisDevicePasskey, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="✅ Este dispositivo ya tiene Windows Hello configurado"
-                                           Foreground="{DynamicResource SuccessBrush}"
-                                           FontWeight="SemiBold"/>
-                            </Border>
+                </Border>
+            </DataTemplate>
+            
+            <!-- Template para AuditLogViewModel -->
+            <DataTemplate DataType="{x:Type local:AuditLogViewModel}">
+                <Border BorderThickness="1" BorderBrush="#808080" Background="White" Margin="5">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <Border Grid.Row="0" Background="#000080" Padding="8,5">
+                            <TextBlock Text="LOG DE AUDITORIA" FontFamily="Tahoma" FontSize="10" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
+                        
+                        <WrapPanel Grid.Row="1" Margin="10,10,10,5">
+                            <TextBlock Text="Desde:" FontFamily="Tahoma" FontSize="9" VerticalAlignment="Center" Margin="0,0,5,5"/>
+                            <DatePicker SelectedDate="{Binding FechaDesde}" Width="100" Margin="0,0,10,5"/>
+                            <TextBlock Text="Hasta:" FontFamily="Tahoma" FontSize="9" VerticalAlignment="Center" Margin="0,0,5,5"/>
+                            <DatePicker SelectedDate="{Binding FechaHasta}" Width="100" Margin="0,0,10,5"/>
+                            <TextBlock Text="Entidad:" FontFamily="Tahoma" FontSize="9" VerticalAlignment="Center" Margin="0,0,5,5"/>
+                            <ComboBox ItemsSource="{Binding Entidades}" SelectedItem="{Binding FiltroEntidad}" Width="100" Margin="0,0,10,5"/>
+                            <Button Content="Buscar" Command="{Binding BuscarCommand}"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" Padding="10,3" Margin="0,0,5,5"/>
+                            <Button Content="Limpiar" Command="{Binding LimpiarFiltrosCommand}"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" Padding="10,3" Margin="0,0,0,5"/>
+                        </WrapPanel>
+                        
+                        <DataGrid Grid.Row="2" ItemsSource="{Binding Registros}" Margin="10,0,10,10"
+                                  AutoGenerateColumns="False" IsReadOnly="True" FontFamily="Tahoma" FontSize="9"
+                                  GridLinesVisibility="All" HeadersVisibility="Column" BorderThickness="1" BorderBrush="#808080"
+                                  RowHeight="20" ColumnHeaderHeight="22">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="#C0C0C0"/>
+                                    <Setter Property="Foreground" Value="#000080"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="Padding" Value="4,2"/>
+                                    <Setter Property="BorderBrush" Value="#808080"/>
+                                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Fecha/Hora" Binding="{Binding FechaHora, StringFormat='{}{0:dd/MM/yyyy HH:mm:ss}'}" Width="120"/>
+                                <DataGridTextColumn Header="Usuario" Binding="{Binding UsuarioNombre}" Width="100"/>
+                                <DataGridTextColumn Header="Accion" Binding="{Binding Accion}" Width="80"/>
+                                <DataGridTextColumn Header="Entidad" Binding="{Binding Entidad}" Width="80"/>
+                                <DataGridTextColumn Header="Descripcion" Binding="{Binding Descripcion}" Width="*"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0,10,10">
+                            <TextBlock Text="{Binding Mensaje}" Foreground="#808080" FontFamily="Tahoma" FontSize="9" 
+                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <Button Content="Limpiar registros antiguos (90+ dias)" Command="{Binding LimpiarRegistrosAntiguosCommand}"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" Padding="10,4"/>
                         </StackPanel>
-                    </Border>
+                    </Grid>
+                </Border>
+            </DataTemplate>
 
-                    <!-- Lista de dispositivos con passkey -->
-                    <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="8" Padding="20"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
-                        <StackPanel>
-                            <TextBlock Text="Dispositivos con Windows Hello" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,15"/>
-
-                            <DataGrid ItemsSource="{Binding Passkeys}"
-                                      SelectedItem="{Binding SelectedPasskey}"
-                                      AutoGenerateColumns="False"
-                                      CanUserAddRows="False"
-                                      CanUserDeleteRows="False"
-                                      Style="{DynamicResource StandardDataGrid}"
-                                      MinHeight="200">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Dispositivo" Binding="{Binding DeviceName}" Width="*" IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Registrado" Binding="{Binding CreatedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="150" IsReadOnly="True"/>
-                                    <DataGridTextColumn Header="Último uso" Binding="{Binding LastUsedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="150" IsReadOnly="True"/>
-                                    <DataGridTemplateColumn Header="Estado" Width="120">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding IsCurrent, Converter={StaticResource BoolToCurrentDeviceConverter}}"
-                                                           Foreground="{DynamicResource SuccessBrush}"
-                                                           FontWeight="SemiBold"
-                                                           Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                    <DataGridTemplateColumn Header="Acciones" Width="100">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Button Content="🗑️ Eliminar"
-                                                        Command="{Binding DataContext.RemovePasskeyCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                        CommandParameter="{Binding}"
-                                                        Style="{DynamicResource DangerButton}"
-                                                        Padding="8,4" FontSize="12"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
-
-                            <!-- Mensaje si no hay passkeys -->
-                            <TextBlock Text="No hay dispositivos registrados con Windows Hello"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       HorizontalAlignment="Center"
-                                       Margin="0,20,0,0"
-                                       Visibility="{Binding Passkeys.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Mensaje de resultado -->
-                    <Border Background="{Binding HasError, Converter={StaticResource BoolToErrorBackgroundConverter}}"
-                            CornerRadius="5" Padding="12" Margin="0,15,0,0"
-                            Visibility="{Binding Mensaje, Converter={StaticResource NullToVisibilityConverter}}">
-                        <TextBlock Text="{Binding Mensaje}"
-                                   Foreground="{Binding HasError, Converter={StaticResource BoolToErrorForegroundConverter}}"
-                                   TextWrapping="Wrap"
-                                   FontSize="13"/>
-                    </Border>
-
-                    <!-- Indicador de carga -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0"
-                                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <TextBlock Text="⏳ Procesando..." Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
+            <!-- Template para SeguridadViewModel -->
+            <DataTemplate DataType="{x:Type local:SeguridadViewModel}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="5">
+                        <!-- Estado de Windows Hello -->
+                        <Border BorderThickness="1" BorderBrush="#808080" Background="White" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <Border Grid.Row="0" Background="#000080" Padding="8,5">
+                                    <TextBlock Text="WINDOWS HELLO" FontFamily="Tahoma" FontSize="10" 
+                                               FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                                
+                                <StackPanel Grid.Row="1" Margin="15">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="Estado: " FontFamily="Tahoma" FontSize="9" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding WindowsHelloStatusMessage}" FontFamily="Tahoma" FontSize="9"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding DeviceName, StringFormat='Dispositivo actual: {0}'}"
+                                               FontFamily="Tahoma" FontSize="8" Foreground="#808080" Margin="0,0,0,12"/>
+                                    
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Registrar dispositivo" Command="{Binding RegisterPasskeyCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}"
+                                                FontFamily="Tahoma" FontSize="9" Padding="10,4" Margin="0,0,8,0"
+                                                IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
+                                                Visibility="{Binding HasThisDevicePasskey, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                        <Button Content="Asistente Configuracion" Command="{Binding OpenWizardCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}"
+                                                FontFamily="Tahoma" FontSize="9" Padding="10,4"
+                                                IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}"
+                                                Visibility="{Binding HasThisDevicePasskey, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                    
+                                    <Border Background="#C0FFC0" BorderThickness="1" BorderBrush="#008000" Padding="8" Margin="0,10,0,0"
+                                            Visibility="{Binding HasThisDevicePasskey, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <TextBlock Text="[OK] Este dispositivo ya tiene Windows Hello configurado"
+                                                   FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#008000"/>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        
+                        <!-- Lista de dispositivos -->
+                        <Border BorderThickness="1" BorderBrush="#808080" Background="White">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <Border Grid.Row="0" Background="#000080" Padding="8,5">
+                                    <TextBlock Text="DISPOSITIVOS CON WINDOWS HELLO" FontFamily="Tahoma" FontSize="10" 
+                                               FontWeight="Bold" Foreground="White"/>
+                                </Border>
+                                
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding Passkeys}" SelectedItem="{Binding SelectedPasskey}"
+                                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                          FontFamily="Tahoma" FontSize="9" GridLinesVisibility="All" HeadersVisibility="Column"
+                                          BorderThickness="0" RowHeight="20" ColumnHeaderHeight="22" MinHeight="150">
+                                    <DataGrid.ColumnHeaderStyle>
+                                        <Style TargetType="DataGridColumnHeader">
+                                            <Setter Property="Background" Value="#C0C0C0"/>
+                                            <Setter Property="Foreground" Value="#000080"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                            <Setter Property="Padding" Value="4,2"/>
+                                            <Setter Property="BorderBrush" Value="#808080"/>
+                                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                        </Style>
+                                    </DataGrid.ColumnHeaderStyle>
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Dispositivo" Binding="{Binding DeviceName}" Width="*" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="Registrado" Binding="{Binding CreatedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="110" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="Ultimo uso" Binding="{Binding LastUsedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="110" IsReadOnly="True"/>
+                                        <DataGridTemplateColumn Header="Acciones" Width="70">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="X" Command="{Binding DataContext.RemovePasskeyCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource LegacyButtonStyle}"
+                                                            FontFamily="Courier New" FontSize="9" Padding="5,2"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
+                        </Border>
+                        
+                        <!-- Mensaje -->
+                        <Border Background="#FFFFCC" BorderThickness="1" BorderBrush="#CC6600" Padding="8" Margin="0,10,0,0"
+                                Visibility="{Binding Mensaje, Converter={StaticResource NullToVisibilityConverter}}">
+                            <TextBlock Text="{Binding Mensaje}" FontFamily="Tahoma" FontSize="9" TextWrapping="Wrap"/>
+                        </Border>
+                        
+                        <!-- Loading -->
+                        <TextBlock Text="[...] Procesando..." FontFamily="Courier New" FontSize="10" HorizontalAlignment="Center"
+                                   Foreground="#808080" Margin="0,10,0,0"
+                                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
-                </StackPanel>
-            </ScrollViewer>
-        </DataTemplate>
+                </ScrollViewer>
+            </DataTemplate>
+        </ResourceDictionary>
     </UserControl.Resources>
     
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="160"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         
         <!-- Panel lateral de navegación -->
-        <Border Grid.Column="0" Background="{DynamicResource SidebarDarkBrush}" Padding="0">
+        <Border Grid.Column="0" Background="#000080" BorderThickness="0,0,1,0" BorderBrush="#404040">
             <StackPanel>
-                <TextBlock Text="⚙️ Configuración" 
-                           Foreground="White" 
-                           FontSize="18" 
-                           FontWeight="Bold"
-                           Padding="15"/>
+                <Border Padding="10,12">
+                    <TextBlock Text="[CONFIGURACION]" FontFamily="Courier New" FontSize="10" 
+                               FontWeight="Bold" Foreground="White"/>
+                </Border>
                 
-                <Button Content="🏢 Empresa" 
-                        Command="{Binding NavigateToSectionCommand}"
-                        CommandParameter="Empresa"
-                        Style="{DynamicResource SidebarMenuButton}"/>
+                <Button Content="Empresa" Command="{Binding NavigateToSectionCommand}" CommandParameter="Empresa"
+                        Style="{StaticResource LegacyButtonStyle}" HorizontalAlignment="Stretch"
+                        FontFamily="Tahoma" FontSize="9" Padding="10,6" Margin="5,0,5,3"/>
                 
-                <Button Content="💾 Backup"
-                        Command="{Binding NavigateToSectionCommand}"
-                        CommandParameter="Backup"
-                        Style="{DynamicResource SidebarMenuButton}"/>
+                <Button Content="Backup" Command="{Binding NavigateToSectionCommand}" CommandParameter="Backup"
+                        Style="{StaticResource LegacyButtonStyle}" HorizontalAlignment="Stretch"
+                        FontFamily="Tahoma" FontSize="9" Padding="10,6" Margin="5,0,5,3"/>
 
-                <Button Content="📋 Auditoría"
-                        Command="{Binding NavigateToSectionCommand}"
-                        CommandParameter="Auditoria"
-                        Style="{DynamicResource SidebarMenuButton}"/>
+                <Button Content="Auditoria" Command="{Binding NavigateToSectionCommand}" CommandParameter="Auditoria"
+                        Style="{StaticResource LegacyButtonStyle}" HorizontalAlignment="Stretch"
+                        FontFamily="Tahoma" FontSize="9" Padding="10,6" Margin="5,0,5,3"/>
 
-                <Button Content="🔐 Seguridad"
-                        Command="{Binding NavigateToSectionCommand}"
-                        CommandParameter="Seguridad"
-                        Style="{DynamicResource SidebarMenuButton}"/>
+                <Button Content="Seguridad" Command="{Binding NavigateToSectionCommand}" CommandParameter="Seguridad"
+                        Style="{StaticResource LegacyButtonStyle}" HorizontalAlignment="Stretch"
+                        FontFamily="Tahoma" FontSize="9" Padding="10,6" Margin="5,0,5,3"/>
             </StackPanel>
         </Border>
         
         <!-- Contenido de la sección -->
-        <Border Grid.Column="1" Margin="10">
-            <ContentPresenter Content="{Binding CurrentSectionView}"/>
-        </Border>
+        <ContentPresenter Grid.Column="1" Content="{Binding CurrentSectionView}" Margin="5"/>
     </Grid>
 </UserControl>

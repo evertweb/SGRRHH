@@ -8,15 +8,24 @@ namespace SGRRHH.Infrastructure.Firebase.Repositories;
 /// <summary>
 /// Implementación del repositorio de Proyectos para Firestore.
 /// Colección: "proyectos"
+/// Incluye cache en memoria para reducir round-trips.
 /// </summary>
 public class ProyectoFirestoreRepository : FirestoreRepository<Proyecto>, IProyectoRepository
 {
     private const string COLLECTION_NAME = "proyectos";
     private const string CODE_PREFIX = "PRY-";
-    
-    public ProyectoFirestoreRepository(FirebaseInitializer firebase, ILogger<ProyectoFirestoreRepository>? logger = null) 
+    private const string CACHE_KEY_ALL_ACTIVE = "proyectos_all_active";
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
+
+    private readonly ICacheService? _cache;
+
+    public ProyectoFirestoreRepository(
+        FirebaseInitializer firebase,
+        ICacheService? cache = null,
+        ILogger<ProyectoFirestoreRepository>? logger = null)
         : base(firebase, COLLECTION_NAME, logger)
     {
+        _cache = cache;
     }
     
     #region Entity <-> Document Mapping
@@ -73,27 +82,49 @@ public class ProyectoFirestoreRepository : FirestoreRepository<Proyecto>, IProye
     #endregion
     
     #region IProyectoRepository Implementation
-    
+
     /// <summary>
-    /// Obtiene todos los proyectos activos ordenados por nombre
+    /// Obtiene todos los proyectos activos ordenados por nombre.
+    /// Usa cache en memoria con expiración de 10 minutos.
     /// </summary>
     public override async Task<IEnumerable<Proyecto>> GetAllActiveAsync()
     {
         try
         {
-            var query = Collection.WhereEqualTo("activo", true);
-            var snapshot = await query.GetSnapshotAsync();
-            
-            return snapshot.Documents
-                .Select(DocumentToEntity)
-                .OrderBy(p => p.Nombre)
-                .ToList();
+            if (_cache != null)
+            {
+                return await _cache.GetOrCreateAsync(
+                    CACHE_KEY_ALL_ACTIVE,
+                    FetchAllActiveFromFirestoreAsync,
+                    CacheExpiration);
+            }
+
+            return await FetchAllActiveFromFirestoreAsync();
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al obtener proyectos activos");
             throw;
         }
+    }
+
+    private async Task<IEnumerable<Proyecto>> FetchAllActiveFromFirestoreAsync()
+    {
+        var query = Collection.WhereEqualTo("activo", true);
+        var snapshot = await query.GetSnapshotAsync();
+
+        return snapshot.Documents
+            .Select(DocumentToEntity)
+            .OrderBy(p => p.Nombre)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Invalida el cache de proyectos.
+    /// </summary>
+    public void InvalidateCache()
+    {
+        _cache?.InvalidateByPrefix("proyectos");
     }
     
     /// <summary>

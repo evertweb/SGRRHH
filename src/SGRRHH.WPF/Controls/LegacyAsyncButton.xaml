@@ -1,0 +1,60 @@
+<UserControl x:Class="SGRRHH.WPF.Controls.LegacyAsyncButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             x:Name="Root"
+             MouseLeftButtonDown="OnMouseLeftButtonDown"
+             MouseLeftButtonUp="OnMouseLeftButtonUp"
+             MouseLeave="OnMouseLeave">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <!-- Estructura del botón con efecto 3D Legacy -->
+    <Border x:Name="OuterBorder" BorderThickness="1,1,1,1" BorderBrush="White" Cursor="Hand">
+        <Border x:Name="OuterBorderDark" BorderThickness="0,0,1,1" BorderBrush="Black">
+            <Border x:Name="InnerBorderLight" BorderThickness="1,1,1,1" BorderBrush="#DFDFDF">
+                <Border x:Name="InnerBorderDark" BorderThickness="0,0,1,1" BorderBrush="#808080">
+                    <Border x:Name="BackgroundBorder" Background="{StaticResource ControlBrush}">
+                        <Grid Margin="6,2">
+                            <!-- Indicador de carga (oculto por defecto) -->
+                            <StackPanel x:Name="LoadingPanel" 
+                                        Orientation="Horizontal" 
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Visibility="Collapsed">
+                                <TextBlock x:Name="LoadingIcon" 
+                                           Text="[|  ]" 
+                                           FontFamily="Courier New" 
+                                           FontSize="10" 
+                                           FontWeight="Bold"
+                                           Foreground="#000080" 
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,4,0"/>
+                                <TextBlock x:Name="LoadingText"
+                                           Text="{Binding Content, ElementName=Root}"
+                                           FontFamily="{StaticResource SystemFont}"
+                                           FontSize="{StaticResource BaseFontSize}"
+                                           Foreground="#606060"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <!-- Contenido normal del botón -->
+                            <ContentPresenter x:Name="ContentHost" 
+                                              Content="{Binding Content, ElementName=Root}"
+                                              HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </Border>
+            </Border>
+        </Border>
+    </Border>
+</UserControl>

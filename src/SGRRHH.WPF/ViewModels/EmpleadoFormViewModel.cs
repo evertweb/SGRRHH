@@ -21,11 +21,15 @@ public partial class EmpleadoFormViewModel : ViewModelBase
     private readonly IDepartamentoService _departamentoService;
     private readonly ICargoService _cargoService;
     private readonly IDialogService _dialogService;
+    private readonly IDocumentoEmpleadoService? _documentoService;
     
     private int _empleadoId;
     private bool _isEditing;
     private byte[]? _newFotoData;
     private string? _newFotoExtension;
+    
+    // Documentos pendientes para subir después de crear el empleado
+    private readonly Dictionary<TipoDocumentoEmpleado, PendingDocument> _pendingDocuments = new();
     
     [ObservableProperty]
     private string _windowTitle = "Nuevo Empleado";
@@ -95,6 +99,19 @@ public partial class EmpleadoFormViewModel : ViewModelBase
     
     [ObservableProperty]
     private string? _observaciones;
+    
+    // Propiedades para documentos pendientes (nombre de archivo seleccionado)
+    [ObservableProperty]
+    private string? _docCedulaFileName;
+    
+    [ObservableProperty]
+    private string? _docHojaVidaFileName;
+    
+    [ObservableProperty]
+    private string? _docContratoFileName;
+    
+    [ObservableProperty]
+    private string? _docCertificadoBancarioFileName;
     
     // Colecciones para combos
     [ObservableProperty]
@@ -174,12 +191,14 @@ public partial class EmpleadoFormViewModel : ViewModelBase
         IEmpleadoService empleadoService, 
         IDepartamentoService departamentoService,
         ICargoService cargoService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IDocumentoEmpleadoService? documentoService = null)
     {
         _empleadoService = empleadoService;
         _departamentoService = departamentoService;
         _cargoService = cargoService;
         _dialogService = dialogService;
+        _documentoService = documentoService;
     }
     
     /// <summary>
@@ -364,6 +383,117 @@ public partial class EmpleadoFormViewModel : ViewModelBase
     }
     
     /// <summary>
+    /// Selecciona documento de cédula
+    /// </summary>
+    [RelayCommand]
+    private void SelectDocCedula()
+    {
+        SelectPendingDocument(TipoDocumentoEmpleado.Cedula, val => DocCedulaFileName = val);
+    }
+    
+    /// <summary>
+    /// Selecciona documento de hoja de vida
+    /// </summary>
+    [RelayCommand]
+    private void SelectDocHojaVida()
+    {
+        SelectPendingDocument(TipoDocumentoEmpleado.HojaVida, val => DocHojaVidaFileName = val);
+    }
+    
+    /// <summary>
+    /// Selecciona documento de contrato
+    /// </summary>
+    [RelayCommand]
+    private void SelectDocContrato()
+    {
+        SelectPendingDocument(TipoDocumentoEmpleado.ContratoFirmado, val => DocContratoFileName = val);
+    }
+    
+    /// <summary>
+    /// Selecciona certificado bancario
+    /// </summary>
+    [RelayCommand]
+    private void SelectDocCertificadoBancario()
+    {
+        SelectPendingDocument(TipoDocumentoEmpleado.CertificadoBancario, val => DocCertificadoBancarioFileName = val);
+    }
+    
+    /// <summary>
+    /// Método genérico para seleccionar un documento pendiente
+    /// </summary>
+    private void SelectPendingDocument(TipoDocumentoEmpleado tipo, Action<string?> setFileName)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "Documentos PDF|*.pdf|Imágenes|*.jpg;*.jpeg;*.png|Todos los archivos|*.*",
+            Title = $"Seleccionar {SGRRHH.Infrastructure.Services.DocumentoEmpleadoService.GetNombreTipoDocumento(tipo)}"
+        };
+        
+        if (dialog.ShowDialog() == true)
+        {
+            try
+            {
+                var fileBytes = File.ReadAllBytes(dialog.FileName);
+                var fileName = Path.GetFileName(dialog.FileName);
+                
+                _pendingDocuments[tipo] = new PendingDocument
+                {
+                    TipoDocumento = tipo,
+                    FileBytes = fileBytes,
+                    FileName = fileName,
+                    OriginalPath = dialog.FileName
+                };
+                
+                setFileName(fileName);
+            }
+            catch (Exception ex)
+            {
+                _dialogService.ShowError($"Error al cargar el archivo: {ex.Message}");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Elimina documento de cédula pendiente
+    /// </summary>
+    [RelayCommand]
+    private void RemoveDocCedula()
+    {
+        _pendingDocuments.Remove(TipoDocumentoEmpleado.Cedula);
+        DocCedulaFileName = null;
+    }
+    
+    /// <summary>
+    /// Elimina documento de hoja de vida pendiente
+    /// </summary>
+    [RelayCommand]
+    private void RemoveDocHojaVida()
+    {
+        _pendingDocuments.Remove(TipoDocumentoEmpleado.HojaVida);
+        DocHojaVidaFileName = null;
+    }
+    
+    /// <summary>
+    /// Elimina documento de contrato pendiente
+    /// </summary>
+    [RelayCommand]
+    private void RemoveDocContrato()
+    {
+        _pendingDocuments.Remove(TipoDocumentoEmpleado.ContratoFirmado);
+        DocContratoFileName = null;
+    }
+    
+    /// <summary>
+    /// Elimina certificado bancario pendiente
+    /// </summary>
+    [RelayCommand]
+    private void RemoveDocCertificadoBancario()
+    {
+        _pendingDocuments.Remove(TipoDocumentoEmpleado.CertificadoBancario);
+        DocCertificadoBancarioFileName = null;
+    }
+    
+    /// <summary>
     /// Valida los datos del formulario
     /// </summary>
     private List<string> ValidateForm()
@@ -536,30 +666,65 @@ public partial class EmpleadoFormViewModel : ViewModelBase
                     await _empleadoService.SaveFotoAsync(_empleadoId, _newFotoData, _newFotoExtension);
                 }
                 
+                // Subir documentos pendientes
+                var docsUploadedCount = 0;
+                if (_pendingDocuments.Any() && _documentoService != null)
+                {
+                    var currentUser = App.CurrentUser;
+                    foreach (var pending in _pendingDocuments.Values)
+                    {
+                        try
+                        {
+                            var doc = new DocumentoEmpleado
+                            {
+                                EmpleadoId = _empleadoId,
+                                TipoDocumento = pending.TipoDocumento,
+                                Nombre = SGRRHH.Infrastructure.Services.DocumentoEmpleadoService.GetNombreTipoDocumento(pending.TipoDocumento),
+                                NombreArchivoOriginal = pending.FileName,
+                                Descripcion = $"Cargado al crear empleado"
+                            };
+                            
+                            var uploadResult = await _documentoService.SubirDocumentoAsync(
+                                doc, 
+                                pending.FileBytes, 
+                                currentUser?.Id ?? 0, 
+                                currentUser?.Rol ?? RolUsuario.Operador);
+                            
+                            if (uploadResult.Success)
+                                docsUploadedCount++;
+                        }
+                        catch
+                        {
+                            // Continuar con los demás documentos
+                        }
+                    }
+                }
+                
                 SaveCompleted?.Invoke(this, EventArgs.Empty);
                 
-                // Si es un empleado nuevo, preguntar si desea cargar documentos
-                if (!_isEditing)
+                // Mostrar mensaje de éxito
+                var mensaje = $"Empleado '{Nombres} {Apellidos}' {(_isEditing ? "actualizado" : "creado")} exitosamente.";
+                if (docsUploadedCount > 0)
                 {
-                    var cargarDocumentos = _dialogService.Confirm(
-                        $"Empleado '{Nombres} {Apellidos}' creado exitosamente.\n\n" +
-                        "¿Desea cargar los documentos requeridos ahora?\n\n" +
-                        "Documentos requeridos:\n" +
-                        "• Cédula de ciudadanía\n" +
-                        "• Hoja de vida\n" +
-                        "• Examen médico de ingreso\n" +
-                        "• Afiliaciones (EPS, AFP, ARL)",
-                        "Cargar Documentos");
+                    mensaje += $"\n\n{docsUploadedCount} documento(s) cargado(s).";
+                }
+                
+                // Solo preguntar por más documentos si es nuevo y no se cargaron todos los requeridos
+                var pendingRequiredDocs = !_isEditing && _pendingDocuments.Count < 4;
+                if (pendingRequiredDocs)
+                {
+                    var cargarMasDocumentos = _dialogService.Confirm(
+                        mensaje + "\n\n¿Desea cargar más documentos ahora?",
+                        "Documentos Adicionales");
                     
-                    if (cargarDocumentos)
+                    if (cargarMasDocumentos)
                     {
-                        // Disparar evento para abrir ventana de documentos
                         OpenDocumentosRequested?.Invoke(this, _empleadoId);
                     }
                 }
                 else
                 {
-                    _dialogService.ShowSuccess(result.Message);
+                    _dialogService.ShowSuccess(mensaje);
                 }
                 
                 CloseRequested?.Invoke(this, EventArgs.Empty);
@@ -612,4 +777,15 @@ public class EstadoEmpleadoFormItem
 {
     public string Nombre { get; set; } = string.Empty;
     public EstadoEmpleado Valor { get; set; }
+}
+
+/// <summary>
+/// Representa un documento pendiente de subir
+/// </summary>
+public class PendingDocument
+{
+    public TipoDocumentoEmpleado TipoDocumento { get; set; }
+    public byte[] FileBytes { get; set; } = Array.Empty<byte>();
+    public string FileName { get; set; } = string.Empty;
+    public string OriginalPath { get; set; } = string.Empty;
 }

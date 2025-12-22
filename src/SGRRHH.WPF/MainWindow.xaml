@@ -9,182 +9,313 @@
         Height="700" Width="1100"
         MinHeight="600" MinWidth="900"
         WindowStartupLocation="CenterScreen"
-        WindowState="Maximized">
-    
-    <Grid Background="{StaticResource BackgroundBrush}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="250"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-        
-        <!-- Panel lateral (Menú) -->
-        <Border Grid.Column="0" Background="{StaticResource SidebarBackgroundBrush}">
+        WindowState="Maximized"
+        Background="#C0C0C0">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <!-- Borde exterior estilo Windows Classic (Raised) -->
+    <Border BorderThickness="2" BorderBrush="White">
+        <Border BorderThickness="2" BorderBrush="#808080" Margin="0,0,2,2">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>  <!-- Barra de Menú -->
+                    <RowDefinition Height="Auto"/>  <!-- Barra de Ruta -->
+                    <RowDefinition Height="*"/>     <!-- Contenido Principal -->
+                    <RowDefinition Height="Auto"/>  <!-- Barra de Estado -->
                 </Grid.RowDefinitions>
-                
-                <!-- Logo y título -->
-                <Border Grid.Row="0" Background="{StaticResource SidebarHeaderBrush}" Padding="20">
-                    <StackPanel>
-                        <TextBlock Text="🏢 SGRRHH" Style="{StaticResource SidebarTitle}"/>
-                        <TextBlock Text="Sistema de Gestión RRHH" Style="{StaticResource SidebarSubtitle}" Margin="0,5,0,0"/>
-                    </StackPanel>
-                </Border>
-                
-                <!-- Usuario actual -->
-                <Border Grid.Row="1" Background="{StaticResource SidebarUserBrush}" Padding="15">
-                    <StackPanel>
-                        <TextBlock Text="👤" FontSize="30" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding CurrentUserName}" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextInverseBrush}" HorizontalAlignment="Center" Margin="0,5,0,0"
-                                   TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Text="{Binding CurrentUserRole}" FontSize="11"
-                                   Foreground="{StaticResource SidebarTextMutedBrush}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-                
-                <!-- Menú de navegación -->
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding MenuItems}" Margin="0,10">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Command="{Binding DataContext.NavigateToCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"
-                                        Cursor="Hand" Margin="5,2">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="BorderThickness" Value="0"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border x:Name="border" Background="{TemplateBinding Background}" 
-                                                                CornerRadius="{StaticResource SmallRadius}" Padding="15,12">
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <TextBlock Text="{Binding Icon}" FontSize="18" 
-                                                                           VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                                                <TextBlock Text="{Binding Title}" FontSize="14" 
-                                                                           Foreground="{StaticResource TextInverseBrush}" VerticalAlignment="Center"/>
-                                                            </StackPanel>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryBrush}"/>
-                                                            </DataTrigger>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="border" Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-                
-                <!-- Opciones de usuario (abajo) -->
-                <Border Grid.Row="3" BorderBrush="{StaticResource SidebarUserBrush}" BorderThickness="0,1,0,0" Padding="10">
-                    <StackPanel>
-                        <Button Content="🔑 Cambiar Contraseña" 
-                                Command="{Binding ChangePasswordCommand}"
-                                Style="{StaticResource TransparentButton}"
-                                Foreground="{StaticResource SidebarTextBrush}"/>
-                        <Button Content="🚪 Cerrar Sesión" 
-                                Command="{Binding LogoutCommand}"
-                                Style="{StaticResource TransparentButton}"
-                                Foreground="{StaticResource DangerMutedBrush}"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
-        
-        <!-- Contenido principal -->
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            
-            <!-- Barra superior -->
-            <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" 
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
-                <Grid Margin="25,15">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <!-- Título de la vista -->
-                    <TextBlock Grid.Column="0" Text="{Binding CurrentViewTitle}" Style="{StaticResource HeaderTitle}"/>
-                    
-                    <!-- Fecha/Hora y Versión (centro-derecha) -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" 
-                                VerticalAlignment="Center" Margin="0,0,20,0">
-                        <Border Style="{StaticResource StatTagBlue}" Margin="0,0,10,0" Padding="12,6">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="📅" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="{Binding CurrentDateTime}" FontSize="13" 
-                                           Foreground="{StaticResource PrimaryDarkBrush}" VerticalAlignment="Center" FontWeight="Medium"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource StatTagGreen}" Padding="10,6">
-                            <TextBlock Text="{Binding AppVersion}" FontSize="12" 
-                                       Foreground="{StaticResource SuccessDarkBrush}" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                        </Border>
-                    </StackPanel>
-                    
-                    <!-- Alertas y notificaciones -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="🔔" FontSize="18" Style="{StaticResource TransparentButton}"
-                                ToolTip="Notificaciones"/>
-                        <TextBlock Text="{Binding PendingAlerts}" FontSize="11" 
-                                   Foreground="{StaticResource TextInverseBrush}" Background="{StaticResource DangerBrush}"
-                                   Padding="5,2" VerticalAlignment="Top" Margin="-15,0,15,0"
-                                   Visibility="{Binding PendingAlerts, Converter={StaticResource IntToVisibilityConverter}}"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-            
-            <!-- Área de contenido -->
-            <Border Grid.Row="1" Margin="25">
-                <Grid>
-                    <!-- Vista cargada dinámicamente -->
-                    <ContentControl Content="{Binding CurrentView}"
-                                    Visibility="{Binding CurrentView, Converter={StaticResource NotNullToVisibilityConverter}}"/>
-                    
-                    <!-- Placeholder para módulos no implementados (solo cuando no hay vista cargada) -->
-                    <Border Background="{StaticResource SurfaceBrush}" CornerRadius="{StaticResource StandardRadius}" Padding="30">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CurrentView}" Value="{x:Null}">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="🚧" FontSize="50" HorizontalAlignment="Center"/>
-                            <TextBlock FontSize="18" Foreground="{StaticResource TextTertiaryBrush}" HorizontalAlignment="Center" Margin="0,15,0,0">
-                                <Run Text="Módulo de "/>
-                                <Run Text="{Binding CurrentViewTitle}" FontWeight="SemiBold"/>
-                            </TextBlock>
-                            <TextBlock Text="En construcción - Próximamente disponible" Style="{StaticResource CaptionText}" 
-                                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+
+                <!-- ================================================== -->
+                <!-- 1. BARRA DE MENÚ SUPERIOR (Estilo Windows Classic) -->
+                <!-- ================================================== -->
+                <Grid Grid.Row="0" Background="#C0C0C0">
+                    <!-- Menú de texto horizontal -->
+                    <Border BorderThickness="0,0,0,1" BorderBrush="#808080" Padding="2,1">
+                        <StackPanel Orientation="Horizontal">
+                            <!-- Items del menú como botones de texto -->
+                            <ItemsControl ItemsSource="{Binding MenuItems}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- ContentControl que cambia entre Separador y Botón de menú -->
+                                        <ContentControl>
+                                            <ContentControl.Style>
+                                                <Style TargetType="ContentControl">
+                                                    <!-- Por defecto: Botón de menú normal -->
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ContentControl">
+                                                                <Button Command="{Binding DataContext.NavigateToCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Margin="0" Padding="8,3"
+                                                                        FontFamily="Tahoma" FontSize="11">
+                                                                    <Button.Style>
+                                                                        <Style TargetType="Button">
+                                                                            <Setter Property="Background" Value="Transparent"/>
+                                                                            <Setter Property="BorderThickness" Value="0"/>
+                                                                            <Setter Property="Cursor" Value="Hand"/>
+                                                                            <Setter Property="Template">
+                                                                                <Setter.Value>
+                                                                                    <ControlTemplate TargetType="Button">
+                                                                                        <Border x:Name="border" Background="{TemplateBinding Background}" 
+                                                                                                Padding="{TemplateBinding Padding}">
+                                                                                            <StackPanel Orientation="Horizontal">
+                                                                                                <TextBlock Text="[" Foreground="#000080" FontWeight="Bold"/>
+                                                                                                <TextBlock x:Name="titleText" Text="{Binding Title}" Foreground="#000080"/>
+                                                                                                <TextBlock Text="]" Foreground="#000080" FontWeight="Bold"/>
+                                                                                            </StackPanel>
+                                                                                        </Border>
+                                                                                        <ControlTemplate.Triggers>
+                                                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                                                <Setter TargetName="border" Property="Background" Value="#000080"/>
+                                                                                                <Setter TargetName="titleText" Property="Foreground" Value="White"/>
+                                                                                            </DataTrigger>
+                                                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                                                <Setter TargetName="titleText" Property="TextDecorations" Value="Underline"/>
+                                                                                            </Trigger>
+                                                                                        </ControlTemplate.Triggers>
+                                                                                    </ControlTemplate>
+                                                                                </Setter.Value>
+                                                                            </Setter>
+                                                                        </Style>
+                                                                    </Button.Style>
+                                                                </Button>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <!-- Trigger: Si es separador, mostrar etiqueta de categoría -->
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+                                                            <Setter Property="Template">
+                                                                <Setter.Value>
+                                                                    <ControlTemplate TargetType="ContentControl">
+                                                                        <!-- Separador de categoría estilo Windows Classic -->
+                                                                        <StackPanel Orientation="Horizontal" Margin="5,0,0,0">
+                                                                            <TextBlock Text="|" Foreground="#808080" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                                                            <TextBlock Text="{Binding Title}" 
+                                                                                       FontFamily="Tahoma" FontSize="9" 
+                                                                                       FontWeight="Bold" Foreground="#404040"
+                                                                                       VerticalAlignment="Center"/>
+                                                                            <TextBlock Text=":" Foreground="#808080" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                                        </StackPanel>
+                                                                    </ControlTemplate>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ContentControl.Style>
+                                        </ContentControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            
+                            <!-- Separador -->
+                            <TextBlock Text="|" Foreground="#808080" VerticalAlignment="Center" Margin="5,0"/>
+                            
+                            <!-- Opciones de usuario -->
+                            <Button Command="{Binding ChangePasswordCommand}" Margin="0" Padding="8,3" 
+                                    FontFamily="Tahoma" FontSize="11" Cursor="Hand">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                                        <TextBlock x:Name="txt" Text="[Cambiar Clave]" Foreground="#808080"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="txt" Property="TextDecorations" Value="Underline"/>
+                                                            <Setter TargetName="txt" Property="Foreground" Value="#000080"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            
+                            <Button Command="{Binding LogoutCommand}" Margin="0" Padding="8,3"
+                                    FontFamily="Tahoma" FontSize="11" Cursor="Hand">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                                        <TextBlock x:Name="txt" Text="[Salir]" Foreground="#800000"/>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="txt" Property="TextDecorations" Value="Underline"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
                         </StackPanel>
                     </Border>
                 </Grid>
-            </Border>
-        </Grid>
-    </Grid>
+
+                <!-- ================================================== -->
+                <!-- 2. BARRA DE RUTA / BREADCRUMB -->
+                <!-- ================================================== -->
+                <Border Grid.Row="1" Background="#DFDFDF" BorderThickness="0,0,0,1" BorderBrush="#808080" Padding="5,3">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Ruta de navegación -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <TextBlock Text="RUTA: Inicio &gt; " FontFamily="Tahoma" FontSize="10" Foreground="#404040"/>
+                            <TextBlock Text="{Binding CurrentViewTitle}" FontFamily="Tahoma" FontSize="10" 
+                                       Foreground="#000080" FontWeight="Bold"/>
+                        </StackPanel>
+                        
+                        <!-- Info de usuario -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <TextBlock Text="USUARIO: " FontFamily="Tahoma" FontSize="10" Foreground="#404040"/>
+                            <TextBlock Text="{Binding CurrentUserName}" FontFamily="Tahoma" FontSize="10" 
+                                       Foreground="#000080" FontWeight="Bold" Margin="0,0,10,0"/>
+                            <TextBlock Text="(" FontFamily="Tahoma" FontSize="10" Foreground="#404040"/>
+                            <TextBlock Text="{Binding CurrentUserRole}" FontFamily="Tahoma" FontSize="10" Foreground="#404040"/>
+                            <TextBlock Text=")" FontFamily="Tahoma" FontSize="10" Foreground="#404040"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- ================================================== -->
+                <!-- 3. ÁREA DE CONTENIDO PRINCIPAL -->
+                <!-- ================================================== -->
+                <Border Grid.Row="2" Margin="5" BorderThickness="2" BorderBrush="#808080" Background="White">
+                    <Border BorderThickness="2" BorderBrush="#DFDFDF" Margin="0,0,2,2">
+                        <Grid>
+                            <!-- Título de la sección actual -->
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Header de la vista -->
+                            <Border Grid.Row="0" Background="#E0E0E0" BorderThickness="0,0,0,1" BorderBrush="#808080" Padding="10,5">
+                                <TextBlock FontFamily="Tahoma" FontSize="14" FontWeight="Bold" Foreground="#000080">
+                                    <Run Text="== "/>
+                                    <Run Text="{Binding CurrentViewTitle, Mode=OneWay}"/>
+                                    <Run Text=" =="/>
+                                </TextBlock>
+                            </Border>
+                            
+                            <!-- Contenido dinámico -->
+                            <Grid Grid.Row="1">
+                                <!-- Vista cargada dinámicamente -->
+                                <ContentControl Content="{Binding CurrentView}"
+                                                Visibility="{Binding CurrentView, Converter={StaticResource NotNullToVisibilityConverter}}"/>
+                                
+                                <!-- Placeholder para módulos no implementados -->
+                                <Border Background="#F0F0F0" Padding="20">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CurrentView}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="[!] MODULO EN CONSTRUCCION [!]" FontFamily="Courier New" FontSize="16" 
+                                                   FontWeight="Bold" Foreground="#808080" HorizontalAlignment="Center"/>
+                                        <TextBlock FontFamily="Courier New" FontSize="12" Foreground="#808080" 
+                                                   HorizontalAlignment="Center" Margin="0,10,0,0">
+                                            <Run Text="El módulo de '"/>
+                                            <Run Text="{Binding CurrentViewTitle}" FontWeight="Bold"/>
+                                            <Run Text="' estará disponible próximamente."/>
+                                        </TextBlock>
+                                        <TextBlock Text="Contacte al administrador del sistema." FontFamily="Courier New" 
+                                                   FontSize="10" Foreground="#808080" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Border>
+
+                <!-- ================================================== -->
+                <!-- 4. BARRA DE ESTADO INFERIOR -->
+                <!-- ================================================== -->
+                <Border Grid.Row="3" BorderThickness="0,1,0,0" BorderBrush="#808080" Background="#C0C0C0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Estado del sistema -->
+                        <Border Grid.Column="0" BorderThickness="1" BorderBrush="#808080" Margin="2" Padding="5,2">
+                            <Border BorderThickness="1" BorderBrush="#DFDFDF">
+                                <TextBlock Text="Sistema listo. Conexión establecida." FontFamily="Tahoma" FontSize="10" Margin="3,0"/>
+                            </Border>
+                        </Border>
+                        
+                        <!-- Alertas pendientes -->
+                        <Border Grid.Column="1" BorderThickness="1" BorderBrush="#808080" Margin="2" Padding="5,2" Width="120">
+                            <Border BorderThickness="1" BorderBrush="#DFDFDF">
+                                <StackPanel Orientation="Horizontal" Margin="3,0">
+                                    <TextBlock Text="Alertas: " FontFamily="Tahoma" FontSize="10"/>
+                                    <TextBlock Text="{Binding PendingAlerts}" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
+                                               Foreground="{Binding PendingAlerts, Converter={StaticResource IntToVisibilityConverter}, ConverterParameter=Red}"/>
+                                </StackPanel>
+                            </Border>
+                        </Border>
+                        
+                        <!-- Fecha y hora -->
+                        <Border Grid.Column="2" BorderThickness="1" BorderBrush="#808080" Margin="2" Padding="5,2" Width="280">
+                            <Border BorderThickness="1" BorderBrush="#DFDFDF">
+                                <TextBlock Text="{Binding CurrentDateTime}" FontFamily="Tahoma" FontSize="10" Margin="3,0"/>
+                            </Border>
+                        </Border>
+                        
+                        <!-- Versión -->
+                        <Border Grid.Column="3" BorderThickness="1" BorderBrush="#808080" Margin="2" Padding="5,2" Width="80">
+                            <Border BorderThickness="1" BorderBrush="#DFDFDF">
+                                <TextBlock Text="{Binding AppVersion}" FontFamily="Tahoma" FontSize="10" 
+                                           FontWeight="Bold" Foreground="#000080" Margin="3,0" HorizontalAlignment="Center"/>
+                            </Border>
+                        </Border>
+                        
+                        <!-- Indicador de redimensionamiento -->
+                        <Border Grid.Column="4" Width="16" Height="16" Margin="2">
+                            <TextBlock Text="o" FontFamily="Marlett" FontSize="10" 
+                                       Foreground="#808080" HorizontalAlignment="Right" VerticalAlignment="Bottom"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Border>
 </Window>

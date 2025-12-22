@@ -3,11 +3,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:SGRRHH.WPF.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900"
-             Background="#F5F5F5">
+             Background="#C0C0C0">
     
-    <Grid Margin="20">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -15,33 +24,41 @@
         </Grid.RowDefinitions>
         
         <!-- Encabezado -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,15">
-            <TextBlock Text="👤 Gestión de Usuarios" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
-            <Button Content="➕ Nuevo Usuario" 
-                    Command="{Binding NuevoUsuarioCommand}"
-                    Margin="20,0,0,0"
-                    Padding="15,8"
-                    Background="#4CAF50"
-                    Foreground="White"
-                    Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-        </StackPanel>
+        <Border Grid.Row="0" Background="#000080" Padding="8,6" Margin="0,0,0,8">
+            <Grid>
+                <TextBlock Text="GESTION DE USUARIOS" FontFamily="Tahoma" FontSize="12" 
+                           FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                <Button Content="Nuevo" 
+                        Command="{Binding NuevoUsuarioCommand}"
+                        Style="{StaticResource LegacyButtonStyle}"
+                        HorizontalAlignment="Right"
+                        FontFamily="Tahoma" FontSize="9" Padding="10,3"
+                        Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+            </Grid>
+        </Border>
         
         <!-- Panel de edición -->
         <Border Grid.Row="1" 
                 Background="White" 
-                BorderBrush="#E0E0E0" 
+                BorderBrush="#808080" 
                 BorderThickness="1"
-                CornerRadius="5"
-                Padding="20"
-                Margin="0,0,0,15"
+                Margin="0,0,0,8"
                 Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel>
-                <TextBlock Text="{Binding IsCreating, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Nuevo Usuario|Editar Usuario'}" 
-                           FontSize="18" FontWeight="Bold" Margin="0,0,0,15"/>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 
-                <Grid>
+                <Border Grid.Row="0" Background="#000080" Padding="6,4">
+                    <TextBlock Text="{Binding IsCreating, Converter={StaticResource BoolToTextConverter}, ConverterParameter='NUEVO USUARIO|EDITAR USUARIO'}" 
+                               FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="White"/>
+                </Border>
+                
+                <Grid Grid.Row="1" Margin="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="10"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -52,77 +69,93 @@
                     </Grid.RowDefinitions>
                     
                     <!-- Fila 1 -->
-                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
-                        <TextBlock Text="Nombre de Usuario *" Margin="0,0,0,5"/>
+                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
+                        <TextBlock Text="Nombre de Usuario *" FontFamily="Tahoma" FontSize="9" 
+                                   Foreground="#404040" Margin="0,0,0,3"/>
                         <TextBox Text="{Binding EditUsername, UpdateSourceTrigger=PropertyChanged}" 
-                                 Padding="8" FontSize="14"
+                                 Style="{StaticResource LegacyTextBoxStyle}"
+                                 FontFamily="Tahoma" FontSize="9" Height="22"
                                  IsEnabled="{Binding IsCreating}"/>
                     </StackPanel>
                     
-                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,10"
+                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,8"
                                 Visibility="{Binding IsCreating, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <TextBlock Text="Contraseña *" Margin="0,0,0,5"/>
-                        <PasswordBox x:Name="PasswordBox" Padding="8" FontSize="14"/>
+                        <TextBlock Text="Contrasena *" FontFamily="Tahoma" FontSize="9" 
+                                   Foreground="#404040" Margin="0,0,0,3"/>
+                        <PasswordBox x:Name="PasswordBox" 
+                                     Style="{StaticResource LegacyPasswordStyle}"
+                                     FontFamily="Tahoma" FontSize="9" Height="22"/>
                     </StackPanel>
                     
                     <!-- Fila 2 -->
-                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
-                        <TextBlock Text="Nombre Completo *" Margin="0,0,0,5"/>
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,8">
+                        <TextBlock Text="Nombre Completo *" FontFamily="Tahoma" FontSize="9" 
+                                   Foreground="#404040" Margin="0,0,0,3"/>
                         <TextBox Text="{Binding EditNombreCompleto, UpdateSourceTrigger=PropertyChanged}" 
-                                 Padding="8" FontSize="14"/>
+                                 Style="{StaticResource LegacyTextBoxStyle}"
+                                 FontFamily="Tahoma" FontSize="9" Height="22"/>
                     </StackPanel>
                     
-                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,10">
-                        <TextBlock Text="Correo Electrónico" Margin="0,0,0,5"/>
+                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,8">
+                        <TextBlock Text="Correo Electronico" FontFamily="Tahoma" FontSize="9" 
+                                   Foreground="#404040" Margin="0,0,0,3"/>
                         <TextBox Text="{Binding EditEmail, UpdateSourceTrigger=PropertyChanged}" 
-                                 Padding="8" FontSize="14"/>
+                                 Style="{StaticResource LegacyTextBoxStyle}"
+                                 FontFamily="Tahoma" FontSize="9" Height="22"/>
                     </StackPanel>
                     
                     <!-- Fila 3 -->
-                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,10,10">
-                        <TextBlock Text="Rol *" Margin="0,0,0,5"/>
+                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,0,8">
+                        <TextBlock Text="Rol *" FontFamily="Tahoma" FontSize="9" 
+                                   Foreground="#404040" Margin="0,0,0,3"/>
                         <ComboBox ItemsSource="{Binding Roles}" 
                                   SelectedItem="{Binding EditRol}"
-                                  Padding="8" FontSize="14">
+                                  FontFamily="Tahoma" FontSize="9" Height="22">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Converter={StaticResource EnumToStringConverter}}"/>
+                                    <TextBlock Text="{Binding Converter={StaticResource EnumToStringConverter}}" 
+                                               FontFamily="Tahoma" FontSize="9"/>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </StackPanel>
                     
-                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="10,0,0,10" 
+                    <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,8" 
                                 Visibility="{Binding IsCreating, Converter={StaticResource InverseBoolToVisibilityConverter}}">
-                        <TextBlock Text="Estado" Margin="0,0,0,5"/>
-                        <CheckBox Content="Activo" IsChecked="{Binding EditActivo}" VerticalAlignment="Center"/>
+                        <TextBlock Text="Estado" FontFamily="Tahoma" FontSize="9" 
+                                   Foreground="#404040" Margin="0,0,0,3"/>
+                        <CheckBox Content="Activo" IsChecked="{Binding EditActivo}" 
+                                  FontFamily="Tahoma" FontSize="9" VerticalAlignment="Center" Margin="0,4,0,0"/>
                     </StackPanel>
                     
                     <!-- Fila 4 - Botones -->
-                    <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" 
-                                Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                        <Button Content="Cancelar" 
-                                Command="{Binding CancelarEdicionCommand}"
-                                Padding="20,8" Margin="0,0,10,0"/>
-                        <Button Content="💾 Guardar" 
+                    <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" 
+                                Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+                        <controls:LegacyAsyncButton Content="Cancelar" 
+                                Command="{Binding CancelarEdicionCommand}" Margin="0,0,8,0"/>
+                        <controls:LegacyAsyncButton Content="Guardar" 
                                 Command="{Binding GuardarUsuarioCommand}"
-                                Padding="20,8"
-                                Background="#4CAF50"
-                                Foreground="White"/>
+                                IsLoading="{Binding IsLoading}"/>
                     </StackPanel>
                 </Grid>
-            </StackPanel>
+            </Grid>
         </Border>
         
         <!-- Lista de usuarios -->
-        <Border Grid.Row="2" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="5">
+        <Border Grid.Row="2" Background="White" BorderBrush="#808080" BorderThickness="1">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
-                <DataGrid Grid.Row="0"
+                <Border Grid.Row="0" Background="#000080" Padding="6,4">
+                    <TextBlock Text="LISTA DE USUARIOS" FontFamily="Tahoma" FontSize="9" 
+                               FontWeight="Bold" Foreground="White"/>
+                </Border>
+                
+                <DataGrid Grid.Row="1"
                           ItemsSource="{Binding Usuarios}"
                           SelectedItem="{Binding SelectedUsuario}"
                           AutoGenerateColumns="False"
@@ -130,23 +163,56 @@
                           SelectionMode="Single"
                           CanUserAddRows="False"
                           RowHeaderWidth="0"
-                          GridLinesVisibility="Horizontal"
-                          BorderThickness="0">
+                          GridLinesVisibility="All"
+                          BorderThickness="0"
+                          Background="White"
+                          RowBackground="White"
+                          AlternatingRowBackground="#E8E8E8"
+                          FontFamily="Tahoma" FontSize="9"
+                          ColumnHeaderHeight="22"
+                          RowHeight="20">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="#C0C0C0"/>
+                            <Setter Property="Foreground" Value="#000080"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="FontFamily" Value="Tahoma"/>
+                            <Setter Property="FontSize" Value="9"/>
+                            <Setter Property="Padding" Value="4,2"/>
+                            <Setter Property="BorderBrush" Value="#808080"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.CellStyle>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="Padding" Value="4,2"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                        </Style>
+                    </DataGrid.CellStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
-                        <DataGridTextColumn Header="Usuario" Binding="{Binding Username}" Width="120"/>
+                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="40"/>
+                        <DataGridTextColumn Header="Usuario" Binding="{Binding Username}" Width="100"/>
                         <DataGridTextColumn Header="Nombre Completo" Binding="{Binding NombreCompleto}" Width="*"/>
-                        <DataGridTextColumn Header="Rol" Binding="{Binding Rol}" Width="120"/>
-                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="180"/>
-                        <DataGridTextColumn Header="Último Acceso" Binding="{Binding UltimoAcceso, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Width="140"/>
-                        <DataGridTemplateColumn Header="Estado" Width="80">
+                        <DataGridTextColumn Header="Rol" Binding="{Binding Rol}" Width="100"/>
+                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="150"/>
+                        <DataGridTextColumn Header="Ult. Acceso" Binding="{Binding UltimoAcceso, StringFormat='{}{0:dd/MM/yy HH:mm}'}" Width="100"/>
+                        <DataGridTemplateColumn Header="Estado" Width="60">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Background="{Binding Activo, Converter={StaticResource BoolToColorConverter}}"
-                                            CornerRadius="3" Padding="5,2">
-                                        <TextBlock Text="{Binding Activo, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Activo|Inactivo'}"
-                                                   Foreground="White" FontSize="11" HorizontalAlignment="Center"/>
-                                    </Border>
+                                    <TextBlock HorizontalAlignment="Center" FontFamily="Courier New" FontWeight="Bold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="OK"/>
+                                                <Setter Property="Foreground" Value="#008000"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Activo}" Value="False">
+                                                        <Setter Property="Text" Value="[X]"/>
+                                                        <Setter Property="Foreground" Value="#CC0000"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
@@ -154,22 +220,21 @@
                 </DataGrid>
                 
                 <!-- Botones de acción -->
-                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
-                    <Button Content="✏️ Editar" 
-                            Command="{Binding EditarUsuarioCommand}"
-                            Padding="15,8" Margin="0,0,5,0"/>
-                    <Button Content="🔑 Restablecer Contraseña" 
-                            Command="{Binding ResetPasswordCommand}"
-                            Padding="15,8" Margin="0,0,5,0"/>
-                    <Button Content="{Binding SelectedUsuario.Activo, Converter={StaticResource BoolToTextConverter}, ConverterParameter='⏸️ Desactivar|▶️ Activar', FallbackValue='⏸️ Activar/Desactivar'}" 
-                            Command="{Binding ToggleActivoCommand}"
-                            Padding="15,8" Margin="0,0,5,0"/>
-                    <Button Content="🗑️ Eliminar" 
-                            Command="{Binding EliminarUsuarioCommand}"
-                            Padding="15,8"
-                            Background="#f44336"
-                            Foreground="White"/>
-                </StackPanel>
+                <Border Grid.Row="2" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="#808080" Padding="6">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <controls:LegacyAsyncButton Content="Editar" 
+                                Command="{Binding EditarUsuarioCommand}" Margin="0,0,5,0"/>
+                        <controls:LegacyAsyncButton Content="Reset Pass" 
+                                Command="{Binding ResetPasswordCommand}"
+                                IsLoading="{Binding IsLoading}" Margin="0,0,5,0"/>
+                        <controls:LegacyAsyncButton Content="{Binding SelectedUsuario.Activo, Converter={StaticResource BoolToTextConverter}, ConverterParameter='Desactivar|Activar', FallbackValue='On/Off'}" 
+                                Command="{Binding ToggleActivoCommand}"
+                                IsLoading="{Binding IsLoading}" Margin="0,0,5,0"/>
+                        <controls:LegacyAsyncButton Content="Eliminar" 
+                                Command="{Binding EliminarUsuarioCommand}"
+                                IsLoading="{Binding IsLoading}"/>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
         
@@ -177,9 +242,15 @@
         <Border Grid.RowSpan="3" 
                 Background="#80FFFFFF" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="Cargando..." FontSize="16"/>
-            </StackPanel>
+            <Border Background="White" BorderThickness="2" BorderBrush="#808080" 
+                    Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="[...]" FontFamily="Courier New" FontSize="20" FontWeight="Bold"
+                               Foreground="#000080" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Cargando..." FontFamily="Tahoma" FontSize="10" 
+                               Foreground="#808080" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Border>
         </Border>
     </Grid>
 </UserControl>

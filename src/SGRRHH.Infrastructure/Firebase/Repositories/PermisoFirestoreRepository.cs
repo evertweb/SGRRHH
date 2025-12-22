@@ -193,8 +193,14 @@ public class PermisoFirestoreRepository : FirestoreRepository<Permiso>, IPermiso
         return entity;
     }
     
+    /// <summary>
+    /// Convierte un DocumentSnapshot a Permiso.
+    /// Método público para uso con FirestoreListenerService.
+    /// </summary>
+    public Permiso ConvertFromSnapshot(DocumentSnapshot document) => DocumentToEntity(document);
+
     #endregion
-    
+
     #region IPermisoRepository Implementation
     
     /// <summary>

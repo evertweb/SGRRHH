@@ -6,6 +6,7 @@ using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
 using SGRRHH.Core.Models;
 using SGRRHH.Infrastructure.Services;
+using SGRRHH.WPF.Helpers;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -165,7 +166,7 @@ public partial class VacacionesViewModel : ViewModelBase
     {
         if (value != null)
         {
-            _ = LoadVacacionesEmpleadoAsync();
+            LoadVacacionesEmpleadoAsync().SafeFireAndForget(showErrorMessage: false);
         }
         else
         {

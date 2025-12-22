@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 
 namespace SGRRHH.WPF.Converters;
@@ -26,6 +27,6 @@ public class CollectionContainsConverter : IMultiValueConverter
 
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return new object[] { DependencyProperty.UnsetValue };
     }
 }

@@ -364,7 +364,7 @@ public partial class ControlDiarioViewModel : ViewModelBase
     {
         if (value != null && Empleados.Count > 0)
         {
-            _ = RefreshAsync();
+            RefreshAsync().SafeFireAndForget(showErrorMessage: false);
         }
     }
     
@@ -372,7 +372,7 @@ public partial class ControlDiarioViewModel : ViewModelBase
     {
         if (value != null && Empleados.Count > 0)
         {
-            _ = RefreshAsync();
+            RefreshAsync().SafeFireAndForget(showErrorMessage: false);
         }
     }
     
@@ -380,7 +380,7 @@ public partial class ControlDiarioViewModel : ViewModelBase
     {
         if (value > 0 && Empleados.Count > 0)
         {
-            _ = RefreshAsync();
+            RefreshAsync().SafeFireAndForget(showErrorMessage: false);
         }
     }
     

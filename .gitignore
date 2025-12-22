@@ -35,6 +35,18 @@ serviceAccountKey.json
 # Windows device files
 nul
 
+# Build logs (archivos temporales de desarrollo)
+build_error.log
+build_errors.txt
+build_log.txt
+build_output.txt
+error.txt
+run_error.txt
+errors.txt
+
+# Application logs
+**/data/logs/
+
 # Installer output and build artifacts
 installer/output/
 *.zip

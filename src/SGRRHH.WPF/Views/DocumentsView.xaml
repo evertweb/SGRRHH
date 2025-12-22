@@ -8,159 +8,238 @@
              xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
              mc:Ignorable="d"
              d:DesignWidth="1100" d:DesignHeight="700"
-             Background="{DynamicResource SurfaceBrush}">
+             Background="#C0C0C0">
     <UserControl.Resources>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
-        <converters:NotNullToVisibilityConverter x:Key="NotNullToVisibilityConverter" />
-        <converters:IsNullOrEmptyToVisibilityConverter x:Key="IsNullOrEmptyToVisibilityConverter" />
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+            <converters:NotNullToVisibilityConverter x:Key="NotNullToVisibilityConverter" />
+            <converters:IsNullOrEmptyToVisibilityConverter x:Key="IsNullOrEmptyToVisibilityConverter" />
+        </ResourceDictionary>
     </UserControl.Resources>
-    <Grid>
+    
+    <Grid Margin="5">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="380" />
-            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="350" />
+            <ColumnDefinition Width="5" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <!-- Config Panel -->
-        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="20">
-                <TextBlock Text="Documentos PDF" FontSize="24" FontWeight="Bold" Margin="0,0,0,15"/>
-                <TextBlock Text="Genera actas, certificados y constancias con los datos registrados en SGRRHH." Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,15"/>
-
-                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
-                    <StackPanel>
-                        <TextBlock Text="Plantilla" FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding Templates}"
-                                  SelectedItem="{Binding SelectedTemplate}"
-                                  DisplayMemberPath="Nombre" Margin="0,8,0,0" />
-                        <TextBlock Text="{Binding SelectedTemplate.Descripcion}"
-                                   Margin="0,5,0,0" Foreground="{DynamicResource TextMutedBrush}" FontSize="12" />
-                    </StackPanel>
+        <Border Grid.Column="0" BorderThickness="1" BorderBrush="#808080" Background="White">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <Border Grid.Row="0" Background="#000080" Padding="10,5">
+                    <TextBlock Text="[DOC] GENERADOR DE DOCUMENTOS" FontFamily="Courier New" FontSize="11" 
+                               FontWeight="Bold" Foreground="White"/>
                 </Border>
-
-                <!-- Permiso Selector -->
-                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedTemplate.Tipo}" Value="{x:Static enums:TipoDocumentoPdf.ActaPermiso}">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
+                
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10">
                     <StackPanel>
-                        <TextBlock Text="Permiso" FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding Permisos}"
-                                  SelectedItem="{Binding SelectedPermiso}"
-                                  DisplayMemberPath="NumeroActa" Margin="0,8,0,0" />
-                        <TextBlock Text="Selecciona la solicitud aprobada para emitir el acta." FontSize="12" Foreground="{DynamicResource TextMutedBrush}" />
+                        <TextBlock Text="Genera actas, certificados y constancias con los datos registrados en SGRRHH." 
+                                   FontFamily="Tahoma" FontSize="9" Foreground="#606060" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <!-- Plantilla -->
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="[1] PLANTILLA:" FontFamily="Courier New" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <ComboBox ItemsSource="{Binding Templates}"
+                                          SelectedItem="{Binding SelectedTemplate}"
+                                          DisplayMemberPath="Nombre" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                <TextBlock Text="{Binding SelectedTemplate.Descripcion}"
+                                           Margin="0,5,0,0" FontFamily="Tahoma" FontSize="8" Foreground="#808080" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Permiso Selector -->
+                        <Border Background="#FFFFCC" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,0,0,8">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTemplate.Tipo}" Value="{x:Static enums:TipoDocumentoPdf.ActaPermiso}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock Text="[PERM] PERMISO:" FontFamily="Courier New" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <ComboBox ItemsSource="{Binding Permisos}"
+                                          SelectedItem="{Binding SelectedPermiso}"
+                                          DisplayMemberPath="NumeroActa" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                <TextBlock Text="Selecciona la solicitud aprobada para emitir el acta." 
+                                           FontFamily="Tahoma" FontSize="8" Foreground="#808080" Margin="0,3,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Empleado Selector -->
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,0,0,8">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTemplate.RequiresEmpleado}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock Text="[EMP] EMPLEADO:" FontFamily="Courier New" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <ComboBox ItemsSource="{Binding Empleados}"
+                                          SelectedItem="{Binding SelectedEmpleado}"
+                                          DisplayMemberPath="NombreCompleto" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                <TextBlock Text="El colaborador aparecera automaticamente si eliges un permiso." 
+                                           FontFamily="Tahoma" FontSize="8" Foreground="#808080" Margin="0,3,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Opciones Certificado -->
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,0,0,8">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTemplate.Tipo}" Value="{x:Static enums:TipoDocumentoPdf.CertificadoLaboral}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock Text="[CERT] OPCIONES CERTIFICADO:" FontFamily="Courier New" FontSize="9" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <TextBlock Text="Ciudad:" FontFamily="Tahoma" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding CertificadoOptions.CiudadExpedicion, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="20" Margin="0,0,0,5"/>
+                                <TextBlock Text="Responsable:" FontFamily="Tahoma" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding CertificadoOptions.ResponsableNombre, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="20" Margin="0,0,0,5"/>
+                                <TextBlock Text="Cargo:" FontFamily="Tahoma" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding CertificadoOptions.ResponsableCargo, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="20" Margin="0,0,0,5"/>
+                                <TextBlock Text="Parrafo adicional:" FontFamily="Tahoma" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding CertificadoOptions.ParrafoAdicional, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" AcceptsReturn="True" Height="50" 
+                                         FontFamily="Tahoma" FontSize="9" VerticalContentAlignment="Top" Padding="3"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Opciones Constancia -->
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,0,0,8">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedTemplate.Tipo}" Value="{x:Static enums:TipoDocumentoPdf.ConstanciaTrabajo}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock Text="[CONST] OPCIONES CONSTANCIA:" FontFamily="Courier New" FontSize="9" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <TextBlock Text="Ciudad:" FontFamily="Tahoma" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding ConstanciaOptions.CiudadExpedicion, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="20" Margin="0,0,0,5"/>
+                                <TextBlock Text="Motivo:" FontFamily="Tahoma" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding ConstanciaOptions.Motivo, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="20" Margin="0,0,0,5"/>
+                                <TextBlock Text="Responsable:" FontFamily="Tahoma" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding ConstanciaOptions.ResponsableNombre, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="20" Margin="0,0,0,5"/>
+                                <TextBlock Text="Cargo:" FontFamily="Tahoma" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding ConstanciaOptions.ResponsableCargo, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" FontFamily="Tahoma" FontSize="9" Height="20" Margin="0,0,0,5"/>
+                                <TextBlock Text="Notas:" FontFamily="Tahoma" FontSize="9" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding ConstanciaOptions.NotasAdicionales, UpdateSourceTrigger=PropertyChanged}" 
+                                         Style="{StaticResource LegacyTextBoxStyle}" AcceptsReturn="True" Height="50" 
+                                         FontFamily="Tahoma" FontSize="9" VerticalContentAlignment="Top" Padding="3"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Botones principales -->
+                        <Border Background="#C0C0C0" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="[ACCIONES]" FontFamily="Courier New" FontSize="9" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="Generar" Command="{Binding GenerateDocumentCommand}"
+                                            Style="{StaticResource LegacyButtonStyle}" FontFamily="Tahoma" FontSize="10" 
+                                            FontWeight="Bold" Padding="10,5" Margin="0,0,3,0"/>
+                                    <Button Grid.Column="1" Content="Descargar" Command="{Binding DownloadDocumentCommand}" 
+                                            Style="{StaticResource LegacyButtonStyle}" FontFamily="Tahoma" FontSize="10" 
+                                            Padding="10,5" Margin="3,0,0,0"/>
+                                </Grid>
+                                <Grid Margin="0,5,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="Abrir" Command="{Binding OpenPreviewExternallyCommand}" 
+                                            Style="{StaticResource LegacyButtonStyle}" FontFamily="Tahoma" FontSize="10" 
+                                            Padding="10,5" Margin="0,0,3,0"/>
+                                    <Button Grid.Column="1" Content="Imprimir" Command="{Binding PrintDocumentCommand}" 
+                                            Style="{StaticResource LegacyButtonStyle}" FontFamily="Tahoma" FontSize="10" 
+                                            Padding="10,5" Margin="3,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="{Binding StatusMessage}" FontFamily="Tahoma" FontSize="9" 
+                                   Foreground="#606060" TextWrapping="Wrap" Margin="0,5,0,0"/>
                     </StackPanel>
-                </Border>
+                </ScrollViewer>
+            </Grid>
+        </Border>
 
-                <!-- Empleado Selector -->
-                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedTemplate.RequiresEmpleado}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <StackPanel>
-                        <TextBlock Text="Empleado" FontWeight="SemiBold" />
-                        <ComboBox ItemsSource="{Binding Empleados}"
-                                  SelectedItem="{Binding SelectedEmpleado}"
-                                  DisplayMemberPath="NombreCompleto" Margin="0,8,0,0" />
-                        <TextBlock Text="El colaborador aparecerá automáticamente si eliges un permiso." FontSize="12" Foreground="{DynamicResource TextMutedBrush}" />
-                    </StackPanel>
-                </Border>
-
-                <!-- Opciones Certificado -->
-                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedTemplate.Tipo}" Value="{x:Static enums:TipoDocumentoPdf.CertificadoLaboral}">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <StackPanel>
-                        <TextBlock Text="Opciones Certificado" FontWeight="SemiBold" />
-                        <TextBlock Text="Ciudad" />
-                        <TextBox Text="{Binding CertificadoOptions.CiudadExpedicion, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Text="Responsable" />
-                        <TextBox Text="{Binding CertificadoOptions.ResponsableNombre, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Text="Cargo" />
-                        <TextBox Text="{Binding CertificadoOptions.ResponsableCargo, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Text="Párrafo adicional" />
-                        <TextBox Text="{Binding CertificadoOptions.ParrafoAdicional, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" />
-                    </StackPanel>
-                </Border>
-
-                <!-- Opciones Constancia -->
-                <Border Background="{DynamicResource BorderLightBrush}" CornerRadius="8" Padding="12">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedTemplate.Tipo}" Value="{x:Static enums:TipoDocumentoPdf.ConstanciaTrabajo}">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <StackPanel>
-                        <TextBlock Text="Opciones Constancia" FontWeight="SemiBold" />
-                        <TextBlock Text="Ciudad" />
-                        <TextBox Text="{Binding ConstanciaOptions.CiudadExpedicion, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Text="Motivo" />
-                        <TextBox Text="{Binding ConstanciaOptions.Motivo, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Text="Responsable" />
-                        <TextBox Text="{Binding ConstanciaOptions.ResponsableNombre, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Text="Cargo" />
-                        <TextBox Text="{Binding ConstanciaOptions.ResponsableCargo, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBlock Text="Notas" />
-                        <TextBox Text="{Binding ConstanciaOptions.NotasAdicionales, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" Height="60" />
-                    </StackPanel>
-                </Border>
-
-                <StackPanel Orientation="Horizontal">
-                    <Button Content="Generar" Command="{Binding GenerateDocumentCommand}"
-                            Style="{DynamicResource PrimaryButton}" Margin="0,0,10,0"/>
-                    <Button Content="Descargar" Command="{Binding DownloadDocumentCommand}" Style="{DynamicResource SecondaryButton}" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <Button Content="Abrir" Command="{Binding OpenPreviewExternallyCommand}" Style="{DynamicResource SecondaryButton}" Margin="0,0,10,0"/>
-                    <Button Content="Imprimir" Command="{Binding PrintDocumentCommand}" Style="{DynamicResource SecondaryButton}" />
-                </StackPanel>
-
-                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" />
-            </StackPanel>
-        </ScrollViewer>
+        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#808080"/>
 
         <!-- Preview Panel -->
-        <Border Grid.Column="2" Margin="0,20,20,20" Background="{DynamicResource BackgroundBrush}" CornerRadius="10" Padding="10">
+        <Border Grid.Column="2" BorderThickness="1" BorderBrush="#808080" Background="White">
             <Grid>
-                <wv2:WebView2 x:Name="PreviewWebView" DefaultBackgroundColor="#FFFFFFFF" />
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <Border Grid.Row="0" Background="#000080" Padding="10,5">
+                    <TextBlock Text="[PREVIEW] VISTA PREVIA DEL DOCUMENTO" FontFamily="Courier New" FontSize="11" 
+                               FontWeight="Bold" Foreground="White"/>
+                </Border>
+                
+                <Grid Grid.Row="1">
+                    <wv2:WebView2 x:Name="PreviewWebView" DefaultBackgroundColor="#FFFFFFFF" />
 
-                <TextBlock Text="Genera un documento para previsualizarlo aquí"
-                           FontSize="18" Foreground="{DynamicResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Visibility="{Binding PreviewFilePath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}" />
-
-                <Grid Background="#CCFFFFFF" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <ProgressBar IsIndeterminate="True" Width="220" />
-                        <TextBlock Text="Procesando..." FontWeight="SemiBold" />
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Visibility="{Binding PreviewFilePath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}">
+                        <TextBlock Text="[?]" FontFamily="Courier New" FontSize="48" Foreground="#808080" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Genera un documento" FontFamily="Tahoma" FontSize="12" 
+                                   Foreground="#808080" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                        <TextBlock Text="para previsualizarlo aqui" FontFamily="Tahoma" FontSize="12" 
+                                   Foreground="#808080" HorizontalAlignment="Center"/>
                     </StackPanel>
+
+                    <Border Background="#80000000" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Border Background="#C0C0C0" BorderThickness="2" BorderBrush="#808080" Padding="20"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <StackPanel>
+                                <TextBlock Text="[...] Procesando" FontFamily="Courier New" FontSize="12" FontWeight="Bold"
+                                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                <ProgressBar IsIndeterminate="True" Width="150" Height="16"/>
+                            </StackPanel>
+                        </Border>
+                    </Border>
                 </Grid>
             </Grid>
         </Border>

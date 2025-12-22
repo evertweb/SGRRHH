@@ -5,37 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Documentos del Empleado" 
-        Height="700" Width="1000"
+        Height="650" Width="950"
         MinHeight="550" MinWidth="800"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource BackgroundBrush}">
+        Background="#C0C0C0">
     
     <Window.Resources>
-        <!-- Estilos locales no duplicados -->
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="Margin" Value="5"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.1"/>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-        </Style>
-        
-        <Style x:Key="LabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
-            <Setter Property="Margin" Value="0,5,0,2"/>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Window.Resources>
     
     <Grid>
@@ -45,53 +25,61 @@
         </Grid.RowDefinitions>
         
         <!-- Encabezado -->
-        <Border Grid.Row="0" Background="{DynamicResource SidebarBackgroundBrush}" Padding="20">
+        <Border Grid.Row="0" Background="#000080" Padding="10">
             <Grid>
                 <StackPanel>
-                    <TextBlock Text="📁 Documentos del Empleado" FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextInverseBrush}"/>
-                    <TextBlock Text="{Binding Empleado.NombreCompleto}" FontSize="14" Foreground="{DynamicResource SidebarTextMutedBrush}" Margin="0,5,0,0"/>
+                    <TextBlock Text="DOCUMENTOS DEL EMPLEADO" FontFamily="Tahoma" FontSize="14" 
+                               FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="{Binding Empleado.NombreCompleto}" FontFamily="Tahoma" FontSize="10" 
+                               Foreground="#C0C0FF" Margin="0,3,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding ProgresoChecklist}" Foreground="{DynamicResource TextInverseBrush}" VerticalAlignment="Center" Margin="0,0,15,0"/>
-                    <Button Content="➕ Nuevo Documento" 
+                    <TextBlock Text="{Binding ProgresoChecklist}" FontFamily="Courier New" FontSize="10"
+                               Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <Button Content="Nuevo" 
                             Command="{Binding NuevoDocumentoCommand}"
-                            Style="{DynamicResource SuccessButton}"
+                            Style="{StaticResource LegacyButtonStyle}"
+                            FontFamily="Tahoma" FontSize="9" Padding="8,3"
                             Visibility="{Binding PuedeGestionar, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 </StackPanel>
             </Grid>
         </Border>
         
         <!-- Contenido principal -->
-        <Grid Grid.Row="1" Margin="10">
+        <Grid Grid.Row="1" Margin="8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="260"/>
+                <ColumnDefinition Width="8"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             
             <!-- Panel izquierdo - Checklist -->
-            <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+            <Border Grid.Column="0" BorderThickness="1" BorderBrush="#808080" Background="White">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     
-                    <TextBlock Grid.Row="0" Text="📋 Checklist de Documentos" Style="{StaticResource HeaderTextStyle}"/>
+                    <Border Grid.Row="0" Background="#000080" Padding="6,4">
+                        <TextBlock Text="CHECKLIST DE DOCUMENTOS" FontFamily="Tahoma" FontSize="9" 
+                                   FontWeight="Bold" Foreground="White"/>
+                    </Border>
                     
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="5">
                         <ItemsControl ItemsSource="{Binding Checklist}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Margin="0,0,0,8" Padding="10" CornerRadius="4">
+                                    <Border Margin="0,0,0,4" Padding="6" BorderThickness="1" BorderBrush="#808080">
                                         <Border.Style>
                                             <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#F8F9FA"/>
+                                                <Setter Property="Background" Value="#E0E0E0"/>
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding TieneDocumento}" Value="True">
-                                                        <Setter Property="Background" Value="#E8F5E9"/>
+                                                        <Setter Property="Background" Value="#C0E0C0"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding EstaVencido}" Value="True">
-                                                        <Setter Property="Background" Value="#FFEBEE"/>
+                                                        <Setter Property="Background" Value="#E0C0C0"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -103,17 +91,22 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             
-                                            <!-- Icono de estado -->
-                                            <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="16" Margin="0,0,10,0">
+                                            <!-- Icono de estado ASCII -->
+                                            <TextBlock Grid.Column="0" VerticalAlignment="Center" 
+                                                       FontFamily="Courier New" FontSize="12" FontWeight="Bold"
+                                                       Margin="0,0,6,0">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="⬜"/>
+                                                        <Setter Property="Text" Value="[ ]"/>
+                                                        <Setter Property="Foreground" Value="#808080"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding TieneDocumento}" Value="True">
-                                                                <Setter Property="Text" Value="✅"/>
+                                                                <Setter Property="Text" Value="[X]"/>
+                                                                <Setter Property="Foreground" Value="#008000"/>
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding EstaVencido}" Value="True">
-                                                                <Setter Property="Text" Value="⚠️"/>
+                                                                <Setter Property="Text" Value="[!]"/>
+                                                                <Setter Property="Foreground" Value="#CC0000"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -122,19 +115,21 @@
                                             
                                             <!-- Nombre del tipo -->
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding NombreTipo}" FontWeight="Medium" TextWrapping="Wrap"/>
-                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}">
+                                                <TextBlock Text="{Binding NombreTipo}" FontFamily="Tahoma" FontSize="9" 
+                                                           FontWeight="Bold" TextWrapping="Wrap"/>
+                                                <TextBlock FontFamily="Tahoma" FontSize="8">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Text" Value="Opcional"/>
+                                                            <Setter Property="Foreground" Value="#808080"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding EsRequerido}" Value="True">
-                                                                    <Setter Property="Text" Value="Requerido"/>
-                                                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                                                    <Setter Property="Text" Value="* Requerido"/>
+                                                                    <Setter Property="Foreground" Value="#CC0000"/>
                                                                 </DataTrigger>
                                                                 <DataTrigger Binding="{Binding EstaVencido}" Value="True">
-                                                                    <Setter Property="Text" Value="⚠️ Vencido"/>
-                                                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
+                                                                    <Setter Property="Text" Value="[!] VENCIDO"/>
+                                                                    <Setter Property="Foreground" Value="#CC0000"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -146,12 +141,11 @@
                                             <Button Grid.Column="2" Content="+" 
                                                     Command="{Binding DataContext.NuevoDocumentoTipoCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding Tipo}"
-                                                    Width="28" Height="28"
-                                                    Background="{DynamicResource PrimaryBrush}" Foreground="{DynamicResource TextInverseBrush}"
-                                                    BorderThickness="0" Cursor="Hand"
+                                                    Width="22" Height="22"
+                                                    FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
                                                     Visibility="{Binding DataContext.PuedeGestionar, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
                                                 <Button.Style>
-                                                    <Style TargetType="Button">
+                                                    <Style TargetType="Button" BasedOn="{StaticResource LegacyButtonStyle}">
                                                         <Setter Property="Visibility" Value="Visible"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding TieneDocumento}" Value="True">
@@ -171,14 +165,14 @@
             </Border>
             
             <!-- Panel derecho - Lista de documentos y formulario -->
-            <Grid Grid.Column="1" Margin="5,0,0,0">
+            <Grid Grid.Column="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
                 <!-- Lista de documentos -->
-                <Border Grid.Row="0" Style="{StaticResource CardStyle}">
+                <Border Grid.Row="0" BorderThickness="1" BorderBrush="#808080" Background="White">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -186,17 +180,22 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
-                        <TextBlock Grid.Row="0" Text="📄 Documentos Subidos" Style="{StaticResource HeaderTextStyle}"/>
+                        <Border Grid.Row="0" Background="#000080" Padding="6,4">
+                            <TextBlock Text="DOCUMENTOS SUBIDOS" FontFamily="Tahoma" FontSize="9" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
                         
                         <!-- Mensaje cuando no hay documentos -->
-                        <Border Grid.Row="1" Padding="20" Visibility="{Binding Documentos.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+                        <Border Grid.Row="1" Padding="20" 
+                                Visibility="{Binding Documentos.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="📂" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
-                                <TextBlock Text="No hay documentos subidos" FontSize="16" HorizontalAlignment="Center" 
-                                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,10,0,5"/>
-                                <TextBlock Text="Use el checklist de la izquierda o el botón 'Nuevo Documento' para agregar documentos" 
-                                           FontSize="12" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
-                                           Foreground="{DynamicResource TextMutedBrush}" MaxWidth="350"/>
+                                <TextBlock Text="[VACIO]" FontFamily="Courier New" FontSize="16" FontWeight="Bold"
+                                           HorizontalAlignment="Center" Foreground="#808080"/>
+                                <TextBlock Text="No hay documentos subidos" FontFamily="Tahoma" FontSize="10" 
+                                           HorizontalAlignment="Center" Foreground="#808080" Margin="0,8,0,4"/>
+                                <TextBlock Text="Use el checklist o el boton [+ Nuevo]" 
+                                           FontFamily="Tahoma" FontSize="9" HorizontalAlignment="Center" 
+                                           TextWrapping="Wrap" TextAlignment="Center" Foreground="#808080"/>
                             </StackPanel>
                         </Border>
                         
@@ -206,32 +205,55 @@
                                   AutoGenerateColumns="False"
                                   IsReadOnly="True"
                                   SelectionMode="Single"
-                                  GridLinesVisibility="Horizontal"
+                                  GridLinesVisibility="All"
                                   HeadersVisibility="Column"
                                   BorderThickness="0"
-                                  Background="Transparent"
+                                  Background="White"
                                   RowBackground="White"
-                                  AlternatingRowBackground="#F8F9FA"
+                                  AlternatingRowBackground="#E8E8E8"
+                                  FontFamily="Tahoma" FontSize="9"
+                                  ColumnHeaderHeight="22"
+                                  RowHeight="20"
                                   Visibility="{Binding Documentos.Count, Converter={StaticResource IntToVisibilityConverter}}">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="#C0C0C0"/>
+                                    <Setter Property="Foreground" Value="#000080"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="FontFamily" Value="Tahoma"/>
+                                    <Setter Property="FontSize" Value="9"/>
+                                    <Setter Property="Padding" Value="4,2"/>
+                                    <Setter Property="BorderBrush" Value="#808080"/>
+                                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.CellStyle>
+                                <Style TargetType="DataGridCell">
+                                    <Setter Property="Padding" Value="4,2"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                </Style>
+                            </DataGrid.CellStyle>
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Tipo" Width="150">
+                                <DataGridTextColumn Header="Tipo" Width="130">
                                     <DataGridTextColumn.Binding>
                                         <Binding Path="TipoDocumento"/>
                                     </DataGridTextColumn.Binding>
                                 </DataGridTextColumn>
                                 <DataGridTextColumn Header="Nombre" Binding="{Binding Nombre}" Width="*"/>
-                                <DataGridTextColumn Header="Fecha Subida" Binding="{Binding FechaCreacion, StringFormat=dd/MM/yyyy}" Width="100"/>
-                                <DataGridTextColumn Header="Vencimiento" Binding="{Binding FechaVencimiento, StringFormat=dd/MM/yyyy}" Width="100"/>
-                                <DataGridTemplateColumn Header="Estado" Width="80">
+                                <DataGridTextColumn Header="Fecha" Binding="{Binding FechaCreacion, StringFormat=dd/MM/yyyy}" Width="75"/>
+                                <DataGridTextColumn Header="Vencimiento" Binding="{Binding FechaVencimiento, StringFormat=dd/MM/yyyy}" Width="80"/>
+                                <DataGridTemplateColumn Header="Estado" Width="50">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock HorizontalAlignment="Center">
+                                            <TextBlock HorizontalAlignment="Center" FontFamily="Courier New" FontWeight="Bold">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="✅"/>
+                                                        <Setter Property="Text" Value="OK"/>
+                                                        <Setter Property="Foreground" Value="#008000"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding EstaVigente}" Value="False">
-                                                                <Setter Property="Text" Value="⚠️"/>
+                                                                <Setter Property="Text" Value="[!]"/>
+                                                                <Setter Property="Foreground" Value="#CC0000"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -244,35 +266,50 @@
                         </DataGrid>
                         
                         <!-- Botones de acción -->
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                            <Button Content="👁️ Ver" 
-                                    Command="{Binding VerDocumentoCommand}"
-                                    Style="{DynamicResource PrimaryButton}"
-                                    Margin="0,0,5,0"/>
-                            <Button Content="✏️ Editar" 
-                                    Command="{Binding EditarDocumentoCommand}"
-                                    Style="{DynamicResource SecondaryButton}"
-                                    Margin="0,0,5,0"
-                                    Visibility="{Binding PuedeGestionar, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                            <Button Content="🗑️ Eliminar" 
-                                    Command="{Binding EliminarDocumentoCommand}"
-                                    Style="{DynamicResource DangerButton}"
-                                    Visibility="{Binding PuedeEliminar, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                        </StackPanel>
+                        <Border Grid.Row="2" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="#808080" Padding="6">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="Ver" 
+                                        Command="{Binding VerDocumentoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Width="60" Padding="0,3"
+                                        Margin="0,0,5,0"/>
+                                <Button Content="Editar" 
+                                        Command="{Binding EditarDocumentoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Width="60" Padding="0,3"
+                                        Margin="0,0,5,0"
+                                        Visibility="{Binding PuedeGestionar, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                <Button Content="Eliminar" 
+                                        Command="{Binding EliminarDocumentoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Width="60" Padding="0,3"
+                                        Visibility="{Binding PuedeEliminar, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </Border>
                     </Grid>
                 </Border>
                 
                 <!-- Formulario de documento -->
-                <Border Grid.Row="1" Style="{StaticResource CardStyle}" 
+                <Border Grid.Row="1" BorderThickness="1" BorderBrush="#808080" Background="White"
                         Visibility="{Binding IsFormVisible, Converter={StaticResource BoolToVisibilityConverter}}"
-                        Margin="5,10,5,5">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource HeaderTextStyle}" Text="{Binding FormTitle}"/>
+                        Margin="0,8,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         
-                        <Grid Margin="0,10,0,0">
+                        <Border Grid.Row="0" Background="#000080" Padding="6,4">
+                            <TextBlock Text="{Binding FormTitle}" FontFamily="Tahoma" FontSize="9" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
+                        
+                        <Grid Grid.Row="1" Margin="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
@@ -283,88 +320,104 @@
                             </Grid.RowDefinitions>
                             
                             <!-- Tipo de documento -->
-                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,10">
-                                <TextBlock Text="Tipo de Documento *" Style="{StaticResource LabelStyle}"/>
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
+                                <TextBlock Text="Tipo de Documento *" FontFamily="Tahoma" FontSize="9" 
+                                           Foreground="#404040" Margin="0,0,0,3"/>
                                 <ComboBox ItemsSource="{Binding TiposDocumento}"
                                           SelectedValue="{Binding FormTipoDocumento}"
                                           SelectedValuePath="Tipo"
                                           DisplayMemberPath="Nombre"
-                                          Padding="8" Margin="0,5,0,0"/>
+                                          FontFamily="Tahoma" FontSize="9" Height="22"/>
                             </StackPanel>
                             
                             <!-- Nombre -->
-                            <StackPanel Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,10">
-                                <TextBlock Text="Nombre del Documento *" Style="{StaticResource LabelStyle}"/>
+                            <StackPanel Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="3" Margin="0,0,0,8">
+                                <TextBlock Text="Nombre del Documento *" FontFamily="Tahoma" FontSize="9" 
+                                           Foreground="#404040" Margin="0,0,0,3"/>
                                 <TextBox Text="{Binding FormNombre, UpdateSourceTrigger=PropertyChanged}"
-                                         Padding="8" Margin="0,5,0,0"/>
+                                         Style="{StaticResource LegacyTextBoxStyle}"
+                                         FontFamily="Tahoma" FontSize="9" Height="22"/>
                             </StackPanel>
                             
                             <!-- Fecha Emisión -->
-                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,10">
-                                <TextBlock Text="Fecha de Emisión" Style="{StaticResource LabelStyle}"/>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,8">
+                                <TextBlock Text="Fecha de Emision" FontFamily="Tahoma" FontSize="9" 
+                                           Foreground="#404040" Margin="0,0,0,3"/>
                                 <DatePicker SelectedDate="{Binding FormFechaEmision}"
-                                            Padding="8" Margin="0,5,0,0"/>
+                                            FontFamily="Tahoma" FontSize="9" Height="22"/>
                             </StackPanel>
                             
                             <!-- Fecha Vencimiento -->
-                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,10,10">
-                                <TextBlock Text="Fecha de Vencimiento" Style="{StaticResource LabelStyle}"/>
+                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,8">
+                                <TextBlock Text="Fecha de Vencimiento" FontFamily="Tahoma" FontSize="9" 
+                                           Foreground="#404040" Margin="0,0,0,3"/>
                                 <DatePicker SelectedDate="{Binding FormFechaVencimiento}"
-                                            Padding="8" Margin="0,5,0,0"/>
+                                            FontFamily="Tahoma" FontSize="9" Height="22"/>
                             </StackPanel>
                             
                             <!-- Archivo -->
-                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,10"
+                            <StackPanel Grid.Row="1" Grid.Column="4" Margin="0,0,0,8"
                                         Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibilityConverter}}">
-                                <TextBlock Text="Archivo *" Style="{StaticResource LabelStyle}"/>
-                                <Grid Margin="0,5,0,0">
+                                <TextBlock Text="Archivo *" FontFamily="Tahoma" FontSize="9" 
+                                           Foreground="#404040" Margin="0,0,0,3"/>
+                                <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBox Grid.Column="0" Text="{Binding FormArchivoNombreOriginal, Mode=OneWay}" 
-                                             IsReadOnly="True" Padding="8" Background="{DynamicResource BorderLightBrush}"/>
-                                    <Button Grid.Column="1" Content="📁" 
+                                             IsReadOnly="True" Style="{StaticResource LegacyTextBoxStyle}"
+                                             Background="#E0E0E0" FontFamily="Tahoma" FontSize="9" Height="22"/>
+                                    <Button Grid.Column="1" Content="..." 
                                             Command="{Binding SeleccionarArchivoCommand}"
-                                            Padding="8,6" Margin="5,0,0,0"
-                                            Background="{DynamicResource PrimaryBrush}" Foreground="{DynamicResource TextInverseBrush}"
-                                            BorderThickness="0" Cursor="Hand"/>
+                                            Style="{StaticResource LegacyButtonStyle}"
+                                            Width="25" Height="22" Margin="3,0,0,0"
+                                            FontFamily="Tahoma" FontSize="9" FontWeight="Bold"/>
                                 </Grid>
                             </StackPanel>
                             
                             <!-- Descripción -->
-                            <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,0,0,10">
-                                <TextBlock Text="Descripción / Notas" Style="{StaticResource LabelStyle}"/>
+                            <StackPanel Grid.Row="2" Grid.ColumnSpan="5" Margin="0,0,0,8">
+                                <TextBlock Text="Descripcion / Notas" FontFamily="Tahoma" FontSize="9" 
+                                           Foreground="#404040" Margin="0,0,0,3"/>
                                 <TextBox Text="{Binding FormDescripcion, UpdateSourceTrigger=PropertyChanged}"
-                                         Padding="8" Margin="0,5,0,0" Height="60"
+                                         Style="{StaticResource LegacyTextBoxStyle}"
+                                         FontFamily="Tahoma" FontSize="9" Height="50"
                                          TextWrapping="Wrap" AcceptsReturn="True"
                                          VerticalScrollBarVisibility="Auto"/>
                             </StackPanel>
                             
                             <!-- Botones -->
-                            <StackPanel Grid.Row="3" Grid.ColumnSpan="3" 
+                            <StackPanel Grid.Row="3" Grid.ColumnSpan="5" 
                                         Orientation="Horizontal" HorizontalAlignment="Right">
                                 <Button Content="Cancelar" 
                                         Command="{Binding CancelarFormularioCommand}"
-                                        Style="{DynamicResource SecondaryButton}"
-                                        Margin="0,0,10,0"/>
-                                <Button Content="💾 Guardar" 
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Width="70" Padding="0,4"
+                                        Margin="0,0,8,0"/>
+                                <Button Content="Guardar" 
                                         Command="{Binding GuardarDocumentoCommand}"
-                                        Style="{DynamicResource SuccessButton}"/>
+                                        Style="{StaticResource LegacyButtonStyle}"
+                                        FontFamily="Tahoma" FontSize="9" Width="70" Padding="0,4"/>
                             </StackPanel>
                         </Grid>
-                    </StackPanel>
+                    </Grid>
                 </Border>
             </Grid>
         </Grid>
         
         <!-- Loading overlay -->
-        <Border Grid.RowSpan="2" Background="#80000000" 
+        <Border Grid.RowSpan="2" Background="#80FFFFFF" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="⏳" FontSize="40" HorizontalAlignment="Center"/>
-                <TextBlock Text="Procesando..." FontSize="16" Foreground="{DynamicResource TextInverseBrush}" HorizontalAlignment="Center" Margin="0,10,0,0"/>
-            </StackPanel>
+            <Border Background="White" BorderThickness="2" BorderBrush="#808080" 
+                    Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="[...]" FontFamily="Courier New" FontSize="20" FontWeight="Bold"
+                               Foreground="#000080" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Procesando..." FontFamily="Tahoma" FontSize="10" 
+                               Foreground="#808080" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Border>
         </Border>
     </Grid>
 </Window>

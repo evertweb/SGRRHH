@@ -8,7 +8,7 @@
         Height="700" Width="900"
         MinHeight="600" MinWidth="800"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BackgroundBrush}">
+        Background="{StaticResource ControlBrush}">
     
     <Grid>
         <Grid.RowDefinitions>
@@ -18,97 +18,205 @@
         </Grid.RowDefinitions>
         
         <!-- Encabezado -->
-        <Border Grid.Row="0" Background="{StaticResource SidebarHeaderBrush}" Padding="20">
-            <StackPanel>
-                <TextBlock Text="{Binding WindowTitle}" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextInverseBrush}"/>
-                <TextBlock Text="Complete la información del empleado" FontSize="13" Foreground="{StaticResource SidebarTextMutedBrush}" Margin="0,5,0,0"/>
-            </StackPanel>
+        <Border Grid.Row="0" Background="{StaticResource TitleBarBrush}" Padding="10,8">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="{Binding WindowTitle}" FontFamily="Tahoma" FontSize="14" 
+                               FontWeight="Bold" Foreground="White"/>
+                    <TextBlock Text="Complete la informacion del empleado" FontFamily="Tahoma" 
+                               FontSize="10" Foreground="#C0C0FF" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
         </Border>
         
         <!-- Contenido principal con scroll -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="180"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 
                 <!-- Panel izquierdo - Foto y Documentos -->
-                <StackPanel Grid.Column="0" Margin="0,0,20,0">
-                    <Border Style="{StaticResource CardFlat}" Padding="15">
-                        <StackPanel>
-                            <TextBlock Text="Foto del Empleado" FontWeight="SemiBold" FontSize="13" 
-                                       Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,10"/>
+                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                    <!-- Sección Foto -->
+                    <Border BorderThickness="1" BorderBrush="{StaticResource ShadowBrush}" Background="{StaticResource WhiteBrush}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             
-                            <!-- Área de foto -->
-                            <Border Width="150" Height="180" Background="{StaticResource GrayLightBrush}" 
-                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="5">
-                                <Grid>
-                                    <!-- Placeholder si no hay foto -->
-                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                                                Visibility="{Binding FotoPath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}">
-                                        <TextBlock Text="👤" FontSize="50" HorizontalAlignment="Center" Foreground="{StaticResource GrayBrush}"/>
-                                        <TextBlock Text="Sin foto" FontSize="11" Foreground="{StaticResource TextDisabledBrush}" HorizontalAlignment="Center"/>
-                                    </StackPanel>
-                                    
-                                    <!-- Imagen si hay foto -->
-                                    <Image Source="{Binding FotoPath}" Stretch="UniformToFill"
-                                           Visibility="{Binding FotoPath, Converter={StaticResource NotNullToVisibilityConverter}}"/>
-                                </Grid>
+                            <Border Grid.Row="0" Background="#E0E0E0" Padding="{StaticResource SectionHeaderPadding}" 
+                                    BorderThickness="0,0,0,1" BorderBrush="{StaticResource ShadowBrush}">
+                                <TextBlock Text="FOTO EMPLEADO" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
                             </Border>
                             
-                            <!-- Botones de foto -->
-                            <Button Content="📷 Seleccionar" Command="{Binding SelectFotoCommand}"
-                                    Style="{StaticResource PrimaryButton}"
-                                    Margin="0,10,0,5" Padding="10,8" FontSize="12"/>
-                            <Button Content="🗑️ Eliminar" Command="{Binding RemoveFotoCommand}"
-                                    Style="{StaticResource DangerOutlineButton}"
-                                    Padding="10,8" FontSize="12"
-                                    Visibility="{Binding FotoPath, Converter={StaticResource NotNullToVisibilityConverter}}"/>
-                        </StackPanel>
+                            <StackPanel Grid.Row="1" Margin="10">
+                                <!-- Área de foto -->
+                                <Border Width="130" Height="160" Background="#E0E0E0" 
+                                        BorderThickness="2" BorderBrush="{StaticResource ShadowBrush}" Margin="0,0,0,10">
+                                    <Border BorderThickness="2" BorderBrush="#DFDFDF">
+                                        <Grid>
+                                            <!-- Placeholder si no hay foto -->
+                                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                        Visibility="{Binding FotoPath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}">
+                                                <TextBlock Text="[SIN FOTO]" FontFamily="Courier New" FontSize="10" 
+                                                           HorizontalAlignment="Center" Foreground="#808080"/>
+                                            </StackPanel>
+                                            
+                                            <!-- Imagen si hay foto -->
+                                            <Image Source="{Binding FotoPath}" Stretch="UniformToFill"
+                                                   Visibility="{Binding FotoPath, Converter={StaticResource NotNullToVisibilityConverter}}"/>
+                                        </Grid>
+                                    </Border>
+                                </Border>
+                                
+                                <!-- Botones de foto -->
+                                <Button Content="Seleccionar..." Command="{Binding SelectFotoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}" Width="130" Height="22"
+                                        FontFamily="Tahoma" FontSize="10" Margin="0,0,0,5"/>
+                                <Button Content="Eliminar" Command="{Binding RemoveFotoCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}" Width="130" Height="22"
+                                        FontFamily="Tahoma" FontSize="10"
+                                        Visibility="{Binding FotoPath, Converter={StaticResource NotNullToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
                     
-                    <!-- Sección de Documentos - Solo visible cuando se está editando -->
-                    <Border Style="{StaticResource CardFlat}" Padding="15" Margin="0,15,0,0"
-                            Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <StackPanel>
-                            <TextBlock Text="📁 Documentos" FontWeight="SemiBold" FontSize="13" 
-                                       Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,10"/>
+                    <!-- Sección de Documentos - Ahora visible en crear y editar -->
+                    <Border BorderThickness="1" BorderBrush="{StaticResource ShadowBrush}" Background="{StaticResource WhiteBrush}" Margin="0,10,0,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             
-                            <TextBlock Text="Gestione los documentos legales del empleado:" 
-                                       FontSize="11" Foreground="{StaticResource TextMutedBrush}" 
-                                       TextWrapping="Wrap" Margin="0,0,0,10"/>
+                            <Border Grid.Row="0" Background="{StaticResource SuccessBrush}" Padding="{StaticResource SectionHeaderPadding}" 
+                                    BorderThickness="0,0,0,1" BorderBrush="{StaticResource ShadowBrush}">
+                                <TextBlock Text="DOCUMENTOS" FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                            </Border>
                             
-                            <StackPanel>
-                                <TextBlock Text="• Cédula de ciudadanía" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock Text="• Hoja de vida" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock Text="• Contrato firmado" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock Text="• Certificado bancario" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock Text="• Afiliaciones (EPS, AFP, ARL)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                                <TextBlock Text="• Y más..." FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,10"/>
+                            <StackPanel Grid.Row="1" Margin="8">
+                                <!-- Cédula -->
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Cédula *" FontFamily="Tahoma" FontSize="9" Foreground="#404040"/>
+                                        <TextBlock Text="{Binding DocCedulaFileName, TargetNullValue='Sin archivo'}" 
+                                                   FontFamily="Tahoma" FontSize="8" Foreground="#008000" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="..." Command="{Binding SelectDocCedulaCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}" Width="25" Height="18" 
+                                                FontFamily="Tahoma" FontSize="9" Margin="0,0,2,0"/>
+                                        <Button Content="X" Command="{Binding RemoveDocCedulaCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}" Width="18" Height="18" 
+                                                FontFamily="Tahoma" FontSize="8"
+                                                Visibility="{Binding DocCedulaFileName, Converter={StaticResource NotNullToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </Grid>
+                                
+                                <!-- Hoja de Vida -->
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Hoja de Vida *" FontFamily="Tahoma" FontSize="9" Foreground="#404040"/>
+                                        <TextBlock Text="{Binding DocHojaVidaFileName, TargetNullValue='Sin archivo'}" 
+                                                   FontFamily="Tahoma" FontSize="8" Foreground="#008000" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="..." Command="{Binding SelectDocHojaVidaCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}" Width="25" Height="18" 
+                                                FontFamily="Tahoma" FontSize="9" Margin="0,0,2,0"/>
+                                        <Button Content="X" Command="{Binding RemoveDocHojaVidaCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}" Width="18" Height="18" 
+                                                FontFamily="Tahoma" FontSize="8"
+                                                Visibility="{Binding DocHojaVidaFileName, Converter={StaticResource NotNullToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </Grid>
+                                
+                                <!-- Contrato -->
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Contrato" FontFamily="Tahoma" FontSize="9" Foreground="#404040"/>
+                                        <TextBlock Text="{Binding DocContratoFileName, TargetNullValue='Sin archivo'}" 
+                                                   FontFamily="Tahoma" FontSize="8" Foreground="#008000" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="..." Command="{Binding SelectDocContratoCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}" Width="25" Height="18" 
+                                                FontFamily="Tahoma" FontSize="9" Margin="0,0,2,0"/>
+                                        <Button Content="X" Command="{Binding RemoveDocContratoCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}" Width="18" Height="18" 
+                                                FontFamily="Tahoma" FontSize="8"
+                                                Visibility="{Binding DocContratoFileName, Converter={StaticResource NotNullToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </Grid>
+                                
+                                <!-- Certificado Bancario -->
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Cert. Bancario" FontFamily="Tahoma" FontSize="9" Foreground="#404040"/>
+                                        <TextBlock Text="{Binding DocCertificadoBancarioFileName, TargetNullValue='Sin archivo'}" 
+                                                   FontFamily="Tahoma" FontSize="8" Foreground="#008000" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Content="..." Command="{Binding SelectDocCertificadoBancarioCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}" Width="25" Height="18" 
+                                                FontFamily="Tahoma" FontSize="9" Margin="0,0,2,0"/>
+                                        <Button Content="X" Command="{Binding RemoveDocCertificadoBancarioCommand}"
+                                                Style="{StaticResource LegacyButtonStyle}" Width="18" Height="18" 
+                                                FontFamily="Tahoma" FontSize="8"
+                                                Visibility="{Binding DocCertificadoBancarioFileName, Converter={StaticResource NotNullToVisibilityConverter}}"/>
+                                    </StackPanel>
+                                </Grid>
+                                
+                                <!-- Botón ver todos los documentos (solo en edición) -->
+                                <Button Content="Ver Todos..." Command="{Binding OpenDocumentosCommand}"
+                                        Style="{StaticResource LegacyButtonStyle}" Height="20" Margin="0,5,0,0"
+                                        FontFamily="Tahoma" FontSize="9"
+                                        Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibilityConverter}}"/>
                             </StackPanel>
-                            
-                            <Button Content="📂 Ver Documentos" Command="{Binding OpenDocumentosCommand}"
-                                    Style="{StaticResource SecondaryButton}"
-                                    Padding="10,8" FontSize="12"/>
-                        </StackPanel>
+                        </Grid>
                     </Border>
                 </StackPanel>
                 
                 <!-- Panel derecho - Formulario -->
                 <StackPanel Grid.Column="1">
                     <!-- Datos básicos -->
-                    <Border Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
-                        <StackPanel>
-                            <TextBlock Text="📋 Datos Básicos" FontWeight="Bold" FontSize="15" 
-                                       Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
+                    <Border BorderThickness="1" BorderBrush="{StaticResource ShadowBrush}" Background="{StaticResource WhiteBrush}" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             
-                            <Grid>
+                            <Border Grid.Row="0" Background="{StaticResource TitleBarBrush}" Padding="{StaticResource SectionHeaderPadding}">
+                                <TextBlock Text="DATOS BASICOS" FontFamily="Tahoma" FontSize="10" 
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            
+                            <Grid Grid.Row="1" Margin="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
@@ -118,76 +226,82 @@
                                 </Grid.RowDefinitions>
                                 
                                 <!-- Código -->
-                                <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,0,15">
-                                    <TextBlock Text="Código *" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,0,8">
+                                    <TextBlock Text="Codigo *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <TextBox Text="{Binding Codigo, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource StandardTextBox}" IsReadOnly="True"
-                                             Background="{StaticResource GrayLightBrush}"/>
+                                             Style="{StaticResource LegacyTextBoxStyle}" Height="20" FontSize="10" 
+                                             IsReadOnly="True" Background="#E0E0E0"/>
                                 </StackPanel>
                                 
                                 <!-- Cédula -->
-                                <StackPanel Grid.Column="2" Grid.Row="0" Margin="0,0,0,15">
-                                    <TextBlock Text="Cédula *" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Grid.Column="2" Grid.Row="0" Margin="0,0,0,8">
+                                    <TextBlock Text="Cedula *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <TextBox Text="{Binding Cedula, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource StandardTextBox}" MaxLength="20"/>
+                                             Style="{StaticResource LegacyTextBoxStyle}" Height="20" FontSize="10" MaxLength="20"/>
                                 </StackPanel>
                                 
                                 <!-- Tipo de contrato -->
-                                <StackPanel Grid.Column="4" Grid.Row="0" Margin="0,0,0,15">
-                                    <TextBlock Text="Tipo de Contrato" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Grid.Column="4" Grid.Row="0" Margin="0,0,0,8">
+                                    <TextBlock Text="Tipo Contrato" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <ComboBox ItemsSource="{Binding TiposContrato}"
                                               SelectedValue="{Binding TipoContrato}"
                                               SelectedValuePath="Valor"
                                               DisplayMemberPath="Nombre"
-                                              Style="{StaticResource StandardComboBox}"/>
+                                              Height="20" FontFamily="Tahoma" FontSize="10"/>
                                 </StackPanel>
                                 
                                 <!-- Nombres -->
-                                <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,0,15">
-                                    <TextBlock Text="Nombres *" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,0,8">
+                                    <TextBlock Text="Nombres *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <TextBox Text="{Binding Nombres, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource StandardTextBox}" MaxLength="100"/>
+                                             Style="{StaticResource LegacyTextBoxStyle}" Height="20" FontSize="10" MaxLength="100"/>
                                 </StackPanel>
                                 
                                 <!-- Apellidos -->
-                                <StackPanel Grid.Column="2" Grid.Row="1" Margin="0,0,0,15">
-                                    <TextBlock Text="Apellidos *" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Grid.Column="2" Grid.Row="1" Margin="0,0,0,8">
+                                    <TextBlock Text="Apellidos *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <TextBox Text="{Binding Apellidos, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource StandardTextBox}" MaxLength="100"/>
+                                             Style="{StaticResource LegacyTextBoxStyle}" Height="20" FontSize="10" MaxLength="100"/>
                                 </StackPanel>
                                 
                                 <!-- Fecha Ingreso -->
-                                <StackPanel Grid.Column="4" Grid.Row="1" Margin="0,0,0,15">
-                                    <TextBlock Text="Fecha Ingreso *" Style="{StaticResource FieldLabel}"/>
-                                    <DatePicker SelectedDate="{Binding FechaIngreso}" 
-                                                Style="{StaticResource StandardDatePicker}"/>
+                                <StackPanel Grid.Column="4" Grid.Row="1" Margin="0,0,0,8">
+                                    <TextBlock Text="Fecha Ingreso *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                                    <DatePicker SelectedDate="{Binding FechaIngreso}" Height="22" FontSize="10"/>
                                 </StackPanel>
                                 
                                 <!-- Estado -->
                                 <StackPanel Grid.Column="0" Grid.Row="2">
-                                    <TextBlock Text="Estado" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="Estado" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <ComboBox ItemsSource="{Binding EstadosEmpleado}"
                                               SelectedValue="{Binding Estado}"
                                               SelectedValuePath="Valor"
                                               DisplayMemberPath="Nombre"
-                                              Style="{StaticResource StandardComboBox}"/>
+                                              Height="20" FontFamily="Tahoma" FontSize="10"/>
                                 </StackPanel>
                             </Grid>
-                        </StackPanel>
+                        </Grid>
                     </Border>
                     
                     <!-- Datos personales -->
-                    <Border Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
-                        <StackPanel>
-                            <TextBlock Text="👤 Datos Personales" FontWeight="Bold" FontSize="15" 
-                                       Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
+                    <Border BorderThickness="1" BorderBrush="{StaticResource ShadowBrush}" Background="{StaticResource WhiteBrush}" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             
-                            <Grid>
+                            <Border Grid.Row="0" Background="{StaticResource TitleBarBrush}" Padding="{StaticResource SectionHeaderPadding}">
+                                <TextBlock Text="DATOS PERSONALES" FontFamily="Tahoma" FontSize="10" 
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            
+                            <Grid Grid.Row="1" Margin="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
@@ -197,145 +311,159 @@
                                 </Grid.RowDefinitions>
                                 
                                 <!-- Fecha Nacimiento -->
-                                <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,0,15">
-                                    <TextBlock Text="Fecha Nacimiento" Style="{StaticResource FieldLabel}"/>
-                                    <DatePicker SelectedDate="{Binding FechaNacimiento}" 
-                                                Style="{StaticResource StandardDatePicker}"/>
+                                <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,0,8">
+                                    <TextBlock Text="Fecha Nacimiento" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                                    <DatePicker SelectedDate="{Binding FechaNacimiento}" Height="22" FontSize="10"/>
                                 </StackPanel>
                                 
                                 <!-- Género -->
-                                <StackPanel Grid.Column="2" Grid.Row="0" Margin="0,0,0,15">
-                                    <TextBlock Text="Género" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Grid.Column="2" Grid.Row="0" Margin="0,0,0,8">
+                                    <TextBlock Text="Genero" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <ComboBox ItemsSource="{Binding Generos}"
                                               SelectedValue="{Binding Genero}"
                                               SelectedValuePath="Valor"
                                               DisplayMemberPath="Nombre"
-                                              Style="{StaticResource StandardComboBox}"/>
+                                              Height="20" FontFamily="Tahoma" FontSize="10"/>
                                 </StackPanel>
                                 
                                 <!-- Estado Civil -->
-                                <StackPanel Grid.Column="4" Grid.Row="0" Margin="0,0,0,15">
-                                    <TextBlock Text="Estado Civil" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Grid.Column="4" Grid.Row="0" Margin="0,0,0,8">
+                                    <TextBlock Text="Estado Civil" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <ComboBox ItemsSource="{Binding EstadosCiviles}"
                                               SelectedValue="{Binding EstadoCivil}"
                                               SelectedValuePath="Valor"
                                               DisplayMemberPath="Nombre"
-                                              Style="{StaticResource StandardComboBox}"/>
+                                              Height="20" FontFamily="Tahoma" FontSize="10"/>
                                 </StackPanel>
                                 
                                 <!-- Dirección -->
-                                <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1" Margin="0,0,0,15">
-                                    <TextBlock Text="Dirección" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1" Margin="0,0,0,8">
+                                    <TextBlock Text="Direccion" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <TextBox Text="{Binding Direccion, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource StandardTextBox}" MaxLength="300"/>
+                                             Style="{StaticResource LegacyTextBoxStyle}" Height="20" FontSize="10" MaxLength="300"/>
                                 </StackPanel>
                                 
                                 <!-- Email -->
-                                <StackPanel Grid.Column="4" Grid.Row="1" Margin="0,0,0,15">
-                                    <TextBlock Text="Correo Electrónico" Style="{StaticResource FieldLabel}"/>
+                                <StackPanel Grid.Column="4" Grid.Row="1" Margin="0,0,0,8">
+                                    <TextBlock Text="Correo Electronico" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource StandardTextBox}" MaxLength="200"/>
+                                             Style="{StaticResource LegacyTextBoxStyle}" Height="20" FontSize="10" MaxLength="200"/>
                                 </StackPanel>
                                 
                                 <!-- Teléfono -->
                                 <StackPanel Grid.Column="0" Grid.Row="2">
-                                    <TextBlock Text="Teléfono" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="Telefono" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <TextBox Text="{Binding Telefono, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource StandardTextBox}" MaxLength="20"/>
+                                             Style="{StaticResource LegacyTextBoxStyle}" Height="20" FontSize="10" MaxLength="20"/>
                                 </StackPanel>
                                 
                                 <!-- Teléfono Emergencia -->
                                 <StackPanel Grid.Column="2" Grid.Row="2">
-                                    <TextBlock Text="Tel. Emergencia" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="Tel. Emergencia" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <TextBox Text="{Binding TelefonoEmergencia, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource StandardTextBox}" MaxLength="20"/>
+                                             Style="{StaticResource LegacyTextBoxStyle}" Height="20" FontSize="10" MaxLength="20"/>
                                 </StackPanel>
                                 
                                 <!-- Contacto Emergencia -->
                                 <StackPanel Grid.Column="4" Grid.Row="2">
-                                    <TextBlock Text="Contacto Emergencia" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="Contacto Emergencia" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <TextBox Text="{Binding ContactoEmergencia, UpdateSourceTrigger=PropertyChanged}" 
-                                             Style="{StaticResource StandardTextBox}" MaxLength="100"/>
+                                             Style="{StaticResource LegacyTextBoxStyle}" Height="20" FontSize="10" MaxLength="100"/>
                                 </StackPanel>
                             </Grid>
-                        </StackPanel>
+                        </Grid>
                     </Border>
                     
                     <!-- Datos laborales -->
-                    <Border Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
-                        <StackPanel>
-                            <TextBlock Text="🏢 Datos Laborales" FontWeight="Bold" FontSize="15" 
-                                       Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
+                    <Border BorderThickness="1" BorderBrush="{StaticResource ShadowBrush}" Background="{StaticResource WhiteBrush}" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
                             
-                            <Grid>
+                            <Border Grid.Row="0" Background="{StaticResource TitleBarBrush}" Padding="{StaticResource SectionHeaderPadding}">
+                                <TextBlock Text="DATOS LABORALES" FontFamily="Tahoma" FontSize="10" 
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            
+                            <Grid Grid.Row="1" Margin="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 
                                 <!-- Departamento -->
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock Text="Departamento" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="Departamento" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <ComboBox ItemsSource="{Binding Departamentos}"
                                               SelectedItem="{Binding SelectedDepartamento}"
                                               DisplayMemberPath="Nombre"
-                                              Style="{StaticResource StandardComboBox}"/>
+                                              Height="20" FontFamily="Tahoma" FontSize="10"/>
                                 </StackPanel>
                                 
                                 <!-- Cargo -->
                                 <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Cargo" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="Cargo" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <ComboBox ItemsSource="{Binding CargosDisponibles}"
                                               SelectedItem="{Binding SelectedCargo}"
                                               DisplayMemberPath="Nombre"
-                                              Style="{StaticResource StandardComboBox}"/>
+                                              Height="20" FontFamily="Tahoma" FontSize="10"/>
                                 </StackPanel>
                                 
                                 <!-- Supervisor -->
                                 <StackPanel Grid.Column="4">
-                                    <TextBlock Text="Supervisor" Style="{StaticResource FieldLabel}"/>
+                                    <TextBlock Text="Supervisor" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                                     <ComboBox ItemsSource="{Binding Supervisores}"
                                               SelectedItem="{Binding SelectedSupervisor}"
                                               DisplayMemberPath="NombreCompleto"
-                                              Style="{StaticResource StandardComboBox}"/>
+                                              Height="20" FontFamily="Tahoma" FontSize="10"/>
                                 </StackPanel>
                             </Grid>
-                        </StackPanel>
+                        </Grid>
                     </Border>
                     
                     <!-- Observaciones -->
-                    <Border Style="{StaticResource CardFlat}" Padding="20">
-                        <StackPanel>
-                            <TextBlock Text="📝 Observaciones" FontWeight="Bold" FontSize="15" 
-                                       Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
-                            <TextBox Text="{Binding Observaciones, UpdateSourceTrigger=PropertyChanged}"
-                                     Height="80" TextWrapping="Wrap" AcceptsReturn="True"
-                                     Padding="10,8" FontSize="13" MaxLength="1000"
+                    <Border BorderThickness="1" BorderBrush="{StaticResource ShadowBrush}" Background="{StaticResource WhiteBrush}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            
+                            <Border Grid.Row="0" Background="{StaticResource TitleBarBrush}" Padding="{StaticResource SectionHeaderPadding}">
+                                <TextBlock Text="OBSERVACIONES" FontFamily="Tahoma" FontSize="10" 
+                                           FontWeight="Bold" Foreground="White"/>
+                            </Border>
+                            
+                            <TextBox Grid.Row="1" Text="{Binding Observaciones, UpdateSourceTrigger=PropertyChanged}"
+                                     Height="60" TextWrapping="Wrap" AcceptsReturn="True"
+                                     Margin="{StaticResource FormFieldPadding}" MaxLength="1000"
                                      VerticalScrollBarVisibility="Auto"
-                                     BorderBrush="{StaticResource BorderBrush}"/>
-                        </StackPanel>
+                                     Style="{StaticResource LegacyTextBoxStyle}"/>
+                        </Grid>
                     </Border>
                 </StackPanel>
             </Grid>
         </ScrollViewer>
         
         <!-- Barra de acciones -->
-        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" Padding="20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="{StaticResource ShadowBrush}" Padding="10,8">
             <Grid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="* Campos obligatorios" FontSize="12" Foreground="{StaticResource TextDisabledBrush}" VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock Text="* Campos obligatorios" FontFamily="Tahoma" FontSize="9" Foreground="#808080"/>
                 </StackPanel>
                 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="Cancelar" Command="{Binding CancelCommand}"
-                            Style="{StaticResource SecondaryButton}"
-                            Width="120" Height="40" Margin="0,0,10,0" FontSize="14"/>
-                    <Button Content="💾 Guardar" Command="{Binding SaveCommand}"
-                            Style="{StaticResource SuccessButton}"
-                            Width="140" Height="40" FontWeight="Bold" FontSize="14"/>
+                            Style="{StaticResource LegacyButtonStyle}"
+                            Width="100" Height="24" FontFamily="Tahoma" FontSize="10" Margin="0,0,10,0"/>
+                    <Button Content="Guardar" Command="{Binding SaveCommand}"
+                            Style="{StaticResource LegacyButtonStyle}"
+                            Width="100" Height="24" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -343,13 +471,16 @@
         <!-- Overlay de carga -->
         <Border Grid.RowSpan="3" Background="#80000000" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="30"
+            <Border Background="#C0C0C0" BorderThickness="2" BorderBrush="#808080" Padding="30"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel>
-                    <TextBlock Text="⏳" FontSize="40" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Procesando..." FontSize="16" Foreground="{StaticResource TextSecondaryBrush}" 
-                               HorizontalAlignment="Center" Margin="0,10,0,0"/>
-                </StackPanel>
+                <Border BorderThickness="2" BorderBrush="White">
+                    <StackPanel Margin="20">
+                        <TextBlock Text="Procesando..." FontFamily="Tahoma" FontSize="12" FontWeight="Bold"
+                                   Foreground="#000080" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Por favor espere..." FontFamily="Tahoma" FontSize="10" 
+                                   Foreground="#808080" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
             </Border>
         </Border>
     </Grid>

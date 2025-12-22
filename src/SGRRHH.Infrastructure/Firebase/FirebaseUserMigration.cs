@@ -21,14 +21,15 @@ public class FirebaseUserMigration
     private const string USERS_COLLECTION = "users";
     
     /// <summary>
-    /// Usuarios por defecto que deben existir en el sistema
+    /// Usuarios por defecto ya no se definen en código por seguridad.
+    /// Los usuarios deben crearse manualmente en Firebase Console o mediante
+    /// el panel de administración de la aplicación.
+    /// 
+    /// NOTA: Las credenciales anteriores (admin123, secretaria123, ingeniera123)
+    /// fueron eliminadas del código fuente. Si los usuarios aún existen en
+    /// Firebase con esas contraseñas, se recomienda cambiarlas.
     /// </summary>
-    public static readonly (string Username, string Password, string NombreCompleto, RolUsuario Rol)[] DefaultUsers = new[]
-    {
-        ("admin", "admin123", "Administrador del Sistema", RolUsuario.Administrador),
-        ("secretaria", "secretaria123", "Secretaria", RolUsuario.Operador),
-        ("ingeniera", "ingeniera123", "Ingeniera de Gestión", RolUsuario.Aprobador)
-    };
+    public static readonly (string Username, string Password, string NombreCompleto, RolUsuario Rol)[] DefaultUsers = Array.Empty<(string, string, string, RolUsuario)>();
     
     public FirebaseUserMigration(FirebaseInitializer firebase, ILogger<FirebaseUserMigration>? logger = null)
     {

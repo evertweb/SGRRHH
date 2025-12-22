@@ -26,7 +26,7 @@ public class BoolToTextConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -48,7 +48,7 @@ public class BoolToColorConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -69,7 +69,7 @@ public class EnumToStringConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -90,7 +90,7 @@ public class EqualityConverter : IMultiValueConverter
 
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return new object[] { DependencyProperty.UnsetValue };
     }
 }
 
@@ -114,7 +114,7 @@ public class EstadoPermisoToColorConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -184,7 +184,7 @@ public class PercentToWidthConverter : IMultiValueConverter
 
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return new object[] { DependencyProperty.UnsetValue };
     }
 }
 
@@ -212,7 +212,7 @@ public class HexToColorConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -244,7 +244,7 @@ public class InitialsConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -277,7 +277,7 @@ public class FileIconConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -304,7 +304,7 @@ public class FileSizeConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -335,7 +335,7 @@ public class BoolToErrorBackgroundConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -366,7 +366,7 @@ public class BoolToErrorForegroundConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 
@@ -397,7 +397,7 @@ public class StepToColorConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        throw new NotImplementedException();
+        return DependencyProperty.UnsetValue;
     }
 }
 

@@ -8,15 +8,25 @@ namespace SGRRHH.Infrastructure.Firebase.Repositories;
 /// <summary>
 /// Implementación del repositorio de Cargos para Firestore.
 /// Colección: "cargos"
+/// Incluye cache en memoria para reducir round-trips.
 /// </summary>
 public class CargoFirestoreRepository : FirestoreRepository<Cargo>, ICargoRepository
 {
     private const string COLLECTION_NAME = "cargos";
     private const string CODE_PREFIX = "CAR";
-    
-    public CargoFirestoreRepository(FirebaseInitializer firebase, ILogger<CargoFirestoreRepository>? logger = null) 
+    private const string CACHE_KEY_ALL_ACTIVE = "cargos_all_active";
+    private const string CACHE_KEY_BY_DEPTO = "cargos_by_depto_";
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
+
+    private readonly ICacheService? _cache;
+
+    public CargoFirestoreRepository(
+        FirebaseInitializer firebase,
+        ICacheService? cache = null,
+        ILogger<CargoFirestoreRepository>? logger = null)
         : base(firebase, COLLECTION_NAME, logger)
     {
+        _cache = cache;
     }
     
     #region Entity <-> Document Mapping
@@ -332,42 +342,64 @@ public class CargoFirestoreRepository : FirestoreRepository<Cargo>, ICargoReposi
     }
     
     /// <summary>
-    /// Obtiene todos los cargos activos ordenados
+    /// Obtiene todos los cargos activos ordenados.
+    /// Usa cache en memoria con expiración de 10 minutos.
     /// </summary>
     public override async Task<IEnumerable<Cargo>> GetAllActiveAsync()
     {
         try
         {
-            var query = Collection.WhereEqualTo("activo", true);
-            var snapshot = await query.GetSnapshotAsync();
-            
-            var cargos = snapshot.Documents.Select(DocumentToEntity).ToList();
-            
-            // Cargar departamentos
-            var departamentosIds = cargos
-                .Where(c => c.DepartamentoId.HasValue)
-                .Select(c => c.DepartamentoId!.Value)
-                .Distinct()
-                .ToList();
-            
-            var departamentos = await GetDepartamentosAsync(departamentosIds);
-            var depDict = departamentos.ToDictionary(d => d.Id);
-            
-            foreach (var cargo in cargos.Where(c => c.DepartamentoId.HasValue))
+            if (_cache != null)
             {
-                if (depDict.TryGetValue(cargo.DepartamentoId!.Value, out var dep))
-                {
-                    cargo.Departamento = dep;
-                }
+                return await _cache.GetOrCreateAsync(
+                    CACHE_KEY_ALL_ACTIVE,
+                    FetchAllActiveFromFirestoreAsync,
+                    CacheExpiration);
             }
-            
-            return cargos.OrderBy(c => c.Nombre).ToList();
+
+            return await FetchAllActiveFromFirestoreAsync();
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al obtener cargos activos");
             throw;
         }
+    }
+
+    private async Task<IEnumerable<Cargo>> FetchAllActiveFromFirestoreAsync()
+    {
+        var query = Collection.WhereEqualTo("activo", true);
+        var snapshot = await query.GetSnapshotAsync();
+
+        var cargos = snapshot.Documents.Select(DocumentToEntity).ToList();
+
+        // Cargar departamentos
+        var departamentosIds = cargos
+            .Where(c => c.DepartamentoId.HasValue)
+            .Select(c => c.DepartamentoId!.Value)
+            .Distinct()
+            .ToList();
+
+        var departamentos = await GetDepartamentosAsync(departamentosIds);
+        var depDict = departamentos.ToDictionary(d => d.Id);
+
+        foreach (var cargo in cargos.Where(c => c.DepartamentoId.HasValue))
+        {
+            if (depDict.TryGetValue(cargo.DepartamentoId!.Value, out var dep))
+            {
+                cargo.Departamento = dep;
+            }
+        }
+
+        return cargos.OrderBy(c => c.Nombre).ToList();
+    }
+
+    /// <summary>
+    /// Invalida el cache de cargos. Llamar después de Add/Update/Delete.
+    /// </summary>
+    public void InvalidateCache()
+    {
+        _cache?.InvalidateByPrefix("cargos");
     }
     
     #endregion

@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 using System.Windows;
 using System.Windows.Interop;
 
@@ -77,7 +78,7 @@ public partial class LoginViewModel : ViewModelBase
         _windowsHelloService = windowsHelloService;
 
         // Verificar disponibilidad de Windows Hello al iniciar
-        _ = CheckWindowsHelloAvailabilityAsync();
+        CheckWindowsHelloAvailabilityAsync().SafeFireAndForget(showErrorMessage: false);
     }
     
     [RelayCommand]

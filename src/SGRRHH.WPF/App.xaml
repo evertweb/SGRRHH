@@ -7,8 +7,8 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <!-- Tema principal con todos los estilos -->
-                <ResourceDictionary Source="Resources/Styles/Theme.xaml"/>
+                <!-- Tema Principal: Legacy (Windows Classic / Brutalismo Funcional) -->
+                <ResourceDictionary Source="Resources/Styles/LegacyTheme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
             <!-- Convertidores -->

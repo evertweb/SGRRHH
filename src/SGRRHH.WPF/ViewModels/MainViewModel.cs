@@ -5,11 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 using SGRRHH.WPF.Messages;
+using SGRRHH.WPF.Services;
 using SGRRHH.WPF.Views;
 using System.Collections.ObjectModel;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace SGRRHH.WPF.ViewModels;
 
@@ -34,19 +35,33 @@ public partial class MenuItemViewModel : ObservableObject
     private bool _isVisible = true;
     
     /// <summary>
+    /// Categoría del menú para agrupación visual
+    /// </summary>
+    [ObservableProperty]
+    private string _category = string.Empty;
+    
+    /// <summary>
+    /// Indica si es un separador de categoría (no clickeable)
+    /// </summary>
+    [ObservableProperty]
+    private bool _isSeparator = false;
+    
+    /// <summary>
     /// Roles que pueden ver este elemento
     /// </summary>
     public RolUsuario[] AllowedRoles { get; set; } = Array.Empty<RolUsuario>();
 }
 
 /// <summary>
-/// ViewModel principal de la aplicación
+/// ViewModel principal de la aplicación.
+/// Refactorizado para usar ViewFactory y MenuConfiguration.
 /// </summary>
 public partial class MainViewModel : ViewModelBase
 {
     private readonly Usuario _currentUser;
     private readonly IServiceProvider _serviceProvider;
     private readonly IDialogService _dialogService;
+    private readonly ViewFactory _viewFactory;
     
     // Scope actual para mantener vivo el DbContext de la vista activa
     private IServiceScope? _currentViewScope;
@@ -99,6 +114,10 @@ public partial class MainViewModel : ViewModelBase
         CurrentUserName = currentUser.NombreCompleto;
         CurrentUserRole = GetRoleName(currentUser.Rol);
         
+        // Crear ViewFactory y suscribirse a eventos
+        _viewFactory = new ViewFactory(currentUser);
+        SetupViewFactoryEvents();
+        
         // Inicializar fecha/hora y versión
         InitializeDateTimeAndVersion();
         
@@ -112,154 +131,44 @@ public partial class MainViewModel : ViewModelBase
             }
             else if (m.Value == "CreateEmpleado")
             {
-                // Navegación especial que no es un menú principal
                 ShowEmpleadoForm(null);
             }
         });
 
         InitializeMenu();
-        _ = LoadDashboardDataAsync();
+        LoadDashboardDataAsync().SafeFireAndForget(showErrorMessage: false);
     }
     
+    /// <summary>
+    /// Configura los eventos de ViewFactory para manejar formularios modales
+    /// </summary>
+    private void SetupViewFactoryEvents()
+    {
+        _viewFactory.CreateEmpleadoRequested += (s, e) => ShowEmpleadoForm(null);
+        _viewFactory.EditEmpleadoRequested += (s, emp) => ShowEmpleadoForm(emp.Id);
+        _viewFactory.ViewEmpleadoRequested += (s, emp) => ShowEmpleadoDetail(emp.Id);
+        _viewFactory.CreatePermisoRequested += (s, e) => ShowPermisoForm(null);
+        _viewFactory.EditPermisoRequested += (s, p) => ShowPermisoForm(p.Id);
+        _viewFactory.CreateActividadRequested += (s, e) => ShowActividadForm(null);
+        _viewFactory.EditActividadRequested += (s, act) => ShowActividadForm(act.Id);
+    }
+    
+    /// <summary>
+    /// Inicializa el menú usando MenuConfiguration
+    /// </summary>
     private void InitializeMenu()
     {
-        var allMenuItems = new List<MenuItemViewModel>
+        MenuItems.Clear();
+        foreach (var item in MenuConfiguration.GetMenuItems(_currentUser.Rol))
         {
-            new MenuItemViewModel
-            {
-                Icon = "📊",
-                Title = "Dashboard",
-                ViewName = "Dashboard",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "👥",
-                Title = "Empleados",
-                ViewName = "Empleados",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "📅",
-                Title = "Control Diario",
-                ViewName = "ControlDiario",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "�",
-                Title = "Chat",
-                ViewName = "Chat",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "�📝",
-                Title = "Permisos",
-                ViewName = "Permisos",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "🏖️",
-                Title = "Vacaciones",
-                ViewName = "Vacaciones",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "📄",
-                Title = "Contratos",
-                ViewName = "Contratos",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "📁",
-                Title = "Catálogos",
-                ViewName = "Catalogos",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "🏢",
-                Title = "Departamentos",
-                ViewName = "Departamentos",
-                AllowedRoles = new[] { RolUsuario.Administrador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "💼",
-                Title = "Cargos",
-                ViewName = "Cargos",
-                AllowedRoles = new[] { RolUsuario.Administrador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "🚀",
-                Title = "Proyectos",
-                ViewName = "Proyectos",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "📝",
-                Title = "Actividades",
-                ViewName = "Actividades",
-                AllowedRoles = new[] { RolUsuario.Administrador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "📋",
-                Title = "Tipos de Permiso",
-                ViewName = "TiposPermiso",
-                AllowedRoles = new[] { RolUsuario.Administrador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "📈",
-                Title = "Reportes",
-                ViewName = "Reportes",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "📄",
-                Title = "Documentos",
-                ViewName = "Documentos",
-                AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "⚙️",
-                Title = "Configuración",
-                ViewName = "Configuracion",
-                AllowedRoles = new[] { RolUsuario.Administrador }
-            },
-            new MenuItemViewModel
-            {
-                Icon = "👤",
-                Title = "Usuarios",
-                ViewName = "Usuarios",
-                AllowedRoles = new[] { RolUsuario.Administrador }
-            }
-        };
-        
-        // Filtrar por rol
-        foreach (var item in allMenuItems)
-        {
-            if (item.AllowedRoles.Contains(_currentUser.Rol))
-            {
-                MenuItems.Add(item);
-            }
+            MenuItems.Add(item);
         }
         
         // Seleccionar Dashboard por defecto
-        if (MenuItems.Any())
+        var dashboard = MenuItems.FirstOrDefault(m => m.ViewName == "Dashboard");
+        if (dashboard != null)
         {
-            SelectedMenuItem = MenuItems.First();
-            // La navegación se ejecutará después de que la ventana se cargue
+            SelectedMenuItem = dashboard;
         }
     }
     
@@ -297,6 +206,9 @@ public partial class MainViewModel : ViewModelBase
         LoadView(menuItem.ViewName);
     }
     
+    /// <summary>
+    /// Carga una vista usando ViewFactory
+    /// </summary>
     private void LoadView(string viewName)
     {
         // Disponer el scope anterior si existe
@@ -304,203 +216,34 @@ public partial class MainViewModel : ViewModelBase
         
         // Crear un nuevo scope que se mantendrá activo mientras la vista esté cargada
         _currentViewScope = _serviceProvider.CreateScope();
-        var scope = _currentViewScope;
         
-        switch (viewName)
+        var result = _viewFactory.CreateView(viewName, _currentViewScope);
+        
+        if (result == null)
         {
-            case "Empleados":
-                var empleadosViewModel = scope.ServiceProvider.GetRequiredService<EmpleadosListViewModel>();
-                var empleadosView = new EmpleadosListView(empleadosViewModel);
-                
-                // Suscribirse a eventos
-                empleadosViewModel.CreateEmpleadoRequested += OnCreateEmpleadoRequested;
-                empleadosViewModel.EditEmpleadoRequested += OnEditEmpleadoRequested;
-                empleadosViewModel.ViewEmpleadoRequested += OnViewEmpleadoRequested;
-                
-                // Cargar datos
-                _ = empleadosViewModel.LoadDataAsync();
-                
-                CurrentView = empleadosView;
-                break;
-                
-            case "Departamentos":
-                var deptViewModel = scope.ServiceProvider.GetRequiredService<DepartamentosListViewModel>();
-                var deptView = new DepartamentosListView(deptViewModel);
-                CurrentView = deptView;
-                break;
-                
-            case "Cargos":
-                var cargosViewModel = scope.ServiceProvider.GetRequiredService<CargosListViewModel>();
-                var cargosView = new CargosListView(cargosViewModel);
-                CurrentView = cargosView;
-                break;
-                
-            case "ControlDiario":
-                var wizardViewModel = scope.ServiceProvider.GetRequiredService<DailyActivityWizardViewModel>();
-                var wizardView = new DailyActivityWizardView(wizardViewModel);
-                CurrentView = wizardView;
-                break;
-            
-            case "Chat":
-                var chatViewModel = scope.ServiceProvider.GetRequiredService<ChatViewModel>();
-                var chatView = new ChatView(chatViewModel);
-                CurrentView = chatView;
-                break;
-                
-            case "Proyectos":
-                var proyectosViewModel = scope.ServiceProvider.GetRequiredService<ProyectosListViewModel>();
-                var proyectosView = new ProyectosListView(proyectosViewModel);
-                _ = proyectosViewModel.LoadDataAsync();
-                CurrentView = proyectosView;
-                break;
-                
-            case "Actividades":
-                var actividadesViewModel = scope.ServiceProvider.GetRequiredService<ActividadesListViewModel>();
-                
-                // Suscribirse a eventos para abrir ventanas modales
-                actividadesViewModel.CreateActividadRequested += OnCreateActividadRequested;
-                actividadesViewModel.EditActividadRequested += OnEditActividadRequested;
-                
-                var actividadesView = new ActividadesListView(actividadesViewModel);
-                _ = actividadesViewModel.LoadDataAsync();
-                CurrentView = actividadesView;
-                break;
-            
-            case "Permisos":
-                // Determinar qué vista mostrar según el rol
-                if (_currentUser.Rol == RolUsuario.Aprobador || _currentUser.Rol == RolUsuario.Administrador)
-                {
-                    // Aprobadores ven la bandeja de aprobación
-                    var bandejaViewModel = scope.ServiceProvider.GetRequiredService<BandejaAprobacionViewModel>();
-                    var bandejaView = new BandejaAprobacionView(bandejaViewModel);
-                    _ = bandejaViewModel.LoadDataAsync();
-                    CurrentView = bandejaView;
-                }
-                else
-                {
-                    // Operadores ven la lista de permisos para solicitar
-                    var permisosViewModel = scope.ServiceProvider.GetRequiredService<PermisosListViewModel>();
-                    
-                    // Suscribirse a eventos
-                    permisosViewModel.CreatePermisoRequested += OnCreatePermisoRequested;
-                    permisosViewModel.EditPermisoRequested += OnEditPermisoRequested;
-                    
-                    var permisosView = new PermisosListView(permisosViewModel);
-                    _ = permisosViewModel.LoadDataAsync();
-                    CurrentView = permisosView;
-                }
-                break;
-            
-            case "HistorialPermisos":
-                var historialPermisosViewModel = scope.ServiceProvider.GetRequiredService<PermisosListViewModel>();
-                historialPermisosViewModel.CreatePermisoRequested += OnCreatePermisoRequested;
-                historialPermisosViewModel.EditPermisoRequested += OnEditPermisoRequested;
-                var historialPermisosView = new PermisosListView(historialPermisosViewModel);
-                _ = historialPermisosViewModel.LoadDataAsync();
-                CurrentView = historialPermisosView;
-                break;
-            
-            case "TiposPermiso":
-                var tiposPermisoViewModel = scope.ServiceProvider.GetRequiredService<TiposPermisoListViewModel>();
-                var tiposPermisoView = new TiposPermisoListView(tiposPermisoViewModel);
-                _ = tiposPermisoViewModel.LoadDataAsync();
-                CurrentView = tiposPermisoView;
-                break;
-
-            case "Reportes":
-                var reportsViewModel = scope.ServiceProvider.GetRequiredService<ReportsViewModel>();
-                var reportsView = new ReportsView(reportsViewModel);
-                _ = reportsViewModel.LoadDataAsync();
-                CurrentView = reportsView;
-                break;
-            
-            case "Vacaciones":
-                var vacacionesViewModel = scope.ServiceProvider.GetRequiredService<VacacionesViewModel>();
-                var vacacionesView = new VacacionesView(vacacionesViewModel);
-                _ = vacacionesViewModel.LoadDataAsync();
-                CurrentView = vacacionesView;
-                break;
-            
-            case "Contratos":
-                var contratosViewModel = scope.ServiceProvider.GetRequiredService<ContratosViewModel>();
-                var contratosView = new ContratosView(contratosViewModel);
-                _ = contratosViewModel.LoadDataAsync();
-                CurrentView = contratosView;
-                break;
-                
-            case "Dashboard":
-                var dashboardViewModel = scope.ServiceProvider.GetRequiredService<DashboardViewModel>();
-                var dashboardView = new DashboardView(dashboardViewModel);
-                _ = dashboardViewModel.LoadDataAsync();
-                CurrentView = dashboardView;
-                break;
-            
-            case "Catalogos":
-                var catalogosViewModel = scope.ServiceProvider.GetRequiredService<CatalogosViewModel>();
-                var catalogosView = new CatalogosView(catalogosViewModel);
-                CurrentView = catalogosView;
-                break;
-            
-            case "Documentos":
-                var documentsViewModel = scope.ServiceProvider.GetRequiredService<DocumentsViewModel>();
-                var documentsView = new DocumentsView(documentsViewModel);
-                CurrentView = documentsView;
-                break;
-            
-            case "Configuracion":
-                var configuracionViewModel = scope.ServiceProvider.GetRequiredService<ConfiguracionViewModel>();
-                var configuracionView = new ConfiguracionView(configuracionViewModel);
-                _ = configuracionViewModel.LoadDataAsync();
-                CurrentView = configuracionView;
-                break;
-            
-            case "Usuarios":
-                var usuariosViewModel = scope.ServiceProvider.GetRequiredService<UsuariosListViewModel>();
-                var usuariosView = new UsuariosListView(usuariosViewModel);
-                _ = usuariosViewModel.LoadDataAsync();
-                CurrentView = usuariosView;
-                break;
-                
-            default:
-                CurrentView = null;
-                break;
+            CurrentView = null;
+            return;
         }
+        
+        // Configurar eventos si es necesario
+        result.SetupEvents?.Invoke();
+        
+        // Cargar datos automáticamente si corresponde
+        if (result.AutoLoadData && result.ViewModel is ViewModelBase vmBase)
+        {
+            // Usar reflection para llamar LoadDataAsync si existe
+            var loadMethod = result.ViewModel.GetType().GetMethod("LoadDataAsync");
+            if (loadMethod != null)
+            {
+                var task = loadMethod.Invoke(result.ViewModel, null) as Task;
+                task?.SafeFireAndForget(showErrorMessage: false);
+            }
+        }
+        
+        CurrentView = result.View;
     }
     
-    private void OnCreateEmpleadoRequested(object? sender, EventArgs e)
-    {
-        ShowEmpleadoForm(null);
-    }
-    
-    private void OnEditEmpleadoRequested(object? sender, Empleado empleado)
-    {
-        ShowEmpleadoForm(empleado.Id);
-    }
-    
-    private void OnViewEmpleadoRequested(object? sender, Empleado empleado)
-    {
-        ShowEmpleadoDetail(empleado.Id);
-    }
-    
-    private void OnCreatePermisoRequested(object? sender, EventArgs e)
-    {
-        ShowPermisoForm(null);
-    }
-    
-    private void OnEditPermisoRequested(object? sender, Permiso permiso)
-    {
-        ShowPermisoForm(permiso.Id);
-    }
-    
-    private void OnCreateActividadRequested(object? sender, EventArgs e)
-    {
-        ShowActividadForm(null);
-    }
-    
-    private void OnEditActividadRequested(object? sender, Actividad actividad)
-    {
-        ShowActividadForm(actividad.Id);
-    }
+    #region Modal Forms
     
     private void ShowActividadForm(int? actividadId)
     {
@@ -511,18 +254,17 @@ public partial class MainViewModel : ViewModelBase
         
         if (actividadId.HasValue)
         {
-            _ = viewModel.InitializeForEditAsync(actividadId.Value);
+            viewModel.InitializeForEditAsync(actividadId.Value).SafeFireAndForget();
         }
         else
         {
-            _ = viewModel.InitializeForCreateAsync();
+            viewModel.InitializeForCreateAsync().SafeFireAndForget();
         }
         
         var result = window.ShowDialog();
         
         if (result == true)
         {
-            // Recargar lista de actividades
             LoadView("Actividades");
         }
     }
@@ -535,18 +277,17 @@ public partial class MainViewModel : ViewModelBase
         
         if (permisoId.HasValue)
         {
-            _ = viewModel.InitializeForEditAsync(permisoId.Value);
+            viewModel.InitializeForEditAsync(permisoId.Value).SafeFireAndForget();
         }
         else
         {
-            _ = viewModel.InitializeForCreateAsync();
+            viewModel.InitializeForCreateAsync().SafeFireAndForget();
         }
         
         var result = window.ShowDialog();
         
         if (result == true)
         {
-            // Recargar lista de permisos
             LoadView("Permisos");
         }
     }
@@ -559,18 +300,17 @@ public partial class MainViewModel : ViewModelBase
         
         if (empleadoId.HasValue)
         {
-            _ = viewModel.InitializeForEditAsync(empleadoId.Value);
+            viewModel.InitializeForEditAsync(empleadoId.Value).SafeFireAndForget();
         }
         else
         {
-            _ = viewModel.InitializeForCreateAsync();
+            viewModel.InitializeForCreateAsync().SafeFireAndForget();
         }
         
         var result = window.ShowDialog();
         
         if (result == true)
         {
-            // Recargar lista de empleados
             LoadView("Empleados");
         }
     }
@@ -581,17 +321,20 @@ public partial class MainViewModel : ViewModelBase
         var viewModel = scope.ServiceProvider.GetRequiredService<EmpleadoDetailViewModel>();
         var window = new EmpleadoDetailWindow(viewModel);
         
-        // Suscribirse a evento de edición
         viewModel.EditRequested += (s, emp) =>
         {
             window.Close();
             ShowEmpleadoForm(emp.Id);
         };
         
-        _ = viewModel.LoadEmpleadoAsync(empleadoId);
+        viewModel.LoadEmpleadoAsync(empleadoId).SafeFireAndForget();
         
         window.ShowDialog();
     }
+    
+    #endregion
+    
+    #region Commands
     
     [RelayCommand]
     private void Logout()
@@ -599,9 +342,7 @@ public partial class MainViewModel : ViewModelBase
         if (!_dialogService.Confirm("¿Está seguro de cerrar sesión?", "Cerrar Sesión"))
             return;
             
-        // Limpiar scope antes de cerrar
-        _currentViewScope?.Dispose();
-        _currentViewScope = null;
+        Cleanup();
         LogoutRequested?.Invoke(this, EventArgs.Empty);
     }
     
@@ -614,6 +355,10 @@ public partial class MainViewModel : ViewModelBase
         window.Owner = Application.Current.MainWindow;
         window.ShowDialog();
     }
+    
+    #endregion
+    
+    #region Cleanup & Utilities
     
     /// <summary>
     /// Limpia los recursos cuando se cierra la ventana principal
@@ -638,10 +383,8 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     private void InitializeDateTimeAndVersion()
     {
-        // Actualizar fecha/hora inmediatamente
         UpdateDateTime();
         
-        // Crear timer para actualizar cada segundo
         _dateTimeTimer = new System.Windows.Threading.DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(1)
@@ -649,7 +392,6 @@ public partial class MainViewModel : ViewModelBase
         _dateTimeTimer.Tick += (s, e) => UpdateDateTime();
         _dateTimeTimer.Start();
         
-        // Cargar versión desde configuración
         LoadAppVersion();
     }
     
@@ -661,8 +403,7 @@ public partial class MainViewModel : ViewModelBase
     
     private void LoadAppVersion()
     {
-        // Usar AppSettings.GetAppVersion() que lee del Assembly (fuente de verdad)
-        AppVersion = $"v{Helpers.AppSettings.GetAppVersion()}";
+        AppVersion = $"v{AppSettings.GetAppVersion()}";
     }
     
     /// <summary>
@@ -673,4 +414,6 @@ public partial class MainViewModel : ViewModelBase
         _dateTimeTimer?.Stop();
         _dateTimeTimer = null;
     }
+    
+    #endregion
 }

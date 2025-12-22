@@ -8,21 +8,27 @@
              xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="900"
-             Background="#F5F5F5">
+             Background="#C0C0C0">
     
     <UserControl.Resources>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        </ResourceDictionary>
     </UserControl.Resources>
     
-    <Grid Margin="20">
+    <Grid Margin="5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="350" x:Name="DetailColumn"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="320" x:Name="DetailColumn"/>
         </Grid.ColumnDefinitions>
         
         <!-- Lista de permisos pendientes -->
-        <Grid Grid.Column="0" Margin="0,0,15,0">
+        <Grid Grid.Column="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -30,73 +36,86 @@
             </Grid.RowDefinitions>
             
             <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,15">
-                <TextBlock Text="📋 Bandeja de Aprobación" FontSize="24" FontWeight="Bold" Foreground="#1976D2"/>
-                <TextBlock Text="Permisos pendientes de aprobación" Foreground="#666" Margin="0,5,0,0"/>
-            </StackPanel>
+            <Border Grid.Row="0" Background="#000080" Padding="10,5" Margin="0,0,0,5">
+                <TextBlock Text="[BANDEJA] APROBACION DE PERMISOS" FontFamily="Courier New" FontSize="12" 
+                           FontWeight="Bold" Foreground="White"/>
+            </Border>
             
             <!-- Stats y acciones -->
-            <Grid Grid.Row="1" Margin="0,0,0,15">
+            <Grid Grid.Row="1" Margin="0,0,0,5">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
-                <Border Background="#FFF3E0" CornerRadius="8" Padding="20,10">
+                <Border Grid.Column="0" Background="#FFFFCC" BorderThickness="1" BorderBrush="#808080" Padding="10,5">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding TotalPendientes}" FontSize="28" FontWeight="Bold" Foreground="#F57C00"/>
-                        <TextBlock Text=" permisos pendientes" VerticalAlignment="Center" Foreground="#F57C00" Margin="10,0,0,0"/>
+                        <TextBlock Text="[PEND] " FontFamily="Courier New" FontSize="10" Foreground="#808080" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding TotalPendientes}" FontFamily="Courier New" FontSize="18" 
+                                   FontWeight="Bold" Foreground="#CC6600" VerticalAlignment="Center"/>
+                        <TextBlock Text=" permisos pendientes" FontFamily="Tahoma" FontSize="10" 
+                                   Foreground="#606060" VerticalAlignment="Center" Margin="8,0,0,0"/>
                     </StackPanel>
                 </Border>
                 
-                <Button Grid.Column="2" Content="✅ Aprobar Todos" 
-                        Command="{Binding ApproveAllCommand}"
-                        Background="#4CAF50" Foreground="White"
-                        Padding="20,10" Cursor="Hand"
+                <Button Grid.Column="1" Command="{Binding ApproveAllCommand}"
+                        Style="{StaticResource LegacyButtonStyle}"
+                        FontFamily="Tahoma" FontSize="10" Padding="12,5" Margin="5,0,0,0"
                         Visibility="{Binding TotalPendientes, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="[OK] " FontFamily="Courier New" FontWeight="Bold" Foreground="#008000"/>
+                        <TextBlock Text="Aprobar Todos"/>
+                    </StackPanel>
                 </Button>
             </Grid>
             
             <!-- Lista -->
-            <Border Grid.Row="2" Background="White" CornerRadius="8">
+            <Border Grid.Row="2" BorderThickness="1" BorderBrush="#808080" Background="White">
                 <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <Border Grid.Row="0" Background="#000080" Padding="8,4">
+                        <TextBlock Text="SOLICITUDES PENDIENTES" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="White"/>
+                    </Border>
+                    
                     <!-- Loading -->
-                    <StackPanel Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
+                    <StackPanel Grid.Row="1" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="⏳ Cargando..." FontSize="16" Foreground="#666"/>
+                        <TextBlock Text="[...] Cargando..." FontFamily="Courier New" FontSize="12" Foreground="#808080"/>
                     </StackPanel>
                     
                     <!-- Empty state -->
-                    <StackPanel Visibility="{Binding TotalPendientes, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                    <StackPanel Grid.Row="1" Visibility="{Binding TotalPendientes, Converter={StaticResource InverseBoolToVisibilityConverter}}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <TextBlock Text="✅" FontSize="60" HorizontalAlignment="Center"/>
-                        <TextBlock Text="No hay permisos pendientes" FontSize="18" Foreground="#666" Margin="0,10,0,0"/>
-                        <TextBlock Text="Todos los permisos han sido procesados" Foreground="#999" Margin="0,5,0,0"/>
+                        <TextBlock Text="[OK]" FontFamily="Courier New" FontSize="36" Foreground="#008000" HorizontalAlignment="Center"/>
+                        <TextBlock Text="No hay permisos pendientes" FontFamily="Tahoma" FontSize="12" 
+                                   Foreground="#606060" Margin="0,10,0,0" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Todos los permisos han sido procesados" FontFamily="Tahoma" FontSize="10" 
+                                   Foreground="#808080" Margin="0,5,0,0" HorizontalAlignment="Center"/>
                     </StackPanel>
                     
                     <!-- Lista de permisos -->
-                    <ListBox ItemsSource="{Binding PermisosPendientes}"
+                    <ListBox Grid.Row="1" ItemsSource="{Binding PermisosPendientes}"
                              SelectedItem="{Binding SelectedPermiso}"
-                             BorderThickness="0"
-                             Padding="10"
+                             BorderThickness="0" Background="White"
+                             FontFamily="Tahoma" FontSize="10"
                              Visibility="{Binding TotalPendientes, Converter={StaticResource BoolToVisibilityConverter}}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="#FAFAFA" CornerRadius="8" Padding="15" Margin="0,5">
+                                <Border BorderThickness="0,0,0,1" BorderBrush="#C0C0C0" Padding="10,8" Cursor="Hand">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#E8E8E8"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
@@ -111,78 +130,52 @@
                                         
                                         <!-- Número y Tipo -->
                                         <StackPanel Grid.Row="0" Orientation="Horizontal">
-                                            <TextBlock Text="{Binding NumeroActa}" FontWeight="Bold" FontSize="14" Foreground="#1976D2"/>
-                                            <Border Background="{Binding TipoPermiso.Color}" CornerRadius="10" Padding="8,2" Margin="10,0,0,0">
-                                                <TextBlock Text="{Binding TipoPermiso.Nombre}" FontSize="11" Foreground="White"/>
+                                            <TextBlock Text="{Binding NumeroActa}" FontFamily="Courier New" FontWeight="Bold" 
+                                                       FontSize="11" Foreground="#000080"/>
+                                            <Border Background="{Binding TipoPermiso.Color}" Padding="6,1" Margin="10,0,0,0">
+                                                <TextBlock Text="{Binding TipoPermiso.Nombre}" FontFamily="Tahoma" FontSize="9" Foreground="White"/>
                                             </Border>
                                         </StackPanel>
                                         
                                         <!-- Empleado -->
-                                        <TextBlock Grid.Row="1" Margin="0,8,0,0">
-                                            <Run Text="👤 " FontSize="12"/>
-                                            <Run Text="{Binding Empleado.NombreCompleto}" FontWeight="SemiBold"/>
-                                            <Run Text=" - "/>
-                                            <Run Text="{Binding Empleado.Cargo.Nombre}" Foreground="#666"/>
+                                        <TextBlock Grid.Row="1" Margin="0,5,0,0" FontFamily="Tahoma" FontSize="10">
+                                            <Run Text="[EMP] " FontFamily="Courier New" FontSize="9" Foreground="#808080"/>
+                                            <Run Text="{Binding Empleado.NombreCompleto}" FontWeight="Bold"/>
+                                            <Run Text=" - " Foreground="#808080"/>
+                                            <Run Text="{Binding Empleado.Cargo.Nombre}" Foreground="#606060"/>
                                         </TextBlock>
                                         
                                         <!-- Fechas -->
-                                        <TextBlock Grid.Row="2" Margin="0,5,0,0" Foreground="#666">
-                                            <Run Text="📅 "/>
-                                            <Run Text="{Binding FechaInicio, StringFormat=dd/MM/yyyy}"/>
+                                        <TextBlock Grid.Row="2" Margin="0,3,0,0" FontFamily="Tahoma" FontSize="9" Foreground="#606060">
+                                            <Run Text="Fechas: "/>
+                                            <Run Text="{Binding FechaInicio, StringFormat=dd/MM/yyyy}" FontWeight="SemiBold"/>
                                             <Run Text=" al "/>
-                                            <Run Text="{Binding FechaFin, StringFormat=dd/MM/yyyy}"/>
+                                            <Run Text="{Binding FechaFin, StringFormat=dd/MM/yyyy}" FontWeight="SemiBold"/>
                                             <Run Text=" ("/>
-                                            <Run Text="{Binding TotalDias}" FontWeight="SemiBold"/>
-                                            <Run Text=" días)"/>
+                                            <Run Text="{Binding TotalDias}" FontFamily="Courier New" FontWeight="Bold" Foreground="#000080"/>
+                                            <Run Text=" dias)"/>
                                         </TextBlock>
                                         
                                         <!-- Motivo -->
                                         <TextBlock Grid.Row="3" Text="{Binding Motivo}" 
-                                                   TextTrimming="CharacterEllipsis" MaxWidth="350"
-                                                   Margin="0,5,0,0" Foreground="#888" FontStyle="Italic"/>
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="300"
+                                                   Margin="0,3,0,0" FontFamily="Tahoma" FontSize="9" 
+                                                   Foreground="#808080" FontStyle="Italic"/>
                                         
                                         <!-- Botones -->
                                         <StackPanel Grid.Column="1" Grid.RowSpan="4" 
-                                                    VerticalAlignment="Center" Orientation="Vertical">
-                                            <Button Content="✅ Aprobar" 
-                                                    Command="{Binding DataContext.SelectForApprovalCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                    VerticalAlignment="Center" Orientation="Vertical" Margin="10,0,0,0">
+                                            <Button Command="{Binding DataContext.SelectForApprovalCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                     CommandParameter="{Binding}"
-                                                    Background="#4CAF50" Foreground="White"
-                                                    Padding="15,8" Margin="0,0,0,5" Cursor="Hand"
-                                                    Width="100">
-                                                <Button.Style>
-                                                    <Style TargetType="Button">
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    </Border>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </Button.Style>
+                                                    Style="{StaticResource LegacyButtonStyle}"
+                                                    FontFamily="Tahoma" FontSize="9" Padding="8,4" Margin="0,0,0,3" Width="75">
+                                                <TextBlock Text="[OK]" FontFamily="Courier New" FontSize="8" FontWeight="Bold" Foreground="#008000"/>
                                             </Button>
-                                            <Button Content="❌ Rechazar" 
-                                                    Command="{Binding DataContext.SelectForRejectionCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            <Button Command="{Binding DataContext.SelectForRejectionCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                                     CommandParameter="{Binding}"
-                                                    Background="#F44336" Foreground="White"
-                                                    Padding="15,8" Cursor="Hand"
-                                                    Width="100">
-                                                <Button.Style>
-                                                    <Style TargetType="Button">
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="Button">
-                                                                    <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    </Border>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </Button.Style>
+                                                    Style="{StaticResource LegacyButtonStyle}"
+                                                    FontFamily="Tahoma" FontSize="9" Padding="8,4" Width="75">
+                                                <TextBlock Text="[X]" FontFamily="Courier New" FontSize="8" FontWeight="Bold" Foreground="#CC0000"/>
                                             </Button>
                                         </StackPanel>
                                     </Grid>
@@ -194,8 +187,10 @@
             </Border>
         </Grid>
         
+        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#808080"/>
+        
         <!-- Panel de aprobación/rechazo -->
-        <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="20"
+        <Border Grid.Column="2" BorderThickness="1" BorderBrush="#808080" Background="White"
                 Visibility="{Binding ShowApprovalPanel, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid>
                 <Grid.RowDefinitions>
@@ -205,56 +200,69 @@
                 </Grid.RowDefinitions>
                 
                 <!-- Header del panel -->
-                <StackPanel Grid.Row="0">
-                    <TextBlock FontSize="18" FontWeight="Bold" Margin="0,0,0,5">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="✅ Aprobar Permiso"/>
-                                <Setter Property="Foreground" Value="#388E3C"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRejecting}" Value="True">
-                                        <Setter Property="Text" Value="❌ Rechazar Permiso"/>
-                                        <Setter Property="Foreground" Value="#D32F2F"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <TextBlock Text="{Binding SelectedPermiso.NumeroActa}" Foreground="#666"/>
-                </StackPanel>
+                <Border Grid.Row="0" Padding="10,5">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#008000"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsRejecting}" Value="True">
+                                    <Setter Property="Background" Value="#CC0000"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel>
+                        <TextBlock FontFamily="Courier New" FontSize="12" FontWeight="Bold" Foreground="White">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="[OK] APROBAR PERMISO"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRejecting}" Value="True">
+                                            <Setter Property="Text" Value="[X] RECHAZAR PERMISO"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding SelectedPermiso.NumeroActa}" FontFamily="Tahoma" FontSize="9" Foreground="White" Opacity="0.8"/>
+                    </StackPanel>
+                </Border>
                 
                 <!-- Contenido -->
-                <ScrollViewer Grid.Row="1" Margin="0,15,0,15" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10">
                     <StackPanel>
                         <!-- Info del permiso -->
-                        <Border Background="#F5F5F5" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                        <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080" Padding="10" Margin="0,0,0,10">
                             <StackPanel>
-                                <TextBlock Text="Resumen del Permiso" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <TextBlock Text="[INFO] RESUMEN DEL PERMISO" FontFamily="Courier New" FontSize="9" 
+                                           FontWeight="Bold" Foreground="#808080" Margin="0,0,0,8"/>
                                 
-                                <TextBlock Margin="0,5,0,0">
-                                    <Run Text="Empleado: " FontWeight="SemiBold"/>
+                                <TextBlock FontFamily="Tahoma" FontSize="10" Margin="0,3,0,0">
+                                    <Run Text="Empleado: " FontWeight="Bold"/>
                                     <Run Text="{Binding SelectedPermiso.Empleado.NombreCompleto}"/>
                                 </TextBlock>
                                 
-                                <TextBlock Margin="0,5,0,0">
-                                    <Run Text="Tipo: " FontWeight="SemiBold"/>
+                                <TextBlock FontFamily="Tahoma" FontSize="10" Margin="0,3,0,0">
+                                    <Run Text="Tipo: " FontWeight="Bold"/>
                                     <Run Text="{Binding SelectedPermiso.TipoPermiso.Nombre}"/>
                                 </TextBlock>
                                 
-                                <TextBlock Margin="0,5,0,0">
-                                    <Run Text="Fechas: " FontWeight="SemiBold"/>
+                                <TextBlock FontFamily="Tahoma" FontSize="10" Margin="0,3,0,0">
+                                    <Run Text="Fechas: " FontWeight="Bold"/>
                                     <Run Text="{Binding SelectedPermiso.FechaInicio, StringFormat=dd/MM/yyyy}"/>
                                     <Run Text=" - "/>
                                     <Run Text="{Binding SelectedPermiso.FechaFin, StringFormat=dd/MM/yyyy}"/>
                                 </TextBlock>
                                 
-                                <TextBlock Margin="0,5,0,0">
-                                    <Run Text="Días: " FontWeight="SemiBold"/>
-                                    <Run Text="{Binding SelectedPermiso.TotalDias}"/>
-                                </TextBlock>
+                                <Border Background="#000080" Padding="8,5" Margin="0,8,0,0">
+                                    <TextBlock FontFamily="Tahoma" FontSize="10" Foreground="White" HorizontalAlignment="Center">
+                                        <Run Text="DIAS: " FontWeight="Bold"/>
+                                        <Run Text="{Binding SelectedPermiso.TotalDias}" FontFamily="Courier New" FontSize="14" FontWeight="Bold"/>
+                                    </TextBlock>
+                                </Border>
                                 
-                                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap">
-                                    <Run Text="Motivo: " FontWeight="SemiBold"/>
+                                <TextBlock FontFamily="Tahoma" FontSize="10" Margin="0,8,0,0" TextWrapping="Wrap">
+                                    <Run Text="Motivo: " FontWeight="Bold"/>
                                     <Run Text="{Binding SelectedPermiso.Motivo}"/>
                                 </TextBlock>
                             </StackPanel>
@@ -262,97 +270,70 @@
                         
                         <!-- Observaciones (para aprobar) -->
                         <StackPanel Visibility="{Binding IsApproving, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <TextBlock Text="Observaciones (opcional)" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                            <TextBlock Text="Observaciones (opcional):" FontFamily="Tahoma" FontSize="10" 
+                                       FontWeight="Bold" Margin="0,0,0,3"/>
                             <TextBox Text="{Binding ObservacionesAprobacion, UpdateSourceTrigger=PropertyChanged}"
-                                     Height="100" TextWrapping="Wrap" AcceptsReturn="True"
-                                     Padding="10"/>
+                                     Style="{StaticResource LegacyTextBoxStyle}"
+                                     Height="70" TextWrapping="Wrap" AcceptsReturn="True"
+                                     FontFamily="Tahoma" FontSize="9" VerticalContentAlignment="Top" Padding="5"/>
                         </StackPanel>
                         
                         <!-- Motivo de rechazo (para rechazar) -->
                         <StackPanel Visibility="{Binding IsRejecting, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                                <TextBlock Text="Motivo del Rechazo" FontWeight="SemiBold"/>
-                                <TextBlock Text=" *" Foreground="#D32F2F" FontWeight="Bold"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                <TextBlock Text="Motivo del Rechazo:" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"/>
+                                <TextBlock Text=" *" Foreground="#CC0000" FontWeight="Bold"/>
                             </StackPanel>
                             <TextBox Text="{Binding MotivoRechazo, UpdateSourceTrigger=PropertyChanged}"
-                                     Height="100" TextWrapping="Wrap" AcceptsReturn="True"
-                                     Padding="10"/>
+                                     Style="{StaticResource LegacyTextBoxStyle}"
+                                     Height="70" TextWrapping="Wrap" AcceptsReturn="True"
+                                     FontFamily="Tahoma" FontSize="9" VerticalContentAlignment="Top" Padding="5"/>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
                 
                 <!-- Botones -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Cancelar" Command="{Binding CancelActionCommand}"
-                            Background="#ECEFF1" Foreground="#333"
-                            Padding="20,10" Margin="0,0,10,0" Cursor="Hand">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    
-                    <!-- Botón Confirmar Aprobación -->
-                    <Button Content="✅ Confirmar" 
-                            Command="{Binding ConfirmApprovalCommand}"
-                            Visibility="{Binding IsApproving, Converter={StaticResource BoolToVisibilityConverter}}"
-                            Background="#4CAF50" Foreground="White"
-                            Padding="20,10" Cursor="Hand">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                    
-                    <!-- Botón Confirmar Rechazo -->
-                    <Button Content="❌ Rechazar" 
-                            Command="{Binding ConfirmRejectionCommand}"
-                            Visibility="{Binding IsRejecting, Converter={StaticResource BoolToVisibilityConverter}}"
-                            Background="#F44336" Foreground="White"
-                            Padding="20,10" Cursor="Hand">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-                </StackPanel>
+                <Border Grid.Row="2" Background="#C0C0C0" BorderThickness="0,1,0,0" BorderBrush="#808080" Padding="10">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Cancelar" Command="{Binding CancelActionCommand}"
+                                Style="{StaticResource LegacyButtonStyle}"
+                                FontFamily="Tahoma" FontSize="10" Padding="15,5" Margin="0,0,8,0"/>
+                        
+                        <!-- Botón Confirmar Aprobación -->
+                        <Button Command="{Binding ConfirmApprovalCommand}"
+                                Visibility="{Binding IsApproving, Converter={StaticResource BoolToVisibilityConverter}}"
+                                Style="{StaticResource LegacyButtonStyle}"
+                                FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Padding="15,5">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="[OK] " FontFamily="Courier New" FontWeight="Bold" Foreground="#008000"/>
+                                <TextBlock Text="Confirmar" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Button>
+                        
+                        <!-- Botón Confirmar Rechazo -->
+                        <Button Command="{Binding ConfirmRejectionCommand}"
+                                Visibility="{Binding IsRejecting, Converter={StaticResource BoolToVisibilityConverter}}"
+                                Style="{StaticResource LegacyButtonStyle}"
+                                FontFamily="Tahoma" FontSize="10" FontWeight="Bold" Padding="15,5">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="[X] " FontFamily="Courier New" FontWeight="Bold" Foreground="#CC0000"/>
+                                <TextBlock Text="Rechazar" FontWeight="Bold"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
         
         <!-- Panel vacío cuando no hay selección -->
-        <Border Grid.Column="1" Background="White" CornerRadius="8" 
+        <Border Grid.Column="2" BorderThickness="1" BorderBrush="#808080" Background="White"
                 Visibility="{Binding ShowApprovalPanel, Converter={StaticResource InverseBoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="📋" FontSize="50" HorizontalAlignment="Center"/>
-                <TextBlock Text="Seleccione un permiso" FontSize="16" Foreground="#666" Margin="0,10,0,0"/>
-                <TextBlock Text="para aprobar o rechazar" Foreground="#999"/>
+                <TextBlock Text="[?]" FontFamily="Courier New" FontSize="48" Foreground="#808080" HorizontalAlignment="Center"/>
+                <TextBlock Text="Seleccione un permiso" FontFamily="Tahoma" FontSize="12" Foreground="#606060" 
+                           Margin="0,10,0,0" HorizontalAlignment="Center"/>
+                <TextBlock Text="para aprobar o rechazar" FontFamily="Tahoma" FontSize="10" Foreground="#808080"
+                           HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>
     </Grid>

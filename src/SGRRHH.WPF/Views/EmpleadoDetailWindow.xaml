@@ -5,10 +5,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="{Binding WindowTitle}" 
-        Height="650" Width="850"
+        Height="580" Width="780"
         MinHeight="500" MinWidth="700"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BackgroundBrush}">
+        Background="#C0C0C0">
+    
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     
     <Grid>
         <Grid.RowDefinitions>
@@ -18,14 +26,8 @@
         </Grid.RowDefinitions>
         
         <!-- Encabezado con foto y datos principales -->
-        <Border Grid.Row="0">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="{StaticResource SidebarHeaderColor}" Offset="0"/>
-                    <GradientStop Color="{StaticResource GrayBlueColor}" Offset="1"/>
-                </LinearGradientBrush>
-            </Border.Background>
-            <Grid Margin="25">
+        <Border Grid.Row="0" Background="#000080" Padding="10">
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
@@ -33,11 +35,11 @@
                 </Grid.ColumnDefinitions>
                 
                 <!-- Foto -->
-                <Border Grid.Column="0" Width="100" Height="120" CornerRadius="8"
-                        Background="{StaticResource SurfaceBrush}" Margin="0,0,20,0">
+                <Border Grid.Column="0" Width="70" Height="85" Background="White" Margin="0,0,15,0"
+                        BorderThickness="2" BorderBrush="#808080">
                     <Grid>
-                        <TextBlock Text="👤" FontSize="50" HorizontalAlignment="Center" 
-                                   VerticalAlignment="Center" Foreground="{StaticResource GrayBrush}"
+                        <TextBlock Text="[IMG]" FontFamily="Courier New" FontSize="10" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#808080"
                                    Visibility="{Binding FotoPath, Converter={StaticResource IsNullOrEmptyToVisibilityConverter}}"/>
                         <Image Source="{Binding FotoPath}" Stretch="UniformToFill"
                                Visibility="{Binding FotoPath, Converter={StaticResource NotNullToVisibilityConverter}}"/>
@@ -46,43 +48,52 @@
                 
                 <!-- Información principal -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding NombreCompleto}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource TextInverseBrush}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <Border Background="{StaticResource PrimaryBrush}" CornerRadius="3" Padding="8,4" Margin="0,0,10,0">
-                            <TextBlock Text="{Binding Codigo}" Foreground="{StaticResource TextInverseBrush}" FontSize="12" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding NombreCompleto}" FontFamily="Tahoma" FontSize="16" 
+                               FontWeight="Bold" Foreground="White"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <Border Background="{StaticResource InfoBrush}" Padding="5,2" Margin="0,0,8,0">
+                            <TextBlock Text="{Binding Codigo}" FontFamily="Tahoma" FontSize="9" 
+                                       FontWeight="Bold" Foreground="White"/>
                         </Border>
-                        <Border Background="{StaticResource SuccessBrush}" CornerRadius="3" Padding="8,4" Margin="0,0,10,0">
-                            <TextBlock Text="{Binding Estado}" Foreground="{StaticResource TextInverseBrush}" FontSize="12" FontWeight="SemiBold"/>
+                        <Border Background="{StaticResource SuccessBrush}" Padding="5,2" Margin="0,0,8,0">
+                            <TextBlock Text="{Binding Estado}" FontFamily="Tahoma" FontSize="9" 
+                                       FontWeight="Bold" Foreground="White"/>
                         </Border>
-                        <Border Background="{StaticResource WarningBrush}" CornerRadius="3" Padding="8,4">
-                            <TextBlock Foreground="{StaticResource TextInverseBrush}" FontSize="12" FontWeight="SemiBold">
-                                <Run Text="Antigüedad: "/>
+                        <Border Background="{StaticResource WarningBrush}" Padding="5,2">
+                            <TextBlock FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="White">
+                                <Run Text="Antiguedad: "/>
                                 <Run Text="{Binding Antiguedad, Mode=OneWay}"/>
                             </TextBlock>
                         </Border>
                     </StackPanel>
-                    <TextBlock Margin="0,8,0,0" Foreground="{StaticResource SidebarTextMutedBrush}" FontSize="13">
-                        <Run Text="Cédula: "/>
+                    <TextBlock Margin="0,5,0,0" FontFamily="Tahoma" FontSize="9" Foreground="#C0C0FF">
+                        <Run Text="Cedula: "/>
                         <Run Text="{Binding Cedula, Mode=OneWay}"/>
                         <Run Text="  |  Ingreso: "/>
                         <Run Text="{Binding FechaIngreso, Mode=OneWay}"/>
                     </TextBlock>
                 </StackPanel>
                 
-                <!-- Botón editar -->
-                <Button Grid.Column="2" Content="✏️ Editar" Command="{Binding EditCommand}"
-                        Style="{StaticResource WarningButton}"
-                        VerticalAlignment="Top"
-                        Padding="15,10" FontWeight="Bold" FontSize="13"/>
+                <!-- Botones de acción -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Button Content="Imprimir" Click="PrintButton_Click"
+                            Style="{StaticResource LegacyButtonStyle}"
+                            FontFamily="Tahoma" FontSize="10"
+                            Padding="10,4" Margin="0,0,5,0"/>
+                    <Button Content="Editar" Command="{Binding EditCommand}"
+                            Style="{StaticResource LegacyButtonStyle}"
+                            FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
+                            Padding="10,4"/>
+                </StackPanel>
             </Grid>
         </Border>
         
-        <!-- Contenido con tabs -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="25">
+        <!-- Contenido con paneles -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="20"/>
+                    <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
@@ -92,156 +103,194 @@
                 </Grid.RowDefinitions>
                 
                 <!-- Datos Personales -->
-                <Border Grid.Column="0" Grid.Row="0" Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
-                    <StackPanel>
-                        <TextBlock Text="👤 Datos Personales" FontWeight="Bold" FontSize="15" 
-                                   Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
-                        
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Fecha Nacimiento:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FechaNacimiento}" 
-                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
-                            
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Género:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Genero}" 
-                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
-                            
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Estado Civil:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding EstadoCivil}" 
-                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
-                            
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Dirección:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Direccion}" 
-                                       FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,10"/>
-                            
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Email:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,0"/>
-                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Email}" 
-                                       FontWeight="SemiBold" FontSize="13"/>
-                        </Grid>
-                    </StackPanel>
+                <Border Grid.Column="0" Grid.Row="0" BorderThickness="1" BorderBrush="#808080" 
+                        Background="White" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Background="#000080" Padding="8,4">
+                            <TextBlock Text="DATOS PERSONALES" FontFamily="Tahoma" FontSize="10" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
+                        <Border Grid.Row="1" Padding="10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="F. Nacimiento:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FechaNacimiento}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Genero:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Genero}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Estado Civil:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding EstadoCivil}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Direccion:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Direccion}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Email:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,0"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Email}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Border>
                 
                 <!-- Datos de Contacto -->
-                <Border Grid.Column="2" Grid.Row="0" Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
-                    <StackPanel>
-                        <TextBlock Text="📞 Contacto y Emergencia" FontWeight="Bold" FontSize="15" 
-                                   Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
-                        
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Teléfono:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Telefono}" 
-                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
-                            
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Tel. Emergencia:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TelefonoEmergencia}" 
-                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
-                            
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Contacto Emerg.:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,0"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ContactoEmergencia}" 
-                                       FontWeight="SemiBold" FontSize="13"/>
-                        </Grid>
-                    </StackPanel>
+                <Border Grid.Column="2" Grid.Row="0" BorderThickness="1" BorderBrush="#808080" 
+                        Background="White" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Background="#000080" Padding="8,4">
+                            <TextBlock Text="CONTACTO Y EMERGENCIA" FontFamily="Tahoma" FontSize="10" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
+                        <Border Grid.Row="1" Padding="10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Telefono:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Telefono}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Tel. Emergencia:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TelefonoEmergencia}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Contacto Emerg.:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,0"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ContactoEmergencia}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Border>
                 
                 <!-- Datos Laborales -->
-                <Border Grid.Column="0" Grid.Row="1" Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
-                    <StackPanel>
-                        <TextBlock Text="🏢 Información Laboral" FontWeight="Bold" FontSize="15" 
-                                   Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
-                        
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Departamento:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Departamento}" 
-                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
-                            
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Cargo:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Cargo}" 
-                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
-                            
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Supervisor:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,10"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Supervisor}" 
-                                       FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
-                            
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Tipo Contrato:" 
-                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,15,0"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TipoContrato}" 
-                                       FontWeight="SemiBold" FontSize="13"/>
-                        </Grid>
-                    </StackPanel>
+                <Border Grid.Column="0" Grid.Row="1" BorderThickness="1" BorderBrush="#808080" 
+                        Background="White" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Background="#000080" Padding="8,4">
+                            <TextBlock Text="INFORMACION LABORAL" FontFamily="Tahoma" FontSize="10" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
+                        <Border Grid.Row="1" Padding="10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Departamento:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Departamento}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Cargo:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Cargo}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Supervisor:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,5"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Supervisor}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
+                                
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Tipo Contrato:" 
+                                           FontFamily="Tahoma" FontSize="9" Foreground="#404040" Margin="0,0,10,0"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TipoContrato}" 
+                                           FontFamily="Tahoma" FontSize="9" FontWeight="Bold"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Border>
                 
                 <!-- Observaciones -->
-                <Border Grid.Column="2" Grid.Row="1" Style="{StaticResource CardFlat}" Padding="20" Margin="0,0,0,15">
-                    <StackPanel>
-                        <TextBlock Text="📝 Observaciones" FontWeight="Bold" FontSize="15" 
-                                   Foreground="{StaticResource SidebarHeaderBrush}" Margin="0,0,0,15"/>
-                        <TextBlock Text="{Binding Observaciones}" FontSize="13" TextWrapping="Wrap"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
-                    </StackPanel>
+                <Border Grid.Column="2" Grid.Row="1" BorderThickness="1" BorderBrush="#808080" 
+                        Background="White" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Background="#000080" Padding="8,4">
+                            <TextBlock Text="OBSERVACIONES" FontFamily="Tahoma" FontSize="10" 
+                                       FontWeight="Bold" Foreground="White"/>
+                        </Border>
+                        <Border Grid.Row="1" Padding="10">
+                            <TextBlock Text="{Binding Observaciones}" FontFamily="Tahoma" FontSize="9" 
+                                       TextWrapping="Wrap" Foreground="#404040"/>
+                        </Border>
+                    </Grid>
                 </Border>
                 
-                <!-- Acciones rápidas (placeholder para futuras funciones) -->
-                <Border Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2" Background="{StaticResource PrimaryLightBrush}" 
-                        CornerRadius="8" Padding="20">
+                <!-- Acciones rápidas -->
+                <Border Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2" Background="#E0E0E0" 
+                        BorderThickness="1" BorderBrush="#808080" Padding="10">
                     <StackPanel>
-                        <TextBlock Text="⚡ Acciones Rápidas" FontWeight="Bold" FontSize="15" 
-                                   Foreground="{StaticResource InfoBrush}" Margin="0,0,0,15"/>
+                        <TextBlock Text="ACCIONES RAPIDAS" FontFamily="Tahoma" FontSize="10" 
+                                   FontWeight="Bold" Foreground="#000080" Margin="0,0,0,8"/>
                         <WrapPanel>
-                            <Button Content="📁 Ver Documentos" Margin="0,0,10,10" Padding="15,8"
+                            <Button Content="Documentos" Margin="0,0,8,5" Padding="10,4"
                                     Command="{Binding VerDocumentosCommand}"
-                                    Style="{StaticResource InfoButton}"/>
-                            <Button Content="📅 Ver Permisos" Margin="0,0,10,10" Padding="15,8"
-                                    Style="{StaticResource PrimaryOutlineButton}" IsEnabled="False"/>
-                            <Button Content="🏖️ Ver Vacaciones" Margin="0,0,10,10" Padding="15,8"
-                                    Style="{StaticResource PrimaryOutlineButton}" IsEnabled="False"/>
-                            <Button Content="📊 Ver Actividades" Margin="0,0,10,10" Padding="15,8"
-                                    Style="{StaticResource PrimaryOutlineButton}" IsEnabled="False"/>
-                            <Button Content="📄 Generar Certificado" Margin="0,0,10,10" Padding="15,8"
-                                    Style="{StaticResource PrimaryOutlineButton}" IsEnabled="False"/>
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9"/>
+                            <Button Content="Permisos" Margin="0,0,8,5" Padding="10,4"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" IsEnabled="False"/>
+                            <Button Content="Vacaciones" Margin="0,0,8,5" Padding="10,4"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" IsEnabled="False"/>
+                            <Button Content="Actividades" Margin="0,0,8,5" Padding="10,4"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" IsEnabled="False"/>
+                            <Button Content="Certificado" Margin="0,0,8,5" Padding="10,4"
+                                    Style="{StaticResource LegacyButtonStyle}"
+                                    FontFamily="Tahoma" FontSize="9" IsEnabled="False"/>
                         </WrapPanel>
                     </StackPanel>
                 </Border>
@@ -249,22 +298,23 @@
         </ScrollViewer>
         
         <!-- Barra inferior -->
-        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}" Padding="20" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="#808080" Padding="10,8">
             <Button Content="Cerrar" Command="{Binding CloseCommand}"
-                    Style="{StaticResource SecondaryButton}"
+                    Style="{StaticResource LegacyButtonStyle}"
                     HorizontalAlignment="Right"
-                    Width="120" Height="40" FontSize="14"/>
+                    FontFamily="Tahoma" FontSize="10" Width="80" Padding="0,4"/>
         </Border>
         
         <!-- Overlay de carga -->
-        <Border Grid.RowSpan="3" Background="#80000000" 
+        <Border Grid.RowSpan="3" Background="#80FFFFFF" 
                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="30"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Background="White" BorderThickness="2" BorderBrush="#808080" 
+                    Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
-                    <TextBlock Text="⏳" FontSize="40" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Cargando información..." FontSize="16" Foreground="{StaticResource TextSecondaryBrush}" 
-                               HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                    <TextBlock Text="[...]" FontFamily="Courier New" FontSize="20" FontWeight="Bold"
+                               Foreground="#000080" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Cargando informacion..." FontFamily="Tahoma" FontSize="10" 
+                               Foreground="#808080" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                 </StackPanel>
             </Border>
         </Border>

@@ -8,14 +8,23 @@ namespace SGRRHH.Infrastructure.Firebase.Repositories;
 /// <summary>
 /// Implementación del repositorio de Tipos de Permiso para Firestore.
 /// Colección: "tipos-permiso"
+/// Incluye cache en memoria con expiración de 30 minutos (cambia muy poco).
 /// </summary>
 public class TipoPermisoFirestoreRepository : FirestoreRepository<TipoPermiso>, ITipoPermisoRepository
 {
     private const string COLLECTION_NAME = "tipos-permiso";
-    
-    public TipoPermisoFirestoreRepository(FirebaseInitializer firebase, ILogger<TipoPermisoFirestoreRepository>? logger = null) 
+    private const string CACHE_KEY_ALL_ACTIVE = "tipos_permiso_all_active";
+    private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(30);
+
+    private readonly ICacheService? _cache;
+
+    public TipoPermisoFirestoreRepository(
+        FirebaseInitializer firebase,
+        ICacheService? cache = null,
+        ILogger<TipoPermisoFirestoreRepository>? logger = null)
         : base(firebase, COLLECTION_NAME, logger)
     {
+        _cache = cache;
     }
     
     #region Entity <-> Document Mapping
@@ -66,27 +75,49 @@ public class TipoPermisoFirestoreRepository : FirestoreRepository<TipoPermiso>, 
     #endregion
     
     #region ITipoPermisoRepository Implementation
-    
+
     /// <summary>
-    /// Obtiene todos los tipos de permiso activos ordenados por nombre
+    /// Obtiene todos los tipos de permiso activos ordenados por nombre.
+    /// Usa cache en memoria con expiración de 30 minutos.
     /// </summary>
     public async Task<IEnumerable<TipoPermiso>> GetActivosAsync()
     {
         try
         {
-            var query = Collection.WhereEqualTo("activo", true);
-            var snapshot = await query.GetSnapshotAsync();
-            
-            return snapshot.Documents
-                .Select(DocumentToEntity)
-                .OrderBy(tp => tp.Nombre)
-                .ToList();
+            if (_cache != null)
+            {
+                return await _cache.GetOrCreateAsync(
+                    CACHE_KEY_ALL_ACTIVE,
+                    FetchActivosFromFirestoreAsync,
+                    CacheExpiration);
+            }
+
+            return await FetchActivosFromFirestoreAsync();
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al obtener tipos de permiso activos");
             throw;
         }
+    }
+
+    private async Task<IEnumerable<TipoPermiso>> FetchActivosFromFirestoreAsync()
+    {
+        var query = Collection.WhereEqualTo("activo", true);
+        var snapshot = await query.GetSnapshotAsync();
+
+        return snapshot.Documents
+            .Select(DocumentToEntity)
+            .OrderBy(tp => tp.Nombre)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Invalida el cache de tipos de permiso.
+    /// </summary>
+    public void InvalidateCache()
+    {
+        _cache?.InvalidateByPrefix("tipos_permiso");
     }
     
     /// <summary>

@@ -4,6 +4,7 @@ using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 using System.Collections.ObjectModel;
 using System.Windows;
 
@@ -352,21 +353,21 @@ public partial class PermisosListViewModel : ViewModelBase
     
     partial void OnSelectedEmpleadoChanged(Empleado? value)
     {
-        _ = LoadPermisosAsync();
+        LoadPermisosAsync().SafeFireAndForget(showErrorMessage: false);
     }
     
     partial void OnSelectedEstadoChanged(EstadoPermiso? value)
     {
-        _ = LoadPermisosAsync();
+        LoadPermisosAsync().SafeFireAndForget(showErrorMessage: false);
     }
     
     partial void OnFechaDesdeChanged(DateTime? value)
     {
-        _ = LoadPermisosAsync();
+        LoadPermisosAsync().SafeFireAndForget(showErrorMessage: false);
     }
     
     partial void OnFechaHastaChanged(DateTime? value)
     {
-        _ = LoadPermisosAsync();
+        LoadPermisosAsync().SafeFireAndForget(showErrorMessage: false);
     }
 }
