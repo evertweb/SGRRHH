@@ -560,9 +560,8 @@ public partial class ContratosViewModel : ViewModelBase
         {
             try
             {
-                // Copiar archivo a carpeta de contratos
-                var contratosPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "contratos");
-                Directory.CreateDirectory(contratosPath);
+                // Copiar archivo a carpeta de contratos usando DataPaths
+                var contratosPath = Helpers.DataPaths.EnsureDirectory(Helpers.DataPaths.Contratos);
                 
                 var fileName = $"contrato_{SelectedEmpleado?.Cedula ?? "temp"}_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(dialog.FileName)}";
                 var destPath = Path.Combine(contratosPath, fileName);

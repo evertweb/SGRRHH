@@ -684,13 +684,7 @@ public partial class App : Application
     {
         try
         {
-            var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "logs");
-            if (!Directory.Exists(logPath))
-            {
-                Directory.CreateDirectory(logPath);
-            }
-            
-            var logFile = Path.Combine(logPath, $"error_{DateTime.Now:yyyy-MM-dd}.log");
+            var logFile = Helpers.DataPaths.GetLogFilePath("error");
             var logEntry = $"""
                 ================================================================================
                 [{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {source}

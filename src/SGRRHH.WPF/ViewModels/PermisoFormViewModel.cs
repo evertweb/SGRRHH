@@ -185,14 +185,10 @@ public partial class PermisoFormViewModel : ViewModelBase
         
         if (dialog.ShowDialog() == true)
         {
-            // Copiar archivo a carpeta de documentos
+            // Copiar archivo a carpeta de documentos usando DataPaths
             try
             {
-                var docsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "documentos", "permisos");
-                if (!Directory.Exists(docsPath))
-                {
-                    Directory.CreateDirectory(docsPath);
-                }
+                var docsPath = Helpers.DataPaths.EnsureDirectory(Helpers.DataPaths.Permisos);
                 
                 var fileName = $"{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(dialog.FileName)}";
                 var destPath = Path.Combine(docsPath, fileName);

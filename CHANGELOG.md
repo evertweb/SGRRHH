@@ -7,6 +7,19 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [1.1.14] - 2025-12-22
+
+### 🐛 Corrección Crítica
+
+- **Corregido error de permisos de archivos**: La aplicación ahora guarda logs y documentos en `%LOCALAPPDATA%\SGRRHH` en lugar del directorio de instalación, evitando errores de permisos cuando está instalada en Program Files.
+
+### 🔧 Cambios Técnicos
+
+- Nuevo helper centralizado `DataPaths.cs` para gestión de rutas de datos
+- Actualizado `App.xaml.cs`, `AsyncHelper.cs`, `ContratosViewModel.cs` y `PermisoFormViewModel.cs`
+
+---
+
 ## [1.1.13] - 2025-12-22
 
 ### 🧹 Mantenimiento

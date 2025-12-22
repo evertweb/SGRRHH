@@ -113,17 +113,7 @@ public static class AsyncHelper
     {
         try
         {
-            var logPath = System.IO.Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory, 
-                "data", "logs", 
-                $"error_{DateTime.Now:yyyy-MM-dd}.log");
-            
-            var logDir = System.IO.Path.GetDirectoryName(logPath);
-            if (!string.IsNullOrEmpty(logDir) && !System.IO.Directory.Exists(logDir))
-            {
-                System.IO.Directory.CreateDirectory(logDir);
-            }
-            
+            var logPath = DataPaths.GetLogFilePath("async_error");
             var logMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] AsyncHelper Error: {ex.Message}\n{ex.StackTrace}\n\n";
             System.IO.File.AppendAllText(logPath, logMessage);
         }
