@@ -1,5 +1,7 @@
 namespace SGRRHH.Core.Models;
 
+using SGRRHH.Core.Common;
+
 /// <summary>
 /// Información básica de la empresa usada para los documentos oficiales.
 /// </summary>
@@ -13,8 +15,12 @@ public class CompanyInfo
     public string Correo { get; set; } = "contacto@empresa.com";
     public string RepresentanteNombre { get; set; } = "María Pérez";
     public string RepresentanteCargo { get; set; } = "Gerente General";
+    
+    /// <summary>
+    /// Ruta al logo de la empresa. Se almacena en %LOCALAPPDATA%\SGRRHH\config
+    /// </summary>
     public string? LogoPath { get; set; }
-        = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "logo.png");
+        = Path.Combine(AppDataPaths.Config, "logo.png");
 
     /// <summary>
     /// Mezcla la información actual con otra instancia, usando los valores definidos en <paramref name="overrides"/>.

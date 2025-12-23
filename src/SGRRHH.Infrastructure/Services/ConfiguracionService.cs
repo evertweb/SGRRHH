@@ -149,12 +149,9 @@ public class ConfiguracionService : IConfiguracionService
                 return ServiceResult<string>.Fail("El archivo de origen no existe");
             }
             
-            // Crear directorio de configuración si no existe
-            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config");
-            if (!Directory.Exists(configPath))
-            {
-                Directory.CreateDirectory(configPath);
-            }
+            // Crear directorio de configuración en %LOCALAPPDATA%\SGRRHH si no existe
+            var configPath = AppDataPaths.Config;
+            AppDataPaths.EnsureDirectory(configPath);
             
             // Copiar archivo con extensión original
             var extension = Path.GetExtension(rutaOrigen);

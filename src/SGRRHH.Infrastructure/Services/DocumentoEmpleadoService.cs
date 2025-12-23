@@ -66,9 +66,9 @@ public class DocumentoEmpleadoService : IDocumentoEmpleadoService
         _pdfCompressionService = pdfCompressionService;
         _logger = logger;
         
-        // Configurar ruta de documentos
-        _documentosPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "documentos_empleados");
-        Directory.CreateDirectory(_documentosPath);
+        // Configurar ruta de documentos en %LOCALAPPDATA%\SGRRHH
+        _documentosPath = AppDataPaths.DocumentosEmpleados;
+        AppDataPaths.EnsureDirectory(_documentosPath);
     }
     
     /// <summary>

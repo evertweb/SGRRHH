@@ -36,14 +36,12 @@ public class DocumentService : IDocumentService
         _empleadoRepository = empleadoRepository;
         _permisoRepository = permisoRepository;
 
-        var dataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
-        Directory.CreateDirectory(dataDirectory);
+        // Usar rutas en %LOCALAPPDATA%\SGRRHH para evitar problemas de permisos
+        var configDirectory = AppDataPaths.Config;
+        AppDataPaths.EnsureDirectory(configDirectory);
 
-        var configDirectory = Path.Combine(dataDirectory, ConfigFolderName);
-        Directory.CreateDirectory(configDirectory);
-
-        _documentsPath = Path.Combine(dataDirectory, DocumentsFolderName);
-        Directory.CreateDirectory(_documentsPath);
+        _documentsPath = AppDataPaths.Documentos;
+        AppDataPaths.EnsureDirectory(_documentsPath);
 
         _companyInfo = LoadCompanyInfo(Path.Combine(configDirectory, CompanyFileName));
         _logoBytes = TryLoadLogo(_companyInfo.LogoPath);

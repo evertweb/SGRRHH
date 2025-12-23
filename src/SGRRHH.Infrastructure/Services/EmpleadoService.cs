@@ -4,7 +4,6 @@ using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
 using SGRRHH.Core.Models;
-using System.IO;
 
 namespace SGRRHH.Infrastructure.Services;
 
@@ -27,12 +26,9 @@ public class EmpleadoService : IEmpleadoService
         _dateCalculationService = dateCalculationService;
         _logger = logger;
         
-        // Configurar ruta para fotos
-        _fotosPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "fotos");
-        if (!Directory.Exists(_fotosPath))
-        {
-            Directory.CreateDirectory(_fotosPath);
-        }
+        // Configurar ruta para fotos en %LOCALAPPDATA%\SGRRHH
+        _fotosPath = AppDataPaths.Fotos;
+        AppDataPaths.EnsureDirectory(_fotosPath);
     }
     
     public async Task<IEnumerable<Empleado>> GetAllAsync()

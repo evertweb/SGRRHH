@@ -1,74 +1,61 @@
-using System.IO;
+using SGRRHH.Core.Common;
 
 namespace SGRRHH.WPF.Helpers;
 
 /// <summary>
 /// Proporciona rutas centralizadas para datos de la aplicación.
-/// Usa LOCALAPPDATA para evitar problemas de permisos cuando la aplicación
-/// está instalada en Program Files.
+/// Esta clase es un wrapper alrededor de AppDataPaths en Core para compatibilidad.
 /// </summary>
 public static class DataPaths
 {
     /// <summary>
     /// Ruta base de datos de la aplicación en %LOCALAPPDATA%\SGRRHH
     /// </summary>
-    public static string AppDataRoot { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "SGRRHH");
+    public static string AppDataRoot => AppDataPaths.AppDataRoot;
     
     /// <summary>
     /// Ruta para logs de la aplicación
     /// </summary>
-    public static string Logs => Path.Combine(AppDataRoot, "logs");
+    public static string Logs => AppDataPaths.Logs;
     
     /// <summary>
     /// Ruta para documentos de contratos
     /// </summary>
-    public static string Contratos => Path.Combine(AppDataRoot, "contratos");
+    public static string Contratos => AppDataPaths.Contratos;
     
     /// <summary>
     /// Ruta para documentos de permisos
     /// </summary>
-    public static string Permisos => Path.Combine(AppDataRoot, "permisos");
+    public static string Permisos => AppDataPaths.Permisos;
     
     /// <summary>
     /// Ruta para fotos de empleados
     /// </summary>
-    public static string Fotos => Path.Combine(AppDataRoot, "fotos");
+    public static string Fotos => AppDataPaths.Fotos;
     
     /// <summary>
     /// Ruta para documentos generales
     /// </summary>
-    public static string Documentos => Path.Combine(AppDataRoot, "documentos");
+    public static string Documentos => AppDataPaths.Documentos;
     
     /// <summary>
     /// Ruta para backups locales
     /// </summary>
-    public static string Backups => Path.Combine(AppDataRoot, "backups");
+    public static string Backups => AppDataPaths.Backups;
     
     /// <summary>
     /// Ruta para actualizaciones descargadas
     /// </summary>
-    public static string Updates => Path.Combine(AppDataRoot, "updates");
+    public static string Updates => AppDataPaths.Updates;
     
     /// <summary>
     /// Asegura que un directorio exista, creándolo si es necesario.
     /// </summary>
-    public static string EnsureDirectory(string path)
-    {
-        if (!Directory.Exists(path))
-        {
-            Directory.CreateDirectory(path);
-        }
-        return path;
-    }
+    public static string EnsureDirectory(string path) => AppDataPaths.EnsureDirectory(path);
     
     /// <summary>
     /// Obtiene la ruta para un archivo de log del día actual
     /// </summary>
-    public static string GetLogFilePath(string prefix = "error")
-    {
-        EnsureDirectory(Logs);
-        return Path.Combine(Logs, $"{prefix}_{DateTime.Now:yyyy-MM-dd}.log");
-    }
+    public static string GetLogFilePath(string prefix = "error") => AppDataPaths.GetLogFilePath(prefix);
 }
+
