@@ -39,7 +39,18 @@ jobs:
         $json = Get-Content "src/SGRRHH.WPF/appsettings.json" -Raw | ConvertFrom-Json
         $json.Application.Version = $version
         $json | ConvertTo-Json -Depth 10 | Set-Content "src/SGRRHH.WPF/appsettings.json" -Encoding UTF8
-        Write-Host "✅ Version updated to $version"
+        Write-Host "✅ Version updated to $version in appsettings.json"
+
+    - name: Update version in csproj from tag
+      run: |
+        $version = "${{ github.ref_name }}".TrimStart('v')
+        $csprojPath = "src/SGRRHH.WPF/SGRRHH.WPF.csproj"
+        $content = Get-Content $csprojPath -Raw
+        $content = $content -replace '<Version>.*?</Version>', "<Version>$version</Version>"
+        $content = $content -replace '<AssemblyVersion>.*?</AssemblyVersion>', "<AssemblyVersion>$version.0</AssemblyVersion>"
+        $content = $content -replace '<FileVersion>.*?</FileVersion>', "<FileVersion>$version.0</FileVersion>"
+        Set-Content $csprojPath $content -Encoding UTF8
+        Write-Host "✅ Version updated to $version in csproj"
 
     - name: Verify config files exist
       run: |
