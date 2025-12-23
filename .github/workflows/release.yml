@@ -33,6 +33,14 @@ jobs:
         Set-Content -Path "src/SGRRHH.WPF/firebase-credentials.json" -Value $content -Encoding UTF8
         Write-Host "✅ firebase-credentials.json created"
 
+    - name: Update version in appsettings.json from tag
+      run: |
+        $version = "${{ github.ref_name }}".TrimStart('v')
+        $json = Get-Content "src/SGRRHH.WPF/appsettings.json" -Raw | ConvertFrom-Json
+        $json.Application.Version = $version
+        $json | ConvertTo-Json -Depth 10 | Set-Content "src/SGRRHH.WPF/appsettings.json" -Encoding UTF8
+        Write-Host "✅ Version updated to $version"
+
     - name: Verify config files exist
       run: |
         if (Test-Path "src/SGRRHH.WPF/appsettings.json") {
