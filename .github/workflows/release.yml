@@ -32,30 +32,72 @@ jobs:
     - name: Copy Updater to Main Folder
       run: copy publish/Updater/SGRRHH.Updater.* publish/SGRRHH/
 
-    - name: Create ZIP
+    # ========== CREAR INSTALADOR EXE ==========
+    - name: Install Inno Setup
+      run: choco install innosetup -y
+
+    - name: Get version from tag
+      id: version
+      run: |
+        $version = "${{ github.ref_name }}".TrimStart('v')
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+
+    - name: Update installer version
+      run: |
+        $content = Get-Content installer.iss
+        $content = $content -replace '#define MyAppVersion ".*"', '#define MyAppVersion "${{ steps.version.outputs.version }}"'
+        Set-Content installer.iss $content
+
+    - name: Build Installer
+      run: |
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+
+    # ========== TAMBIÉN CREAR ZIP (para actualizaciones) ==========
+    - name: Create ZIP (for auto-updates)
       run: Compress-Archive -Path publish/SGRRHH/* -DestinationPath SGRRHH.zip
 
-    - name: Calculate SHA256
-      id: sha256
+    - name: Calculate SHA256 for ZIP
+      id: sha256_zip
       run: |
         $hash = (Get-FileHash -Path SGRRHH.zip -Algorithm SHA256).Hash.ToLower()
         echo "hash=$hash" >> $env:GITHUB_OUTPUT
-        echo "SHA256: $hash"
+
+    - name: Calculate SHA256 for Installer
+      id: sha256_exe
+      run: |
+        $installer = Get-ChildItem -Path "." -Filter "SGRRHH-Setup-*.exe" | Select-Object -First 1
+        $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLower()
+        echo "hash=$hash" >> $env:GITHUB_OUTPUT
+        echo "filename=$($installer.Name)" >> $env:GITHUB_OUTPUT
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: SGRRHH.zip
+        files: |
+          ${{ steps.sha256_exe.outputs.filename }}
+          SGRRHH.zip
         body: |
-          ## Actualización SGRRHH ${{ github.ref_name }}
+          ## 🚀 SGRRHH ${{ github.ref_name }}
 
-          **Verificación de integridad:**
+          ### 📥 Descargas
+
+          | Archivo | Descripción |
+          |---------|-------------|
+          | **${{ steps.sha256_exe.outputs.filename }}** | 🔧 **Instalador** - Recomendado para nuevas instalaciones |
+          | **SGRRHH.zip** | 📦 Versión portable / Para actualizaciones automáticas |
+
+          ### ✅ Verificación de integridad
 
           ```
-          SHA256: ${{ steps.sha256.outputs.hash }}
+          Instalador SHA256: ${{ steps.sha256_exe.outputs.hash }}
+          ZIP SHA256: ${{ steps.sha256_zip.outputs.hash }}
           ```
 
-          ### Cambios
+          ### 📋 Requisitos
+          - Windows 10/11 (64-bit)
+          - [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
 
+          ### 📝 Cambios
           ${{ github.event.head_commit.message }}
+
         generate_release_notes: true

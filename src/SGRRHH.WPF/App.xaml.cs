@@ -39,6 +39,11 @@ public partial class App : Application
     {
         base.OnStartup(e);
         
+        // ========== INICIALIZAR RUTAS DE DATOS ==========
+        // Esto crea todos los directorios necesarios en %LOCALAPPDATA%\SGRRHH
+        // ANTES de que cualquier servicio intente usarlos
+        SGRRHH.Core.Common.AppDataPaths.Initialize();
+        
         // Configurar manejo global de excepciones
         SetupGlobalExceptionHandling();
         
