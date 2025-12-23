@@ -20,6 +20,34 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
+    # ========== CREAR ARCHIVOS DE CONFIGURACIÓN DESDE SECRETS ==========
+    - name: Create appsettings.json from secret
+      run: |
+        $content = '${{ secrets.APPSETTINGS_JSON }}'
+        Set-Content -Path "src/SGRRHH.WPF/appsettings.json" -Value $content -Encoding UTF8
+        Write-Host "✅ appsettings.json created"
+
+    - name: Create firebase-credentials.json from secret
+      run: |
+        $content = '${{ secrets.FIREBASE_CREDENTIALS_JSON }}'
+        Set-Content -Path "src/SGRRHH.WPF/firebase-credentials.json" -Value $content -Encoding UTF8
+        Write-Host "✅ firebase-credentials.json created"
+
+    - name: Verify config files exist
+      run: |
+        if (Test-Path "src/SGRRHH.WPF/appsettings.json") {
+          Write-Host "✅ appsettings.json exists"
+        } else {
+          Write-Host "❌ appsettings.json NOT FOUND"
+          exit 1
+        }
+        if (Test-Path "src/SGRRHH.WPF/firebase-credentials.json") {
+          Write-Host "✅ firebase-credentials.json exists"
+        } else {
+          Write-Host "❌ firebase-credentials.json NOT FOUND"
+          exit 1
+        }
+
     - name: Restore dependencies
       run: dotnet restore src/SGRRHH.sln
 

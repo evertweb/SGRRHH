@@ -52,16 +52,16 @@
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
   </PropertyGroup>
   
-  <!-- Copiar archivos de configuración al output (SIEMPRE) -->
+  <!-- Copiar archivos de configuración al output (creados desde GitHub Secrets) -->
   <ItemGroup>
-    <Content Include="appsettings.json">
+    <None Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-    </Content>
-    <Content Include="firebase-credentials.json">
+    </None>
+    <None Update="firebase-credentials.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-    </Content>
+    </None>
   </ItemGroup>
 
   <!-- Compilar y copiar SGRRHH.Updater.exe al output -->
