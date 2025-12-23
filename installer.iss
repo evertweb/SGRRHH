@@ -2,7 +2,7 @@
 ; Este script genera un instalador EXE profesional
 
 #define MyAppName "SGRRHH"
-#define MyAppVersion "1.1.17"
+#define MyAppVersion "1.1.18"
 #define MyAppPublisher "Forestech"
 #define MyAppURL "https://github.com/evertweb/SGRRHH"
 #define MyAppExeName "SGRRHH.exe"

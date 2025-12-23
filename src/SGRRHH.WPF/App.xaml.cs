@@ -667,10 +667,15 @@ public partial class App : Application
         return ex switch
         {
             IOException ioEx =>
-                "Error al acceder al sistema de archivos. Verifique permisos y espacio disponible.",
+                $"Error al acceder al sistema de archivos.\n\n" +
+                $"Detalles: {ioEx.Message}\n\n" +
+                $"Stack: {ioEx.StackTrace?.Split('\n').FirstOrDefault() ?? "N/A"}\n\n" +
+                $"Ruta de datos: {SGRRHH.Core.Common.AppDataPaths.AppDataRoot}",
             
-            UnauthorizedAccessException =>
-                "No tiene permisos para realizar esta operación.",
+            UnauthorizedAccessException uaEx =>
+                $"No tiene permisos para realizar esta operación.\n\n" +
+                $"Detalles: {uaEx.Message}\n\n" +
+                $"Verifique que la carpeta {SGRRHH.Core.Common.AppDataPaths.AppDataRoot} sea accesible.",
             
             InvalidOperationException when ex.Message.Contains("disposed") =>
                 "Error interno: componente no disponible. Intente nuevamente.",
