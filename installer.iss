@@ -2,7 +2,7 @@
 ; Este script genera un instalador EXE profesional
 
 #define MyAppName "SGRRHH"
-#define MyAppVersion "1.1.16"
+#define MyAppVersion "1.1.17"
 #define MyAppPublisher "Forestech"
 #define MyAppURL "https://github.com/evertweb/SGRRHH"
 #define MyAppExeName "SGRRHH.exe"
@@ -31,7 +31,7 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 ; Apariencia
 WizardStyle=modern
-SetupIconFile=publish\SGRRHH\SGRRHH.ico
+; Usar icono de la aplicación compilada (sin icono externo)
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ; Información adicional
 VersionInfoVersion={#MyAppVersion}
