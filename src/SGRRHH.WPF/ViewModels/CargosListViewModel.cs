@@ -6,7 +6,9 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
+using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 
 namespace SGRRHH.WPF.ViewModels;
 
@@ -18,6 +20,7 @@ public partial class CargosListViewModel : ViewModelBase
     private readonly ICargoService _cargoService;
     private readonly IDepartamentoService _departamentoService;
     private readonly IDialogService _dialogService;
+    private readonly RolUsuario _currentUserRole;
     
     [ObservableProperty]
     private ObservableCollection<Cargo> _cargos = new();
@@ -62,6 +65,23 @@ public partial class CargosListViewModel : ViewModelBase
     
     private List<Cargo> _allCargos = new();
     
+    // ======== Permisos de UI ========
+    
+    /// <summary>
+    /// Indica si el usuario puede crear cargos
+    /// </summary>
+    public bool CanCreate => PermissionHelper.CanCreate(_currentUserRole, PermissionHelper.Modulos.Cargos);
+    
+    /// <summary>
+    /// Indica si el usuario puede editar cargos
+    /// </summary>
+    public bool CanEdit => PermissionHelper.CanEdit(_currentUserRole, PermissionHelper.Modulos.Cargos);
+    
+    /// <summary>
+    /// Indica si el usuario puede eliminar cargos
+    /// </summary>
+    public bool CanDelete => PermissionHelper.CanDelete(_currentUserRole, PermissionHelper.Modulos.Cargos);
+    
     // ======== Control de vistas ========
     
     [ObservableProperty]
@@ -95,6 +115,9 @@ public partial class CargosListViewModel : ViewModelBase
         _cargoService = cargoService;
         _departamentoService = departamentoService;
         _dialogService = dialogService;
+        
+        // Obtener rol del usuario actual desde App.CurrentUser
+        _currentUserRole = App.CurrentUser?.Rol ?? RolUsuario.Operador;
     }
     
     public async Task LoadAsync()

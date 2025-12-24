@@ -604,15 +604,16 @@ public class FirebaseAuthService : IFirebaseAuthService
     {
         return reason switch
         {
-            AuthErrorReason.WrongPassword => "Contraseña incorrecta",
-            AuthErrorReason.UserNotFound => "Usuario no encontrado",
+            AuthErrorReason.WrongPassword => "Usuario o contraseña incorrectos",
+            AuthErrorReason.UserNotFound => "Usuario o contraseña incorrectos",
             AuthErrorReason.InvalidEmailAddress => "Correo electrónico inválido",
             AuthErrorReason.UserDisabled => "Usuario desactivado",
             AuthErrorReason.TooManyAttemptsTryLater => "Demasiados intentos. Intente más tarde",
             AuthErrorReason.WeakPassword => "La contraseña es muy débil",
             AuthErrorReason.EmailExists => "El correo electrónico ya está en uso",
             AuthErrorReason.OperationNotAllowed => "Operación no permitida",
-            AuthErrorReason.Unknown => "Error desconocido de autenticación",
+            // "Unknown" usualmente significa INVALID_LOGIN_CREDENTIALS (contraseña incorrecta)
+            AuthErrorReason.Unknown => "Usuario o contraseña incorrectos",
             _ => $"Error de autenticación: {reason}"
         };
     }
@@ -621,7 +622,18 @@ public class FirebaseAuthService : IFirebaseAuthService
     {
         if (ex is FirebaseAuthException firebaseEx)
         {
+            // Detectar INVALID_LOGIN_CREDENTIALS en el mensaje
+            if (ex.Message.Contains("INVALID_LOGIN_CREDENTIALS"))
+            {
+                return "Usuario o contraseña incorrectos";
+            }
             return GetFriendlyFirebaseError(firebaseEx.Reason);
+        }
+
+        // Detectar INVALID_LOGIN_CREDENTIALS en cualquier excepción
+        if (ex.Message.Contains("INVALID_LOGIN_CREDENTIALS"))
+        {
+            return "Usuario o contraseña incorrectos";
         }
 
         if (ex.Message.Contains("network") || ex.Message.Contains("connection"))

@@ -5,7 +5,9 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SGRRHH.Core.Entities;
+using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.WPF.Helpers;
 
 namespace SGRRHH.WPF.ViewModels;
 
@@ -16,6 +18,7 @@ public partial class DepartamentosListViewModel : ViewModelBase
 {
     private readonly IDepartamentoService _departamentoService;
     private readonly IDialogService _dialogService;
+    private readonly RolUsuario _currentUserRole;
     
     [ObservableProperty]
     private ObservableCollection<Departamento> _departamentos = new();
@@ -44,6 +47,23 @@ public partial class DepartamentosListViewModel : ViewModelBase
     
     [ObservableProperty]
     private int? _editingId;
+    
+    // ======== Permisos de UI ========
+    
+    /// <summary>
+    /// Indica si el usuario puede crear departamentos
+    /// </summary>
+    public bool CanCreate => PermissionHelper.CanCreate(_currentUserRole, PermissionHelper.Modulos.Departamentos);
+    
+    /// <summary>
+    /// Indica si el usuario puede editar departamentos
+    /// </summary>
+    public bool CanEdit => PermissionHelper.CanEdit(_currentUserRole, PermissionHelper.Modulos.Departamentos);
+    
+    /// <summary>
+    /// Indica si el usuario puede eliminar departamentos
+    /// </summary>
+    public bool CanDelete => PermissionHelper.CanDelete(_currentUserRole, PermissionHelper.Modulos.Departamentos);
     
     // ======== Control de vistas ========
     
@@ -92,6 +112,9 @@ public partial class DepartamentosListViewModel : ViewModelBase
     {
         _departamentoService = departamentoService;
         _dialogService = dialogService;
+        
+        // Obtener rol del usuario actual desde App.CurrentUser
+        _currentUserRole = App.CurrentUser?.Rol ?? RolUsuario.Operador;
     }
     
     /// <summary>

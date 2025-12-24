@@ -41,9 +41,10 @@
                                Foreground="#404040" HorizontalAlignment="Center" Margin="0,0,0,30"/>
                     
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <!-- Nuevo Departamento -->
+                        <!-- Nuevo Departamento (solo visible si tiene permiso) -->
                         <Border BorderThickness="2" BorderBrush="#808080" Background="#E0E0E0" 
-                                Margin="0,0,20,0" Cursor="Hand">
+                                Margin="0,0,20,0" Cursor="Hand"
+                                Visibility="{Binding CanCreate, Converter={StaticResource BoolToVisibilityConverter}}">
                             <Border BorderThickness="2" BorderBrush="White" Margin="0,0,2,2" Padding="15">
                                 <Border.InputBindings>
                                     <MouseBinding MouseAction="LeftClick" Command="{Binding ShowFormCommand}"/>
@@ -249,11 +250,13 @@
                                             <Button Content="Editar"
                                                     Command="{Binding DataContext.EditarCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                     Style="{StaticResource LegacyButtonStyle}"
-                                                    FontFamily="Tahoma" FontSize="9" Padding="5,1" Margin="0,0,3,0"/>
+                                                    FontFamily="Tahoma" FontSize="9" Padding="5,1" Margin="0,0,3,0"
+                                                    Visibility="{Binding DataContext.CanEdit, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                             <Button Content="X"
                                                     Command="{Binding DataContext.EliminarCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                     Style="{StaticResource LegacyButtonStyle}"
-                                                    FontFamily="Tahoma" FontSize="9" Padding="5,1" ToolTip="Eliminar"/>
+                                                    FontFamily="Tahoma" FontSize="9" Padding="5,1" ToolTip="Eliminar"
+                                                    Visibility="{Binding DataContext.CanDelete, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
