@@ -166,16 +166,28 @@ public class GithubUpdateService : IUpdateService
             // Si hay un checksum esperado en el VersionInfo, verificarlo
             if (_pendingUpdate != null && !string.IsNullOrEmpty(_pendingUpdate.Body))
             {
-                // Buscar checksum en las notas de versión (formato: SHA256: xxxxx)
+                // Buscar checksum específico del ZIP en las notas de versión
+                // Formato esperado: "ZIP SHA256: xxxxx" o simplemente "SHA256: xxxxx" (sin "Instalador")
                 var checksumMatch = System.Text.RegularExpressions.Regex.Match(
                     _pendingUpdate.Body,
-                    @"SHA256:\s*([a-fA-F0-9]{64})",
+                    @"ZIP\s*SHA256:\s*([a-fA-F0-9]{64})",
                     System.Text.RegularExpressions.RegexOptions.IgnoreCase
                 );
+
+                // Si no encuentra "ZIP SHA256", intenta buscar "SHA256:" que no sea del instalador
+                if (!checksumMatch.Success)
+                {
+                    checksumMatch = System.Text.RegularExpressions.Regex.Match(
+                        _pendingUpdate.Body,
+                        @"(?<!Instalador\s*)SHA256:\s*([a-fA-F0-9]{64})",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase
+                    );
+                }
 
                 if (checksumMatch.Success)
                 {
                     var expectedChecksum = checksumMatch.Groups[1].Value.ToLowerInvariant();
+                    _logger?.LogInformation($"Checksum esperado del ZIP: {expectedChecksum}");
                     if (!VerifyFileIntegrity(zipPath, expectedChecksum))
                     {
                         _logger?.LogError("La verificación de integridad falló. El archivo puede estar corrupto o modificado.");
@@ -190,7 +202,7 @@ public class GithubUpdateService : IUpdateService
                 }
                 else
                 {
-                    _logger?.LogWarning("No se encontró checksum en las notas de versión");
+                    _logger?.LogWarning("No se encontró checksum del ZIP en las notas de versión, continuando sin verificación");
                 }
             }
 
