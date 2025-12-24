@@ -286,6 +286,7 @@ public class TwilioSmsVerificationService : ISmsVerificationService
     /// <summary>
     /// Genera un ID único para este dispositivo basado en hardware
     /// </summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     private string GetDeviceId()
     {
         try
