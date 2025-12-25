@@ -30,7 +30,7 @@ public class Empleado : EntidadBase
     /// <summary>
     /// Nombre completo del empleado
     /// </summary>
-    public string NombreCompleto => $"{Nombres} {Apellidos}";
+    public string NombreCompleto => $"{Nombres ?? "Sin Nombre"} {Apellidos ?? ""}".Trim();
     
     /// <summary>
     /// Fecha de nacimiento

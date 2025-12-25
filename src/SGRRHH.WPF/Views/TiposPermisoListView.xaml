@@ -415,7 +415,7 @@
             
             <!-- Status bar -->
             <Border Grid.Row="4" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="#808080" Margin="0,5,0,0" Padding="5,3">
-                <TextBlock Text="{Binding TiposPermiso.Count, StringFormat={}{0} tipo(s)}" 
+                <TextBlock Text="{Binding TiposPermiso.Count, Mode=OneWay, StringFormat={}{0} tipo(s)}"
                            FontFamily="Tahoma" FontSize="10" HorizontalAlignment="Right"/>
             </Border>
         </Grid>

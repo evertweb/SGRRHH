@@ -110,7 +110,20 @@
                     </Border>
                     
                     <!-- Alertas -->
-                    <Border Grid.Column="3" Padding="15,10" Background="{StaticResource WhiteBrush}">
+                    <Border Grid.Column="3" Padding="15,10" Cursor="Hand">
+                        <Border.InputBindings>
+                            <MouseBinding MouseAction="LeftClick" Command="{Binding NavigateToContratosCommand}"/>
+                        </Border.InputBindings>
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{StaticResource WhiteBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HayAlertasContratos}" Value="True">
+                                        <Setter Property="Background" Value="#FFFFCC"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="[!] ALERTAS" FontFamily="Tahoma" FontSize="9" Foreground="Black" 
                                        HorizontalAlignment="Center" FontWeight="Bold"/>
@@ -121,11 +134,25 @@
                                            VerticalAlignment="Bottom" Margin="0,0,0,2"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
-                                <TextBlock Text="{Binding ContratosPorVencer}" FontFamily="Courier New" FontSize="14" 
-                                           FontWeight="Bold" Foreground="Black"/>
+                                <TextBlock FontFamily="Courier New" FontSize="14" FontWeight="Bold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="Black"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HayAlertasContratos}" Value="True">
+                                                    <Setter Property="Foreground" Value="#CC6600"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                    <Run Text="{Binding ContratosPorVencer, Mode=OneWay}"/>
+                                </TextBlock>
                                 <TextBlock Text=" contratos" FontFamily="Tahoma" FontSize="9" Foreground="#808080" 
                                            VerticalAlignment="Bottom" Margin="0,0,0,2"/>
                             </StackPanel>
+                            <TextBlock Text="(por vencer)" FontFamily="Tahoma" FontSize="8" Foreground="#808080"
+                                       HorizontalAlignment="Center" Margin="0,2,0,0"
+                                       Visibility="{Binding HayAlertasContratos, Converter={StaticResource BoolToVisibilityConverter}}"/>
                         </StackPanel>
                     </Border>
                 </Grid>

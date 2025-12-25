@@ -1,0 +1,289 @@
+<UserControl x:Class="SGRRHH.WPF.Views.BandejaVacacionesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:converters="clr-namespace:SGRRHH.WPF.Converters"
+             xmlns:controls="clr-namespace:SGRRHH.WPF.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="1000"
+             Background="#C0C0C0">
+    
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Styles/LegacyTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    
+    <Grid Margin="5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="320" x:Name="DetailColumn"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- Lista de vacaciones pendientes -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Header -->
+            <Border Grid.Row="0" Background="#000080" Padding="10,8">
+                <TextBlock Text="[BANDEJA] APROBACION DE VACACIONES" FontFamily="Courier New" FontSize="12" 
+                           FontWeight="Bold" Foreground="White"/>
+            </Border>
+            
+            <!-- Stats y acciones -->
+            <Grid Grid.Row="1" Margin="0,5,0,5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <Border Grid.Column="0" Background="#FFFFCC" BorderThickness="1" BorderBrush="#CC8800" Padding="8,5">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="[!]" FontFamily="Courier New" FontWeight="Bold" Foreground="#CC8800"/>
+                        <TextBlock FontFamily="Tahoma" FontSize="11" Foreground="#606060" VerticalAlignment="Center" Margin="8,0,0,0">
+                            <Run Text="{Binding TotalPendientes, Mode=OneWay}"/>
+                            <Run Text=" solicitudes pendientes de aprobación"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                
+                <controls:LegacyAsyncButton Grid.Column="1" Content="Aprobar Todas" 
+                        Command="{Binding ApproveAllCommand}"
+                        IsLoading="{Binding IsLoading}"
+                        Margin="5,0,0,0" Padding="12,5"/>
+            </Grid>
+            
+            <!-- Lista -->
+            <Border Grid.Row="2" BorderThickness="1" BorderBrush="#808080" Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Loading -->
+                    <StackPanel Grid.Row="1" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="[...] Cargando..." FontFamily="Courier New" FontSize="12" Foreground="#808080"/>
+                    </StackPanel>
+                    
+                    <!-- Empty state -->
+                    <StackPanel Grid.Row="1" Visibility="{Binding TotalPendientes, Converter={StaticResource InverseBoolToVisibilityConverter}}"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Text="[✓]" FontFamily="Courier New" FontSize="48" Foreground="#808080" HorizontalAlignment="Center"/>
+                        <TextBlock Text="No hay solicitudes pendientes" FontFamily="Tahoma" FontSize="12"
+                                   Foreground="#808080" Margin="0,5,0,0" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <!-- Lista de vacaciones -->
+                    <ListBox Grid.Row="1" ItemsSource="{Binding VacacionesPendientes}"
+                             SelectedItem="{Binding SelectedVacacion}"
+                             BorderThickness="0" Background="White"
+                             FontFamily="Tahoma" FontSize="10"
+                             Visibility="{Binding TotalPendientes, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderThickness="0,0,0,1" BorderBrush="#C0C0C0" Padding="10,8" Cursor="Hand">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#F0F0F0"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        
+                                        <!-- Empleado y Fechas -->
+                                        <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="Bold" Foreground="#000080">
+                                            <Run Text="{Binding Empleado.NombreCompleto, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Foreground="#800080" FontWeight="Bold">
+                                            <Run Text="{Binding DiasTomados, Mode=OneWay}"/>
+                                            <Run Text=" días"/>
+                                        </TextBlock>
+                                        
+                                        <!-- Fechas -->
+                                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Foreground="#404040">
+                                            <Run Text="Fechas: "/>
+                                            <Run Text="{Binding FechaInicio, StringFormat=dd/MM/yyyy, Mode=OneWay}"/>
+                                            <Run Text=" - "/>
+                                            <Run Text="{Binding FechaFin, StringFormat=dd/MM/yyyy, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        
+                                        <!-- Periodo y Fecha solicitud -->
+                                        <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Foreground="#808080" FontSize="9">
+                                            <Run Text="Periodo: "/>
+                                            <Run Text="{Binding PeriodoCorrespondiente, Mode=OneWay}"/>
+                                            <Run Text=" | Solicitado: "/>
+                                            <Run Text="{Binding FechaSolicitud, StringFormat=dd/MM/yyyy HH:mm, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+        </Grid>
+        
+        <!-- Separador -->
+        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#C0C0C0"/>
+        
+        <!-- Panel de detalle y acciones -->
+        <Grid Grid.Column="2">
+            <!-- Sin selección -->
+            <Border Background="#E0E0E0" BorderThickness="1" BorderBrush="#808080"
+                    Visibility="{Binding ShowApprovalPanel, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="[i]" FontFamily="Courier New" FontSize="36" Foreground="#808080" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Seleccione una solicitud" FontFamily="Tahoma" FontSize="11" 
+                               Foreground="#808080" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                    <TextBlock Text="para ver detalles" FontFamily="Tahoma" FontSize="11" 
+                               Foreground="#808080" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+            
+            <!-- Panel de aprobación/rechazo -->
+            <Border Background="White" BorderThickness="1" BorderBrush="#808080"
+                    Visibility="{Binding ShowApprovalPanel, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Header -->
+                    <Border Grid.Row="0" Background="#000080" Padding="10,8">
+                        <TextBlock FontFamily="Courier New" FontSize="11" FontWeight="Bold" Foreground="White">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="[APROBAR] SOLICITUD"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRejecting}" Value="True">
+                                            <Setter Property="Text" Value="[RECHAZAR] SOLICITUD"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                    
+                    <!-- Detalle -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="10">
+                        <StackPanel>
+                            <!-- Datos del empleado -->
+                            <TextBlock Text="EMPLEADO" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#808080"/>
+                            <TextBlock Text="{Binding SelectedVacacion.Empleado.NombreCompleto}" 
+                                       FontFamily="Tahoma" FontSize="12" FontWeight="Bold" Foreground="#000080" Margin="0,2,0,10"/>
+                            
+                            <!-- Fechas -->
+                            <TextBlock Text="PERIODO DE VACACIONES" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#808080"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,10">
+                                <TextBlock FontFamily="Tahoma" FontSize="11">
+                                    <Run Text="{Binding SelectedVacacion.FechaInicio, StringFormat=dd/MM/yyyy}"/>
+                                    <Run Text=" - "/>
+                                    <Run Text="{Binding SelectedVacacion.FechaFin, StringFormat=dd/MM/yyyy}"/>
+                                </TextBlock>
+                            </StackPanel>
+                            
+                            <!-- Días -->
+                            <TextBlock Text="DÍAS SOLICITADOS" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#808080"/>
+                            <Border Background="#E0FFE0" BorderThickness="2" BorderBrush="#008000" Padding="10,5" Margin="0,2,0,10" HorizontalAlignment="Left">
+                                <TextBlock FontFamily="Courier New" FontSize="18" FontWeight="Bold" Foreground="#008000">
+                                    <Run Text="{Binding SelectedVacacion.DiasTomados, Mode=OneWay}"/>
+                                    <Run Text=" días" FontSize="12"/>
+                                </TextBlock>
+                            </Border>
+                            
+                            <!-- Periodo correspondiente -->
+                            <TextBlock Text="PERIODO AÑO" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#808080"/>
+                            <TextBlock Text="{Binding SelectedVacacion.PeriodoCorrespondiente}" 
+                                       FontFamily="Tahoma" FontSize="11" Margin="0,2,0,10"/>
+                            
+                            <!-- Observaciones -->
+                            <TextBlock Text="OBSERVACIONES" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#808080"
+                                       Visibility="{Binding SelectedVacacion.Observaciones, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            <TextBlock Text="{Binding SelectedVacacion.Observaciones}" 
+                                       FontFamily="Tahoma" FontSize="10" Foreground="#404040" TextWrapping="Wrap" Margin="0,2,0,10"
+                                       Visibility="{Binding SelectedVacacion.Observaciones, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            
+                            <!-- Campo de rechazo (solo visible al rechazar) -->
+                            <StackPanel Visibility="{Binding IsRejecting, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="MOTIVO DEL RECHAZO *" FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#CC0000"/>
+                                <TextBox Text="{Binding MotivoRechazo, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource LegacyTextBoxStyle}"
+                                         FontFamily="Tahoma" FontSize="10" 
+                                         Height="80" TextWrapping="Wrap" AcceptsReturn="True"
+                                         Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                    
+                    <!-- Botones de acción -->
+                    <Border Grid.Row="2" Background="#E0E0E0" BorderThickness="0,1,0,0" BorderBrush="#808080" Padding="10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <controls:LegacyAsyncButton Grid.Column="0" Content="Cancelar" 
+                                    Command="{Binding CancelActionCommand}"
+                                    Margin="0,0,5,0" HorizontalAlignment="Stretch"/>
+                            
+                            <!-- Botón aprobar -->
+                            <controls:LegacyAsyncButton Grid.Column="1" Content="Aprobar" 
+                                    Command="{Binding ConfirmApprovalCommand}"
+                                    IsLoading="{Binding IsLoading}"
+                                    HorizontalAlignment="Stretch"
+                                    Visibility="{Binding IsApproving, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            
+                            <!-- Botón rechazar -->
+                            <controls:LegacyAsyncButton Grid.Column="1" Content="Rechazar" 
+                                    Command="{Binding ConfirmRejectionCommand}"
+                                    IsLoading="{Binding IsLoading}"
+                                    HorizontalAlignment="Stretch"
+                                    Visibility="{Binding IsRejecting, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+        
+        <!-- Loading overlay -->
+        <Border Grid.ColumnSpan="3" Background="#80000000" 
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Background="#C0C0C0" BorderThickness="2" BorderBrush="#808080" Padding="20"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock Text="[...] Procesando" FontFamily="Courier New" FontSize="12" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                    <ProgressBar IsIndeterminate="True" Width="120" Height="16"/>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+</UserControl>

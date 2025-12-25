@@ -565,6 +565,32 @@ public class EmpleadoFirestoreRepository : FirestoreRepository<Empleado>, IEmple
         _cache?.InvalidateByPrefix("empleados");
     }
     
+    /// <summary>
+    /// Verifica si existe un empleado con el email dado
+    /// </summary>
+    public async Task<bool> ExistsEmailAsync(string email, int? excludeId = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+                
+            var query = Collection.WhereEqualTo("email", email.Trim().ToLower());
+            var snapshot = await query.GetSnapshotAsync();
+            
+            if (!excludeId.HasValue)
+                return snapshot.Documents.Any();
+            
+            return snapshot.Documents.Any(doc =>
+                doc.TryGetValue<int>("id", out var id) && id != excludeId.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al verificar email existente: {Email}", email);
+            throw;
+        }
+    }
+    
     #endregion
     
     #region Helper Methods - Actualizar datos desnormalizados

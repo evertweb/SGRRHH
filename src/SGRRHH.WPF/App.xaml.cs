@@ -251,6 +251,7 @@ public partial class App : Application
         services.AddTransient<BandejaAprobacionViewModel>();
         services.AddTransient<TiposPermisoListViewModel>();
         services.AddTransient<VacacionesViewModel>();
+        services.AddTransient<BandejaVacacionesViewModel>();
         services.AddTransient<ContratosViewModel>();
         services.AddTransient<ConfiguracionViewModel>();
         services.AddTransient<ConfiguracionEmpresaViewModel>();

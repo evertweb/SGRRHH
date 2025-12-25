@@ -326,7 +326,7 @@ public partial class CargosListViewModel : ViewModelBase
                 if (result.Success)
                 {
                     _dialogService.ShowSuccess("Cargo creado correctamente");
-                    ShowHome();
+                    await ShowListAsync(); // Navegar a lista para consistencia con editar
                 }
                 else
                 {

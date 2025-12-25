@@ -20,6 +20,7 @@ public partial class PermisoFormViewModel : ViewModelBase
     private readonly IEmpleadoService _empleadoService;
     private readonly ITipoPermisoService _tipoPermisoService;
     private readonly IDialogService _dialogService;
+    private readonly IDateCalculationService _dateCalculationService;
     
     private int? _permisoId;
     private bool _isEditing;
@@ -86,12 +87,14 @@ public partial class PermisoFormViewModel : ViewModelBase
         IPermisoService permisoService,
         IEmpleadoService empleadoService,
         ITipoPermisoService tipoPermisoService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IDateCalculationService dateCalculationService)
     {
         _permisoService = permisoService;
         _empleadoService = empleadoService;
         _tipoPermisoService = tipoPermisoService;
         _dialogService = dialogService;
+        _dateCalculationService = dateCalculationService;
     }
     
     public async Task InitializeForCreateAsync()
@@ -398,6 +401,7 @@ public partial class PermisoFormViewModel : ViewModelBase
     
     private void CalcularTotalDias()
     {
-        TotalDias = Math.Max(1, (FechaFin - FechaInicio).Days + 1);
+        // Usar servicio de cálculo de días hábiles para consistencia con el backend
+        TotalDias = _dateCalculationService.CalcularDiasHabiles(FechaInicio, FechaFin);
     }
 }

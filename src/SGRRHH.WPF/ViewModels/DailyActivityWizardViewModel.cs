@@ -487,6 +487,14 @@ public partial class DailyActivityWizardViewModel : ViewModelBase
                     }
                     else
                     {
+                        // FIX #7: Validar que el registro esté en estado Borrador antes de actualizar
+                        if (registroDiario.Estado != EstadoRegistroDiario.Borrador)
+                        {
+                            errorCount++;
+                            errors.Add($"El registro de {empleado.NombreCompleto} para {SelectedDate:dd/MM/yyyy} está en estado {registroDiario.Estado} y no se puede modificar");
+                            continue; // Saltar a siguiente empleado
+                        }
+                        
                         // Actualizar horarios si ya existe el registro
                         registroDiario.HoraEntrada = HoraEntrada;
                         registroDiario.HoraSalida = HoraSalida;

@@ -154,7 +154,7 @@
                         
                         <!-- Nivel -->
                         <StackPanel Grid.Column="2" Grid.Row="1" Margin="0,0,0,10">
-                            <TextBlock Text="Nivel Jerarquico" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                            <TextBlock Text="Nivel Jerarquico (1-10)" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Nivel, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
@@ -317,7 +317,7 @@
                     
                     <!-- Empty state -->
                     <Border Background="White"
-                            Visibility="{Binding Cargos.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+                            Visibility="{Binding Cargos.Count, Mode=OneWay, Converter={StaticResource ZeroToVisibilityConverter}}">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <TextBlock Text="[SIN DATOS]" FontFamily="Courier New" FontSize="14" 
                                        FontWeight="Bold" Foreground="#808080" HorizontalAlignment="Center"/>
@@ -372,17 +372,26 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         
-                        <!-- Nombre -->
+                        <!-- Código (solo lectura) -->
                         <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,0,10">
+                            <TextBlock Text="Código" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding Codigo}" FontFamily="Tahoma" FontSize="10" FontWeight="Bold"
+                                       Background="#E0E0E0" Padding="5,3" 
+                                       Foreground="#000080"/>
+                        </StackPanel>
+                        
+                        <!-- Nombre -->
+                        <StackPanel Grid.Column="2" Grid.Row="0" Margin="0,0,0,10">
                             <TextBlock Text="Nombre *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
                         
                         <!-- Departamento -->
-                        <StackPanel Grid.Column="2" Grid.Row="0" Margin="0,0,0,10">
+                        <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,0,10">
                             <TextBlock Text="Departamento *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <ComboBox ItemsSource="{Binding Departamentos}"
                                       SelectedValue="{Binding DepartamentoId}"
@@ -392,21 +401,21 @@
                         </StackPanel>
                         
                         <!-- Descripcion -->
-                        <StackPanel Grid.Column="0" Grid.Row="1" Margin="0,0,0,10">
+                        <StackPanel Grid.Column="2" Grid.Row="1" Margin="0,0,0,10">
                             <TextBlock Text="Descripcion" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
                         
                         <!-- Nivel -->
-                        <StackPanel Grid.Column="2" Grid.Row="1" Margin="0,0,0,10">
-                            <TextBlock Text="Nivel Jerarquico" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                        <StackPanel Grid.Column="0" Grid.Row="2" Margin="0,0,0,10">
+                            <TextBlock Text="Nivel Jerarquico (1-10)" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
                             <TextBox Text="{Binding Nivel, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                         </StackPanel>
                         
                         <!-- Activo y Botones -->
-                        <Grid Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2" Margin="0,20,0,0">
+                        <Grid Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="3" Margin="0,20,0,0">
                             <CheckBox Content="Activo" IsChecked="{Binding Activo}" 
                                       FontFamily="Tahoma" FontSize="10" HorizontalAlignment="Left"/>
                             

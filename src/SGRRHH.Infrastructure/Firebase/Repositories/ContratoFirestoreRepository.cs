@@ -402,6 +402,76 @@ public class ContratoFirestoreRepository : FirestoreRepository<Contrato>, IContr
         }
     }
     
+    /// <summary>
+    /// Renueva un contrato de forma atómica usando WriteBatch.
+    /// Finaliza el contrato actual y crea el nuevo en una sola operación.
+    /// </summary>
+    /// <param name="contratoActual">Contrato a renovar</param>
+    /// <param name="nuevoContrato">Nuevo contrato a crear</param>
+    /// <returns>True si la operación fue exitosa</returns>
+    public async Task<bool> RenovarContratoAtomicoAsync(Contrato contratoActual, Contrato nuevoContrato)
+    {
+        try
+        {
+            // Obtener el DocumentId del contrato actual
+            var contratoActualDocId = contratoActual.GetFirestoreDocumentId();
+            if (string.IsNullOrEmpty(contratoActualDocId))
+            {
+                var query = Collection.WhereEqualTo("id", contratoActual.Id).Limit(1);
+                var snapshot = await query.GetSnapshotAsync();
+                var doc = snapshot.Documents.FirstOrDefault();
+                if (doc == null)
+                    throw new InvalidOperationException($"Contrato con Id {contratoActual.Id} no encontrado");
+                contratoActualDocId = doc.Id;
+            }
+            
+            // Generar nuevo ID para el contrato nuevo
+            if (nuevoContrato.Id == 0)
+            {
+                nuevoContrato.Id = await GetNextIdAsync();
+            }
+            
+            // Crear batch para operación atómica
+            var batch = CreateBatch();
+            
+            // 1. Actualizar contrato actual -> Estado = Renovado
+            var contratoActualRef = Collection.Document(contratoActualDocId);
+            batch.Update(contratoActualRef, new Dictionary<string, object>
+            {
+                ["estado"] = EstadoContrato.Renovado.ToString(),
+                ["fechaFin"] = Timestamp.FromDateTime(nuevoContrato.FechaInicio.AddDays(-1).ToUniversalTime()),
+                ["observaciones"] = $"Renovado el {DateTime.Now:dd/MM/yyyy}. {contratoActual.Observaciones}",
+                ["fechaModificacion"] = Timestamp.FromDateTime(DateTime.UtcNow)
+            });
+            
+            // 2. Crear nuevo contrato -> Estado = Activo
+            var nuevoContratoData = EntityToDocument(nuevoContrato);
+            nuevoContratoData["estado"] = EstadoContrato.Activo.ToString();
+            nuevoContratoData["activo"] = true;
+            nuevoContratoData["fechaCreacion"] = Timestamp.FromDateTime(DateTime.UtcNow);
+            nuevoContratoData["observaciones"] = $"Renovación de contrato anterior (ID: {contratoActual.Id}). {nuevoContrato.Observaciones}";
+            
+            var nuevoContratoRef = Collection.Document();
+            batch.Create(nuevoContratoRef, nuevoContratoData);
+            
+            // Ejecutar ambas operaciones de forma atómica
+            await batch.CommitAsync();
+            
+            // Actualizar el ID del documento en el nuevo contrato
+            nuevoContrato.SetFirestoreDocumentId(nuevoContratoRef.Id);
+            
+            _logger?.LogInformation("Contrato {ContratoActualId} renovado atómicamente. Nuevo contrato: {NuevoContratoId}", 
+                contratoActual.Id, nuevoContrato.Id);
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al renovar contrato {ContratoId} atómicamente", contratoActual.Id);
+            throw;
+        }
+    }
+    
     #endregion
     
     #region Helper Methods - Actualizar datos desnormalizados

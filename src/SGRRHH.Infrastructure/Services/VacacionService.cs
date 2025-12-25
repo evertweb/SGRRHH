@@ -83,8 +83,8 @@ public class VacacionService : IVacacionService
                 return ServiceResult<Vacacion>.Fail("El empleado tiene permisos aprobados o pendientes en las fechas seleccionadas");
             }
             
-            // Calcular días tomados usando el servicio centralizado
-            vacacion.DiasTomados = _dateCalculationService.CalcularDiasHabiles(vacacion.FechaInicio, vacacion.FechaFin);
+            // Calcular días tomados usando el servicio centralizado (sin festivos colombianos)
+            vacacion.DiasTomados = _dateCalculationService.CalcularDiasHabilesSinFestivos(vacacion.FechaInicio, vacacion.FechaFin);
             
             // Verificar que no exceda los días disponibles
             var diasDisponibles = await CalcularDiasDisponiblesAsync(vacacion.EmpleadoId, vacacion.PeriodoCorrespondiente);
@@ -99,6 +99,8 @@ public class VacacionService : IVacacionService
             
             vacacion.Activo = true;
             vacacion.FechaCreacion = DateTime.Now;
+            vacacion.FechaSolicitud = DateTime.Now;
+            vacacion.Estado = EstadoVacacion.Pendiente; // Inicia como pendiente de aprobación
             
             await _vacacionRepository.AddAsync(vacacion);
             await _vacacionRepository.SaveChangesAsync();
@@ -133,8 +135,8 @@ public class VacacionService : IVacacionService
                 return ServiceResult<Vacacion>.Fail("El empleado tiene permisos aprobados o pendientes en las fechas seleccionadas");
             }
             
-            // Recalcular días usando el servicio centralizado
-            vacacion.DiasTomados = _dateCalculationService.CalcularDiasHabiles(vacacion.FechaInicio, vacacion.FechaFin);
+            // Recalcular días usando el servicio centralizado (sin festivos colombianos)
+            vacacion.DiasTomados = _dateCalculationService.CalcularDiasHabilesSinFestivos(vacacion.FechaInicio, vacacion.FechaFin);
             
             // Verificar días disponibles (excluyendo esta vacación)
             var diasDisponibles = await CalcularDiasDisponiblesInternamenteAsync(
@@ -359,6 +361,118 @@ public class VacacionService : IVacacionService
         }
     }
     
+    /// <summary>
+    /// Aprueba una solicitud de vacaciones pendiente
+    /// </summary>
+    public async Task<ServiceResult<bool>> AprobarVacacionAsync(int id, int aprobadorId)
+    {
+        try
+        {
+            var vacacion = await _vacacionRepository.GetByIdAsync(id);
+            if (vacacion == null)
+                return ServiceResult<bool>.Fail("Vacación no encontrada");
+                
+            if (vacacion.Estado != EstadoVacacion.Pendiente)
+                return ServiceResult<bool>.Fail("Solo se pueden aprobar vacaciones pendientes");
+            
+            vacacion.Estado = EstadoVacacion.Aprobada;
+            vacacion.AprobadoPorId = aprobadorId;
+            vacacion.FechaAprobacion = DateTime.Now;
+            vacacion.FechaModificacion = DateTime.Now;
+            
+            await _vacacionRepository.UpdateAsync(vacacion);
+            await _vacacionRepository.SaveChangesAsync();
+            
+            _logger?.LogInformation("Vacación {Id} aprobada por usuario {AprobadorId}", id, aprobadorId);
+            return ServiceResult<bool>.Ok(true, "Vacación aprobada exitosamente");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al aprobar vacación {Id}", id);
+            return ServiceResult<bool>.Fail($"Error: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// Rechaza una solicitud de vacaciones pendiente
+    /// </summary>
+    public async Task<ServiceResult<bool>> RechazarVacacionAsync(int id, int aprobadorId, string motivo)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(motivo))
+                return ServiceResult<bool>.Fail("Debe especificar el motivo del rechazo");
+                
+            var vacacion = await _vacacionRepository.GetByIdAsync(id);
+            if (vacacion == null)
+                return ServiceResult<bool>.Fail("Vacación no encontrada");
+                
+            if (vacacion.Estado != EstadoVacacion.Pendiente)
+                return ServiceResult<bool>.Fail("Solo se pueden rechazar vacaciones pendientes");
+            
+            vacacion.Estado = EstadoVacacion.Rechazada;
+            vacacion.AprobadoPorId = aprobadorId;
+            vacacion.FechaAprobacion = DateTime.Now;
+            vacacion.MotivoRechazo = motivo;
+            vacacion.FechaModificacion = DateTime.Now;
+            
+            await _vacacionRepository.UpdateAsync(vacacion);
+            await _vacacionRepository.SaveChangesAsync();
+            
+            _logger?.LogInformation("Vacación {Id} rechazada por usuario {AprobadorId}. Motivo: {Motivo}", id, aprobadorId, motivo);
+            return ServiceResult<bool>.Ok(true, "Vacación rechazada");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al rechazar vacación {Id}", id);
+            return ServiceResult<bool>.Fail($"Error: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// Programa una vacación aprobada (confirma las fechas)
+    /// </summary>
+    public async Task<ServiceResult<bool>> ProgramarVacacionAsync(int id)
+    {
+        try
+        {
+            var vacacion = await _vacacionRepository.GetByIdAsync(id);
+            if (vacacion == null)
+                return ServiceResult<bool>.Fail("Vacación no encontrada");
+                
+            if (vacacion.Estado != EstadoVacacion.Aprobada)
+                return ServiceResult<bool>.Fail("Solo se pueden programar vacaciones aprobadas");
+            
+            vacacion.Estado = EstadoVacacion.Programada;
+            vacacion.FechaModificacion = DateTime.Now;
+            
+            await _vacacionRepository.UpdateAsync(vacacion);
+            await _vacacionRepository.SaveChangesAsync();
+            
+            return ServiceResult<bool>.Ok(true, "Vacación programada exitosamente");
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<bool>.Fail($"Error: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// Obtiene las vacaciones pendientes de aprobación
+    /// </summary>
+    public async Task<ServiceResult<IEnumerable<Vacacion>>> GetVacacionesPendientesAsync()
+    {
+        try
+        {
+            var vacaciones = await _vacacionRepository.GetByEstadoAsync(EstadoVacacion.Pendiente);
+            return ServiceResult<IEnumerable<Vacacion>>.Ok(vacaciones.OrderBy(v => v.FechaSolicitud));
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<IEnumerable<Vacacion>>.Fail($"Error: {ex.Message}");
+        }
+    }
+    
     #region Métodos privados
     
     private async Task<List<string>> ValidarVacacionAsync(Vacacion vacacion, int? excludeId = null)
@@ -379,6 +493,10 @@ public class VacacionService : IVacacionService
             
         if (vacacion.PeriodoCorrespondiente <= 0)
             errors.Add("Debe especificar el periodo correspondiente");
+        
+        // Fix #3: Validar que la fecha de inicio no sea en el pasado (para nuevas solicitudes)
+        if (excludeId == null && vacacion.FechaInicio.Date < DateTime.Today)
+            errors.Add("La fecha de inicio no puede ser en el pasado");
             
         // Verificar traslape con otras vacaciones
         if (await _vacacionRepository.ExisteTraslapeAsync(
@@ -401,8 +519,8 @@ public class VacacionService : IVacacionService
         var totalAcumulado = 0;
         var primerPeriodo = empleado.FechaIngreso.Year;
         
-        // Calcular desde el primer periodo hasta el anterior al actual (máximo 2 años según ley)
-        var periodoInicio = Math.Max(primerPeriodo, periodoActual - 2);
+        // Calcular desde el primer periodo hasta el anterior al actual (máximo 4 años según Art. 187 CST)
+        var periodoInicio = Math.Max(primerPeriodo, periodoActual - 4);
         
         for (int periodo = periodoInicio; periodo < periodoActual; periodo++)
         {

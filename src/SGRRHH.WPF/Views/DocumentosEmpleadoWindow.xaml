@@ -186,8 +186,8 @@
                         </Border>
                         
                         <!-- Mensaje cuando no hay documentos -->
-                        <Border Grid.Row="1" Padding="20" 
-                                Visibility="{Binding Documentos.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+                        <Border Grid.Row="1" Padding="20"
+                                Visibility="{Binding Documentos.Count, Mode=OneWay, Converter={StaticResource ZeroToVisibilityConverter}}">
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <TextBlock Text="[VACIO]" FontFamily="Courier New" FontSize="16" FontWeight="Bold"
                                            HorizontalAlignment="Center" Foreground="#808080"/>
@@ -214,7 +214,7 @@
                                   FontFamily="Tahoma" FontSize="9"
                                   ColumnHeaderHeight="22"
                                   RowHeight="20"
-                                  Visibility="{Binding Documentos.Count, Converter={StaticResource IntToVisibilityConverter}}">
+                                  Visibility="{Binding Documentos.Count, Mode=OneWay, Converter={StaticResource IntToVisibilityConverter}}">
                             <DataGrid.ColumnHeaderStyle>
                                 <Style TargetType="DataGridColumnHeader">
                                     <Setter Property="Background" Value="#C0C0C0"/>

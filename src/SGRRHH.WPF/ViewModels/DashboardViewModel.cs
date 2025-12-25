@@ -40,7 +40,13 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
     private int _permisosPendientes;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HayAlertasContratos))]
     private int _contratosPorVencer;
+    
+    /// <summary>
+    /// Indica si hay contratos próximos a vencer (para alerta visual)
+    /// </summary>
+    public bool HayAlertasContratos => ContratosPorVencer > 0;
 
     [ObservableProperty]
     private string _welcomeMessage = string.Empty;
@@ -300,6 +306,15 @@ public partial class DashboardViewModel : ViewModelBase, IDisposable
     private void NavigateToPermisos()
     {
         WeakReferenceMessenger.Default.Send(new NavigationMessage("Permisos"));
+    }
+    
+    /// <summary>
+    /// Navega a la vista de Contratos
+    /// </summary>
+    [RelayCommand]
+    private void NavigateToContratos()
+    {
+        WeakReferenceMessenger.Default.Send(new NavigationMessage("Contratos"));
     }
     
     [RelayCommand]

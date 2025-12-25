@@ -24,6 +24,7 @@ public partial class VacacionesViewModel : ViewModelBase
     private readonly IVacacionService _vacacionService;
     private readonly IEmpleadoService _empleadoService;
     private readonly IDialogService _dialogService;
+    private readonly IDateCalculationService _dateCalculationService;
     
     // Control de permisos por rol
     [ObservableProperty]
@@ -79,7 +80,7 @@ public partial class VacacionesViewModel : ViewModelBase
     private int _formPeriodo = DateTime.Today.Year;
     
     [ObservableProperty]
-    private EstadoVacacion _formEstado = EstadoVacacion.Programada;
+    private EstadoVacacion _formEstado = EstadoVacacion.Pendiente;
     
     [ObservableProperty]
     private string _formObservaciones = string.Empty;
@@ -88,10 +89,13 @@ public partial class VacacionesViewModel : ViewModelBase
     private int _formDiasCalculados;
     
     /// <summary>
-    /// Lista de estados de vacación disponibles
+    /// Lista de estados de vacación disponibles (para visualización, no para cambio manual)
     /// </summary>
     public ObservableCollection<EstadoVacacion> EstadosVacacion { get; } = new()
     {
+        EstadoVacacion.Pendiente,
+        EstadoVacacion.Aprobada,
+        EstadoVacacion.Rechazada,
         EstadoVacacion.Programada,
         EstadoVacacion.Disfrutada,
         EstadoVacacion.Cancelada
@@ -105,11 +109,13 @@ public partial class VacacionesViewModel : ViewModelBase
     public VacacionesViewModel(
         IVacacionService vacacionService, 
         IEmpleadoService empleadoService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IDateCalculationService dateCalculationService)
     {
         _vacacionService = vacacionService;
         _empleadoService = empleadoService;
         _dialogService = dialogService;
+        _dateCalculationService = dateCalculationService;
         
         // Determinar permisos según rol del usuario actual
         var rolActual = App.CurrentUser?.Rol ?? RolUsuario.Operador;
@@ -228,15 +234,8 @@ public partial class VacacionesViewModel : ViewModelBase
     {
         if (FormFechaFin >= FormFechaInicio)
         {
-            int dias = 0;
-            var fecha = FormFechaInicio;
-            while (fecha <= FormFechaFin)
-            {
-                if (fecha.DayOfWeek != DayOfWeek.Saturday && fecha.DayOfWeek != DayOfWeek.Sunday)
-                    dias++;
-                fecha = fecha.AddDays(1);
-            }
-            FormDiasCalculados = dias;
+            // Fix #2: Usar servicio centralizado que resta festivos colombianos
+            FormDiasCalculados = _dateCalculationService.CalcularDiasHabilesSinFestivos(FormFechaInicio, FormFechaFin);
         }
         else
         {
@@ -356,7 +355,8 @@ public partial class VacacionesViewModel : ViewModelBase
                     FechaFin = FormFechaFin,
                     PeriodoCorrespondiente = FormPeriodo,
                     Estado = FormEstado,
-                    Observaciones = FormObservaciones
+                    Observaciones = FormObservaciones,
+                    SolicitadoPorId = App.CurrentUser?.Id // Usuario que crea la solicitud
                 };
                 
                 var result = await _vacacionService.CreateAsync(nuevaVacacion);

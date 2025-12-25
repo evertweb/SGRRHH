@@ -48,6 +48,14 @@ public class VacacionFirestoreRepository : FirestoreRepository<Vacacion>, IVacac
         // Observaciones
         doc["observaciones"] = entity.Observaciones;
         
+        // Campos de auditoría (Fix #11)
+        doc["fechaSolicitud"] = Timestamp.FromDateTime(entity.FechaSolicitud.ToUniversalTime());
+        doc["solicitadoPorId"] = entity.SolicitadoPorId;
+        doc["aprobadoPorId"] = entity.AprobadoPorId;
+        if (entity.FechaAprobacion.HasValue)
+            doc["fechaAprobacion"] = Timestamp.FromDateTime(entity.FechaAprobacion.Value.ToUniversalTime());
+        doc["motivoRechazo"] = entity.MotivoRechazo;
+        
         return doc;
     }
     
@@ -97,6 +105,22 @@ public class VacacionFirestoreRepository : FirestoreRepository<Vacacion>, IVacac
         // Observaciones
         if (document.TryGetValue<string>("observaciones", out var obs))
             entity.Observaciones = obs;
+        
+        // Campos de auditoría (Fix #11)
+        if (document.TryGetValue<Timestamp>("fechaSolicitud", out var fechaSolicitud))
+            entity.FechaSolicitud = fechaSolicitud.ToDateTime().ToLocalTime();
+        
+        if (document.TryGetValue<int>("solicitadoPorId", out var solicitadoPorId))
+            entity.SolicitadoPorId = solicitadoPorId;
+        
+        if (document.TryGetValue<int>("aprobadoPorId", out var aprobadoPorId))
+            entity.AprobadoPorId = aprobadoPorId;
+        
+        if (document.TryGetValue<Timestamp>("fechaAprobacion", out var fechaAprobacion))
+            entity.FechaAprobacion = fechaAprobacion.ToDateTime().ToLocalTime();
+        
+        if (document.TryGetValue<string>("motivoRechazo", out var motivoRechazo))
+            entity.MotivoRechazo = motivoRechazo;
         
         return entity;
     }

@@ -10,10 +10,17 @@ namespace SGRRHH.Infrastructure.Services;
 public class ControlDiarioService : IControlDiarioService
 {
     private readonly IRegistroDiarioRepository _registroRepository;
+    private readonly IActividadService? _actividadService;
+    private readonly IProyectoService? _proyectoService;
     
-    public ControlDiarioService(IRegistroDiarioRepository registroRepository)
+    public ControlDiarioService(
+        IRegistroDiarioRepository registroRepository,
+        IActividadService? actividadService = null,
+        IProyectoService? proyectoService = null)
     {
         _registroRepository = registroRepository;
+        _actividadService = actividadService;
+        _proyectoService = proyectoService;
     }
     
     public async Task<RegistroDiario?> GetRegistroByFechaEmpleadoAsync(DateTime fecha, int empleadoId)
@@ -57,11 +64,26 @@ public class ControlDiarioService : IControlDiarioService
             errors.Add("No se pueden registrar actividades para fechas futuras");
             
         // Validar horas de entrada/salida
+        decimal horasTrabajadas = 24m; // Default si no hay horas
         if (registro.HoraEntrada.HasValue && registro.HoraSalida.HasValue)
         {
             if (registro.HoraSalida.Value <= registro.HoraEntrada.Value)
             {
                 errors.Add("La hora de salida debe ser posterior a la hora de entrada");
+            }
+            else
+            {
+                horasTrabajadas = (decimal)(registro.HoraSalida.Value - registro.HoraEntrada.Value).TotalHours;
+            }
+        }
+        
+        // FIX #1 y #3: Validar que la suma de horas de actividades no exceda las horas trabajadas
+        if (registro.DetallesActividades?.Any() == true)
+        {
+            var totalHorasActividades = registro.DetallesActividades.Sum(d => d.Horas);
+            if (totalHorasActividades > horasTrabajadas)
+            {
+                errors.Add($"El total de horas de actividades ({totalHorasActividades:N1}h) excede las horas trabajadas ({horasTrabajadas:N1}h)");
             }
         }
         
@@ -129,17 +151,41 @@ public class ControlDiarioService : IControlDiarioService
         // Validaciones
         if (detalle.ActividadId <= 0)
             errors.Add("Debe seleccionar una actividad");
+        
+        // FIX #4: Validar que ActividadId exista
+        if (detalle.ActividadId > 0 && _actividadService != null)
+        {
+            var actividad = await _actividadService.GetByIdAsync(detalle.ActividadId);
+            if (actividad == null)
+                errors.Add($"La actividad con Id {detalle.ActividadId} no existe");
+        }
+        
+        // FIX #5: Validar que ProyectoId exista (si se proporciona)
+        if (detalle.ProyectoId.HasValue && detalle.ProyectoId.Value > 0 && _proyectoService != null)
+        {
+            var proyecto = await _proyectoService.GetByIdAsync(detalle.ProyectoId.Value);
+            if (proyecto == null)
+                errors.Add($"El proyecto con Id {detalle.ProyectoId} no existe");
+        }
             
         if (detalle.Horas <= 0)
             errors.Add("Las horas deben ser mayores a 0");
             
         if (detalle.Horas > 24)
             errors.Add("Las horas no pueden exceder 24");
+        
+        // FIX #3: Calcular horas trabajadas reales desde HoraEntrada y HoraSalida
+        decimal horasTrabajadasMax = 24m; // Default
+        if (registro.HoraEntrada.HasValue && registro.HoraSalida.HasValue && 
+            registro.HoraSalida.Value > registro.HoraEntrada.Value)
+        {
+            horasTrabajadasMax = (decimal)(registro.HoraSalida.Value - registro.HoraEntrada.Value).TotalHours;
+        }
             
-        // Validar que el total de horas no exceda 24
+        // Validar que el total de horas no exceda las horas trabajadas
         var totalHorasActuales = registro.DetallesActividades?.Sum(d => d.Horas) ?? 0;
-        if (totalHorasActuales + detalle.Horas > 24)
-            errors.Add($"El total de horas del día no puede exceder 24. Horas actuales: {totalHorasActuales}");
+        if (totalHorasActuales + detalle.Horas > horasTrabajadasMax)
+            errors.Add($"El total de horas ({totalHorasActuales + detalle.Horas:N1}h) excede las horas trabajadas ({horasTrabajadasMax:N1}h)");
             
         if (errors.Any())
             return ServiceResult<DetalleActividad>.Fail(errors);
@@ -249,6 +295,51 @@ public class ControlDiarioService : IControlDiarioService
         await _registroRepository.SaveChangesAsync();
         
         return ServiceResult.Ok("Registro completado exitosamente");
+    }
+    
+    /// <summary>
+    /// FIX #6: Aprobar un registro completado (solo supervisores/admin)
+    /// </summary>
+    public async Task<ServiceResult> AprobarRegistroAsync(int registroId)
+    {
+        var registro = await _registroRepository.GetByIdWithDetallesAsync(registroId);
+        if (registro == null)
+            return ServiceResult.Fail("Registro no encontrado");
+            
+        if (registro.Estado != EstadoRegistroDiario.Completado)
+            return ServiceResult.Fail("Solo se pueden aprobar registros en estado Completado");
+            
+        registro.Estado = EstadoRegistroDiario.Aprobado;
+        registro.FechaModificacion = DateTime.Now;
+        
+        await _registroRepository.UpdateAsync(registro);
+        await _registroRepository.SaveChangesAsync();
+        
+        return ServiceResult.Ok("Registro aprobado exitosamente");
+    }
+    
+    /// <summary>
+    /// FIX #6: Rechazar un registro completado (vuelve a Borrador)
+    /// </summary>
+    public async Task<ServiceResult> RechazarRegistroAsync(int registroId, string? motivo = null)
+    {
+        var registro = await _registroRepository.GetByIdWithDetallesAsync(registroId);
+        if (registro == null)
+            return ServiceResult.Fail("Registro no encontrado");
+            
+        if (registro.Estado != EstadoRegistroDiario.Completado && registro.Estado != EstadoRegistroDiario.Aprobado)
+            return ServiceResult.Fail("Solo se pueden rechazar registros en estado Completado o Aprobado");
+            
+        registro.Estado = EstadoRegistroDiario.Borrador;
+        registro.Observaciones = string.IsNullOrEmpty(motivo) 
+            ? registro.Observaciones 
+            : $"{registro.Observaciones}\n[RECHAZADO] {motivo}";
+        registro.FechaModificacion = DateTime.Now;
+        
+        await _registroRepository.UpdateAsync(registro);
+        await _registroRepository.SaveChangesAsync();
+        
+        return ServiceResult.Ok("Registro rechazado y devuelto a Borrador");
     }
     
     public async Task<decimal> GetTotalHorasAsync(int empleadoId, DateTime fechaInicio, DateTime fechaFin)

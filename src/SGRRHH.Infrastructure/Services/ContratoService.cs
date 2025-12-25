@@ -3,6 +3,7 @@ using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
+using SGRRHH.Infrastructure.Firebase.Repositories;
 
 namespace SGRRHH.Infrastructure.Services;
 
@@ -13,17 +14,30 @@ public class ContratoService : IContratoService
 {
     private readonly IContratoRepository _contratoRepository;
     private readonly IEmpleadoRepository _empleadoRepository;
+    private readonly ICargoRepository _cargoRepository;
     private readonly IUnitOfWork? _unitOfWork;
     private readonly ILogger<ContratoService>? _logger;
+    
+    /// <summary>
+    /// Salario mínimo legal vigente en Colombia (2025)
+    /// </summary>
+    private const decimal SALARIO_MINIMO_COLOMBIA = 1_423_500m;
+    
+    /// <summary>
+    /// Duración máxima en meses para contratos de aprendizaje (ley colombiana)
+    /// </summary>
+    private const int MAX_MESES_APRENDIZAJE = 24;
     
     public ContratoService(
         IContratoRepository contratoRepository, 
         IEmpleadoRepository empleadoRepository,
+        ICargoRepository cargoRepository,
         IUnitOfWork? unitOfWork = null,
         ILogger<ContratoService>? logger = null)
     {
         _contratoRepository = contratoRepository;
         _empleadoRepository = empleadoRepository;
+        _cargoRepository = cargoRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -61,7 +75,7 @@ public class ContratoService : IContratoService
     {
         try
         {
-            var errors = ValidarContrato(contrato);
+            var errors = await ValidarContratoAsync(contrato);
             if (errors.Any())
                 return ServiceResult<Contrato>.Fail(errors);
             
@@ -101,7 +115,7 @@ public class ContratoService : IContratoService
             if (existing == null)
                 return ServiceResult<Contrato>.Fail("Contrato no encontrado");
             
-            var errors = ValidarContrato(contrato);
+            var errors = await ValidarContratoAsync(contrato);
             if (errors.Any())
                 return ServiceResult<Contrato>.Fail(errors);
             
@@ -181,7 +195,7 @@ public class ContratoService : IContratoService
             if (contratoActual.Estado != EstadoContrato.Activo)
                 return ServiceResult<Contrato>.Fail("Solo se pueden renovar contratos activos");
             
-            var errors = ValidarContrato(nuevoContrato);
+            var errors = await ValidarContratoAsync(nuevoContrato);
             if (errors.Any())
                 return ServiceResult<Contrato>.Fail(errors);
             
@@ -338,7 +352,7 @@ public class ContratoService : IContratoService
     
     #region Métodos privados
     
-    private List<string> ValidarContrato(Contrato contrato)
+    private async Task<List<string>> ValidarContratoAsync(Contrato contrato)
     {
         var errors = new List<string>();
         
@@ -347,25 +361,80 @@ public class ContratoService : IContratoService
             
         if (contrato.CargoId <= 0)
             errors.Add("Debe seleccionar un cargo");
+        else
+        {
+            // FIX #3: Validar que el cargo existe
+            var cargo = await _cargoRepository.GetByIdAsync(contrato.CargoId);
+            if (cargo == null)
+                errors.Add("El cargo seleccionado no existe");
+        }
             
         if (contrato.FechaInicio == default)
             errors.Add("La fecha de inicio es obligatoria");
             
         if (contrato.Salario <= 0)
             errors.Add("El salario debe ser mayor a cero");
-            
-        // Para contratos a término fijo, la fecha fin es obligatoria
-        if (contrato.TipoContrato == TipoContrato.Fijo && !contrato.FechaFin.HasValue)
+        
+        // FIX #7: Validar salario mínimo (excepto Aprendizaje que tiene reglas especiales)
+        if (contrato.TipoContrato != TipoContrato.Aprendizaje && 
+            contrato.TipoContrato != TipoContrato.PrestacionServicios &&
+            contrato.Salario > 0 && contrato.Salario < SALARIO_MINIMO_COLOMBIA)
         {
-            errors.Add("Para contratos a término fijo, la fecha de fin es obligatoria");
+            errors.Add($"El salario no puede ser menor al salario mínimo legal vigente (${SALARIO_MINIMO_COLOMBIA:N0})");
         }
         
+        // FIX #5 & #6: Validar FechaFin según tipo de contrato
+        switch (contrato.TipoContrato)
+        {
+            case TipoContrato.Indefinido:
+                // Indefinido NO debe tener fecha fin
+                if (contrato.FechaFin.HasValue)
+                {
+                    _logger?.LogWarning("Contrato indefinido con FechaFin, se ignorará");
+                }
+                break;
+                
+            case TipoContrato.Fijo:
+            case TipoContrato.ObraLabor:
+            case TipoContrato.Aprendizaje:
+                // Estos tipos DEBEN tener fecha fin
+                if (!contrato.FechaFin.HasValue)
+                {
+                    errors.Add($"Para contratos de tipo {contrato.TipoContrato}, la fecha de fin es obligatoria");
+                }
+                break;
+                
+            case TipoContrato.PrestacionServicios:
+                // Prestación de servicios puede o no tener fecha fin
+                break;
+        }
+        
+        // FIX #5: Validar FechaFin > FechaInicio (corregido de <= a <)
         if (contrato.FechaFin.HasValue && contrato.FechaFin.Value < contrato.FechaInicio)
         {
-            errors.Add("La fecha de fin debe ser posterior a la fecha de inicio");
+            errors.Add("La fecha de fin debe ser igual o posterior a la fecha de inicio");
+        }
+        
+        // FIX #4: Validar duración máxima para contratos de Aprendizaje (24 meses)
+        if (contrato.TipoContrato == TipoContrato.Aprendizaje && contrato.FechaFin.HasValue)
+        {
+            var duracionMeses = ((contrato.FechaFin.Value.Year - contrato.FechaInicio.Year) * 12) + 
+                               (contrato.FechaFin.Value.Month - contrato.FechaInicio.Month);
+            if (duracionMeses > MAX_MESES_APRENDIZAJE)
+            {
+                errors.Add($"Los contratos de aprendizaje no pueden exceder {MAX_MESES_APRENDIZAJE} meses (ley colombiana)");
+            }
         }
         
         return errors;
+    }
+    
+    /// <summary>
+    /// Método sincrónico legacy para compatibilidad
+    /// </summary>
+    private List<string> ValidarContrato(Contrato contrato)
+    {
+        return ValidarContratoAsync(contrato).GetAwaiter().GetResult();
     }
     
     #endregion

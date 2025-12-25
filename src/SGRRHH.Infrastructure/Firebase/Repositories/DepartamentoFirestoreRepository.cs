@@ -35,6 +35,7 @@ public class DepartamentoFirestoreRepository : FirestoreRepository<Departamento>
         var doc = base.EntityToDocument(entity);
         doc["codigo"] = entity.Codigo;
         doc["nombre"] = entity.Nombre;
+        doc["nombre_upper"] = entity.Nombre?.ToUpperInvariant() ?? string.Empty;  // Para búsqueda case-insensitive
         doc["descripcion"] = entity.Descripcion;
         doc["jefeId"] = entity.JefeId;
         // Nota: No guardamos las colecciones de navegación (Empleados, Cargos)
@@ -208,16 +209,41 @@ public class DepartamentoFirestoreRepository : FirestoreRepository<Departamento>
         {
             var query = Collection.WhereEqualTo("codigo", codigo);
             var snapshot = await query.GetSnapshotAsync();
-            
+
             if (!excludeId.HasValue)
                 return snapshot.Documents.Any();
-            
-            return snapshot.Documents.Any(doc => 
+
+            return snapshot.Documents.Any(doc =>
                 doc.TryGetValue<int>("id", out var id) && id != excludeId.Value);
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error al verificar código existente: {Codigo}", codigo);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Verifica si existe un departamento con el nombre dado (case-insensitive)
+    /// </summary>
+    public async Task<bool> ExistsByNameAsync(string nombre, int? excludeId = null)
+    {
+        try
+        {
+            // Firestore es case-sensitive, así que normalizamos a mayúsculas para búsqueda
+            var normalizedName = nombre?.ToUpperInvariant() ?? string.Empty;
+            var query = Collection.WhereEqualTo("nombre_upper", normalizedName);
+            var snapshot = await query.GetSnapshotAsync();
+
+            if (!excludeId.HasValue)
+                return snapshot.Documents.Any();
+
+            return snapshot.Documents.Any(doc =>
+                doc.TryGetValue<int>("id", out var id) && id != excludeId.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al verificar nombre existente: {Nombre}", nombre);
             throw;
         }
     }
@@ -305,6 +331,33 @@ public class DepartamentoFirestoreRepository : FirestoreRepository<Departamento>
     {
         _cache?.InvalidateByPrefix("departamentos");
     }
-    
+
+    /// <summary>
+    /// Obtiene departamentos activos con paginación.
+    /// Firestore no soporta paginación nativa, así que obtenemos todo y paginamos en memoria.
+    /// Para datasets muy grandes, implementar cursor-based pagination.
+    /// </summary>
+    public async Task<(IEnumerable<Departamento> Items, int TotalCount)> GetAllActivePagedAsync(int pageNumber = 1, int pageSize = 50)
+    {
+        try
+        {
+            // Obtener todos los departamentos activos
+            var allDepartamentos = await GetAllActiveAsync();
+            var departamentosList = allDepartamentos.ToList();
+
+            // Calcular paginación
+            var totalCount = departamentosList.Count;
+            var skip = (pageNumber - 1) * pageSize;
+            var pagedItems = departamentosList.Skip(skip).Take(pageSize);
+
+            return (pagedItems, totalCount);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al obtener departamentos paginados");
+            throw;
+        }
+    }
+
     #endregion
 }

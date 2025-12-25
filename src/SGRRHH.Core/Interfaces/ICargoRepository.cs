@@ -56,4 +56,12 @@ public interface ICargoRepository : IRepository<Cargo>
     /// Cuenta el total de cargos activos
     /// </summary>
     Task<int> CountActiveAsync();
+    
+    /// <summary>
+    /// Verifica si existe un cargo con el mismo nombre en el mismo departamento
+    /// </summary>
+    /// <param name="nombre">Nombre del cargo</param>
+    /// <param name="departamentoId">ID del departamento</param>
+    /// <param name="excludeId">ID del cargo a excluir (para edición)</param>
+    Task<bool> ExistsNombreInDepartamentoAsync(string nombre, int? departamentoId, int? excludeId = null);
 }

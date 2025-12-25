@@ -31,6 +31,11 @@ public interface IDepartamentoRepository : IRepository<Departamento>
     /// Verifica si existe un departamento con el código dado
     /// </summary>
     Task<bool> ExistsCodigoAsync(string codigo, int? excludeId = null);
+
+    /// <summary>
+    /// Verifica si existe un departamento con el nombre dado
+    /// </summary>
+    Task<bool> ExistsByNameAsync(string nombre, int? excludeId = null);
     
     /// <summary>
     /// Obtiene el siguiente código de departamento disponible
@@ -46,4 +51,14 @@ public interface IDepartamentoRepository : IRepository<Departamento>
     /// Cuenta el total de departamentos activos
     /// </summary>
     Task<int> CountActiveAsync();
+
+    /// <summary>
+    /// Invalida el cache de departamentos después de cambios
+    /// </summary>
+    void InvalidateCache();
+
+    /// <summary>
+    /// Obtiene departamentos activos con paginación
+    /// </summary>
+    Task<(IEnumerable<Departamento> Items, int TotalCount)> GetAllActivePagedAsync(int pageNumber = 1, int pageSize = 50);
 }

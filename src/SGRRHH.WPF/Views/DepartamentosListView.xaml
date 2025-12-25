@@ -121,24 +121,39 @@
                             <ColumnDefinition Width="Auto" MinWidth="350" MaxWidth="600"/>
                             <ColumnDefinition Width="*" MinWidth="20" MaxWidth="200"/>
                         </Grid.ColumnDefinitions>
-                        
+
                         <StackPanel Grid.Column="1" Margin="20">
                             <StackPanel Margin="0,0,0,10">
+                                <TextBlock Text="Codigo" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding Codigo, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10" IsReadOnly="True" Background="#F0F0F0"/>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Nombre *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
-                                <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
+                                <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                             </StackPanel>
-                            
+
+                            <StackPanel Margin="0,0,0,10">
+                                <TextBlock Text="Jefe del Departamento" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                                <ComboBox ItemsSource="{Binding Empleados}"
+                                          SelectedValue="{Binding JefeId}"
+                                          SelectedValuePath="Id"
+                                          DisplayMemberPath="NombreCompleto"
+                                          Height="22" FontFamily="Tahoma" FontSize="10"/>
+                            </StackPanel>
+
                             <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Descripcion" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
-                                <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}" 
+                                <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}"
                                          Height="60" TextWrapping="Wrap" AcceptsReturn="True"
                                          FontFamily="Tahoma" FontSize="10" BorderThickness="2" BorderBrush="#808080"/>
                             </StackPanel>
-                            
-                            <CheckBox Content="Activo" IsChecked="{Binding Activo}" 
+
+                            <CheckBox Content="Activo" IsChecked="{Binding Activo}"
                                       FontFamily="Tahoma" FontSize="10" Margin="0,0,0,20"/>
-                            
+
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <controls:LegacyAsyncButton Content="Cancelar" Command="{Binding CancelarCommand}" Margin="0,0,10,0"/>
                                 <controls:LegacyAsyncButton Content="Guardar" Command="{Binding GuardarCommand}" IsLoading="{Binding IsLoading}"/>
@@ -148,7 +163,7 @@
                 </Grid>
             </Border>
         </Grid>
-        
+
         <!-- ============================================ -->
         <!-- VISTA DE LISTA -->
         <!-- ============================================ -->
@@ -221,6 +236,7 @@
                         
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                            <DataGridTextColumn Header="CODIGO" Binding="{Binding Codigo}" Width="80"/>
                             <DataGridTextColumn Header="NOMBRE" Binding="{Binding Nombre}" Width="*"/>
                             <DataGridTextColumn Header="DESCRIPCION" Binding="{Binding Descripcion}" Width="2*"/>
                             <DataGridTemplateColumn Header="ESTADO" Width="80">
@@ -273,7 +289,7 @@
                     
                     <!-- Empty state -->
                     <Border Background="White"
-                            Visibility="{Binding Departamentos.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+                            Visibility="{Binding Departamentos.Count, Mode=OneWay, Converter={StaticResource ZeroToVisibilityConverter}}">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <TextBlock Text="[SIN DATOS]" FontFamily="Courier New" FontSize="14" 
                                        FontWeight="Bold" Foreground="#808080" HorizontalAlignment="Center"/>
@@ -327,21 +343,36 @@
                         
                         <StackPanel Grid.Column="1" Margin="20">
                             <StackPanel Margin="0,0,0,10">
+                                <TextBlock Text="Codigo" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                                <TextBox Text="{Binding Codigo, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10" IsReadOnly="True" Background="#F0F0F0"/>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Nombre *" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
-                                <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" 
+                                <TextBox Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}"
                                          Style="{StaticResource LegacyTextBoxStyle}" Height="22" FontSize="10"/>
                             </StackPanel>
-                            
+
+                            <StackPanel Margin="0,0,0,10">
+                                <TextBlock Text="Jefe del Departamento" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
+                                <ComboBox ItemsSource="{Binding Empleados}"
+                                          SelectedValue="{Binding JefeId}"
+                                          SelectedValuePath="Id"
+                                          DisplayMemberPath="NombreCompleto"
+                                          Height="22" FontFamily="Tahoma" FontSize="10"/>
+                            </StackPanel>
+
                             <StackPanel Margin="0,0,0,10">
                                 <TextBlock Text="Descripcion" FontFamily="Tahoma" FontSize="10" Margin="0,0,0,2"/>
-                                <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}" 
+                                <TextBox Text="{Binding Descripcion, UpdateSourceTrigger=PropertyChanged}"
                                          Height="60" TextWrapping="Wrap" AcceptsReturn="True"
                                          FontFamily="Tahoma" FontSize="10" BorderThickness="2" BorderBrush="#808080"/>
                             </StackPanel>
-                            
-                            <CheckBox Content="Activo" IsChecked="{Binding Activo}" 
+
+                            <CheckBox Content="Activo" IsChecked="{Binding Activo}"
                                       FontFamily="Tahoma" FontSize="10" Margin="0,0,0,20"/>
-                            
+
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <controls:LegacyAsyncButton Content="Cancelar" Command="{Binding CancelarEditCommand}" Margin="0,0,10,0"/>
                                 <controls:LegacyAsyncButton Content="Actualizar" Command="{Binding GuardarCommand}" IsLoading="{Binding IsLoading}"/>

@@ -542,6 +542,15 @@ public partial class ContratosViewModel : ViewModelBase
     {
         IsFormVisible = false;
     }
+    /// <summary>
+    /// Extensiones permitidas para archivos de contrato
+    /// </summary>
+    private static readonly string[] ExtensionesPermitidas = { ".pdf", ".jpg", ".jpeg", ".png" };
+    
+    /// <summary>
+    /// Tamaño máximo de archivo en bytes (10 MB)
+    /// </summary>
+    private const long TamanoMaximoBytes = 10 * 1024 * 1024;
     
     /// <summary>
     /// Selecciona un archivo PDF para adjuntar al contrato
@@ -552,7 +561,7 @@ public partial class ContratosViewModel : ViewModelBase
         var dialog = new OpenFileDialog
         {
             Title = "Seleccionar contrato firmado",
-            Filter = "Documentos PDF|*.pdf|Imágenes|*.jpg;*.jpeg;*.png|Todos los archivos|*.*",
+            Filter = "Documentos PDF|*.pdf|Imágenes|*.jpg;*.jpeg;*.png",
             CheckFileExists = true
         };
         
@@ -560,10 +569,30 @@ public partial class ContratosViewModel : ViewModelBase
         {
             try
             {
+                // FIX #8: Validar extensión del archivo
+                var extension = Path.GetExtension(dialog.FileName).ToLowerInvariant();
+                if (!ExtensionesPermitidas.Contains(extension))
+                {
+                    _dialogService.ShowWarning(
+                        $"Formato de archivo no permitido. Use: {string.Join(", ", ExtensionesPermitidas)}", 
+                        "Formato inválido");
+                    return;
+                }
+                
+                // FIX #8: Validar tamaño del archivo
+                var fileInfo = new FileInfo(dialog.FileName);
+                if (fileInfo.Length > TamanoMaximoBytes)
+                {
+                    _dialogService.ShowWarning(
+                        $"El archivo excede el tamaño máximo permitido (10 MB). Tamaño actual: {fileInfo.Length / 1024 / 1024:N1} MB", 
+                        "Archivo muy grande");
+                    return;
+                }
+                
                 // Copiar archivo a carpeta de contratos usando DataPaths
                 var contratosPath = Helpers.DataPaths.EnsureDirectory(Helpers.DataPaths.Contratos);
                 
-                var fileName = $"contrato_{SelectedEmpleado?.Cedula ?? "temp"}_{DateTime.Now:yyyyMMdd_HHmmss}{Path.GetExtension(dialog.FileName)}";
+                var fileName = $"contrato_{SelectedEmpleado?.Cedula ?? "temp"}_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
                 var destPath = Path.Combine(contratosPath, fileName);
                 
                 File.Copy(dialog.FileName, destPath, true);

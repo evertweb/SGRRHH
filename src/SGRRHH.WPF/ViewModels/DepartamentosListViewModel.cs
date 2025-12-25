@@ -17,11 +17,15 @@ namespace SGRRHH.WPF.ViewModels;
 public partial class DepartamentosListViewModel : ViewModelBase
 {
     private readonly IDepartamentoService _departamentoService;
+    private readonly IEmpleadoService _empleadoService;
     private readonly IDialogService _dialogService;
     private readonly RolUsuario _currentUserRole;
-    
+
     [ObservableProperty]
     private ObservableCollection<Departamento> _departamentos = new();
+
+    [ObservableProperty]
+    private ObservableCollection<Empleado> _empleados = new();
     
     [ObservableProperty]
     private Departamento? _selectedDepartamento;
@@ -32,13 +36,16 @@ public partial class DepartamentosListViewModel : ViewModelBase
     // Campos para nuevo/editar departamento
     [ObservableProperty]
     private string _codigo = string.Empty;
-    
+
     [ObservableProperty]
     private string _nombre = string.Empty;
-    
+
     [ObservableProperty]
     private string _descripcion = string.Empty;
-    
+
+    [ObservableProperty]
+    private int? _jefeId;
+
     [ObservableProperty]
     private bool _activo = true;
     
@@ -108,11 +115,15 @@ public partial class DepartamentosListViewModel : ViewModelBase
     /// </summary>
     public string CurrentDateText => DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"));
     
-    public DepartamentosListViewModel(IDepartamentoService departamentoService, IDialogService dialogService)
+    public DepartamentosListViewModel(
+        IDepartamentoService departamentoService,
+        IEmpleadoService empleadoService,
+        IDialogService dialogService)
     {
         _departamentoService = departamentoService;
+        _empleadoService = empleadoService;
         _dialogService = dialogService;
-        
+
         // Obtener rol del usuario actual desde App.CurrentUser
         _currentUserRole = App.CurrentUser?.Rol ?? RolUsuario.Operador;
     }
@@ -122,7 +133,27 @@ public partial class DepartamentosListViewModel : ViewModelBase
     /// </summary>
     public async Task LoadAsync()
     {
-        await LoadDepartamentosAsync();
+        await Task.WhenAll(LoadDepartamentosAsync(), LoadEmpleadosAsync());
+    }
+
+    /// <summary>
+    /// Carga la lista de empleados (para selector de jefe)
+    /// </summary>
+    private async Task LoadEmpleadosAsync()
+    {
+        try
+        {
+            var empleados = await _empleadoService.GetAllAsync();
+            Empleados.Clear();
+            foreach (var emp in empleados)
+            {
+                Empleados.Add(emp);
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error cargando empleados: {ex.Message}";
+        }
     }
     
     /// <summary>
@@ -233,14 +264,15 @@ public partial class DepartamentosListViewModel : ViewModelBase
             _dialogService.ShowInfo("Seleccione un departamento para editar");
             return;
         }
-        
+
         IsEditing = true;
         EditingId = SelectedDepartamento.Id;
         Codigo = SelectedDepartamento.Codigo;
         Nombre = SelectedDepartamento.Nombre;
         Descripcion = SelectedDepartamento.Descripcion ?? string.Empty;
+        JefeId = SelectedDepartamento.JefeId;  // FIX 2.4: Cargar JefeId actual
         Activo = SelectedDepartamento.Activo;
-        
+
         ShowEdit();
     }
     
@@ -255,13 +287,13 @@ public partial class DepartamentosListViewModel : ViewModelBase
             _dialogService.ShowWarning("El nombre es obligatorio", "Validación");
             return;
         }
-        
+
         try
         {
             IsLoading = true;
             ErrorMessage = string.Empty;
-            
-            if (EditingId.HasValue)
+
+            if (IsEditing && EditingId.HasValue)
             {
                 // Editar existente
                 var departamento = new Departamento
@@ -270,11 +302,12 @@ public partial class DepartamentosListViewModel : ViewModelBase
                     Codigo = Codigo,
                     Nombre = Nombre,
                     Descripcion = Descripcion,
+                    JefeId = JefeId,  // FIX 2.4: Guardar JefeId seleccionado
                     Activo = Activo
                 };
-                
+
                 var result = await _departamentoService.UpdateAsync(departamento);
-                
+
                 if (result.Success)
                 {
                     _dialogService.ShowSuccess("Departamento actualizado correctamente");
@@ -285,7 +318,7 @@ public partial class DepartamentosListViewModel : ViewModelBase
                     _dialogService.ShowError(result.Message ?? "Error al actualizar");
                 }
             }
-            else
+            else if (!IsEditing)
             {
                 // Crear nuevo
                 var departamento = new Departamento
@@ -293,20 +326,26 @@ public partial class DepartamentosListViewModel : ViewModelBase
                     Codigo = Codigo,
                     Nombre = Nombre,
                     Descripcion = Descripcion,
+                    JefeId = JefeId,  // FIX 2.4: Guardar JefeId seleccionado
                     Activo = Activo
                 };
-                
+
                 var result = await _departamentoService.CreateAsync(departamento);
-                
+
                 if (result.Success)
                 {
                     _dialogService.ShowSuccess("Departamento creado correctamente");
-                    ShowHome();
+                    await ShowListAsync();  // FIX 2.3: Mostrar lista actualizada, no home (navegación consistente)
                 }
                 else
                 {
                     _dialogService.ShowError(result.Message ?? "Error al crear");
                 }
+            }
+            else
+            {
+                // Estado inconsistente: IsEditing=true pero EditingId=null
+                _dialogService.ShowError("Error: Estado inconsistente en el formulario");
             }
         }
         catch (Exception ex)
@@ -349,6 +388,7 @@ public partial class DepartamentosListViewModel : ViewModelBase
         Codigo = string.Empty;
         Nombre = string.Empty;
         Descripcion = string.Empty;
+        JefeId = null;  // Resetear JefeId
         Activo = true;
     }
     

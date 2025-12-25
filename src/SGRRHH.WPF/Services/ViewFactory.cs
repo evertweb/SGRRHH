@@ -81,6 +81,7 @@ public class ViewFactory : IViewFactory
             "TiposPermiso" => CreateTiposPermisoView(scope),
             "Reportes" => CreateReportesView(scope),
             "Vacaciones" => CreateVacacionesView(scope),
+            "BandejaVacaciones" => CreateBandejaVacacionesView(scope),
             "Contratos" => CreateContratosView(scope),
             "Catalogos" => CreateCatalogosView(scope),
             "Documentos" => CreateDocumentosView(scope),
@@ -222,6 +223,13 @@ public class ViewFactory : IViewFactory
     {
         var vm = scope.ServiceProvider.GetRequiredService<VacacionesViewModel>();
         var view = new VacacionesView(vm);
+        return new ViewCreationResult { View = view, ViewModel = vm };
+    }
+    
+    private ViewCreationResult CreateBandejaVacacionesView(IServiceScope scope)
+    {
+        var vm = scope.ServiceProvider.GetRequiredService<BandejaVacacionesViewModel>();
+        var view = new BandejaVacacionesView { DataContext = vm };
         return new ViewCreationResult { View = view, ViewModel = vm };
     }
     

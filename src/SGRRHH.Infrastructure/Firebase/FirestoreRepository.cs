@@ -180,21 +180,22 @@ public abstract class FirestoreRepository<T> : IFirestoreRepository<T>, IReposit
         {
             entity.FechaCreacion = DateTime.Now;
             entity.Activo = true;
-            
+
             // Si no tiene ID asignado, generar uno basado en el último
             if (entity.Id == 0)
             {
                 entity.Id = await GetNextIdAsync();
             }
-            
+
             var data = EntityToDocument(entity);
             var docRef = await Collection.AddAsync(data);
-            
+
             entity.SetFirestoreDocumentId(docRef.Id);
-            
-            _logger?.LogInformation("Entidad creada en {Collection} con DocumentId: {DocumentId}", 
+
+            _logger?.LogInformation("Entidad creada en {Collection} con DocumentId: {DocumentId}",
                 _collectionName, docRef.Id);
-            
+            InvalidateCache();
+
             return entity;
         }
         catch (Exception ex)
@@ -213,27 +214,28 @@ public abstract class FirestoreRepository<T> : IFirestoreRepository<T>, IReposit
         {
             entity.FechaCreacion = DateTime.Now;
             entity.Activo = true;
-            
+
             // Si no tiene ID asignado, generar uno basado en el último
             if (entity.Id == 0)
             {
                 entity.Id = await GetNextIdAsync();
             }
-            
+
             var data = EntityToDocument(entity);
             var docRef = Collection.Document(documentId);
             await docRef.SetAsync(data);
-            
+
             entity.SetFirestoreDocumentId(documentId);
-            
-            _logger?.LogInformation("Entidad creada en {Collection} con DocumentId específico: {DocumentId}", 
+
+            _logger?.LogInformation("Entidad creada en {Collection} con DocumentId específico: {DocumentId}",
                 _collectionName, documentId);
-            
+            InvalidateCache();
+
             return entity;
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error al agregar entidad a {Collection} con DocumentId {DocumentId}", 
+            _logger?.LogError(ex, "Error al agregar entidad a {Collection} con DocumentId {DocumentId}",
                 _collectionName, documentId);
             throw;
         }
@@ -247,28 +249,29 @@ public abstract class FirestoreRepository<T> : IFirestoreRepository<T>, IReposit
         try
         {
             entity.FechaModificacion = DateTime.Now;
-            
+
             // Intentar obtener el DocumentId de la entidad
             var documentId = entity.GetFirestoreDocumentId();
-            
+
             if (string.IsNullOrEmpty(documentId))
             {
                 // Buscar por Id
                 var query = Collection.WhereEqualTo("id", entity.Id).Limit(1);
                 var snapshot = await query.GetSnapshotAsync();
                 var doc = snapshot.Documents.FirstOrDefault();
-                
+
                 if (doc == null)
                     throw new InvalidOperationException($"No se encontró la entidad con Id {entity.Id}");
-                
+
                 documentId = doc.Id;
             }
-            
+
             await UpdateByDocumentIdAsync(documentId, entity);
+            InvalidateCache();
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error al actualizar entidad con Id {Id} en {Collection}", 
+            _logger?.LogError(ex, "Error al actualizar entidad con Id {Id} en {Collection}",
                 entity.Id, _collectionName);
             throw;
         }
@@ -310,19 +313,20 @@ public abstract class FirestoreRepository<T> : IFirestoreRepository<T>, IReposit
             var query = Collection.WhereEqualTo("id", id).Limit(1);
             var snapshot = await query.GetSnapshotAsync();
             var doc = snapshot.Documents.FirstOrDefault();
-            
+
             if (doc == null)
             {
-                _logger?.LogWarning("No se encontró entidad con Id {Id} para eliminar en {Collection}", 
+                _logger?.LogWarning("No se encontró entidad con Id {Id} para eliminar en {Collection}",
                     id, _collectionName);
                 return;
             }
-            
+
             await DeleteByDocumentIdAsync(doc.Id);
+            InvalidateCache();
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error al eliminar entidad con Id {Id} de {Collection}", 
+            _logger?.LogError(ex, "Error al eliminar entidad con Id {Id} de {Collection}",
                 id, _collectionName);
             throw;
         }
@@ -341,13 +345,14 @@ public abstract class FirestoreRepository<T> : IFirestoreRepository<T>, IReposit
                 ["activo"] = false,
                 ["fechaModificacion"] = Timestamp.FromDateTime(DateTime.UtcNow)
             });
-            
-            _logger?.LogInformation("Entidad desactivada (soft delete) en {Collection} con DocumentId: {DocumentId}", 
+
+            _logger?.LogInformation("Entidad desactivada (soft delete) en {Collection} con DocumentId: {DocumentId}",
                 _collectionName, documentId);
+            InvalidateCache();
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error al desactivar documento {DocumentId} en {Collection}", 
+            _logger?.LogError(ex, "Error al desactivar documento {DocumentId} en {Collection}",
                 documentId, _collectionName);
             throw;
         }
@@ -523,6 +528,15 @@ public abstract class FirestoreRepository<T> : IFirestoreRepository<T>, IReposit
             return $"{prefix}{"1".PadLeft(digits, '0')}";
         }
     }
-    
+
+    /// <summary>
+    /// Invalida el caché de la entidad (para ser sobrescrito en subclases que usan caché)
+    /// </summary>
+    protected virtual void InvalidateCache()
+    {
+        // Implementación por defecto: no hacer nada
+        // Las subclases que usan caché pueden sobrescribir este método
+    }
+
     #endregion
 }

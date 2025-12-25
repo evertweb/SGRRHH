@@ -77,7 +77,7 @@
 
             <!-- Lista de registros (sidebar) -->
             <Border Grid.Column="0" BorderThickness="1" BorderBrush="#808080" Background="White"
-                    Visibility="{Binding Registros.Count, Converter={StaticResource BoolToVisConverter}}">
+                    Visibility="{Binding Registros.Count, Mode=OneWay, Converter={StaticResource BoolToVisConverter}}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>

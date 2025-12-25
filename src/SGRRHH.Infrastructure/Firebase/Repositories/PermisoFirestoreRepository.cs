@@ -303,19 +303,72 @@ public class PermisoFirestoreRepository : FirestoreRepository<Permiso>, IPermiso
     }
     
     /// <summary>
-    /// Obtiene el próximo número de acta disponible
+    /// Obtiene el próximo número de acta disponible usando transacción atómica.
+    /// Esto previene race conditions cuando múltiples usuarios solicitan permisos simultáneamente.
     /// </summary>
     public async Task<string> GetProximoNumeroActaAsync()
     {
+        var year = DateTime.Now.Year;
+        var prefix = $"{ACTA_PREFIX}-{year}-";
+        
         try
         {
-            var year = DateTime.Now.Year;
-            var prefix = $"{ACTA_PREFIX}-{year}-";
+            // Usar transacción atómica para garantizar unicidad
+            var db = _firebase.Firestore;
+            if (db == null)
+            {
+                _logger?.LogError("Firestore no está inicializado");
+                return $"{prefix}0001";
+            }
             
-            // Buscar el último número de acta del año actual
+            var counterRef = db.Collection("counters").Document("permisos");
+            var fieldName = $"year_{year}";
+            
+            var nextNumber = await db.RunTransactionAsync(async transaction =>
+            {
+                var snapshot = await transaction.GetSnapshotAsync(counterRef);
+                
+                int currentValue = 0;
+                if (snapshot.Exists && snapshot.TryGetValue<int>(fieldName, out var existing))
+                {
+                    currentValue = existing;
+                }
+                
+                var newValue = currentValue + 1;
+                
+                // Actualizar o crear el documento del contador
+                transaction.Set(counterRef, new Dictionary<string, object>
+                {
+                    [fieldName] = newValue,
+                    ["lastUpdated"] = Timestamp.FromDateTime(DateTime.UtcNow)
+                }, SetOptions.MergeAll);
+                
+                return newValue;
+            });
+            
+            _logger?.LogInformation("Número de acta generado: {NumeroActa}", $"{prefix}{nextNumber:D4}");
+            return $"{prefix}{nextNumber:D4}";
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al obtener próximo número de acta con transacción. Usando fallback.");
+            
+            // Fallback: método anterior (solo si la transacción falla)
+            return await GetProximoNumeroActaFallbackAsync(year, prefix);
+        }
+    }
+    
+    /// <summary>
+    /// Método fallback para obtener número de acta (sin transacción).
+    /// Solo se usa si la transacción falla.
+    /// </summary>
+    private async Task<string> GetProximoNumeroActaFallbackAsync(int year, string prefix)
+    {
+        try
+        {
             var query = Collection
                 .OrderByDescending("numeroActa")
-                .Limit(20); // Traer varios para filtrar por año
+                .Limit(20);
             var snapshot = await query.GetSnapshotAsync();
             
             int maxNumber = 0;
@@ -336,43 +389,51 @@ public class PermisoFirestoreRepository : FirestoreRepository<Permiso>, IPermiso
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Error al obtener próximo número de acta");
-            return $"{ACTA_PREFIX}-{DateTime.Now.Year}-0001";
+            _logger?.LogError(ex, "Error en fallback de número de acta");
+            return $"{prefix}0001";
         }
     }
     
     /// <summary>
-    /// Verifica si existe solapamiento de fechas para un empleado
+    /// Verifica si existe solapamiento de fechas para un empleado.
+    /// Incluye permisos APROBADOS y PENDIENTES para evitar conflictos.
     /// </summary>
     public async Task<bool> ExisteSolapamientoAsync(int empleadoId, DateTime fechaInicio, DateTime fechaFin, int? excludePermisoId = null)
     {
         try
         {
-            // Traer todos los permisos aprobados del empleado
-            var query = Collection
-                .WhereEqualTo("empleadoId", empleadoId)
-                .WhereEqualTo("estado", EstadoPermiso.Aprobado.ToString())
-                .WhereEqualTo("activo", true);
-            var snapshot = await query.GetSnapshotAsync();
+            // Traer permisos aprobados Y pendientes del empleado (ambos pueden causar conflicto)
+            // Nota: Firestore no soporta WhereIn con otros filtros en algunos casos,
+            // así que hacemos dos consultas separadas
+            var estadosAVerificar = new[] { EstadoPermiso.Aprobado, EstadoPermiso.Pendiente };
             
-            foreach (var doc in snapshot.Documents)
+            foreach (var estado in estadosAVerificar)
             {
-                if (excludePermisoId.HasValue)
+                var query = Collection
+                    .WhereEqualTo("empleadoId", empleadoId)
+                    .WhereEqualTo("estado", estado.ToString())
+                    .WhereEqualTo("activo", true);
+                var snapshot = await query.GetSnapshotAsync();
+            
+                foreach (var doc in snapshot.Documents)
                 {
-                    if (doc.TryGetValue<int>("id", out var id) && id == excludePermisoId.Value)
-                        continue;
-                }
-                
-                if (doc.TryGetValue<Timestamp>("fechaInicio", out var fInicio) &&
-                    doc.TryGetValue<Timestamp>("fechaFin", out var fFin))
-                {
-                    var permisoInicio = fInicio.ToDateTime().ToLocalTime();
-                    var permisoFin = fFin.ToDateTime().ToLocalTime();
-                    
-                    // Verificar solapamiento: (A.inicio <= B.fin) && (A.fin >= B.inicio)
-                    if (fechaInicio <= permisoFin && fechaFin >= permisoInicio)
+                    if (excludePermisoId.HasValue)
                     {
-                        return true;
+                        if (doc.TryGetValue<int>("id", out var id) && id == excludePermisoId.Value)
+                            continue;
+                    }
+                    
+                    if (doc.TryGetValue<Timestamp>("fechaInicio", out var fInicio) &&
+                        doc.TryGetValue<Timestamp>("fechaFin", out var fFin))
+                    {
+                        var permisoInicio = fInicio.ToDateTime().ToLocalTime();
+                        var permisoFin = fFin.ToDateTime().ToLocalTime();
+                        
+                        // Verificar solapamiento: (A.inicio <= B.fin) && (A.fin >= B.inicio)
+                        if (fechaInicio <= permisoFin && fechaFin >= permisoInicio)
+                        {
+                            return true;
+                        }
                     }
                 }
             }

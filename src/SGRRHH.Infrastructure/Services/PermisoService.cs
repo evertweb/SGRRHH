@@ -163,6 +163,12 @@ public class PermisoService : IPermisoService
             {
                 return ServiceResult<Permiso>.Fail("Solo se pueden aprobar permisos pendientes");
             }
+            
+            // Prevenir auto-aprobación: el aprobador no puede ser el solicitante
+            if (usuarioAprobadorId == permiso.SolicitadoPorId)
+            {
+                return ServiceResult<Permiso>.Fail("No puede aprobar un permiso solicitado por usted mismo");
+            }
 
             // Aprobar
             permiso.Estado = EstadoPermiso.Aprobado;
@@ -231,9 +237,22 @@ public class PermisoService : IPermisoService
                 return ServiceResult<Permiso>.Fail("Permiso no encontrado");
             }
 
-            if (permiso.Estado != EstadoPermiso.Pendiente)
+            // Permitir cancelar permisos pendientes o aprobados que aún no han iniciado
+            if (permiso.Estado == EstadoPermiso.Pendiente)
             {
-                return ServiceResult<Permiso>.Fail("Solo se pueden cancelar permisos pendientes");
+                // OK - permisos pendientes siempre se pueden cancelar
+            }
+            else if (permiso.Estado == EstadoPermiso.Aprobado)
+            {
+                // Solo si aún no ha iniciado
+                if (permiso.FechaInicio.Date <= DateTime.Today)
+                {
+                    return ServiceResult<Permiso>.Fail("No se puede cancelar un permiso aprobado que ya inició o está en curso");
+                }
+            }
+            else
+            {
+                return ServiceResult<Permiso>.Fail("Solo se pueden cancelar permisos pendientes o aprobados que no han iniciado");
             }
 
             permiso.Estado = EstadoPermiso.Cancelado;
@@ -358,6 +377,18 @@ public class PermisoService : IPermisoService
             else if (!tipoPermiso.Activo)
             {
                 errores.Add("El tipo de permiso no está activo");
+            }
+            else
+            {
+                // Validar días máximos del tipo de permiso
+                if (tipoPermiso.DiasMaximos > 0)
+                {
+                    var diasSolicitados = _dateCalculationService.CalcularDiasHabiles(permiso.FechaInicio, permiso.FechaFin);
+                    if (diasSolicitados > tipoPermiso.DiasMaximos)
+                    {
+                        errores.Add($"El tipo de permiso '{tipoPermiso.Nombre}' permite máximo {tipoPermiso.DiasMaximos} días. Usted solicitó {diasSolicitados} días.");
+                    }
+                }
             }
         }
 

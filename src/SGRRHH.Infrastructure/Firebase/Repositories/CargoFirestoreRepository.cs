@@ -402,6 +402,37 @@ public class CargoFirestoreRepository : FirestoreRepository<Cargo>, ICargoReposi
         _cache?.InvalidateByPrefix("cargos");
     }
     
+    /// <summary>
+    /// Verifica si existe un cargo con el mismo nombre en el mismo departamento
+    /// </summary>
+    public async Task<bool> ExistsNombreInDepartamentoAsync(string nombre, int? departamentoId, int? excludeId = null)
+    {
+        try
+        {
+            var query = Collection
+                .WhereEqualTo("nombre", nombre)
+                .WhereEqualTo("activo", true);
+            
+            if (departamentoId.HasValue)
+            {
+                query = query.WhereEqualTo("departamentoId", departamentoId.Value);
+            }
+            
+            var snapshot = await query.GetSnapshotAsync();
+            
+            if (!excludeId.HasValue)
+                return snapshot.Documents.Any();
+            
+            return snapshot.Documents.Any(doc => 
+                doc.TryGetValue<int>("id", out var id) && id != excludeId.Value);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al verificar nombre existente: {Nombre} en departamento {DepartamentoId}", nombre, departamentoId);
+            throw;
+        }
+    }
+    
     #endregion
     
     #region Helper Methods

@@ -4,6 +4,7 @@ using SGRRHH.Core.Entities;
 using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
 using SGRRHH.Core.Models;
+using System.Text.RegularExpressions;
 
 namespace SGRRHH.Infrastructure.Services;
 
@@ -13,16 +14,41 @@ namespace SGRRHH.Infrastructure.Services;
 public class EmpleadoService : IEmpleadoService
 {
     private readonly IEmpleadoRepository _empleadoRepository;
+    private readonly ICargoRepository _cargoRepository;
+    private readonly IDepartamentoRepository _departamentoRepository;
     private readonly IDateCalculationService _dateCalculationService;
     private readonly ILogger<EmpleadoService>? _logger;
     private readonly string _fotosPath;
     
+    // Constantes para validación de cédula colombiana
+    private const int CedulaMinLength = 6;
+    private const int CedulaMaxLength = 10;
+    private const long MaxFotoSizeBytes = 5 * 1024 * 1024; // 5MB
+    
+    /// <summary>
+    /// Máquina de estados: define transiciones válidas para cada estado
+    /// </summary>
+    private static readonly Dictionary<EstadoEmpleado, EstadoEmpleado[]> TransicionesValidas = new()
+    {
+        { EstadoEmpleado.PendienteAprobacion, new[] { EstadoEmpleado.Activo, EstadoEmpleado.Rechazado } },
+        { EstadoEmpleado.Activo, new[] { EstadoEmpleado.EnVacaciones, EstadoEmpleado.EnLicencia, EstadoEmpleado.Suspendido, EstadoEmpleado.Retirado } },
+        { EstadoEmpleado.EnVacaciones, new[] { EstadoEmpleado.Activo } },
+        { EstadoEmpleado.EnLicencia, new[] { EstadoEmpleado.Activo } },
+        { EstadoEmpleado.Suspendido, new[] { EstadoEmpleado.Activo, EstadoEmpleado.Retirado } },
+        { EstadoEmpleado.Retirado, Array.Empty<EstadoEmpleado>() },
+        { EstadoEmpleado.Rechazado, Array.Empty<EstadoEmpleado>() }
+    };
+    
     public EmpleadoService(
         IEmpleadoRepository empleadoRepository,
+        ICargoRepository cargoRepository,
+        IDepartamentoRepository departamentoRepository,
         IDateCalculationService dateCalculationService,
         ILogger<EmpleadoService>? logger = null)
     {
         _empleadoRepository = empleadoRepository;
+        _cargoRepository = cargoRepository;
+        _departamentoRepository = departamentoRepository;
         _dateCalculationService = dateCalculationService;
         _logger = logger;
         
@@ -60,7 +86,7 @@ public class EmpleadoService : IEmpleadoService
     {
         var errors = new List<string>();
         
-        // Validaciones
+        // Validaciones básicas
         if (string.IsNullOrWhiteSpace(empleado.Cedula))
             errors.Add("La cédula es obligatoria");
             
@@ -72,6 +98,14 @@ public class EmpleadoService : IEmpleadoService
             
         if (empleado.FechaIngreso == default)
             errors.Add("La fecha de ingreso es obligatoria");
+        
+        // Validación de formato de cédula colombiana (6-10 dígitos numéricos)
+        if (!string.IsNullOrWhiteSpace(empleado.Cedula))
+        {
+            var cedulaLimpia = empleado.Cedula.Trim().Replace(".", "").Replace(",", "");
+            if (!Regex.IsMatch(cedulaLimpia, $@"^\d{{{CedulaMinLength},{CedulaMaxLength}}}$"))
+                errors.Add($"La cédula debe contener entre {CedulaMinLength} y {CedulaMaxLength} dígitos numéricos");
+        }
             
         // Validar unicidad de código
         if (!string.IsNullOrWhiteSpace(empleado.Codigo))
@@ -86,8 +120,41 @@ public class EmpleadoService : IEmpleadoService
         }
         
         // Validar unicidad de cédula
-        if (await _empleadoRepository.ExistsCedulaAsync(empleado.Cedula))
+        if (!string.IsNullOrWhiteSpace(empleado.Cedula) && await _empleadoRepository.ExistsCedulaAsync(empleado.Cedula))
             errors.Add($"Ya existe un empleado con la cédula {empleado.Cedula}");
+            
+        // Validar existencia de CargoId
+        if (empleado.CargoId.HasValue)
+        {
+            var cargo = await _cargoRepository.GetByIdAsync(empleado.CargoId.Value);
+            if (cargo == null)
+                errors.Add($"El cargo con ID {empleado.CargoId} no existe");
+        }
+        
+        // Validar existencia de DepartamentoId
+        if (empleado.DepartamentoId.HasValue)
+        {
+            var departamento = await _departamentoRepository.GetByIdAsync(empleado.DepartamentoId.Value);
+            if (departamento == null)
+                errors.Add($"El departamento con ID {empleado.DepartamentoId} no existe");
+        }
+        
+        // Validar SupervisorId
+        if (empleado.SupervisorId.HasValue)
+        {
+            var supervisor = await _empleadoRepository.GetByIdAsync(empleado.SupervisorId.Value);
+            if (supervisor == null)
+                errors.Add($"El supervisor con ID {empleado.SupervisorId} no existe");
+            else if (supervisor.Estado == EstadoEmpleado.Retirado || supervisor.Estado == EstadoEmpleado.Rechazado)
+                errors.Add("El supervisor seleccionado no está activo");
+        }
+        
+        // Validar unicidad de email
+        if (!string.IsNullOrWhiteSpace(empleado.Email))
+        {
+            if (await _empleadoRepository.ExistsEmailAsync(empleado.Email))
+                errors.Add($"Ya existe un empleado con el email {empleado.Email}");
+        }
             
         if (errors.Any())
             return ServiceResult<Empleado>.Fail(errors);
@@ -101,6 +168,7 @@ public class EmpleadoService : IEmpleadoService
         
         await _empleadoRepository.AddAsync(empleado);
         await _empleadoRepository.SaveChangesAsync();
+        _empleadoRepository.InvalidateCache();
         
         var mensaje = empleado.Estado == EstadoEmpleado.PendienteAprobacion 
             ? "Solicitud de empleado enviada. Pendiente de aprobación."
@@ -144,7 +212,7 @@ public class EmpleadoService : IEmpleadoService
             
         var errors = new List<string>();
         
-        // Validaciones
+        // Validaciones básicas
         if (string.IsNullOrWhiteSpace(empleado.Cedula))
             errors.Add("La cédula es obligatoria");
             
@@ -153,6 +221,14 @@ public class EmpleadoService : IEmpleadoService
             
         if (string.IsNullOrWhiteSpace(empleado.Apellidos))
             errors.Add("Los apellidos son obligatorios");
+        
+        // Validación de formato de cédula colombiana
+        if (!string.IsNullOrWhiteSpace(empleado.Cedula))
+        {
+            var cedulaLimpia = empleado.Cedula.Trim().Replace(".", "").Replace(",", "");
+            if (!Regex.IsMatch(cedulaLimpia, $@"^\d{{{CedulaMinLength},{CedulaMaxLength}}}$"))
+                errors.Add($"La cédula debe contener entre {CedulaMinLength} y {CedulaMaxLength} dígitos numéricos");
+        }
             
         // Validar unicidad de código (excluyendo el actual)
         if (await _empleadoRepository.ExistsCodigoAsync(empleado.Codigo, empleado.Id))
@@ -161,6 +237,59 @@ public class EmpleadoService : IEmpleadoService
         // Validar unicidad de cédula (excluyendo el actual)
         if (await _empleadoRepository.ExistsCedulaAsync(empleado.Cedula, empleado.Id))
             errors.Add($"Ya existe otro empleado con la cédula {empleado.Cedula}");
+        
+        // Validar existencia de CargoId
+        if (empleado.CargoId.HasValue)
+        {
+            var cargo = await _cargoRepository.GetByIdAsync(empleado.CargoId.Value);
+            if (cargo == null)
+                errors.Add($"El cargo con ID {empleado.CargoId} no existe");
+        }
+        
+        // Validar existencia de DepartamentoId
+        if (empleado.DepartamentoId.HasValue)
+        {
+            var departamento = await _departamentoRepository.GetByIdAsync(empleado.DepartamentoId.Value);
+            if (departamento == null)
+                errors.Add($"El departamento con ID {empleado.DepartamentoId} no existe");
+        }
+        
+        // Validar SupervisorId
+        if (empleado.SupervisorId.HasValue)
+        {
+            // Auto-referencia: un empleado no puede ser su propio supervisor
+            if (empleado.SupervisorId == empleado.Id)
+                errors.Add("Un empleado no puede ser su propio supervisor");
+            else
+            {
+                var supervisor = await _empleadoRepository.GetByIdAsync(empleado.SupervisorId.Value);
+                if (supervisor == null)
+                    errors.Add($"El supervisor con ID {empleado.SupervisorId} no existe");
+                else if (supervisor.Estado == EstadoEmpleado.Retirado || supervisor.Estado == EstadoEmpleado.Rechazado)
+                    errors.Add("El supervisor seleccionado no está activo");
+            }
+        }
+        
+        // Validar transiciones de estado (máquina de estados)
+        if (existing.Estado != empleado.Estado)
+        {
+            if (!TransicionesValidas.TryGetValue(existing.Estado, out var estadosPermitidos) ||
+                !estadosPermitidos.Contains(empleado.Estado))
+            {
+                errors.Add($"Transición de estado inválida: {existing.Estado} → {empleado.Estado}");
+            }
+        }
+        
+        // Validar FechaRetiro requerida para estado Retirado
+        if (empleado.Estado == EstadoEmpleado.Retirado && !empleado.FechaRetiro.HasValue)
+            errors.Add("La fecha de retiro es obligatoria para empleados retirados");
+        
+        // Validar unicidad de email (excluyendo el actual)
+        if (!string.IsNullOrWhiteSpace(empleado.Email))
+        {
+            if (await _empleadoRepository.ExistsEmailAsync(empleado.Email, empleado.Id))
+                errors.Add($"Ya existe otro empleado con el email {empleado.Email}");
+        }
             
         if (errors.Any())
             return ServiceResult.Fail(errors);
@@ -190,6 +319,7 @@ public class EmpleadoService : IEmpleadoService
         
         await _empleadoRepository.UpdateAsync(existing);
         await _empleadoRepository.SaveChangesAsync();
+        _empleadoRepository.InvalidateCache();
         
         return ServiceResult.Ok("Empleado actualizado exitosamente");
     }
@@ -207,6 +337,7 @@ public class EmpleadoService : IEmpleadoService
         
         await _empleadoRepository.UpdateAsync(empleado);
         await _empleadoRepository.SaveChangesAsync();
+        _empleadoRepository.InvalidateCache();
         
         return ServiceResult.Ok("Empleado desactivado exitosamente");
     }
@@ -228,6 +359,7 @@ public class EmpleadoService : IEmpleadoService
             // Eliminar el empleado permanentemente
             await _empleadoRepository.DeleteAsync(id);
             await _empleadoRepository.SaveChangesAsync();
+            _empleadoRepository.InvalidateCache();
             
             return ServiceResult.Ok("Empleado eliminado permanentemente");
         }
@@ -250,6 +382,7 @@ public class EmpleadoService : IEmpleadoService
         
         await _empleadoRepository.UpdateAsync(empleado);
         await _empleadoRepository.SaveChangesAsync();
+        _empleadoRepository.InvalidateCache();
         
         return ServiceResult.Ok("Empleado reactivado exitosamente");
     }
@@ -285,6 +418,7 @@ public class EmpleadoService : IEmpleadoService
             
             await _empleadoRepository.UpdateAsync(empleado);
             await _empleadoRepository.SaveChangesAsync();
+            _empleadoRepository.InvalidateCache();
             
             return ServiceResult<string>.Ok(filePath, "Foto guardada exitosamente");
         }
@@ -393,7 +527,7 @@ public class EmpleadoService : IEmpleadoService
         return empleados.Where(e => e.Estado == EstadoEmpleado.PendienteAprobacion).ToList();
     }
     
-    public async Task<ServiceResult> AprobarAsync(int id, int aprobadorId)
+    public async Task<ServiceResult> AprobarAsync(int id, int aprobadorId, RolUsuario rolAprobador)
     {
         var empleado = await _empleadoRepository.GetByIdAsync(id);
         if (empleado == null)
@@ -401,14 +535,25 @@ public class EmpleadoService : IEmpleadoService
             
         if (empleado.Estado != EstadoEmpleado.PendienteAprobacion)
             return ServiceResult.Fail("El empleado no está pendiente de aprobación");
+        
+        // Validar que el aprobador no sea el mismo que creó la solicitud
+        // Solo aplica para Operadores (Secretarias) - Admin y Aprobador pueden aprobar cualquiera
+        if (rolAprobador == RolUsuario.Operador && 
+            empleado.CreadoPorId.HasValue && 
+            empleado.CreadoPorId == aprobadorId)
+        {
+            return ServiceResult.Fail("No puede aprobar un empleado que usted mismo creó");
+        }
             
         empleado.Estado = EstadoEmpleado.Activo;
+        empleado.Activo = true;
         empleado.AprobadoPorId = aprobadorId;
         empleado.FechaAprobacion = DateTime.Now;
         empleado.FechaModificacion = DateTime.Now;
         
         await _empleadoRepository.UpdateAsync(empleado);
         await _empleadoRepository.SaveChangesAsync();
+        _empleadoRepository.InvalidateCache();
         
         return ServiceResult.Ok("Empleado aprobado exitosamente");
     }
@@ -431,6 +576,7 @@ public class EmpleadoService : IEmpleadoService
         
         await _empleadoRepository.UpdateAsync(empleado);
         await _empleadoRepository.SaveChangesAsync();
+        _empleadoRepository.InvalidateCache();
         
         return ServiceResult.Ok("Empleado rechazado");
     }
@@ -439,5 +585,82 @@ public class EmpleadoService : IEmpleadoService
     {
         var empleados = await _empleadoRepository.GetAllAsync();
         return empleados.Count(e => e.Estado == EstadoEmpleado.PendienteAprobacion);
+    }
+    
+    /// <summary>
+    /// Migra los datos desnormalizados (cargoNombre, departamentoNombre) para todos los empleados existentes.
+    /// Útil para corregir empleados creados antes del fix.
+    /// </summary>
+    public async Task<ServiceResult<int>> MigrarDatosDesnormalizadosAsync()
+    {
+        try
+        {
+            _logger?.LogInformation("Iniciando migración de datos desnormalizados de empleados...");
+            
+            // Obtener todos los empleados
+            var empleados = await _empleadoRepository.GetAllAsync();
+            var actualizados = 0;
+            
+            // Cargar todos los cargos y departamentos para evitar múltiples queries
+            var cargos = (await _cargoRepository.GetAllAsync()).ToDictionary(c => c.Id);
+            var departamentos = (await _departamentoRepository.GetAllAsync()).ToDictionary(d => d.Id);
+            
+            foreach (var empleado in empleados)
+            {
+                var necesitaActualizacion = false;
+                
+                // Actualizar Cargo si tiene ID pero no tiene entidad cargada
+                if (empleado.CargoId.HasValue && cargos.TryGetValue(empleado.CargoId.Value, out var cargo))
+                {
+                    if (empleado.Cargo == null || string.IsNullOrEmpty(empleado.Cargo.Nombre))
+                    {
+                        empleado.Cargo = cargo;
+                        necesitaActualizacion = true;
+                    }
+                }
+                
+                // Actualizar Departamento si tiene ID pero no tiene entidad cargada
+                if (empleado.DepartamentoId.HasValue && departamentos.TryGetValue(empleado.DepartamentoId.Value, out var depto))
+                {
+                    if (empleado.Departamento == null || string.IsNullOrEmpty(empleado.Departamento.Nombre))
+                    {
+                        empleado.Departamento = depto;
+                        necesitaActualizacion = true;
+                    }
+                }
+                
+                // Actualizar Supervisor si tiene ID
+                if (empleado.SupervisorId.HasValue && empleado.Supervisor == null)
+                {
+                    var supervisor = await _empleadoRepository.GetByIdAsync(empleado.SupervisorId.Value);
+                    if (supervisor != null)
+                    {
+                        empleado.Supervisor = supervisor;
+                        necesitaActualizacion = true;
+                    }
+                }
+                
+                if (necesitaActualizacion)
+                {
+                    empleado.FechaModificacion = DateTime.Now;
+                    await _empleadoRepository.UpdateAsync(empleado);
+                    actualizados++;
+                }
+            }
+            
+            if (actualizados > 0)
+            {
+                await _empleadoRepository.SaveChangesAsync();
+                _empleadoRepository.InvalidateCache();
+            }
+            
+            _logger?.LogInformation("Migración completada. {Count} empleados actualizados.", actualizados);
+            return ServiceResult<int>.Ok(actualizados, $"Migración completada. {actualizados} empleados actualizados.");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error durante la migración de datos desnormalizados");
+            return ServiceResult<int>.Fail($"Error durante la migración: {ex.Message}");
+        }
     }
 }

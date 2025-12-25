@@ -158,14 +158,16 @@
                                     <DataGridTextColumn Header="COD" Binding="{Binding Codigo}" Width="60"/>
                                     <DataGridTextColumn Header="CEDULA" Binding="{Binding Cedula}" Width="80"/>
                                     <DataGridTextColumn Header="NOMBRE COMPLETO" Binding="{Binding NombreCompleto}" Width="*"/>
-                                    <DataGridTextColumn Header="DEPTO" Binding="{Binding Departamento.Nombre}" Width="100"/>
-                                    <DataGridTextColumn Header="CARGO" Binding="{Binding Cargo.Nombre}" Width="100"/>
+                                    <DataGridTextColumn Header="DEPTO" Binding="{Binding Departamento.Nombre, FallbackValue='Sin Asignar'}" Width="100"/>
+                                    <DataGridTextColumn Header="CARGO" Binding="{Binding Cargo.Nombre, FallbackValue='Sin Asignar'}" Width="100"/>
                                     <DataGridTextColumn Header="FECHA SOL." Binding="{Binding FechaSolicitud, StringFormat=dd/MM/yy}" Width="70"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                             
                             <!-- Botones de aprobación -->
                             <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+                                <controls:LegacyAsyncButton Content="Ver Detalle" Command="{Binding ViewPendienteCommand}"
+                                        IsLoading="{Binding IsLoading}" Margin="0,0,5,0"/>
                                 <controls:LegacyAsyncButton Content="Aprobar" Command="{Binding AprobarEmpleadoCommand}"
                                         IsLoading="{Binding IsLoading}" Margin="0,0,5,0"/>
                                 <controls:LegacyAsyncButton Content="Rechazar" Command="{Binding RechazarEmpleadoCommand}"
@@ -281,8 +283,8 @@
                         <DataGridTextColumn Header="COD." Binding="{Binding Codigo}" Width="70"/>
                         <DataGridTextColumn Header="CEDULA" Binding="{Binding Cedula}" Width="90"/>
                         <DataGridTextColumn Header="NOMBRE COMPLETO" Binding="{Binding NombreCompleto}" Width="*"/>
-                        <DataGridTextColumn Header="DEPARTAMENTO" Binding="{Binding Departamento.Nombre}" Width="120"/>
-                        <DataGridTextColumn Header="CARGO" Binding="{Binding Cargo.Nombre}" Width="120"/>
+                        <DataGridTextColumn Header="DEPARTAMENTO" Binding="{Binding Departamento.Nombre, FallbackValue='Sin Asignar'}" Width="120"/>
+                        <DataGridTextColumn Header="CARGO" Binding="{Binding Cargo.Nombre, FallbackValue='Sin Asignar'}" Width="120"/>
                         <DataGridTextColumn Header="INGRESO" Binding="{Binding FechaIngreso, StringFormat=dd/MM/yyyy}" Width="80"/>
                         
                         <!-- Columna de Estado -->

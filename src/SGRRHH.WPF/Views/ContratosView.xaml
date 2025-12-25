@@ -106,9 +106,9 @@
             </Border>
             
             <!-- Alertas -->
-            <Border Grid.Row="1" Background="#FFFFCC" BorderThickness="1" BorderBrush="#CC6600" 
+            <Border Grid.Row="1" Background="#FFFFCC" BorderThickness="1" BorderBrush="#CC6600"
                     Padding="8" Margin="8,8,8,0"
-                    Visibility="{Binding ContratosProximosAVencer.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+                    Visibility="{Binding ContratosProximosAVencer.Count, Mode=OneWay, Converter={StaticResource ZeroToVisibilityConverter}}">
                 <StackPanel>
                     <TextBlock Text="[!] CONTRATOS PROXIMOS A VENCER (30 dias)" 
                                FontFamily="Tahoma" FontSize="9" FontWeight="Bold" Foreground="#CC6600"/>

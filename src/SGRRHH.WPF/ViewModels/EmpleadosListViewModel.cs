@@ -322,6 +322,21 @@ public partial class EmpleadosListViewModel : ViewModelBase
     }
     
     /// <summary>
+    /// Muestra el detalle del empleado pendiente seleccionado
+    /// </summary>
+    [RelayCommand]
+    private void ViewPendiente()
+    {
+        if (SelectedPendiente == null)
+        {
+            _dialogService.ShowInfo("Seleccione un empleado pendiente para ver su detalle");
+            return;
+        }
+        
+        ViewEmpleadoRequested?.Invoke(this, SelectedPendiente);
+    }
+    
+    /// <summary>
     /// Desactiva el empleado seleccionado
     /// </summary>
     [RelayCommand]
@@ -430,11 +445,15 @@ public partial class EmpleadosListViewModel : ViewModelBase
             _dialogService.ShowInfo("Seleccione un empleado pendiente para aprobar");
             return;
         }
-        
+
+        // Guardar el nombre antes de recargar los datos
+        var nombreEmpleado = SelectedPendiente.NombreCompleto;
+        var empleadoId = SelectedPendiente.Id;
+
         var confirmado = _dialogService.Confirm(
-            $"¿Está seguro de aprobar al empleado {SelectedPendiente.NombreCompleto}?\n\nEl empleado quedará activo en el sistema.",
+            $"¿Está seguro de aprobar al empleado {nombreEmpleado}?\n\nEl empleado quedará activo en el sistema.",
             "Confirmar aprobación");
-            
+
         if (confirmado)
         {
             try
@@ -445,14 +464,14 @@ public partial class EmpleadosListViewModel : ViewModelBase
                     _dialogService.ShowError("Error: Usuario no identificado");
                     return;
                 }
-                
-                var serviceResult = await _empleadoService.AprobarAsync(SelectedPendiente.Id, currentUser.Id);
-                
+
+                var serviceResult = await _empleadoService.AprobarAsync(empleadoId, currentUser.Id, currentUser.Rol);
+
                 if (serviceResult.Success)
                 {
                     await LoadPendientesAsync();
                     await SearchEmpleadosAsync();
-                    _dialogService.ShowSuccess($"✅ {SelectedPendiente.NombreCompleto} ha sido aprobado exitosamente.");
+                    _dialogService.ShowSuccess($"✅ {nombreEmpleado} ha sido aprobado exitosamente.");
                 }
                 else
                 {
@@ -477,21 +496,25 @@ public partial class EmpleadosListViewModel : ViewModelBase
             _dialogService.ShowInfo("Seleccione un empleado pendiente para rechazar");
             return;
         }
-        
+
+        // Guardar el nombre antes de potenciales cambios
+        var nombreEmpleado = SelectedPendiente.NombreCompleto;
+        var empleadoId = SelectedPendiente.Id;
+
         // Pedir motivo del rechazo
         var motivo = _dialogService.ShowInputDialog(
-            $"Ingrese el motivo del rechazo para:\n{SelectedPendiente.NombreCompleto}",
+            $"Ingrese el motivo del rechazo para:\n{nombreEmpleado}",
             "Motivo de Rechazo");
-        
+
         if (string.IsNullOrWhiteSpace(motivo))
         {
             return;
         }
-        
+
         var confirmado = _dialogService.ConfirmWarning(
-            $"¿Está seguro de rechazar al empleado {SelectedPendiente.NombreCompleto}?\n\nMotivo: {motivo}",
+            $"¿Está seguro de rechazar al empleado {nombreEmpleado}?\n\nMotivo: {motivo}",
             "Confirmar rechazo");
-            
+
         if (confirmado)
         {
             try
@@ -502,14 +525,14 @@ public partial class EmpleadosListViewModel : ViewModelBase
                     _dialogService.ShowError("Error: Usuario no identificado");
                     return;
                 }
-                
-                var serviceResult = await _empleadoService.RechazarAsync(SelectedPendiente.Id, currentUser.Id, motivo);
-                
+
+                var serviceResult = await _empleadoService.RechazarAsync(empleadoId, currentUser.Id, motivo);
+
                 if (serviceResult.Success)
                 {
                     await LoadPendientesAsync();
                     await SearchEmpleadosAsync();
-                    _dialogService.ShowSuccess($"❌ {SelectedPendiente.NombreCompleto} ha sido rechazado.");
+                    _dialogService.ShowSuccess($"❌ {nombreEmpleado} ha sido rechazado.");
                 }
                 else
                 {

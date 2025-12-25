@@ -36,6 +36,12 @@ public class TipoPermiso : EntidadBase
     public int DiasPorDefecto { get; set; } = 1;
     
     /// <summary>
+    /// Máximo de días permitidos para este tipo de permiso (0 = sin límite).
+    /// Ej: Luto máx 5 días, Calamidad máx 5 días según ley colombiana.
+    /// </summary>
+    public int DiasMaximos { get; set; } = 0;
+    
+    /// <summary>
     /// Indica si el permiso es compensable (requiere reposición de horas)
     /// </summary>
     public bool EsCompensable { get; set; } = false;

@@ -82,4 +82,14 @@ public interface IControlDiarioService
     /// Elimina un registro diario completo
     /// </summary>
     Task<ServiceResult> DeleteRegistroAsync(int registroId);
+    
+    /// <summary>
+    /// FIX #6: Aprueba un registro completado
+    /// </summary>
+    Task<ServiceResult> AprobarRegistroAsync(int registroId);
+    
+    /// <summary>
+    /// FIX #6: Rechaza un registro (vuelve a Borrador)
+    /// </summary>
+    Task<ServiceResult> RechazarRegistroAsync(int registroId, string? motivo = null);
 }

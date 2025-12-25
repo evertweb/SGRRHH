@@ -2,6 +2,8 @@ using SGRRHH.Core.Common;
 using SGRRHH.Core.Entities;
 using SGRRHH.Core.Interfaces;
 
+using SGRRHH.Infrastructure.Firebase.Repositories;
+
 namespace SGRRHH.Infrastructure.Services;
 
 /// <summary>
@@ -10,10 +12,12 @@ namespace SGRRHH.Infrastructure.Services;
 public class CargoService : ICargoService
 {
     private readonly ICargoRepository _cargoRepository;
+    private readonly IDepartamentoRepository _departamentoRepository;
     
-    public CargoService(ICargoRepository cargoRepository)
+    public CargoService(ICargoRepository cargoRepository, IDepartamentoRepository departamentoRepository)
     {
         _cargoRepository = cargoRepository;
+        _departamentoRepository = departamentoRepository;
     }
     
     public async Task<IEnumerable<Cargo>> GetAllAsync()
@@ -37,6 +41,25 @@ public class CargoService : ICargoService
         
         if (string.IsNullOrWhiteSpace(cargo.Nombre))
             errors.Add("El nombre es obligatorio");
+        
+        // Validar rango de Nivel (1-10)
+        if (cargo.Nivel < 1 || cargo.Nivel > 10)
+            errors.Add("El nivel jerárquico debe estar entre 1 y 10");
+        
+        // Validar que el departamento exista
+        if (cargo.DepartamentoId.HasValue)
+        {
+            var departamentoExists = await _departamentoRepository.GetByIdAsync(cargo.DepartamentoId.Value);
+            if (departamentoExists == null)
+                errors.Add("El departamento especificado no existe");
+        }
+        
+        // Validar nombre único por departamento
+        if (!string.IsNullOrWhiteSpace(cargo.Nombre))
+        {
+            if (await _cargoRepository.ExistsNombreInDepartamentoAsync(cargo.Nombre, cargo.DepartamentoId))
+                errors.Add($"Ya existe un cargo llamado '{cargo.Nombre}' en este departamento");
+        }
             
         // Generar código si está vacío
         if (string.IsNullOrWhiteSpace(cargo.Codigo))
@@ -58,6 +81,9 @@ public class CargoService : ICargoService
         await _cargoRepository.AddAsync(cargo);
         await _cargoRepository.SaveChangesAsync();
         
+        // Invalidar cache después de crear
+        InvalidateCargoCache();
+        
         return ServiceResult<Cargo>.Ok(cargo, "Cargo creado exitosamente");
     }
     
@@ -71,6 +97,25 @@ public class CargoService : ICargoService
         
         if (string.IsNullOrWhiteSpace(cargo.Nombre))
             errors.Add("El nombre es obligatorio");
+        
+        // Validar rango de Nivel (1-10)
+        if (cargo.Nivel < 1 || cargo.Nivel > 10)
+            errors.Add("El nivel jerárquico debe estar entre 1 y 10");
+        
+        // Validar que el departamento exista
+        if (cargo.DepartamentoId.HasValue)
+        {
+            var departamentoExists = await _departamentoRepository.GetByIdAsync(cargo.DepartamentoId.Value);
+            if (departamentoExists == null)
+                errors.Add("El departamento especificado no existe");
+        }
+        
+        // Validar nombre único por departamento
+        if (!string.IsNullOrWhiteSpace(cargo.Nombre))
+        {
+            if (await _cargoRepository.ExistsNombreInDepartamentoAsync(cargo.Nombre, cargo.DepartamentoId, cargo.Id))
+                errors.Add($"Ya existe otro cargo llamado '{cargo.Nombre}' en este departamento");
+        }
             
         if (await _cargoRepository.ExistsCodigoAsync(cargo.Codigo, cargo.Id))
             errors.Add($"Ya existe otro cargo con el código {cargo.Codigo}");
@@ -83,10 +128,14 @@ public class CargoService : ICargoService
         existing.Descripcion = cargo.Descripcion;
         existing.Nivel = cargo.Nivel;
         existing.DepartamentoId = cargo.DepartamentoId;
+        existing.Activo = cargo.Activo;
         existing.FechaModificacion = DateTime.Now;
         
         await _cargoRepository.UpdateAsync(existing);
         await _cargoRepository.SaveChangesAsync();
+        
+        // Invalidar cache después de actualizar
+        InvalidateCargoCache();
         
         return ServiceResult.Ok("Cargo actualizado exitosamente");
     }
@@ -106,6 +155,9 @@ public class CargoService : ICargoService
         await _cargoRepository.UpdateAsync(cargo);
         await _cargoRepository.SaveChangesAsync();
         
+        // Invalidar cache después de eliminar
+        InvalidateCargoCache();
+        
         return ServiceResult.Ok("Cargo eliminado exitosamente");
     }
     
@@ -117,5 +169,16 @@ public class CargoService : ICargoService
     public async Task<int> CountActiveAsync()
     {
         return await _cargoRepository.CountActiveAsync();
+    }
+    
+    /// <summary>
+    /// Invalida el cache de cargos
+    /// </summary>
+    private void InvalidateCargoCache()
+    {
+        if (_cargoRepository is CargoFirestoreRepository firestoreRepo)
+        {
+            firestoreRepo.InvalidateCache();
+        }
     }
 }

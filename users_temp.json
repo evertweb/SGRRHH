@@ -1,0 +1,40 @@
+{"users": [
+{
+  "localId": "6VSFfKaAlAaDOcH40EIzKaTZXBM2",
+  "email": "admin@sgrrhh.local",
+  "emailVerified": true,
+  "passwordHash": "qgafzaWx+VHi0VZiesp0ohE7C3kaGEix2qAQHesyk862k4Q2O5gQqooL6OfWBNQ3Wm8884DeKW5YwSe9sjrCCg==",
+  "salt": "3kxO4BKwT5KTXw==",
+  "displayName": "Administrador del Sistema",
+  "lastSignedInAt": "1764712363713",
+  "createdAt": "1764283450679",
+  "disabled": false,
+  "customAttributes": "{\"rol\":\"Administrador\",\"rolId\":1}",
+  "providerUserInfo": []
+},
+{
+  "localId": "Z8JPNioOB5U0O8zMityslj5EjpZ2",
+  "email": "secretaria@sgrrhh.local",
+  "emailVerified": true,
+  "passwordHash": "HvJD0c5yjah/4Yv9W65VL+y4UK5l637lkMqIbFim72nfhO1b41weazuLQD9MuMlp6sX+9adFAtk/cVzvIWDAJA==",
+  "salt": "HXNyx56ZPueGHg==",
+  "displayName": "Secretaria",
+  "lastSignedInAt": "1764636526492",
+  "createdAt": "1764283452358",
+  "disabled": false,
+  "customAttributes": "{\"rol\":\"Operador\",\"rolId\":3}",
+  "providerUserInfo": []
+},
+{
+  "localId": "iGpEuajlmjaknDfwBEjBkwtCRyK2",
+  "email": "ingeniera@sgrrhh.local",
+  "emailVerified": true,
+  "passwordHash": "0gRDL2aHxjgDBAY0pGUglfcDYmrTK9zcPSPwSN+vpT4aHy/xKqc8xbM8fUurwg3/HG99YuBDCGxCd/5O1it8Dw==",
+  "salt": "Nzu+BjuesfsBMw==",
+  "displayName": "Ingeniera de Gestión",
+  "lastSignedInAt": "1764431890469",
+  "createdAt": "1764283454485",
+  "disabled": false,
+  "customAttributes": "{\"rol\":\"Aprobador\",\"rolId\":2}",
+  "providerUserInfo": []
+}]}

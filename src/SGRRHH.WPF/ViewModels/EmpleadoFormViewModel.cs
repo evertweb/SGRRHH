@@ -333,6 +333,11 @@ public partial class EmpleadoFormViewModel : ViewModelBase
     }
     
     /// <summary>
+    /// Constantes de validación
+    /// </summary>
+    private const long MaxFotoSizeBytes = 5 * 1024 * 1024; // 5MB
+    
+    /// <summary>
     /// Selecciona una foto para el empleado
     /// </summary>
     [RelayCommand]
@@ -348,8 +353,32 @@ public partial class EmpleadoFormViewModel : ViewModelBase
         {
             try
             {
+                var fileInfo = new FileInfo(dialog.FileName);
+                
+                // Validar tamaño máximo de foto (5MB)
+                if (fileInfo.Length > MaxFotoSizeBytes)
+                {
+                    _dialogService.ShowWarning(
+                        $"La imagen es muy grande ({fileInfo.Length / 1024 / 1024:F1} MB).\nTamaño máximo permitido: 5 MB.",
+                        "Imagen demasiado grande");
+                    return;
+                }
+                
                 _newFotoData = File.ReadAllBytes(dialog.FileName);
-                _newFotoExtension = Path.GetExtension(dialog.FileName);
+                _newFotoExtension = Path.GetExtension(dialog.FileName).ToLower();
+                
+                // Validar que sea una extensión de imagen válida
+                var validExtensions = new[] { ".jpg", ".jpeg", ".png", ".bmp" };
+                if (!validExtensions.Contains(_newFotoExtension))
+                {
+                    _dialogService.ShowWarning(
+                        "Formato de imagen no válido.\nFormatos permitidos: JPG, JPEG, PNG, BMP.",
+                        "Formato inválido");
+                    _newFotoData = null;
+                    _newFotoExtension = null;
+                    return;
+                }
+                
                 FotoPath = dialog.FileName;
             }
             catch (Exception ex)
@@ -513,9 +542,13 @@ public partial class EmpleadoFormViewModel : ViewModelBase
         if (FechaIngreso == default)
             errors.Add("La fecha de ingreso es obligatoria");
         
-        // Validación de formato de cédula (solo números, 5-15 dígitos)
-        if (!string.IsNullOrWhiteSpace(Cedula) && !Regex.IsMatch(Cedula.Trim(), @"^\d{5,15}$"))
-            errors.Add("La cédula debe contener solo números (5-15 dígitos)");
+        // Validación de formato de cédula colombiana (solo números, 6-10 dígitos)
+        if (!string.IsNullOrWhiteSpace(Cedula))
+        {
+            var cedulaLimpia = Cedula.Trim().Replace(".", "").Replace(",", "");
+            if (!Regex.IsMatch(cedulaLimpia, @"^\d{6,10}$"))
+                errors.Add("La cédula debe contener entre 6 y 10 dígitos numéricos");
+        }
         
         // Validación de formato de teléfono (solo números, 7-15 dígitos)
         if (!string.IsNullOrWhiteSpace(Telefono) && !Regex.IsMatch(Telefono.Trim(), @"^\d{7,15}$"))
@@ -559,6 +592,25 @@ public partial class EmpleadoFormViewModel : ViewModelBase
         // Validación de apellidos (solo letras y espacios)
         if (!string.IsNullOrWhiteSpace(Apellidos) && !Regex.IsMatch(Apellidos.Trim(), @"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$"))
             errors.Add("Los apellidos solo pueden contener letras");
+        
+        // Validaciones de longitud máxima de campos
+        if (!string.IsNullOrWhiteSpace(Nombres) && Nombres.Length > 100)
+            errors.Add("Los nombres no pueden exceder 100 caracteres");
+        
+        if (!string.IsNullOrWhiteSpace(Apellidos) && Apellidos.Length > 100)
+            errors.Add("Los apellidos no pueden exceder 100 caracteres");
+        
+        if (!string.IsNullOrWhiteSpace(Direccion) && Direccion.Length > 300)
+            errors.Add("La dirección no puede exceder 300 caracteres");
+        
+        if (!string.IsNullOrWhiteSpace(Email) && Email.Length > 150)
+            errors.Add("El email no puede exceder 150 caracteres");
+        
+        if (!string.IsNullOrWhiteSpace(ContactoEmergencia) && ContactoEmergencia.Length > 100)
+            errors.Add("El contacto de emergencia no puede exceder 100 caracteres");
+        
+        if (!string.IsNullOrWhiteSpace(Observaciones) && Observaciones.Length > 1000)
+            errors.Add("Las observaciones no pueden exceder 1000 caracteres");
             
         return errors;
     }
@@ -619,8 +671,11 @@ public partial class EmpleadoFormViewModel : ViewModelBase
                 TipoContrato = TipoContrato,
                 Estado = Estado,
                 CargoId = SelectedCargo?.Id,
+                Cargo = SelectedCargo,  // Save complete entity for denormalization
                 DepartamentoId = SelectedDepartamento?.Id,
+                Departamento = SelectedDepartamento,  // Save complete entity for denormalization
                 SupervisorId = SelectedSupervisor?.Id > 0 ? SelectedSupervisor.Id : null,
+                Supervisor = SelectedSupervisor?.Id > 0 ? SelectedSupervisor : null,  // Save complete entity
                 Observaciones = Observaciones
             };
             

@@ -42,4 +42,24 @@ public interface IVacacionService
     /// Obtiene vacaciones programadas (futuras)
     /// </summary>
     Task<ServiceResult<IEnumerable<Vacacion>>> GetVacacionesProgramadasAsync(int? empleadoId = null);
+    
+    /// <summary>
+    /// Aprueba una solicitud de vacaciones pendiente
+    /// </summary>
+    Task<ServiceResult<bool>> AprobarVacacionAsync(int id, int aprobadorId);
+    
+    /// <summary>
+    /// Rechaza una solicitud de vacaciones pendiente
+    /// </summary>
+    Task<ServiceResult<bool>> RechazarVacacionAsync(int id, int aprobadorId, string motivo);
+    
+    /// <summary>
+    /// Programa una vacación aprobada (confirma las fechas)
+    /// </summary>
+    Task<ServiceResult<bool>> ProgramarVacacionAsync(int id);
+    
+    /// <summary>
+    /// Obtiene las vacaciones pendientes de aprobación
+    /// </summary>
+    Task<ServiceResult<IEnumerable<Vacacion>>> GetVacacionesPendientesAsync();
 }

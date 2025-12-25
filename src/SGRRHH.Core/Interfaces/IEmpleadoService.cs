@@ -113,7 +113,10 @@ public interface IEmpleadoService
     /// <summary>
     /// Aprueba un empleado (solo Aprobador/Admin)
     /// </summary>
-    Task<ServiceResult> AprobarAsync(int id, int aprobadorId);
+    /// <param name="id">ID del empleado a aprobar</param>
+    /// <param name="aprobadorId">ID del usuario aprobador</param>
+    /// <param name="rolAprobador">Rol del usuario aprobador</param>
+    Task<ServiceResult> AprobarAsync(int id, int aprobadorId, RolUsuario rolAprobador);
     
     /// <summary>
     /// Rechaza un empleado (solo Aprobador/Admin)
@@ -138,6 +141,7 @@ public interface IDepartamentoService
     Task<ServiceResult> DeleteAsync(int id);
     Task<string> GetNextCodigoAsync();
     Task<int> CountActiveAsync();
+    Task<(IEnumerable<Departamento> Items, int TotalCount)> GetAllPagedAsync(int pageNumber = 1, int pageSize = 50);
 }
 
 /// <summary>

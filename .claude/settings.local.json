@@ -33,7 +33,11 @@
       "Bash(git log:*)",
       "Bash(Select-String -Pattern \"error|warning|Build succeeded|Build failed\")",
       "Bash(Select-String -Pattern \"error|warning|Build succeeded|Build failed\" -Context 0,2)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(taskkill:*)",
+      "Bash(find:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

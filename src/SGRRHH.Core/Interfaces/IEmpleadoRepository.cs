@@ -72,4 +72,14 @@ public interface IEmpleadoRepository : IRepository<Empleado>
     /// Cuenta el total de empleados activos
     /// </summary>
     Task<int> CountActiveAsync();
+    
+    /// <summary>
+    /// Verifica si existe un empleado con el email dado
+    /// </summary>
+    Task<bool> ExistsEmailAsync(string email, int? excludeId = null);
+    
+    /// <summary>
+    /// Invalida el cache de empleados. Llamar después de Add/Update/Delete.
+    /// </summary>
+    void InvalidateCache();
 }

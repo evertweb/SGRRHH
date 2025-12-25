@@ -268,9 +268,9 @@
                         <DataGridTemplateColumn Header="ACT" Width="50">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
                                                FontFamily="Courier New" FontWeight="Bold">
-                                        <Run Text="{Binding DetallesActividades.Count, FallbackValue='0', TargetNullValue='0'}"/>
+                                        <Run Text="{Binding DetallesActividades.Count, Mode=OneWay, FallbackValue='0', TargetNullValue='0'}"/>
                                     </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>

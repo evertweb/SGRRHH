@@ -163,6 +163,14 @@ public static class MenuConfiguration
             Category = "Operaciones",
             AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador, RolUsuario.Operador }
         };
+        yield return new MenuItemViewModel
+        {
+            Icon = "✅",
+            Title = "Aprobar Vacaciones",
+            ViewName = "BandejaVacaciones",
+            Category = "Operaciones",
+            AllowedRoles = new[] { RolUsuario.Administrador, RolUsuario.Aprobador }
+        };
         
         // ============================================
         // SISTEMA (Administración y Reportes)
