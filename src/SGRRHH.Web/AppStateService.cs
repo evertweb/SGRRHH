@@ -30,6 +30,10 @@ public class AppStateService
     public bool CanEditDepartamentos => CurrentUser?.Rol == RolUsuario.Administrador ||
                                          CurrentUser?.Rol == RolUsuario.Aprobador;
     public bool CanDeleteDepartamentos => CurrentUser?.Rol == RolUsuario.Administrador;
+
+    // Vacaciones module permissions
+    public bool CanEditVacaciones => CurrentUser?.Rol == RolUsuario.Administrador ||
+                                      CurrentUser?.Rol == RolUsuario.Aprobador;
     
     public string CurrentViewTitle { get; private set; } = "Inicio";
     public string WindowTitle => $"SGRRHH v2.0 - {CurrentViewTitle}";

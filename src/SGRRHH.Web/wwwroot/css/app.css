@@ -1963,3 +1963,103 @@ input, button, select, textarea, table, th, td, label, span, div, p, a, li, h1, 
     margin: 0;
     color: var(--win-navy);
 }
+
+/* ==========================================
+   PANEL DE RESUMEN DE VACACIONES
+   ========================================== */
+.vacation-summary-panel {
+    margin-bottom: 10px;
+}
+
+.vacation-summary-panel .legacy-fieldset {
+    background: white;
+    border: 1px solid var(--win-gray);
+    margin: 0;
+}
+
+.vacation-summary-panel .legacy-fieldset-header {
+    background: var(--win-navy);
+    color: white;
+    padding: 6px 10px;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.vacation-summary-panel .legacy-fieldset-icon {
+    font-family: var(--font-monospace);
+    margin-right: 8px;
+}
+
+.vacation-summary-panel .legacy-fieldset-content {
+    padding: 12px;
+}
+
+.summary-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.summary-row {
+    display: flex;
+    gap: 20px;
+}
+
+.summary-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.summary-label {
+    font-size: 9px;
+    color: var(--win-gray);
+    text-transform: uppercase;
+}
+
+.summary-value {
+    font-family: var(--font-monospace);
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.summary-positive {
+    color: var(--win-success);
+}
+
+.summary-negative {
+    color: #CC0000;
+}
+
+.summary-info {
+    color: var(--win-navy);
+}
+
+.summary-accent {
+    color: #800080;
+}
+
+.summary-total {
+    background: #E0FFE0;
+    border: 2px solid var(--win-success);
+    padding: 10px;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.total-label {
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--win-success);
+}
+
+.total-value {
+    font-family: var(--font-monospace);
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--win-success);
+}

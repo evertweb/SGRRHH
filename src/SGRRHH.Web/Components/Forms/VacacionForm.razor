@@ -67,6 +67,21 @@
         <textarea class="legacy-form-textarea" @bind="vacacion.Observaciones" rows="2" placeholder="Observaciones adicionales"></textarea>
     </div>
 
+    @* Selector de estado - solo en modo edición y para usuarios con permiso *@
+    @if (isEditing && canChangeStatus)
+    {
+        <div class="legacy-form-group">
+            <label class="legacy-form-label">Estado</label>
+            <select class="legacy-form-input" @bind="vacacion.Estado">
+                @foreach (var estado in availableStates)
+                {
+                    <option value="@estado">@GetEstadoLabel(estado)</option>
+                }
+            </select>
+            <div class="legacy-form-hint">Cambiar estado manualmente (Admin/Operador)</div>
+        </div>
+    }
+
     @if (isEditing && vacacion.Estado != EstadoVacacion.Pendiente)
     {
         <fieldset class="legacy-fieldset">
@@ -109,6 +124,9 @@
     [Parameter]
     public EventCallback OnCancel { get; set; }
 
+    [Parameter]
+    public bool CanChangeStatus { get; set; } = false;
+
     [Inject]
     public IVacacionService VacacionService { get; set; } = default!;
 
@@ -118,6 +136,9 @@
     [Inject]
     public IDateCalculationService DateService { get; set; } = default!;
 
+    [Inject]
+    public AppStateService AppState { get; set; } = default!;
+
     private Vacacion vacacion = new();
     private IEnumerable<Empleado>? empleados;
     private bool isEditing = false;
@@ -125,6 +146,18 @@
     private string? empleadoError;
     private string? fechaError;
     private bool isSaving = false;
+    
+    // Estado selector - solo para admin/operador
+    private bool canChangeStatus => CanChangeStatus || AppState.IsAdmin || AppState.CanEditVacaciones;
+    private List<EstadoVacacion> availableStates = new()
+    {
+        EstadoVacacion.Pendiente,
+        EstadoVacacion.Aprobada,
+        EstadoVacacion.Programada,
+        EstadoVacacion.Disfrutada,
+        EstadoVacacion.Rechazada,
+        EstadoVacacion.Cancelada
+    };
 
     protected override async Task OnInitializedAsync()
     {

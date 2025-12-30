@@ -2,10 +2,12 @@
 @using SGRRHH.Core.Entities
 @using SGRRHH.Core.Enums
 @using SGRRHH.Core.Interfaces
+@using SGRRHH.Core.Models
 @using SGRRHH.Web.Components.Shared
 @using SGRRHH.Web.Components.Forms
 @inject IVacacionService VacacionService
 @inject IVacacionRepository VacacionRepo
+@inject IEmpleadoRepository EmpleadoRepo
 @inject AppStateService AppState
 
 <div class="module-container">
@@ -18,6 +20,15 @@
 
         <div style="flex: 1;"></div>
 
+        @* Filtro por empleado *@
+        <select class="legacy-input" @bind="filtroEmpleadoId" @bind:after="OnEmpleadoFilterChanged" style="width: 200px;">
+            <option value="0">-- Todos los empleados --</option>
+            @foreach (var emp in empleados ?? Enumerable.Empty<Empleado>())
+            {
+                <option value="@emp.Id">@emp.NombreCompleto</option>
+            }
+        </select>
+
         <select class="legacy-input" @bind="filtroEstado" @bind:after="FilterData" style="width: 150px;">
             <option value="">Todos los estados</option>
             <option value="@EstadoVacacion.Pendiente">Pendientes</option>
@@ -28,6 +39,12 @@
             <option value="@EstadoVacacion.Cancelada">Canceladas</option>
         </select>
     </div>
+
+    @* Panel de Resumen de Vacaciones (cuando hay empleado seleccionado) *@
+    @if (filtroEmpleadoId > 0 && resumenVacaciones != null)
+    {
+        <ResumenVacacionesPanel Resumen="@resumenVacaciones" />
+    }
 
     @* Mensaje de exito *@
     @if (!string.IsNullOrEmpty(successMessage))
@@ -77,6 +94,10 @@
                             </td>
                             <td>
                                 <button class="legacy-button-small" @onclick="() => ShowViewModal(vac)">Ver</button>
+                                @if (CanEditVacacion(vac))
+                                {
+                                    <button class="legacy-button-small legacy-button-primary" @onclick="() => ShowEditModal(vac)">Editar</button>
+                                }
                                 @if (vac.Estado == EstadoVacacion.Pendiente && AppState.CanApprove)
                                 {
                                     <button class="legacy-button-small legacy-button-success" @onclick="() => ShowApproveModal(vac)">Aprobar</button>
@@ -260,10 +281,13 @@
 @code {
     private IEnumerable<Vacacion>? allVacaciones;
     private IEnumerable<Vacacion>? filteredVacaciones;
+    private IEnumerable<Empleado>? empleados;
     private bool isLoading = true;
     private bool isSaving = false;
     private string? successMessage;
     private EstadoVacacion? filtroEstado;
+    private int filtroEmpleadoId = 0;
+    private ResumenVacaciones? resumenVacaciones;
 
     private bool showFormModal = false;
     private bool showViewModal = false;
@@ -277,6 +301,7 @@
     private string motivoRechazo = "";
     private bool isDeleting = false;
     private bool isMarkingDisfrutada = false;
+    private bool isEditMode = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -290,8 +315,18 @@
         successMessage = null;
         try
         {
+            // Cargar empleados para el filtro
+            empleados = await EmpleadoRepo.GetAllActiveAsync();
+            
+            // Cargar vacaciones
             allVacaciones = await VacacionRepo.GetAllAsync();
             FilterData();
+            
+            // Cargar resumen si hay empleado seleccionado
+            if (filtroEmpleadoId > 0)
+            {
+                await LoadResumenVacaciones();
+            }
         }
         catch (Exception ex)
         {
@@ -307,8 +342,65 @@
     {
         if (allVacaciones == null) return;
         var query = allVacaciones.AsEnumerable();
-        if (filtroEstado.HasValue) query = query.Where(v => v.Estado == filtroEstado.Value);
+        
+        // Filtrar por empleado
+        if (filtroEmpleadoId > 0)
+        {
+            query = query.Where(v => v.EmpleadoId == filtroEmpleadoId);
+        }
+        
+        // Filtrar por estado
+        if (filtroEstado.HasValue) 
+        {
+            query = query.Where(v => v.Estado == filtroEstado.Value);
+        }
+        
         filteredVacaciones = query.OrderByDescending(v => v.FechaSolicitud).ToList();
+    }
+
+    private async Task OnEmpleadoFilterChanged()
+    {
+        FilterData();
+        if (filtroEmpleadoId > 0)
+        {
+            await LoadResumenVacaciones();
+        }
+        else
+        {
+            resumenVacaciones = null;
+        }
+    }
+
+    private async Task LoadResumenVacaciones()
+    {
+        if (filtroEmpleadoId <= 0) return;
+        try
+        {
+            var result = await VacacionService.GetResumenVacacionesAsync(filtroEmpleadoId);
+            if (result.Success)
+            {
+                resumenVacaciones = result.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando resumen: {ex.Message}");
+        }
+    }
+
+    // Determina si una vacación puede ser editada
+    private bool CanEditVacacion(Vacacion vac)
+    {
+        // Solo admin/operador puede editar
+        if (!AppState.IsAdmin && !AppState.CanEditVacaciones) return false;
+        
+        // No se pueden editar vacaciones ya disfrutadas o canceladas
+        if (vac.Estado == EstadoVacacion.Disfrutada || vac.Estado == EstadoVacacion.Cancelada) return false;
+        
+        // Si ya pasó la fecha fin, no se puede editar (excepto admin)
+        if (vac.FechaFin < DateTime.Today && !AppState.IsAdmin) return false;
+        
+        return true;
     }
 
     private string GetEstadoLabel(EstadoVacacion estado) => estado switch
@@ -337,9 +429,10 @@
         _ => ""
     };
 
-    private void ShowNewModal() { selectedVacacion = null; modalTitle = "Solicitar Vacaciones"; showFormModal = true; }
+    private void ShowNewModal() { selectedVacacion = null; isEditMode = false; modalTitle = "Solicitar Vacaciones"; showFormModal = true; }
+    private void ShowEditModal(Vacacion v) { selectedVacacion = v; isEditMode = true; modalTitle = "Editar Vacaciones"; showFormModal = true; }
     private void ShowViewModal(Vacacion v) { selectedVacacion = v; showViewModal = true; }
-    private void CloseFormModal() { showFormModal = false; selectedVacacion = null; }
+    private void CloseFormModal() { showFormModal = false; selectedVacacion = null; isEditMode = false; }
     private void CloseViewModal() { showViewModal = false; }
     private void CloseApproveModal() { showApproveModal = false; selectedVacacion = null; }
     private void CloseRejectModal() { showRejectModal = false; selectedVacacion = null; motivoRechazo = ""; }

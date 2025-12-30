@@ -11,73 +11,10 @@
 @inject AppStateService AppState
 
 <div class="module-container">
-    @if (showHomeView)
-    {
-        @* ===== VISTA HOME CON TARJETAS ===== *@
-        <div class="home-view">
-            <div class="home-header">
-                <h2>Control Diario de Actividades</h2>
-                <p>Gestione los registros de actividades diarias de los empleados</p>
-            </div>
-
-            @* Dashboard Estadisticas *@
-            <div class="stats-dashboard">
-                <div class="stat-card stat-primary">
-                    <div class="stat-icon">Registros</div>
-                    <div class="stat-content">
-                        <div class="stat-value">@totalRegistrosMes</div>
-                        <div class="stat-label">Registros del Mes</div>
-                    </div>
-                </div>
-                <div class="stat-card stat-success">
-                    <div class="stat-icon">Horas</div>
-                    <div class="stat-content">
-                        <div class="stat-value">@totalHorasMes.ToString("F1")</div>
-                        <div class="stat-label">Horas del Mes</div>
-                    </div>
-                </div>
-                <div class="stat-card stat-warning">
-                    <div class="stat-icon">Periodo</div>
-                    <div class="stat-content">
-                        <div class="stat-value">@DateTime.Now.ToString("MMMM yyyy")</div>
-                        <div class="stat-label">Periodo Actual</div>
-                    </div>
-                </div>
-            </div>
-
-            @* Tarjetas de Accion *@
-            <div class="home-cards">
-                <div class="home-card card-create" @onclick="StartWizard">
-                    <div class="card-icon">+</div>
-                    <div class="card-title">Crear Registros</div>
-                    <div class="card-description">Wizard batch para multiples empleados</div>
-                </div>
-                <div class="home-card card-view" @onclick="ShowListView">
-                    <div class="card-icon">Lista</div>
-                    <div class="card-title">Ver Registros</div>
-                    <div class="card-description">Consultar y editar registros existentes</div>
-                </div>
-            </div>
-        </div>
-    }
-    else if (!isWizardMode)
+    @if (!isWizardMode)
     {
         @* ===== VISTA LISTA ===== *@
-        @* Dashboard Estadisticas Compacto *@
-        <div class="stats-bar">
-            <div class="stat-mini">
-                <span class="stat-mini-label">Registros:</span>
-                <span class="stat-mini-value stat-primary">@totalRegistrosMes</span>
-            </div>
-            <div class="stat-mini">
-                <span class="stat-mini-label">Horas Mes:</span>
-                <span class="stat-mini-value stat-success">@totalHorasMes.ToString("F1")</span>
-            </div>
-            <div style="flex: 1;"></div>
-            <button class="legacy-button-small" @onclick="GoToHome">Inicio</button>
-        </div>
-
-        @* Toolbar con Filtros Combinados *@
+        @* Toolbar con Filtros *@
         <div class="module-toolbar">
             <div class="filter-group">
                 <label>Empleado:</label>
@@ -181,22 +118,16 @@
             Total: <strong>@registros.Count()</strong> registros |
             Total horas: <strong>@registros.Sum(r => r.TotalHoras).ToString("F1")</strong>
         </div>
+    } @* End of table else *@
     }
-    } @* End of list view *@
-    else if (isWizardMode)
+    else @* isWizardMode = true *@
     {
         @* ===== WIZARD VIEW ===== *@
-        <div class="wizard-container">
-            <div class="wizard-header">
-                <h2>Wizard de Registro Batch</h2>
-                <button class="legacy-button" @onclick="CancelWizard">x Cancelar</button>
+        <fieldset class="legacy-fieldset">
+            <legend>Registro Batch - Paso @(wizardStep + 1) de 5</legend>
+            <div style="text-align: right; margin-bottom: 10px;">
+                <button class="legacy-button-small" @onclick="CancelWizard">Cancelar</button>
             </div>
-
-            @* Progress Bar *@
-            <div class="wizard-progress">
-                <div class="progress-bar" style="width: @((wizardStep + 1) * 20)%"></div>
-            </div>
-            <div class="wizard-step-indicator">Paso @(wizardStep + 1) de 5</div>
 
             @* Step Content *@
             <div class="wizard-content">
@@ -244,23 +175,16 @@
                         </div>
                         @if (wizardHoraEntrada.HasValue && wizardHoraSalida.HasValue)
                         {
-                            <div class="hours-calculated">
-                                <div class="hours-display">
-                                    <span class="hours-value">@wizardHorasManual.ToString("F1")</span>
-                                    <span class="hours-unit">horas</span>
-                                </div>
-                                <div class="hours-calc-detail">
-                                    Calculado: @wizardHoraEntrada?.ToString(@"hh\:mm") -> @wizardHoraSalida?.ToString(@"hh\:mm")
-                                </div>
+                            <div class="legacy-form-group" style="margin-top: 10px;">
+                                <label>Total Horas:</label>
+                                <span style="margin-left: 5px;"><strong>@wizardHorasManual.ToString("F1")</strong> (calculado: @wizardHoraEntrada?.ToString(@"hh\:mm") - @wizardHoraSalida?.ToString(@"hh\:mm"))</span>
                             </div>
-                            <div class="hours-slider-container">
-                                <label>Ajuste manual de horas:</label>
-                                <input type="range" class="hours-slider" min="0.5" max="12" step="0.5"
-                                       @bind="wizardHorasManual" @bind:event="oninput" />
-                                <div class="slider-labels">
-                                    <span>0.5h</span>
-                                    <span>12h</span>
-                                </div>
+                            <div class="legacy-form-group">
+                                <label>Ajuste manual:</label>
+                                <input type="number" class="legacy-input" style="width: 80px; margin-left: 5px;" 
+                                       min="0.5" max="24" step="0.5" 
+                                       @bind="wizardHorasManual" />
+                                <span style="margin-left: 5px; font-size: 11px;">horas</span>
                             </div>
                         }
                         break;
@@ -294,62 +218,50 @@
                         break;
 
                     case 4: @* Review + Save *@
-                        <h3>Paso 5: Revisar y Guardar</h3>
-                        <div class="review-card">
-                            <div class="review-header">
-                                <div class="review-date">
-                                    <span class="review-day">@wizardDate.ToString("dd")</span>
-                                    <span class="review-month">@wizardDate.ToString("MMM yyyy")</span>
-                                </div>
-                                <div class="review-time-box">
-                                    <span class="review-time">@wizardHoraEntrada?.ToString(@"hh\:mm") - @wizardHoraSalida?.ToString(@"hh\:mm")</span>
-                                    <span class="review-hours">@wizardHorasManual.ToString("F1") horas</span>
-                                </div>
-                            </div>
-                            <div class="review-body">
-                                <div class="review-section">
-                                    <label>Empleados (@selectedEmpleadoIds.Count):</label>
-                                    <div class="review-employees">
-                                        @foreach (var empId in selectedEmpleadoIds.Take(5))
+                        <p><strong>Paso 5: Revisar y Guardar</strong></p>
+                        <table class="legacy-table" style="margin: 10px 0;">
+                            <tr>
+                                <td style="width: 120px;"><strong>Fecha:</strong></td>
+                                <td>@wizardDate.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Horario:</strong></td>
+                                <td>@wizardHoraEntrada?.ToString(@"hh\:mm") - @wizardHoraSalida?.ToString(@"hh\:mm") (@wizardHorasManual.ToString("F1") horas)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Empleados:</strong></td>
+                                <td>
+                                    @selectedEmpleadoIds.Count empleado(s):
+                                    @foreach (var empId in selectedEmpleadoIds.Take(5))
+                                    {
+                                        var emp = allEmpleados.FirstOrDefault(e => e.Id == empId);
+                                        if (emp != null)
                                         {
-                                            var emp = allEmpleados.FirstOrDefault(e => e.Id == empId);
-                                            if (emp != null)
-                                            {
-                                                <span class="employee-tag">@emp.NombreCompleto</span>
-                                            }
+                                            <span>@emp.NombreCompleto, </span>
                                         }
-                                        @if (selectedEmpleadoIds.Count > 5)
-                                        {
-                                            <span class="employee-tag more">+@(selectedEmpleadoIds.Count - 5) mas</span>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="review-section">
-                                    <label>Actividad:</label>
-                                    <div class="review-activity">
-                                        <span class="activity-name">@(allActividades.FirstOrDefault(a => a.Id == wizardActividadId)?.Nombre ?? "-")</span>
-                                        @{
-                                            var actCat = allActividades.FirstOrDefault(a => a.Id == wizardActividadId)?.Categoria;
-                                            if (!string.IsNullOrEmpty(actCat))
-                                            {
-                                                <span class="activity-category">@actCat</span>
-                                            }
-                                        }
-                                    </div>
-                                </div>
-                                @if (wizardProyectoId.HasValue)
-                                {
-                                    <div class="review-section">
-                                        <label>Proyecto:</label>
-                                        <span>@(allProyectos.FirstOrDefault(p => p.Id == wizardProyectoId)?.Nombre ?? "-")</span>
-                                    </div>
-                                }
-                                <div class="review-section">
-                                    <label>Descripcion:</label>
-                                    <div class="review-description">@(string.IsNullOrEmpty(wizardDescripcion) ? "(Sin descripcion)" : wizardDescripcion)</div>
-                                </div>
-                            </div>
-                        </div>
+                                    }
+                                    @if (selectedEmpleadoIds.Count > 5)
+                                    {
+                                        <span>... y @(selectedEmpleadoIds.Count - 5) mas</span>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Actividad:</strong></td>
+                                <td>@(allActividades.FirstOrDefault(a => a.Id == wizardActividadId)?.Nombre ?? "-")</td>
+                            </tr>
+                            @if (wizardProyectoId.HasValue)
+                            {
+                                <tr>
+                                    <td><strong>Proyecto:</strong></td>
+                                    <td>@(allProyectos.FirstOrDefault(p => p.Id == wizardProyectoId)?.Nombre ?? "-")</td>
+                                </tr>
+                            }
+                            <tr>
+                                <td><strong>Descripcion:</strong></td>
+                                <td>@(string.IsNullOrEmpty(wizardDescripcion) ? "(Sin descripcion)" : wizardDescripcion)</td>
+                            </tr>
+                        </table>
                         @if (!string.IsNullOrEmpty(wizardError))
                         {
                             <div class="legacy-alert legacy-alert-error">@wizardError</div>
@@ -382,18 +294,7 @@
                     </button>
                 }
             </div>
-        </div>
-    }
-
-    @* ===== OVERLAY DE EXITO ===== *@
-    @if (showSuccessOverlay)
-    {
-        <div class="success-overlay">
-            <div class="success-content">
-                <div class="success-icon">OK</div>
-                <div class="success-message">@successMessage</div>
-            </div>
-        </div>
+        </fieldset>
     }
 </div>
 
@@ -423,10 +324,6 @@
     private bool isLoading = true;
     private bool isSaving = false;
     private string? successMessage;
-    private bool showSuccessOverlay = false;
-
-    // Vista Home
-    private bool showHomeView = true;
 
     // Estadisticas
     private int totalRegistrosMes = 0;
@@ -563,19 +460,6 @@
         return $"{mesNombre} {selectedAnio} ({empNombre})";
     }
 
-    private void ShowListView()
-    {
-        showHomeView = false;
-        _ = LoadDataWithFilters();
-    }
-
-    private void GoToHome()
-    {
-        showHomeView = true;
-        isWizardMode = false;
-        _ = LoadStats();
-    }
-
     private string GetEstadoLabel(EstadoRegistroDiario estado) => estado switch
     {
         EstadoRegistroDiario.Borrador => "Borrador",
@@ -696,7 +580,6 @@
 
     private async Task StartWizard()
     {
-        showHomeView = false;
         isWizardMode = true;
         wizardStep = 0;
         wizardError = null;
@@ -726,7 +609,6 @@
     {
         isWizardMode = false;
         wizardStep = 0;
-        showHomeView = true;
     }
 
     private void ToggleEmpleado(int empleadoId)
@@ -841,13 +723,9 @@
 
     private async Task ShowSuccessAndGoHome()
     {
-        showSuccessOverlay = true;
-        StateHasChanged();
-        await Task.Delay(2000);
-        showSuccessOverlay = false;
+        // Simply go back to list view and show a success message
         isWizardMode = false;
-        showHomeView = true;
-        await LoadStats();
+        await LoadDataWithFilters();
         StateHasChanged();
     }
 }
