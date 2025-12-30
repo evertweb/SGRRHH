@@ -1,0 +1,971 @@
+@page "/proyectos"
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Interfaces
+@using SGRRHH.Web.Components.Shared
+@using SGRRHH.Web.Components.Forms
+@inject IProyectoRepository ProyectoRepo
+@inject IEmpleadoRepository EmpleadoRepo
+@inject IProyectoEmpleadoRepository ProyectoEmpleadoRepo
+@inject IRegistroDiarioRepository RegistroDiarioRepo
+@inject AppStateService AppState
+
+<div class="module-container">
+    @* Alertas de vencimiento *@
+    @if (proyectosVencidos?.Any() == true || proyectosProximosAVencer?.Any() == true)
+    {
+        <div class="alertas-container">
+            @if (proyectosVencidos?.Any() == true)
+            {
+                <div class="legacy-alert legacy-alert-error">
+                    <strong>Proyectos vencidos:</strong> @proyectosVencidos.Count() proyecto(s) han pasado su fecha de fin.
+                    <button class="legacy-button-small" style="margin-left: 10px;" @onclick="() => FiltrarVencidos()">Ver</button>
+                </div>
+            }
+            @if (proyectosProximosAVencer?.Any() == true)
+            {
+                <div class="legacy-alert legacy-alert-warning">
+                    <strong>Proyectos por vencer:</strong> @proyectosProximosAVencer.Count() proyecto(s) vencen en los próximos 7 días.
+                    <button class="legacy-button-small" style="margin-left: 10px;" @onclick="() => FiltrarProximosAVencer()">Ver</button>
+                </div>
+            }
+        </div>
+    }
+
+    @* Toolbar con búsqueda y filtros *@
+    <div class="module-toolbar">
+        <button class="legacy-button" @onclick="LoadData" disabled="@isLoading">
+            @(isLoading ? "Cargando..." : "Actualizar")
+        </button>
+        <button class="legacy-button legacy-button-primary" @onclick="ShowNewModal">+ Nuevo Proyecto</button>
+
+        <div class="search-container">
+            <input type="text"
+                   class="legacy-form-input"
+                   placeholder="Buscar por nombre, código, cliente..."
+                   @bind="searchText"
+                   @bind:event="oninput"
+                   @onkeyup="OnSearchKeyUp"
+                   style="width: 250px;" />
+            @if (!string.IsNullOrEmpty(searchText))
+            {
+                <button class="legacy-button-small" @onclick="ClearSearch" title="Limpiar">X</button>
+            }
+        </div>
+
+        <select class="legacy-form-input" style="width: 140px;" @bind="filtroEstado" @bind:after="FilterData">
+            <option value="">Todos los estados</option>
+            <option value="0">Activo</option>
+            <option value="1">Suspendido</option>
+            <option value="2">Finalizado</option>
+            <option value="3">Cancelado</option>
+        </select>
+
+        <div style="flex: 1;"></div>
+
+        <button class="legacy-button" @onclick="ExportarExcel" disabled="@isLoading" title="Exportar a Excel">
+            Exportar
+        </button>
+
+        <span class="contador-proyectos">
+            @(filteredProyectos?.Count() ?? 0) de @(allProyectos?.Count() ?? 0) proyectos
+        </span>
+    </div>
+
+    @* Mensaje de éxito *@
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="legacy-alert legacy-alert-success">
+            @successMessage
+        </div>
+    }
+
+    @* Contenido principal *@
+    @if (isLoading)
+    {
+        <div class="loading-indicator">Cargando datos...</div>
+    }
+    else if (filteredProyectos == null || !filteredProyectos.Any())
+    {
+        <div class="empty-state">
+            @if (!string.IsNullOrEmpty(searchText) || !string.IsNullOrEmpty(filtroEstado))
+            {
+                <span>No se encontraron proyectos con los filtros aplicados.</span>
+                <button class="legacy-button-small" @onclick="ClearAllFilters" style="margin-left: 10px;">Limpiar filtros</button>
+            }
+            else
+            {
+                <span>No hay proyectos registrados.</span>
+            }
+        </div>
+    }
+    else
+    {
+        <table class="legacy-table">
+            <thead>
+                <tr>
+                    <th style="width: 90px;">Código</th>
+                    <th>Nombre</th>
+                    <th style="width: 120px;">Cliente</th>
+                    <th style="width: 100px;">Ubicación</th>
+                    <th style="width: 90px;">Fecha Fin</th>
+                    <th style="width: 70px;">Progreso</th>
+                    <th style="width: 100px;">Estado</th>
+                    <th style="width: 150px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var proyecto in filteredProyectos ?? Enumerable.Empty<Proyecto>())
+                {
+                    <tr class="@GetRowClass(proyecto)">
+                        <td><code>@proyecto.Codigo</code></td>
+                        <td>
+                            <div class="proyecto-nombre">
+                                <strong>@proyecto.Nombre</strong>
+                                @if (proyecto.EstaVencido)
+                                {
+                                    <span class="alerta-icon" title="Proyecto vencido">⚠️</span>
+                                }
+                                else if (proyecto.EstaProximoAVencer)
+                                {
+                                    <span class="alerta-icon" title="Próximo a vencer">⏰</span>
+                                }
+                            </div>
+                            @if (proyecto.ResponsableId.HasValue)
+                            {
+                                var responsable = empleadosDict.GetValueOrDefault(proyecto.ResponsableId.Value);
+                                if (responsable != null)
+                                {
+                                    <small class="responsable-label">👤 @responsable.NombreCompleto</small>
+                                }
+                            }
+                        </td>
+                        <td>@(proyecto.Cliente ?? "-")</td>
+                        <td>@(proyecto.Ubicacion ?? "-")</td>
+                        <td class="@(proyecto.EstaVencido ? "fecha-vencida" : proyecto.EstaProximoAVencer ? "fecha-proxima" : "")">
+                            @proyecto.FechaFin?.ToString("dd/MM/yyyy")
+                        </td>
+                        <td>
+                            <div class="progress-mini">
+                                <div class="progress-bar-mini @GetProgressClass(proyecto.Progreso)"
+                                     style="width: @(proyecto.Progreso)%"></div>
+                            </div>
+                            <small>@proyecto.Progreso%</small>
+                        </td>
+                        <td style="text-align: center;">
+                            <span class="status-badge @GetStatusClass(proyecto.Estado)">
+                                @GetEstadoLabel(proyecto.Estado)
+                            </span>
+                        </td>
+                        <td class="acciones-cell">
+                            <button class="legacy-button-small" @onclick="() => ShowDetailModal(proyecto)" title="Ver detalles">👁</button>
+                            <button class="legacy-button-small" @onclick="() => ShowEditModal(proyecto)" title="Editar">✏️</button>
+                            <button class="legacy-button-small" @onclick="() => ShowEmpleadosModal(proyecto)" title="Empleados">👥</button>
+                            <button class="legacy-button-small" @onclick="() => ShowRegistrosModal(proyecto)" title="Registros diarios">📋</button>
+                            @if (proyecto.Estado == EstadoProyecto.Activo)
+                            {
+                                <button class="legacy-button-small legacy-button-danger" @onclick="() => ShowDeleteConfirm(proyecto)" title="Cancelar">❌</button>
+                            }
+                            else if (proyecto.Estado == EstadoProyecto.Suspendido || proyecto.Estado == EstadoProyecto.Cancelado)
+                            {
+                                <button class="legacy-button-small legacy-button-primary" @onclick="() => Reactivate(proyecto)" title="Reactivar">↩️</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@* Modal de Crear/Editar *@
+<LegacyModal Title="@modalTitle"
+             IsVisible="@showFormModal"
+             OnClose="CloseFormModal"
+             Width="700px">
+    <ChildContent>
+        <ProyectoForm @ref="formComponent"
+                      ProyectoEdit="@selectedProyecto"
+                      OnSave="HandleSave"
+                      OnCancel="CloseFormModal" />
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseFormModal" disabled="@isSaving">Cancelar</button>
+        <button class="legacy-button legacy-button-primary" @onclick="SaveForm" disabled="@isSaving">
+            @(isSaving ? "Guardando..." : "Guardar")
+        </button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Detalle del Proyecto *@
+<LegacyModal Title="@($"Detalle: {selectedProyecto?.Nombre}")"
+             IsVisible="@showDetailModal"
+             OnClose="CloseDetailModal"
+             Width="700px">
+    <ChildContent>
+        @if (selectedProyecto != null)
+        {
+            <div class="proyecto-detalle">
+                <div class="detalle-row">
+                    <div class="detalle-campo">
+                        <label>Código:</label>
+                        <span><code>@selectedProyecto.Codigo</code></span>
+                    </div>
+                    <div class="detalle-campo">
+                        <label>Estado:</label>
+                        <span class="status-badge @GetStatusClass(selectedProyecto.Estado)">
+                            @GetEstadoLabel(selectedProyecto.Estado)
+                        </span>
+                    </div>
+                </div>
+                <div class="detalle-campo full">
+                    <label>Nombre:</label>
+                    <span><strong>@selectedProyecto.Nombre</strong></span>
+                </div>
+                <div class="detalle-row">
+                    <div class="detalle-campo">
+                        <label>Cliente:</label>
+                        <span>@(selectedProyecto.Cliente ?? "-")</span>
+                    </div>
+                    <div class="detalle-campo">
+                        <label>Ubicación:</label>
+                        <span>@(selectedProyecto.Ubicacion ?? "-")</span>
+                    </div>
+                </div>
+                <div class="detalle-campo full">
+                    <label>Descripción:</label>
+                    <span>@(selectedProyecto.Descripcion ?? "-")</span>
+                </div>
+                <div class="detalle-row">
+                    <div class="detalle-campo">
+                        <label>Fecha Inicio:</label>
+                        <span>@selectedProyecto.FechaInicio?.ToString("dd/MM/yyyy")</span>
+                    </div>
+                    <div class="detalle-campo">
+                        <label>Fecha Fin:</label>
+                        <span class="@(selectedProyecto.EstaVencido ? "fecha-vencida" : "")">
+                            @selectedProyecto.FechaFin?.ToString("dd/MM/yyyy")
+                            @if (selectedProyecto.EstaVencido)
+                            {
+                                <span class="alerta-text">⚠️ Vencido</span>
+                            }
+                            else if (selectedProyecto.EstaProximoAVencer)
+                            {
+                                <span class="alerta-text warning">⏰ Próximo a vencer</span>
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="detalle-row">
+                    <div class="detalle-campo">
+                        <label>Responsable:</label>
+                        <span>
+                            @if (selectedProyecto.ResponsableId.HasValue)
+                            {
+                                var resp = empleadosDict.GetValueOrDefault(selectedProyecto.ResponsableId.Value);
+                                @(resp?.NombreCompleto ?? "No encontrado")
+                            }
+                            else
+                            {
+                                <text>Sin asignar</text>
+                            }
+                        </span>
+                    </div>
+                    <div class="detalle-campo">
+                        <label>Presupuesto:</label>
+                        <span>@(selectedProyecto.Presupuesto?.ToString("C0") ?? "-")</span>
+                    </div>
+                </div>
+                <div class="detalle-campo full">
+                    <label>Progreso:</label>
+                    <div class="progress-container-detail">
+                        <div class="progress-bar @GetProgressClass(selectedProyecto.Progreso)"
+                             style="width: @(selectedProyecto.Progreso)%"></div>
+                        <span class="progress-text">@selectedProyecto.Progreso%</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseDetailModal">Cerrar</button>
+        <button class="legacy-button legacy-button-primary" @onclick="() => { CloseDetailModal(); ShowEditModal(selectedProyecto!); }">Editar</button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Empleados del Proyecto *@
+<LegacyModal Title="@($"Empleados: {selectedProyecto?.Nombre}")"
+             IsVisible="@showEmpleadosModal"
+             OnClose="CloseEmpleadosModal"
+             Width="600px">
+    <ChildContent>
+        <div class="empleados-proyecto">
+            @* Agregar empleado *@
+            <div class="agregar-empleado-form">
+                <select class="legacy-form-input" @bind="empleadoIdToAdd" style="flex: 1;">
+                    <option value="0">-- Seleccionar empleado --</option>
+                    @foreach (var emp in empleadosDisponibles)
+                    {
+                        <option value="@emp.Id">@emp.NombreCompleto</option>
+                    }
+                </select>
+                <input type="text"
+                       class="legacy-form-input"
+                       placeholder="Rol (opcional)"
+                       @bind="rolEmpleado"
+                       style="width: 150px;" />
+                <button class="legacy-button legacy-button-primary"
+                        @onclick="AsignarEmpleado"
+                        disabled="@(empleadoIdToAdd == 0)">
+                    + Asignar
+                </button>
+            </div>
+
+            @* Lista de empleados asignados *@
+            @if (empleadosProyecto?.Any() != true)
+            {
+                <div class="empty-state" style="padding: 20px;">No hay empleados asignados a este proyecto.</div>
+            }
+            else
+            {
+                <table class="legacy-table" style="margin-top: 15px;">
+                    <thead>
+                        <tr>
+                            <th>Empleado</th>
+                            <th style="width: 120px;">Rol</th>
+                            <th style="width: 100px;">Fecha Asig.</th>
+                            <th style="width: 80px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pe in empleadosProyecto)
+                        {
+                            var emp = empleadosDict.GetValueOrDefault(pe.EmpleadoId);
+                            <tr>
+                                <td>@(emp?.NombreCompleto ?? $"ID: {pe.EmpleadoId}")</td>
+                                <td>@(pe.Rol ?? "-")</td>
+                                <td>@pe.FechaAsignacion.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <button class="legacy-button-small legacy-button-danger"
+                                            @onclick="() => DesasignarEmpleado(pe)"
+                                            title="Desasignar">
+                                        ❌
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseEmpleadosModal">Cerrar</button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Confirmación de Eliminación *@
+<LegacyModal Title="Confirmar Cancelación"
+             IsVisible="@showDeleteModal"
+             OnClose="CloseDeleteModal"
+             Width="400px"
+             CloseOnOverlayClick="false">
+    <ChildContent>
+        <div style="text-align: center; padding: 10px;">
+            <p style="font-size: 14px; margin-bottom: 15px;">
+                ¿Está seguro que desea cancelar el proyecto?
+            </p>
+            <p style="font-weight: bold; color: var(--win-navy); font-size: 16px;">
+                "@selectedProyecto?.Nombre"
+            </p>
+            <p style="font-size: 11px; color: var(--win-gray); margin-top: 10px;">
+                El proyecto pasará a estado "Cancelado".
+            </p>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseDeleteModal">Cancelar</button>
+        <button class="legacy-button legacy-button-danger" @onclick="ConfirmDelete">Confirmar</button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Registros Diarios del Proyecto *@
+<LegacyModal Title="@($"Registros Diarios: {selectedProyecto?.Nombre}")"
+             IsVisible="@showRegistrosModal"
+             OnClose="CloseRegistrosModal"
+             Width="800px">
+    <ChildContent>
+        <div class="registros-proyecto">
+            @if (isLoadingRegistros)
+            {
+                <div class="loading-indicator">Cargando registros...</div>
+            }
+            else
+            {
+                @* Resumen de horas *@
+                <div class="registros-resumen">
+                    <div class="resumen-card">
+                        <span class="resumen-valor">@totalHorasProyecto.ToString("N1")</span>
+                        <span class="resumen-label">Total Horas</span>
+                    </div>
+                    <div class="resumen-card">
+                        <span class="resumen-valor">@horasPorEmpleado.Count</span>
+                        <span class="resumen-label">Empleados</span>
+                    </div>
+                    <div class="resumen-card">
+                        <span class="resumen-valor">@detallesProyecto.Count</span>
+                        <span class="resumen-label">Actividades</span>
+                    </div>
+                </div>
+
+                @* Horas por empleado *@
+                @if (horasPorEmpleado.Any())
+                {
+                    <div class="seccion-titulo">Horas por Empleado</div>
+                    <table class="legacy-table">
+                        <thead>
+                            <tr>
+                                <th>Empleado</th>
+                                <th style="width: 100px; text-align: center;">Horas</th>
+                                <th style="width: 100px; text-align: center;">Actividades</th>
+                                <th style="width: 120px;">Última Actividad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var emp in horasPorEmpleado)
+                            {
+                                <tr>
+                                    <td>@emp.EmpleadoNombre</td>
+                                    <td style="text-align: center; font-weight: bold;">@emp.TotalHoras.ToString("N1")</td>
+                                    <td style="text-align: center;">@emp.CantidadActividades</td>
+                                    <td>@emp.UltimaActividad?.ToString("dd/MM/yyyy")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+
+                @* Detalle de actividades recientes *@
+                <div class="seccion-titulo" style="margin-top: 15px;">
+                    Actividades Recientes
+                    @if (detallesProyecto.Count > 10)
+                    {
+                        <small style="color: #666; font-weight: normal;"> (últimas 10 de @detallesProyecto.Count)</small>
+                    }
+                </div>
+                @if (!detallesProyecto.Any())
+                {
+                    <div class="empty-state" style="padding: 15px;">No hay actividades registradas para este proyecto.</div>
+                }
+                else
+                {
+                    <table class="legacy-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 90px;">Fecha</th>
+                                <th>Empleado</th>
+                                <th>Descripción</th>
+                                <th style="width: 70px; text-align: center;">Horas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detalle in detallesProyecto.Take(10))
+                            {
+                                var emp = detalle.RegistroDiario?.EmpleadoId != null
+                                    ? empleadosDict.GetValueOrDefault(detalle.RegistroDiario.EmpleadoId)
+                                    : null;
+                                <tr>
+                                    <td>@detalle.RegistroDiario?.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>@(emp?.NombreCompleto ?? $"Empleado {detalle.RegistroDiario?.EmpleadoId}")</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(detalle.Descripcion))
+                                        {
+                                            @(detalle.Descripcion.Length > 50 ? detalle.Descripcion.Substring(0, 50) + "..." : detalle.Descripcion)
+                                        }
+                                        else
+                                        {
+                                            <text>-</text>
+                                        }
+                                    </td>
+                                    <td style="text-align: center; font-weight: bold;">@detalle.Horas.ToString("N1")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            }
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseRegistrosModal">Cerrar</button>
+    </FooterContent>
+</LegacyModal>
+
+@code {
+    // Datos principales
+    private IEnumerable<Proyecto>? allProyectos;
+    private IEnumerable<Proyecto>? filteredProyectos;
+    private IEnumerable<Proyecto>? proyectosVencidos;
+    private IEnumerable<Proyecto>? proyectosProximosAVencer;
+    private Dictionary<int, Empleado> empleadosDict = new();
+
+    // Estados de UI
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? successMessage;
+
+    // Filtros
+    private string searchText = "";
+    private string filtroEstado = "";
+    private bool mostrandoVencidos = false;
+    private bool mostrandoProximos = false;
+
+    // Modales
+    private bool showFormModal = false;
+    private bool showDetailModal = false;
+    private bool showEmpleadosModal = false;
+    private bool showDeleteModal = false;
+    private bool showRegistrosModal = false;
+    private Proyecto? selectedProyecto;
+    private string modalTitle = "";
+    private ProyectoForm? formComponent;
+
+    // Registros diarios del proyecto
+    private bool isLoadingRegistros = false;
+    private List<DetalleActividad> detallesProyecto = new();
+    private List<ProyectoHorasEmpleado> horasPorEmpleado = new();
+    private decimal totalHorasProyecto = 0;
+
+    // Empleados del proyecto
+    private List<ProyectoEmpleado> empleadosProyecto = new();
+    private List<Empleado> empleadosDisponibles = new();
+    private int empleadoIdToAdd = 0;
+    private string rolEmpleado = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Proyectos");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        successMessage = null;
+        try
+        {
+            // Cargar proyectos y empleados en paralelo
+            var proyectosTask = ProyectoRepo.GetAllAsync();
+            var empleadosTask = EmpleadoRepo.GetAllActiveAsync();
+
+            await Task.WhenAll(proyectosTask, empleadosTask);
+
+            allProyectos = await proyectosTask;
+            var empleados = await empleadosTask;
+            empleadosDict = empleados.ToDictionary(e => e.Id);
+
+            // Calcular alertas
+            var activos = allProyectos.Where(p => p.Activo && p.Estado == EstadoProyecto.Activo);
+            proyectosVencidos = activos.Where(p => p.EstaVencido).ToList();
+            proyectosProximosAVencer = activos.Where(p => p.EstaProximoAVencer).ToList();
+
+            FilterData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando proyectos: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterData()
+    {
+        if (allProyectos == null) return;
+
+        var proyectos = allProyectos.Where(p => p.Activo);
+
+        // Filtro por estado
+        if (!string.IsNullOrEmpty(filtroEstado) && int.TryParse(filtroEstado, out var estadoInt))
+        {
+            var estado = (EstadoProyecto)estadoInt;
+            proyectos = proyectos.Where(p => p.Estado == estado);
+        }
+
+        // Filtro por texto de búsqueda
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            var term = searchText.ToLower();
+            proyectos = proyectos.Where(p =>
+                (p.Nombre?.ToLower().Contains(term) ?? false) ||
+                (p.Codigo?.ToLower().Contains(term) ?? false) ||
+                (p.Cliente?.ToLower().Contains(term) ?? false) ||
+                (p.Ubicacion?.ToLower().Contains(term) ?? false));
+        }
+
+        // Filtros especiales (vencidos / próximos)
+        if (mostrandoVencidos)
+        {
+            proyectos = proyectos.Where(p => p.EstaVencido);
+        }
+        else if (mostrandoProximos)
+        {
+            proyectos = proyectos.Where(p => p.EstaProximoAVencer);
+        }
+
+        filteredProyectos = proyectos.OrderBy(p => p.Estado).ThenBy(p => p.Nombre).ToList();
+    }
+
+    private void OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == "Escape")
+        {
+            FilterData();
+        }
+        else
+        {
+            // Búsqueda en tiempo real
+            FilterData();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchText = "";
+        mostrandoVencidos = false;
+        mostrandoProximos = false;
+        FilterData();
+    }
+
+    private void ClearAllFilters()
+    {
+        searchText = "";
+        filtroEstado = "";
+        mostrandoVencidos = false;
+        mostrandoProximos = false;
+        FilterData();
+    }
+
+    private void FiltrarVencidos()
+    {
+        mostrandoVencidos = true;
+        mostrandoProximos = false;
+        filtroEstado = "0"; // Activos
+        FilterData();
+    }
+
+    private void FiltrarProximosAVencer()
+    {
+        mostrandoProximos = true;
+        mostrandoVencidos = false;
+        filtroEstado = "0"; // Activos
+        FilterData();
+    }
+
+    // Helpers de visualización
+    private string GetEstadoLabel(EstadoProyecto estado) => estado switch
+    {
+        EstadoProyecto.Activo => "Activo",
+        EstadoProyecto.Suspendido => "Suspendido",
+        EstadoProyecto.Finalizado => "Finalizado",
+        EstadoProyecto.Cancelado => "Cancelado",
+        _ => "Desconocido"
+    };
+
+    private string GetStatusClass(EstadoProyecto estado) => estado switch
+    {
+        EstadoProyecto.Activo => "status-active",
+        EstadoProyecto.Suspendido => "status-warning",
+        EstadoProyecto.Finalizado => "status-success",
+        EstadoProyecto.Cancelado => "status-danger",
+        _ => ""
+    };
+
+    private string GetRowClass(Proyecto p)
+    {
+        if (p.Estado == EstadoProyecto.Cancelado || p.Estado == EstadoProyecto.Finalizado)
+            return "inactive-row";
+        if (p.EstaVencido)
+            return "vencido-row";
+        if (p.EstaProximoAVencer)
+            return "proximo-row";
+        return "";
+    }
+
+    private string GetProgressClass(int progreso) => progreso switch
+    {
+        >= 100 => "progress-complete",
+        >= 75 => "progress-high",
+        >= 50 => "progress-medium",
+        >= 25 => "progress-low",
+        _ => "progress-start"
+    };
+
+    // Modal de Crear/Editar
+    private void ShowNewModal()
+    {
+        selectedProyecto = null;
+        modalTitle = "Nuevo Proyecto";
+        showFormModal = true;
+    }
+
+    private void ShowEditModal(Proyecto proyecto)
+    {
+        selectedProyecto = proyecto;
+        modalTitle = $"Editar: {proyecto.Nombre}";
+        showFormModal = true;
+    }
+
+    private void CloseFormModal()
+    {
+        showFormModal = false;
+        selectedProyecto = null;
+    }
+
+    private async Task SaveForm()
+    {
+        if (formComponent == null) return;
+
+        isSaving = true;
+        try
+        {
+            await formComponent.ValidateAndSaveAsync();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HandleSave(Proyecto proyecto)
+    {
+        showFormModal = false;
+        successMessage = selectedProyecto == null
+            ? $"Proyecto '{proyecto.Nombre}' creado exitosamente"
+            : $"Proyecto '{proyecto.Nombre}' actualizado exitosamente";
+        selectedProyecto = null;
+        await LoadData();
+        _ = ClearSuccessMessage();
+    }
+
+    // Modal de Detalle
+    private void ShowDetailModal(Proyecto proyecto)
+    {
+        selectedProyecto = proyecto;
+        showDetailModal = true;
+    }
+
+    private void CloseDetailModal()
+    {
+        showDetailModal = false;
+    }
+
+    // Modal de Empleados
+    private async Task ShowEmpleadosModal(Proyecto proyecto)
+    {
+        selectedProyecto = proyecto;
+        empleadoIdToAdd = 0;
+        rolEmpleado = "";
+
+        try
+        {
+            // Cargar empleados asignados
+            var asignados = await ProyectoEmpleadoRepo.GetActiveByProyectoAsync(proyecto.Id);
+            empleadosProyecto = asignados.ToList();
+
+            // Filtrar empleados disponibles (no asignados)
+            var idsAsignados = empleadosProyecto.Select(pe => pe.EmpleadoId).ToHashSet();
+            empleadosDisponibles = empleadosDict.Values
+                .Where(e => !idsAsignados.Contains(e.Id))
+                .OrderBy(e => e.NombreCompleto)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando empleados del proyecto: {ex.Message}");
+            empleadosProyecto = new();
+            empleadosDisponibles = empleadosDict.Values.OrderBy(e => e.NombreCompleto).ToList();
+        }
+
+        showEmpleadosModal = true;
+    }
+
+    private void CloseEmpleadosModal()
+    {
+        showEmpleadosModal = false;
+        selectedProyecto = null;
+    }
+
+    // Modal de Registros Diarios
+    private async Task ShowRegistrosModal(Proyecto proyecto)
+    {
+        selectedProyecto = proyecto;
+        isLoadingRegistros = true;
+        showRegistrosModal = true;
+
+        // Limpiar datos anteriores
+        detallesProyecto = new();
+        horasPorEmpleado = new();
+        totalHorasProyecto = 0;
+
+        StateHasChanged();
+
+        try
+        {
+            // Cargar datos en paralelo
+            var detallesTask = RegistroDiarioRepo.GetDetallesByProyectoAsync(proyecto.Id);
+            var horasTask = RegistroDiarioRepo.GetHorasPorEmpleadoProyectoAsync(proyecto.Id);
+            var totalTask = RegistroDiarioRepo.GetTotalHorasByProyectoAsync(proyecto.Id);
+
+            await Task.WhenAll(detallesTask, horasTask, totalTask);
+
+            detallesProyecto = (await detallesTask).ToList();
+            horasPorEmpleado = (await horasTask).ToList();
+            totalHorasProyecto = await totalTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando registros del proyecto: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingRegistros = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseRegistrosModal()
+    {
+        showRegistrosModal = false;
+        detallesProyecto = new();
+        horasPorEmpleado = new();
+        totalHorasProyecto = 0;
+    }
+
+    private async Task AsignarEmpleado()
+    {
+        if (selectedProyecto == null || empleadoIdToAdd == 0) return;
+
+        try
+        {
+            var asignacion = new ProyectoEmpleado
+            {
+                ProyectoId = selectedProyecto.Id,
+                EmpleadoId = empleadoIdToAdd,
+                Rol = string.IsNullOrWhiteSpace(rolEmpleado) ? null : rolEmpleado.Trim(),
+                FechaAsignacion = DateTime.Now,
+                Activo = true
+            };
+
+            await ProyectoEmpleadoRepo.AddAsync(asignacion);
+
+            // Recargar lista
+            await ShowEmpleadosModal(selectedProyecto);
+            successMessage = "Empleado asignado exitosamente";
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error asignando empleado: {ex.Message}");
+        }
+    }
+
+    private async Task DesasignarEmpleado(ProyectoEmpleado pe)
+    {
+        if (selectedProyecto == null) return;
+
+        try
+        {
+            await ProyectoEmpleadoRepo.DesasignarAsync(pe.ProyectoId, pe.EmpleadoId);
+
+            // Recargar lista
+            await ShowEmpleadosModal(selectedProyecto);
+            successMessage = "Empleado desasignado";
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error desasignando empleado: {ex.Message}");
+        }
+    }
+
+    // Modal de Eliminar/Cancelar
+    private void ShowDeleteConfirm(Proyecto proyecto)
+    {
+        selectedProyecto = proyecto;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        selectedProyecto = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedProyecto == null) return;
+
+        try
+        {
+            selectedProyecto.Estado = EstadoProyecto.Cancelado;
+            await ProyectoRepo.UpdateAsync(selectedProyecto);
+            successMessage = $"Proyecto '{selectedProyecto.Nombre}' cancelado";
+            showDeleteModal = false;
+            selectedProyecto = null;
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cancelando proyecto: {ex.Message}");
+        }
+    }
+
+    private async Task Reactivate(Proyecto proyecto)
+    {
+        try
+        {
+            proyecto.Estado = EstadoProyecto.Activo;
+            await ProyectoRepo.UpdateAsync(proyecto);
+            successMessage = $"Proyecto '{proyecto.Nombre}' reactivado";
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reactivando proyecto: {ex.Message}");
+        }
+    }
+
+    // Exportar a Excel
+    private async Task ExportarExcel()
+    {
+        if (filteredProyectos == null || !filteredProyectos.Any())
+        {
+            successMessage = "No hay proyectos para exportar";
+            _ = ClearSuccessMessage();
+            return;
+        }
+
+        try
+        {
+            // TODO: Implementar exportación real con librería de Excel
+            // Por ahora mostramos mensaje
+            successMessage = $"Exportación de {filteredProyectos.Count()} proyecto(s) iniciada...";
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error exportando: {ex.Message}");
+        }
+    }
+
+    private async Task ClearSuccessMessage()
+    {
+        await Task.Delay(4000);
+        successMessage = null;
+        StateHasChanged();
+    }
+}

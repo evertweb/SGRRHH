@@ -1,0 +1,546 @@
+@page "/empleados"
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Enums
+@using SGRRHH.Core.Interfaces
+@using SGRRHH.Web.Components.Shared
+@using SGRRHH.Web.Components.Forms
+@using SGRRHH.Web.Client
+@inject IEmpleadoRepository EmpleadoRepo
+@inject IEmpleadoService EmpleadoService
+@inject FirebaseJsInterop Firebase
+@inject AppStateService AppState
+@inject NavigationManager Navigation
+
+<div class="module-container">
+    @* Toolbar *@
+    <div class="module-toolbar">
+        <button class="legacy-button" @onclick="LoadData" disabled="@isLoading">
+            @(isLoading ? "Cargando..." : "Actualizar")
+        </button>
+        <button class="legacy-button" @onclick="ShowNewModal">+ Nuevo Empleado</button>
+
+        <div style="flex: 1;"></div>
+
+        <input type="text" class="legacy-input" placeholder="Buscar..."
+               @bind="searchText" @bind:event="oninput" style="width: 200px;" />
+
+        <label class="legacy-form-checkbox" style="margin-left: 15px;">
+            <input type="checkbox" @bind="showInactive" @bind:after="FilterData" />
+            <span>Mostrar Inactivos</span>
+        </label>
+    </div>
+
+    @* Mensaje de exito *@
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="legacy-alert legacy-alert-success">
+            @successMessage
+        </div>
+    }
+
+    @* Contenido principal *@
+    @if (isLoading)
+    {
+        <div class="loading-indicator">Cargando datos...</div>
+    }
+    else if (empleadosFiltrados == null || !empleadosFiltrados.Any())
+    {
+        <div class="empty-state">No hay empleados registrados.</div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="legacy-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Codigo</th>
+                        <th>Nombre Completo</th>
+                        <th style="width: 100px;">Cedula</th>
+                        <th>Departamento</th>
+                        <th>Cargo</th>
+                        <th style="width: 100px;">F. Ingreso</th>
+                        <th style="width: 100px;">Estado</th>
+                        <th style="width: 150px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var emp in empleadosFiltrados)
+                    {
+                        <tr class="@GetRowClass(emp)">
+                            <td><code>@emp.Codigo</code></td>
+                            <td><strong>@emp.NombreCompleto</strong></td>
+                            <td>@emp.Cedula</td>
+                            <td>@(emp.Departamento?.Nombre ?? "-")</td>
+                            <td>@(emp.Cargo?.Nombre ?? "-")</td>
+                            <td>@emp.FechaIngreso.ToString("dd/MM/yyyy")</td>
+                            <td style="text-align: center;">
+                                <span class="status-badge @GetStatusClass(emp.Estado)">
+                                    @GetEstadoLabel(emp.Estado)
+                                </span>
+                            </td>
+                            <td>
+                                <button class="legacy-button-small" @onclick="() => ShowViewModal(emp)">Ver</button>
+                                <button class="legacy-button-small" @onclick="() => ShowEditModal(emp)">Editar</button>
+                                @if (emp.Estado == EstadoEmpleado.PendienteAprobacion && AppState.CanApprove)
+                                {
+                                    <button class="legacy-button-small legacy-button-success" @onclick="() => ShowApproveModal(emp)">Aprobar</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="module-footer">
+            Total: <strong>@empleadosFiltrados.Count()</strong> empleados
+        </div>
+    }
+</div>
+
+@* Modal de Crear/Editar *@
+<LegacyModal Title="@modalTitle"
+             IsVisible="@showFormModal"
+             OnClose="CloseFormModal"
+             Width="750px">
+    <ChildContent>
+        <EmpleadoForm @ref="formComponent"
+                      EmpleadoEdit="@selectedEmpleado"
+                      OnSave="HandleSave"
+                      OnCancel="CloseFormModal"
+                      OnVerDocumentos="HandleVerDocumentos"
+                      OnAskForMoreDocs="HandleAskForMoreDocs"
+                      OnSaveAndNew="HandleSaveAndNew" />
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseFormModal" disabled="@isSaving">Cancelar</button>
+        @if (selectedEmpleado == null)
+        {
+            <button class="legacy-button" @onclick="SaveFormAndNew" disabled="@isSaving">
+                @(isSaving ? "Guardando..." : "Guardar y Nuevo")
+            </button>
+        }
+        <button class="legacy-button legacy-button-primary" @onclick="SaveForm" disabled="@isSaving">
+            @(isSaving ? "Guardando..." : "Guardar")
+        </button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Ver Detalle *@
+<LegacyModal Title="@($"Empleado: {selectedEmpleado?.NombreCompleto}")"
+             IsVisible="@showViewModal"
+             OnClose="CloseViewModal"
+             Width="600px">
+    <ChildContent>
+        @if (selectedEmpleado != null)
+        {
+            <div class="detail-view">
+                @* Photo if exists *@
+                @if (!string.IsNullOrEmpty(selectedFotoUrl))
+                {
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <img src="@selectedFotoUrl" alt="Foto" style="max-width: 120px; max-height: 120px; border: 2px solid #ccc; border-radius: 4px;" />
+                    </div>
+                }
+
+                <div class="detail-section">
+                    <h4>Datos Personales</h4>
+                    <div class="detail-row">
+                        <span class="detail-label">Codigo:</span>
+                        <span class="detail-value"><code>@selectedEmpleado.Codigo</code></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Cedula:</span>
+                        <span class="detail-value">@selectedEmpleado.Cedula</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Nombre:</span>
+                        <span class="detail-value"><strong>@selectedEmpleado.NombreCompleto</strong></span>
+                    </div>
+                    @if (selectedEmpleado.FechaNacimiento.HasValue)
+                    {
+                        <div class="detail-row">
+                            <span class="detail-label">Fecha Nacimiento:</span>
+                            <span class="detail-value">@selectedEmpleado.FechaNacimiento?.ToString("dd/MM/yyyy")</span>
+                        </div>
+                    }
+                    @if (selectedEmpleado.Genero.HasValue)
+                    {
+                        <div class="detail-row">
+                            <span class="detail-label">Genero:</span>
+                            <span class="detail-value">@selectedEmpleado.Genero</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="detail-section">
+                    <h4>Contacto</h4>
+                    @if (!string.IsNullOrEmpty(selectedEmpleado.Direccion))
+                    {
+                        <div class="detail-row">
+                            <span class="detail-label">Direccion:</span>
+                            <span class="detail-value">@selectedEmpleado.Direccion</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(selectedEmpleado.Telefono))
+                    {
+                        <div class="detail-row">
+                            <span class="detail-label">Telefono:</span>
+                            <span class="detail-value">@selectedEmpleado.Telefono</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(selectedEmpleado.Email))
+                    {
+                        <div class="detail-row">
+                            <span class="detail-label">Email:</span>
+                            <span class="detail-value">@selectedEmpleado.Email</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="detail-section">
+                    <h4>Informacion Laboral</h4>
+                    <div class="detail-row">
+                        <span class="detail-label">Fecha Ingreso:</span>
+                        <span class="detail-value">@selectedEmpleado.FechaIngreso.ToString("dd/MM/yyyy") (@selectedEmpleado.Antiguedad anos)</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Departamento:</span>
+                        <span class="detail-value">@(selectedEmpleado.Departamento?.Nombre ?? "Sin asignar")</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Cargo:</span>
+                        <span class="detail-value">@(selectedEmpleado.Cargo?.Nombre ?? "Sin asignar")</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Tipo Contrato:</span>
+                        <span class="detail-value">@GetTipoContratoLabel(selectedEmpleado.TipoContrato)</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Estado:</span>
+                        <span class="detail-value">
+                            <span class="status-badge @GetStatusClass(selectedEmpleado.Estado)">
+                                @GetEstadoLabel(selectedEmpleado.Estado)
+                            </span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        }
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseViewModal">Cerrar</button>
+        <button class="legacy-button legacy-button-primary" @onclick="() => { CloseViewModal(); ShowEditModal(selectedEmpleado!); }">Editar</button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Aprobar Empleado *@
+<LegacyModal Title="Aprobar Empleado"
+             IsVisible="@showApproveModal"
+             OnClose="CloseApproveModal"
+             Width="400px">
+    <ChildContent>
+        <div style="text-align: center; padding: 10px;">
+            <p>Aprobar el empleado?</p>
+            <p><strong>@selectedEmpleado?.NombreCompleto</strong></p>
+            <p>Cedula: @selectedEmpleado?.Cedula</p>
+            <p>Departamento: @(selectedEmpleado?.Departamento?.Nombre ?? "-")</p>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseApproveModal">Cancelar</button>
+        <button class="legacy-button legacy-button-success" @onclick="ConfirmApprove">Aprobar</button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Cargar Mas Documentos *@
+<LegacyModal Title="Documentos Adicionales"
+             IsVisible="@showMoreDocsModal"
+             OnClose="CloseMoreDocsModal"
+             Width="400px">
+    <ChildContent>
+        <div style="text-align: center; padding: 15px;">
+            <p style="font-size: 13px;">El empleado <strong>@pendingEmpleadoForDocs?.NombreCompleto</strong> fue creado exitosamente.</p>
+            <p style="margin-top: 10px;">Desea cargar documentos adicionales ahora?</p>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseMoreDocsModal">No, despues</button>
+        <button class="legacy-button legacy-button-primary" @onclick="GoToDocumentos">Si, cargar documentos</button>
+    </FooterContent>
+</LegacyModal>
+
+@code {
+    private IEnumerable<Empleado>? allEmpleados;
+    private IEnumerable<Empleado>? filteredEmpleados;
+    private string searchText = "";
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? successMessage;
+    private bool showInactive = false;
+
+    private bool showFormModal = false;
+    private bool showViewModal = false;
+    private bool showApproveModal = false;
+    private bool showMoreDocsModal = false;
+    private Empleado? selectedEmpleado;
+    private Empleado? pendingEmpleadoForDocs;
+    private string modalTitle = "";
+    private EmpleadoForm? formComponent;
+    private string? selectedFotoUrl;
+
+    private IEnumerable<Empleado> empleadosFiltrados =>
+        string.IsNullOrWhiteSpace(searchText)
+            ? filteredEmpleados ?? Enumerable.Empty<Empleado>()
+            : (filteredEmpleados ?? Enumerable.Empty<Empleado>()).Where(e =>
+                e.NombreCompleto.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                e.Cedula.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                e.Codigo.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Empleados");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        successMessage = null;
+        try
+        {
+            allEmpleados = await EmpleadoRepo.GetAllWithRelationsAsync();
+            FilterData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando empleados: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterData()
+    {
+        if (allEmpleados == null) return;
+
+        if (showInactive)
+        {
+            filteredEmpleados = allEmpleados.OrderBy(e => e.NombreCompleto);
+        }
+        else
+        {
+            filteredEmpleados = allEmpleados
+                .Where(e => e.Estado != EstadoEmpleado.Retirado && e.Estado != EstadoEmpleado.Rechazado)
+                .OrderBy(e => e.NombreCompleto);
+        }
+    }
+
+    private string GetEstadoLabel(EstadoEmpleado estado) => estado switch
+    {
+        EstadoEmpleado.PendienteAprobacion => "Pendiente",
+        EstadoEmpleado.Activo => "Activo",
+        EstadoEmpleado.EnVacaciones => "Vacaciones",
+        EstadoEmpleado.EnLicencia => "Licencia",
+        EstadoEmpleado.Suspendido => "Suspendido",
+        EstadoEmpleado.Retirado => "Retirado",
+        EstadoEmpleado.Rechazado => "Rechazado",
+        _ => "Desconocido"
+    };
+
+    private string GetStatusClass(EstadoEmpleado estado) => estado switch
+    {
+        EstadoEmpleado.Activo => "status-active",
+        EstadoEmpleado.EnVacaciones or EstadoEmpleado.EnLicencia => "status-warning",
+        EstadoEmpleado.Retirado or EstadoEmpleado.Rechazado => "status-danger",
+        EstadoEmpleado.PendienteAprobacion => "status-pending",
+        EstadoEmpleado.Suspendido => "status-danger",
+        _ => ""
+    };
+
+    private string GetRowClass(Empleado e) => e.Estado switch
+    {
+        EstadoEmpleado.Retirado or EstadoEmpleado.Rechazado => "inactive-row",
+        _ => ""
+    };
+
+    private string GetTipoContratoLabel(TipoContrato tipo) => tipo switch
+    {
+        TipoContrato.Indefinido => "Indefinido",
+        TipoContrato.Fijo => "Termino Fijo",
+        TipoContrato.ObraLabor => "Obra o Labor",
+        TipoContrato.PrestacionServicios => "Prestacion de Servicios",
+        TipoContrato.Aprendizaje => "Aprendizaje",
+        _ => "Desconocido"
+    };
+
+    private void ShowNewModal()
+    {
+        selectedEmpleado = null;
+        modalTitle = "Nuevo Empleado";
+        showFormModal = true;
+    }
+
+    private void ShowEditModal(Empleado empleado)
+    {
+        selectedEmpleado = empleado;
+        modalTitle = $"Editar: {empleado.NombreCompleto}";
+        showFormModal = true;
+    }
+
+    private async Task ShowViewModal(Empleado empleado)
+    {
+        selectedEmpleado = empleado;
+        selectedFotoUrl = null;
+
+        if (!string.IsNullOrEmpty(empleado.FotoPath))
+        {
+            try
+            {
+                selectedFotoUrl = await Firebase.GetStorageUrlAsync(empleado.FotoPath);
+            }
+            catch { /* ignore */ }
+        }
+
+        showViewModal = true;
+    }
+
+    private void CloseFormModal()
+    {
+        showFormModal = false;
+        selectedEmpleado = null;
+    }
+
+    private void CloseViewModal()
+    {
+        showViewModal = false;
+    }
+
+    private async Task SaveForm()
+    {
+        if (formComponent == null) return;
+
+        isSaving = true;
+        try
+        {
+            await formComponent.ValidateAndSaveAsync();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task SaveFormAndNew()
+    {
+        if (formComponent == null) return;
+
+        isSaving = true;
+        try
+        {
+            await formComponent.ValidateAndSaveAsync(saveAndNew: true);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HandleSave(Empleado empleado)
+    {
+        showFormModal = false;
+        successMessage = selectedEmpleado == null
+            ? $"Empleado '{empleado.NombreCompleto}' creado exitosamente"
+            : $"Empleado '{empleado.NombreCompleto}' actualizado exitosamente";
+        selectedEmpleado = null;
+        await LoadData();
+        _ = ClearSuccessMessage();
+    }
+
+    private async Task HandleSaveAndNew(Empleado empleado)
+    {
+        // No cerrar modal, solo recargar datos y abrir nuevo formulario
+        successMessage = $"Empleado '{empleado.NombreCompleto}' creado. Iniciando nuevo...";
+        await LoadData();
+        _ = ClearSuccessMessage();
+
+        // Reiniciar formulario para nuevo empleado
+        selectedEmpleado = null;
+        modalTitle = "Nuevo Empleado";
+        StateHasChanged();
+    }
+
+    private async Task ClearSuccessMessage()
+    {
+        await Task.Delay(4000);
+        successMessage = null;
+        StateHasChanged();
+    }
+
+    private void ShowApproveModal(Empleado empleado)
+    {
+        selectedEmpleado = empleado;
+        showApproveModal = true;
+    }
+
+    private void CloseApproveModal()
+    {
+        showApproveModal = false;
+        selectedEmpleado = null;
+    }
+
+    private async Task ConfirmApprove()
+    {
+        if (selectedEmpleado == null || AppState.CurrentUser == null) return;
+        try
+        {
+            var result = await EmpleadoService.AprobarAsync(
+                selectedEmpleado.Id,
+                AppState.CurrentUser.EmpleadoId ?? 0,
+                AppState.CurrentUser.Rol);
+            if (result.Success)
+            {
+                successMessage = $"Empleado '{selectedEmpleado.NombreCompleto}' aprobado";
+                showApproveModal = false;
+                selectedEmpleado = null;
+                await LoadData();
+                _ = ClearSuccessMessage();
+            }
+            else
+            {
+                Console.WriteLine($"Error aprobando: {result.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error aprobando: {ex.Message}");
+        }
+    }
+
+    private void HandleVerDocumentos(int empleadoId)
+    {
+        showFormModal = false;
+        Navigation.NavigateTo($"/documentos/{empleadoId}");
+    }
+
+    private void HandleAskForMoreDocs(Empleado empleado)
+    {
+        pendingEmpleadoForDocs = empleado;
+        showMoreDocsModal = true;
+    }
+
+    private void CloseMoreDocsModal()
+    {
+        showMoreDocsModal = false;
+        pendingEmpleadoForDocs = null;
+    }
+
+    private void GoToDocumentos()
+    {
+        showMoreDocsModal = false;
+        var empleadoId = pendingEmpleadoForDocs?.Id ?? 0;
+        pendingEmpleadoForDocs = null;
+        Navigation.NavigateTo($"/documentos/{empleadoId}");
+    }
+}

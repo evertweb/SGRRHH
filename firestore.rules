@@ -18,23 +18,23 @@ service cloud.firestore {
     }
     
     // Función auxiliar: obtener el rol del usuario
-    function getUserRole() {
+    function getRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol;
     }
     
     // Función auxiliar: verificar si es administrador
     function isAdmin() {
-      return userExists() && getUserRole() == 'Administrador';
+      return userExists() && getRole() == 'Administrador';
     }
     
     // Función auxiliar: verificar si es aprobador (ingeniera)
     function isAprobador() {
-      return userExists() && getUserRole() == 'Aprobador';
+      return userExists() && getRole() == 'Aprobador';
     }
     
     // Función auxiliar: verificar si es operador (secretaria)
     function isOperador() {
-      return userExists() && getUserRole() == 'Operador';
+      return userExists() && getRole() == 'Operador';
     }
     
     // Función auxiliar: verificar si tiene acceso (cualquier rol válido)
@@ -46,9 +46,12 @@ service cloud.firestore {
     // COLECCIÓN: users (usuarios del sistema)
     // ============================================
     match /users/{userId} {
-      // Solo el propio usuario puede leer sus datos, o un admin
-      allow read: if isAuthenticated() && 
-                    (request.auth.uid == userId || isAdmin());
+      // CRÍTICO: Permitir lectura del PROPIO documento sin verificar rol
+      // Esto permite el login inicial
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Permitir lectura si es admin (para ver otros usuarios)
+      allow read: if isAdmin();
       
       // Solo administradores pueden crear/modificar/eliminar usuarios
       allow create, update, delete: if isAdmin();
@@ -58,13 +61,8 @@ service cloud.firestore {
     // COLECCIÓN: empleados
     // ============================================
     match /empleados/{empleadoId} {
-      // Todos los usuarios autenticados pueden leer empleados
       allow read: if hasAccess();
-      
-      // Solo admin y operador pueden crear/modificar
       allow create, update: if isAdmin() || isOperador();
-      
-      // Solo admin puede eliminar
       allow delete: if isAdmin();
     }
     
@@ -113,21 +111,13 @@ service cloud.firestore {
     // ============================================
     match /permisos/{permisoId} {
       allow read: if hasAccess();
-      
-      // Operador puede crear permisos
       allow create: if hasAccess();
-      
-      // Admin y Aprobador pueden aprobar/rechazar (modificar)
       allow update: if isAdmin() || isAprobador() || isOperador();
-      
-      // Solo admin puede eliminar
       allow delete: if isAdmin();
     }
     
     // ============================================
     // COLECCIÓN: vacaciones
-    // Solo Admin y Operador pueden crear/modificar
-    // Aprobador (Ingeniera) solo puede ver
     // ============================================
     match /vacaciones/{vacacionId} {
       allow read: if hasAccess();
@@ -152,8 +142,6 @@ service cloud.firestore {
       allow create, update: if hasAccess();
       allow delete: if isAdmin();
       
-      // Subcolección de detalles
-      // Solo Admin puede eliminar detalles
       match /detalles/{detalleId} {
         allow read: if hasAccess();
         allow create, update: if hasAccess();
@@ -170,24 +158,39 @@ service cloud.firestore {
     }
     
     // ============================================
-    // COLECCIÓN: audit-logs (logs de auditoría)
+    // COLECCIÓN: audit-logs
     // ============================================
     match /audit-logs/{logId} {
-      // Solo admin puede ver logs
       allow read: if isAdmin();
-      
-      // Cualquier usuario autenticado puede crear logs (el sistema los crea)
       allow create: if hasAccess();
-      
-      // Nadie puede modificar o eliminar logs
       allow update, delete: if false;
     }
     
     // ============================================
-    // COLECCIÓN: _connection_test (pruebas de conexión)
+    // COLECCIÓN: _connection_test
     // ============================================
     match /_connection_test/{docId} {
       allow read, write: if isAuthenticated();
+    }
+    
+    // ============================================
+    // Colecciones de chat y presencia
+    // ============================================
+    match /chat_messages/{msgId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /user_presence/{odcId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // ============================================
+    // COLECCIÓN: documentosEmpleado
+    // ============================================
+    match /documentosEmpleado/{docId} {
+      allow read: if hasAccess();
+      allow create, update: if isAdmin() || isOperador();
+      allow delete: if isAdmin();
     }
     
     // ============================================

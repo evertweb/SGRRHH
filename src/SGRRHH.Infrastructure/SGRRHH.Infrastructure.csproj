@@ -4,27 +4,30 @@
     <ProjectReference Include="..\SGRRHH.Core\SGRRHH.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageReference Include="FirebaseAdmin" Version="3.0.1" />
-    <PackageReference Include="FirebaseAuthentication.net" Version="4.1.0" />
-    <PackageReference Include="Google.Cloud.Firestore" Version="3.10.0" />
-    <PackageReference Include="Google.Cloud.Storage.V1" Version="4.10.0" />
-    <PackageReference Include="ILove_PDF" Version="1.6.2" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
-    <PackageReference Include="Polly" Version="8.2.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="QuestPDF" Version="2024.3.3" />
-  </ItemGroup>
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <!-- DEPENDENCIAS COMUNES (WPF y Web) -->
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Polly" Version="8.2.0" />
+  </ItemGroup>
+
+  <!-- DEPENDENCIAS SOLO SERVIDOR / WPF (No compatibles con WASM) -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != 'browser-wasm'">
+    <PackageReference Include="FirebaseAdmin" Version="3.0.1" />
+    <PackageReference Include="FirebaseAuthentication.net" Version="4.1.0" />
+    <PackageReference Include="Google.Cloud.Firestore" Version="3.10.0" />
+    <PackageReference Include="Google.Cloud.Storage.V1" Version="4.10.0" />
+    <PackageReference Include="ILove_PDF" Version="1.6.2" />
+    <PackageReference Include="QuestPDF" Version="2024.3.3" />
+  </ItemGroup>
 
 </Project>

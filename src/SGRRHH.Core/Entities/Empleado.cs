@@ -133,6 +133,41 @@ public class Empleado : EntidadBase
     public string? Observaciones { get; set; }
     
     /// <summary>
+    /// Número de cuenta bancaria para nómina
+    /// </summary>
+    public string? NumeroCuenta { get; set; }
+    
+    /// <summary>
+    /// Nombre del banco para nómina
+    /// </summary>
+    public string? Banco { get; set; }
+    
+    /// <summary>
+    /// Nivel de educación del empleado
+    /// </summary>
+    public NivelEducacion? NivelEducacion { get; set; }
+    
+    /// <summary>
+    /// Entidad Promotora de Salud
+    /// </summary>
+    public string? EPS { get; set; }
+    
+    /// <summary>
+    /// Administradora de Riesgos Laborales
+    /// </summary>
+    public string? ARL { get; set; }
+    
+    /// <summary>
+    /// Administradora de Fondo de Pensiones
+    /// </summary>
+    public string? AFP { get; set; }
+    
+    /// <summary>
+    /// Salario base mensual
+    /// </summary>
+    public decimal? SalarioBase { get; set; }
+    
+    /// <summary>
     /// ID del usuario que creó/solicitó el empleado
     /// </summary>
     public int? CreadoPorId { get; set; }

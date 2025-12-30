@@ -1,0 +1,257 @@
+@* Formulario de Tipo de Permiso - Crear/Editar *@
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Interfaces
+
+<div class="tipo-permiso-form">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="legacy-alert legacy-alert-error">
+            @errorMessage
+        </div>
+    }
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label required">Nombre</label>
+        <input type="text" 
+               class="legacy-form-input" 
+               @bind="tipoPermiso.Nombre" 
+               @bind:event="oninput"
+               maxlength="100"
+               placeholder="Ej: Permiso Personal, Licencia Médica" />
+        @if (!string.IsNullOrEmpty(nombreError))
+        {
+            <div class="legacy-validation-error">@nombreError</div>
+        }
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">Descripción</label>
+        <textarea class="legacy-form-textarea" 
+                  @bind="tipoPermiso.Descripcion" 
+                  rows="2"
+                  placeholder="Descripción del tipo de permiso"></textarea>
+    </div>
+
+    <div class="legacy-form-row">
+        <div class="legacy-form-group" style="width: 120px;">
+            <label class="legacy-form-label">Color</label>
+            <div class="color-picker-wrapper">
+                <input type="color" 
+                       class="legacy-color-input"
+                       value="@tipoPermiso.Color"
+                       @onchange="OnColorChange" />
+                <input type="text" 
+                       class="legacy-form-input color-text-input" 
+                       @bind="tipoPermiso.Color"
+                       maxlength="7"
+                       placeholder="#RRGGBB" />
+            </div>
+        </div>
+        
+        <div class="legacy-form-group" style="width: 100px;">
+            <label class="legacy-form-label">Días por Defecto</label>
+            <input type="number" 
+                   class="legacy-form-input" 
+                   @bind="tipoPermiso.DiasPorDefecto"
+                   min="1"
+                   max="365" />
+        </div>
+        
+        <div class="legacy-form-group" style="width: 100px;">
+            <label class="legacy-form-label">Días Máximos</label>
+            <input type="number" 
+                   class="legacy-form-input" 
+                   @bind="tipoPermiso.DiasMaximos"
+                   min="0"
+                   max="365" />
+            <div class="legacy-form-hint">0 = sin límite</div>
+        </div>
+    </div>
+
+    <fieldset class="legacy-fieldset">
+        <legend>Configuración</legend>
+        
+        <div class="legacy-form-group">
+            <label class="legacy-form-checkbox">
+                <input type="checkbox" @bind="tipoPermiso.RequiereAprobacion" />
+                <span>Requiere Aprobación</span>
+            </label>
+            <div class="legacy-form-hint" style="margin-left: 20px;">El permiso debe ser aprobado por un supervisor</div>
+        </div>
+
+        <div class="legacy-form-group">
+            <label class="legacy-form-checkbox">
+                <input type="checkbox" @bind="tipoPermiso.RequiereDocumento" />
+                <span>Requiere Documento Soporte</span>
+            </label>
+            <div class="legacy-form-hint" style="margin-left: 20px;">Se debe adjuntar un documento al solicitar</div>
+        </div>
+
+        <div class="legacy-form-group">
+            <label class="legacy-form-checkbox">
+                <input type="checkbox" @bind="tipoPermiso.EsCompensable" />
+                <span>Es Compensable</span>
+            </label>
+            <div class="legacy-form-hint" style="margin-left: 20px;">El empleado debe reponer las horas tomadas</div>
+        </div>
+    </fieldset>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-checkbox">
+            <input type="checkbox" @bind="tipoPermiso.Activo" />
+            <span>Activo</span>
+        </label>
+    </div>
+</div>
+
+
+@code {
+
+    /// <summary>
+    /// Tipo de permiso a editar (null = nuevo)
+    /// </summary>
+    [Parameter]
+    public TipoPermiso? TipoPermisoEdit { get; set; }
+
+    /// <summary>
+    /// Callback cuando se guarda exitosamente
+    /// </summary>
+    [Parameter]
+    public EventCallback<TipoPermiso> OnSave { get; set; }
+
+    /// <summary>
+    /// Callback cuando se cancela
+    /// </summary>
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    /// <summary>
+    /// Repositorio de tipos de permiso
+    /// </summary>
+    [Inject]
+    public ITipoPermisoRepository TipoPermisoRepo { get; set; } = default!;
+
+    private TipoPermiso tipoPermiso = new();
+    private bool isEditing = false;
+    private string? errorMessage;
+    private string? nombreError;
+    private bool isSaving = false;
+
+    protected override void OnInitialized()
+    {
+        if (TipoPermisoEdit != null)
+        {
+            // Modo edición - clonar para no modificar original
+            isEditing = true;
+            tipoPermiso = new TipoPermiso
+            {
+                Id = TipoPermisoEdit.Id,
+                Nombre = TipoPermisoEdit.Nombre,
+                Descripcion = TipoPermisoEdit.Descripcion,
+                Color = TipoPermisoEdit.Color,
+                RequiereAprobacion = TipoPermisoEdit.RequiereAprobacion,
+                RequiereDocumento = TipoPermisoEdit.RequiereDocumento,
+                DiasPorDefecto = TipoPermisoEdit.DiasPorDefecto,
+                DiasMaximos = TipoPermisoEdit.DiasMaximos,
+                EsCompensable = TipoPermisoEdit.EsCompensable,
+                Activo = TipoPermisoEdit.Activo,
+                FechaCreacion = TipoPermisoEdit.FechaCreacion
+            };
+            tipoPermiso.SetFirestoreDocumentId(TipoPermisoEdit.GetFirestoreDocumentId() ?? "");
+        }
+        else
+        {
+            // Modo creación - valores por defecto
+            isEditing = false;
+            tipoPermiso = new TipoPermiso 
+            { 
+                Activo = true,
+                Color = "#1E88E5",
+                DiasPorDefecto = 1,
+                DiasMaximos = 0,
+                RequiereAprobacion = true,
+                RequiereDocumento = false,
+                EsCompensable = false
+            };
+        }
+    }
+
+    private void OnColorChange(ChangeEventArgs e)
+    {
+        tipoPermiso.Color = e.Value?.ToString() ?? "#1E88E5";
+    }
+
+    /// <summary>
+    /// Valida y guarda el tipo de permiso
+    /// </summary>
+    public async Task<bool> ValidateAndSaveAsync()
+    {
+        if (isSaving) return false;
+        
+        isSaving = true;
+        errorMessage = null;
+        nombreError = null;
+
+        try
+        {
+            // Validar nombre requerido
+            if (string.IsNullOrWhiteSpace(tipoPermiso.Nombre))
+            {
+                nombreError = "El nombre es requerido";
+                return false;
+            }
+
+            // Validar nombre único
+            var existeNombre = await TipoPermisoRepo.ExisteNombreAsync(
+                tipoPermiso.Nombre, 
+                isEditing ? tipoPermiso.Id : null);
+            
+            if (existeNombre)
+            {
+                nombreError = "Ya existe un tipo de permiso con este nombre";
+                return false;
+            }
+
+            // Validar días
+            if (tipoPermiso.DiasPorDefecto < 1)
+            {
+                errorMessage = "Los días por defecto deben ser al menos 1";
+                return false;
+            }
+
+            if (tipoPermiso.DiasMaximos < 0)
+            {
+                errorMessage = "Los días máximos no pueden ser negativos";
+                return false;
+            }
+
+            // Guardar
+            if (isEditing)
+            {
+                await TipoPermisoRepo.UpdateAsync(tipoPermiso);
+            }
+            else
+            {
+                await TipoPermisoRepo.AddAsync(tipoPermiso);
+            }
+
+            await OnSave.InvokeAsync(tipoPermiso);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar: {ex.Message}";
+            Console.WriteLine($"Error guardando tipo de permiso: {ex}");
+            return false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    /// <summary>
+    /// Indica si el formulario está en proceso de guardado
+    /// </summary>
+    public bool IsSaving => isSaving;
+}

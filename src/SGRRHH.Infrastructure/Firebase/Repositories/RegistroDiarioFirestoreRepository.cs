@@ -967,14 +967,14 @@ public class RegistroDiarioFirestoreRepository : FirestoreRepository<RegistroDia
         {
             // Obtener todos los registros
             var registrosSnapshot = await Collection.GetSnapshotAsync();
-            
+
             foreach (var registroDoc in registrosSnapshot.Documents)
             {
                 var detallesCollection = registroDoc.Reference.Collection(DETALLES_SUBCOLLECTION);
                 var detalleQuery = detallesCollection.WhereEqualTo("id", detalleId).Limit(1);
                 var detalleSnapshot = await detalleQuery.GetSnapshotAsync();
                 var detalleDoc = detalleSnapshot.Documents.FirstOrDefault();
-                
+
                 if (detalleDoc != null)
                 {
                     var registro = DocumentToEntity(registroDoc);
@@ -983,7 +983,7 @@ public class RegistroDiarioFirestoreRepository : FirestoreRepository<RegistroDia
                     return detalle;
                 }
             }
-            
+
             return null;
         }
         catch (Exception ex)
@@ -992,6 +992,139 @@ public class RegistroDiarioFirestoreRepository : FirestoreRepository<RegistroDia
             throw;
         }
     }
-    
+
+    /// <summary>
+    /// Obtiene las actividades (detalles) asociadas a un proyecto
+    /// </summary>
+    public async Task<IEnumerable<DetalleActividad>> GetDetallesByProyectoAsync(int proyectoId)
+    {
+        try
+        {
+            var detalles = new List<DetalleActividad>();
+
+            // Obtener todos los registros activos
+            var registrosQuery = Collection.WhereEqualTo("activo", true);
+            var registrosSnapshot = await registrosQuery.GetSnapshotAsync();
+
+            foreach (var registroDoc in registrosSnapshot.Documents)
+            {
+                var registro = DocumentToEntity(registroDoc);
+                var detallesCollection = registroDoc.Reference.Collection(DETALLES_SUBCOLLECTION);
+
+                // Buscar detalles con el proyectoId especificado
+                var detalleQuery = detallesCollection
+                    .WhereEqualTo("proyectoId", proyectoId)
+                    .WhereEqualTo("activo", true);
+                var detalleSnapshot = await detalleQuery.GetSnapshotAsync();
+
+                foreach (var detalleDoc in detalleSnapshot.Documents)
+                {
+                    var detalle = DocumentToDetalle(detalleDoc, registro.Id);
+                    detalle.RegistroDiario = registro;
+                    detalles.Add(detalle);
+                }
+            }
+
+            return detalles.OrderByDescending(d => d.RegistroDiario?.Fecha).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al obtener detalles del proyecto {ProyectoId}", proyectoId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene las actividades de un proyecto en un rango de fechas
+    /// </summary>
+    public async Task<IEnumerable<DetalleActividad>> GetDetallesByProyectoRangoFechasAsync(int proyectoId, DateTime fechaInicio, DateTime fechaFin)
+    {
+        try
+        {
+            var detalles = new List<DetalleActividad>();
+
+            // Obtener registros en el rango de fechas
+            var registrosQuery = Collection
+                .WhereGreaterThanOrEqualTo("fecha", Timestamp.FromDateTime(fechaInicio.Date.ToUniversalTime()))
+                .WhereLessThanOrEqualTo("fecha", Timestamp.FromDateTime(fechaFin.Date.ToUniversalTime()))
+                .WhereEqualTo("activo", true);
+            var registrosSnapshot = await registrosQuery.GetSnapshotAsync();
+
+            foreach (var registroDoc in registrosSnapshot.Documents)
+            {
+                var registro = DocumentToEntity(registroDoc);
+                var detallesCollection = registroDoc.Reference.Collection(DETALLES_SUBCOLLECTION);
+
+                var detalleQuery = detallesCollection
+                    .WhereEqualTo("proyectoId", proyectoId)
+                    .WhereEqualTo("activo", true);
+                var detalleSnapshot = await detalleQuery.GetSnapshotAsync();
+
+                foreach (var detalleDoc in detalleSnapshot.Documents)
+                {
+                    var detalle = DocumentToDetalle(detalleDoc, registro.Id);
+                    detalle.RegistroDiario = registro;
+                    detalles.Add(detalle);
+                }
+            }
+
+            return detalles.OrderByDescending(d => d.RegistroDiario?.Fecha).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al obtener detalles del proyecto {ProyectoId} en rango de fechas", proyectoId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Calcula el total de horas trabajadas en un proyecto
+    /// </summary>
+    public async Task<decimal> GetTotalHorasByProyectoAsync(int proyectoId)
+    {
+        try
+        {
+            var detalles = await GetDetallesByProyectoAsync(proyectoId);
+            return detalles.Sum(d => d.Horas);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al calcular total de horas del proyecto {ProyectoId}", proyectoId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene un resumen de horas por empleado en un proyecto
+    /// </summary>
+    public async Task<IEnumerable<ProyectoHorasEmpleado>> GetHorasPorEmpleadoProyectoAsync(int proyectoId)
+    {
+        try
+        {
+            var detalles = await GetDetallesByProyectoAsync(proyectoId);
+
+            var resumen = detalles
+                .Where(d => d.RegistroDiario != null)
+                .GroupBy(d => d.RegistroDiario!.EmpleadoId)
+                .Select(g => new ProyectoHorasEmpleado
+                {
+                    EmpleadoId = g.Key,
+                    EmpleadoNombre = g.First().RegistroDiario?.Empleado?.NombreCompleto ?? $"Empleado {g.Key}",
+                    TotalHoras = g.Sum(d => d.Horas),
+                    CantidadActividades = g.Count(),
+                    UltimaActividad = g.Max(d => d.RegistroDiario?.Fecha)
+                })
+                .OrderByDescending(x => x.TotalHoras)
+                .ToList();
+
+            return resumen;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error al obtener horas por empleado del proyecto {ProyectoId}", proyectoId);
+            throw;
+        }
+    }
+
     #endregion
 }

@@ -1,0 +1,203 @@
+@* Formulario de Departamento - Crear/Editar *@
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Interfaces
+@inject IEmpleadoRepository EmpleadoRepo
+
+<div class="departamento-form">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="legacy-alert legacy-alert-error">
+            @errorMessage
+        </div>
+    }
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">Codigo</label>
+        <input type="text"
+               class="legacy-form-input"
+               value="@departamento.Codigo"
+               readonly
+               disabled />
+        <div class="legacy-form-hint">El codigo se genera automaticamente</div>
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label required">Nombre</label>
+        <input type="text"
+               class="legacy-form-input"
+               @bind="departamento.Nombre"
+               @bind:event="oninput"
+               maxlength="100"
+               placeholder="Ingrese el nombre del departamento" />
+        @if (!string.IsNullOrEmpty(nombreError))
+        {
+            <div class="legacy-validation-error">@nombreError</div>
+        }
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">Jefe del Departamento</label>
+        <select class="legacy-form-input" @bind="departamento.JefeId">
+            <option value="">-- Sin jefe asignado --</option>
+            @foreach (var emp in empleados)
+            {
+                <option value="@emp.Id">@emp.NombreCompleto</option>
+            }
+        </select>
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">Descripcion</label>
+        <textarea class="legacy-form-textarea"
+                  @bind="departamento.Descripcion"
+                  rows="3"
+                  placeholder="Descripcion opcional del departamento"></textarea>
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-checkbox">
+            <input type="checkbox" @bind="departamento.Activo" />
+            <span>Activo</span>
+        </label>
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Departamento a editar (null = nuevo)
+    /// </summary>
+    [Parameter]
+    public Departamento? DepartamentoEdit { get; set; }
+
+    /// <summary>
+    /// Callback cuando se guarda exitosamente
+    /// </summary>
+    [Parameter]
+    public EventCallback<Departamento> OnSave { get; set; }
+
+    /// <summary>
+    /// Callback cuando se cancela
+    /// </summary>
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    /// <summary>
+    /// Repositorio inyectado para validaciones
+    /// </summary>
+    [Inject]
+    public IDepartamentoRepository DepartamentoRepo { get; set; } = default!;
+
+    private Departamento departamento = new();
+    private bool isEditing = false;
+    private string? errorMessage;
+    private string? nombreError;
+    private bool isSaving = false;
+    private IEnumerable<Empleado> empleados = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar lista de empleados para el selector de jefe
+        try
+        {
+            empleados = await EmpleadoRepo.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando empleados: {ex.Message}");
+            empleados = [];
+        }
+
+        if (DepartamentoEdit != null)
+        {
+            // Modo edicion - clonar para no modificar original
+            isEditing = true;
+            departamento = new Departamento
+            {
+                Id = DepartamentoEdit.Id,
+                Codigo = DepartamentoEdit.Codigo,
+                Nombre = DepartamentoEdit.Nombre,
+                Descripcion = DepartamentoEdit.Descripcion,
+                JefeId = DepartamentoEdit.JefeId,
+                Activo = DepartamentoEdit.Activo,
+                FechaCreacion = DepartamentoEdit.FechaCreacion
+            };
+            departamento.SetFirestoreDocumentId(DepartamentoEdit.GetFirestoreDocumentId() ?? "");
+        }
+        else
+        {
+            // Modo creacion - generar codigo
+            isEditing = false;
+            departamento = new Departamento { Activo = true };
+            try
+            {
+                departamento.Codigo = await DepartamentoRepo.GetNextCodigoAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al generar codigo: {ex.Message}");
+                departamento.Codigo = "DEP???";
+            }
+        }
+    }
+
+    /// <summary>
+    /// Valida y guarda el departamento
+    /// </summary>
+    public async Task<bool> ValidateAndSaveAsync()
+    {
+        if (isSaving) return false;
+
+        isSaving = true;
+        errorMessage = null;
+        nombreError = null;
+
+        try
+        {
+            // Validar nombre requerido
+            if (string.IsNullOrWhiteSpace(departamento.Nombre))
+            {
+                nombreError = "El nombre es requerido";
+                return false;
+            }
+
+            // Validar nombre unico
+            var existeNombre = await DepartamentoRepo.ExistsByNameAsync(
+                departamento.Nombre,
+                isEditing ? departamento.Id : null);
+
+            if (existeNombre)
+            {
+                nombreError = "Ya existe un departamento con este nombre";
+                return false;
+            }
+
+            // Guardar
+            if (isEditing)
+            {
+                await DepartamentoRepo.UpdateAsync(departamento);
+            }
+            else
+            {
+                await DepartamentoRepo.AddAsync(departamento);
+            }
+
+            await OnSave.InvokeAsync(departamento);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar: {ex.Message}";
+            Console.WriteLine($"Error guardando departamento: {ex}");
+            return false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    /// <summary>
+    /// Indica si el formulario esta en proceso de guardado
+    /// </summary>
+    public bool IsSaving => isSaving;
+}

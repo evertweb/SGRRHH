@@ -35,8 +35,47 @@ public class Cargo : EntidadBase
     /// </summary>
     public Departamento? Departamento { get; set; }
     
+    // ========== NUEVOS CAMPOS ==========
+    
+    /// <summary>
+    /// Salario base del cargo (puede ser null si no se define)
+    /// </summary>
+    public decimal? SalarioBase { get; set; }
+    
+    /// <summary>
+    /// Requisitos mínimos para ocupar el cargo (experiencia, educación, etc.)
+    /// </summary>
+    public string? Requisitos { get; set; }
+    
+    /// <summary>
+    /// Competencias y habilidades requeridas para el cargo
+    /// </summary>
+    public string? Competencias { get; set; }
+    
+    /// <summary>
+    /// ID del cargo inmediato superior en la jerarquía
+    /// </summary>
+    public int? CargoSuperiorId { get; set; }
+    
+    /// <summary>
+    /// Cargo inmediato superior
+    /// </summary>
+    public Cargo? CargoSuperior { get; set; }
+    
+    /// <summary>
+    /// Número de plazas/posiciones disponibles para este cargo
+    /// </summary>
+    public int NumeroPlazas { get; set; } = 1;
+    
+    // ========== COLECCIONES ==========
+    
     /// <summary>
     /// Empleados que tienen este cargo
     /// </summary>
     public ICollection<Empleado> Empleados { get; set; } = new List<Empleado>();
+    
+    /// <summary>
+    /// Cargos que reportan directamente a este cargo
+    /// </summary>
+    public ICollection<Cargo> CargosSubordinados { get; set; } = new List<Cargo>();
 }

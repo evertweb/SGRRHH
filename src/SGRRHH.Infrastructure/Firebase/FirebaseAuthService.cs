@@ -1,3 +1,4 @@
+#if !BROWSER
 using Firebase.Auth;
 using Firebase.Auth.Providers;
 using FirebaseAdmin;
@@ -856,3 +857,4 @@ public class FirebaseAuthService : IFirebaseAuthService
 
     #endregion
 }
+#endif

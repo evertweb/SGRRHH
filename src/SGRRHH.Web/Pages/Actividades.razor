@@ -1,0 +1,281 @@
+@page "/actividades"
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Interfaces
+@using SGRRHH.Web.Components.Shared
+@using SGRRHH.Web.Components.Forms
+@inject IActividadRepository ActividadRepo
+@inject AppStateService AppState
+
+<div class="module-container">
+    @* Toolbar *@
+    <div class="module-toolbar">
+        <button class="legacy-button" @onclick="LoadData" disabled="@isLoading">
+            @(isLoading ? "Cargando..." : "Actualizar")
+        </button>
+        <button class="legacy-button" @onclick="ShowNewModal">+ Nueva Actividad</button>
+
+        <div style="flex: 1;"></div>
+
+        <label class="legacy-form-checkbox" style="margin-right: 15px;">
+            <input type="checkbox" @bind="showInactive" @bind:after="FilterData" />
+            <span>Mostrar Inactivos</span>
+        </label>
+    </div>
+
+    @* Mensaje de exito *@
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="legacy-alert legacy-alert-success">
+            @successMessage
+        </div>
+    }
+
+    @* Contenido principal *@
+    @if (isLoading)
+    {
+        <div class="loading-indicator">Cargando datos...</div>
+    }
+    else if (filteredActividades == null || !filteredActividades.Any())
+    {
+        <div class="empty-state">No hay actividades registradas.</div>
+    }
+    else
+    {
+        <table class="legacy-table">
+            <thead>
+                <tr>
+                    <th style="width: 80px;">Codigo</th>
+                    <th>Nombre</th>
+                    <th>Categoria</th>
+                    <th style="width: 50px;">Orden</th>
+                    <th style="width: 80px;">Req. Proy.</th>
+                    <th style="width: 60px;">Activo</th>
+                    <th style="width: 150px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var act in filteredActividades ?? Enumerable.Empty<Actividad>())
+                {
+                    <tr class="@(act.Activo ? "" : "inactive-row")">
+                        <td><code>@act.Codigo</code></td>
+                        <td><strong>@act.Nombre</strong></td>
+                        <td>@(act.Categoria ?? "-")</td>
+                        <td style="text-align: center;">@act.Orden</td>
+                        <td style="text-align: center;">@(act.RequiereProyecto ? "Si" : "-")</td>
+                        <td style="text-align: center;">@(act.Activo ? "Si" : "No")</td>
+                        <td>
+                            <button class="legacy-button-small" @onclick="() => ShowEditModal(act)">Editar</button>
+                            @if (act.Activo)
+                            {
+                                <button class="legacy-button-small legacy-button-danger" @onclick="() => ShowDeleteConfirm(act)">Eliminar</button>
+                            }
+                            else
+                            {
+                                <button class="legacy-button-small legacy-button-primary" @onclick="() => Reactivate(act)">Reactivar</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@* Modal de Crear/Editar *@
+<LegacyModal Title="@modalTitle"
+             IsVisible="@showFormModal"
+             OnClose="CloseFormModal"
+             Width="500px">
+    <ChildContent>
+        <ActividadForm @ref="formComponent"
+                       ActividadEdit="@selectedActividad"
+                       OnSave="HandleSave"
+                       OnCancel="CloseFormModal" />
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseFormModal" disabled="@isSaving">Cancelar</button>
+        <button class="legacy-button legacy-button-primary" @onclick="SaveForm" disabled="@isSaving">
+            @(isSaving ? "Guardando..." : "Guardar")
+        </button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Confirmacion de Eliminacion *@
+<LegacyModal Title="Confirmar Eliminacion"
+             IsVisible="@showDeleteModal"
+             OnClose="CloseDeleteModal"
+             Width="400px"
+             CloseOnOverlayClick="false">
+    <ChildContent>
+        <div style="text-align: center; padding: 10px;">
+            <p style="font-size: 14px; margin-bottom: 15px;">
+                Esta seguro que desea eliminar la actividad?
+            </p>
+            <p style="font-weight: bold; color: var(--win-navy); font-size: 16px;">
+                "@selectedActividad?.Nombre"
+            </p>
+            <p style="font-size: 11px; color: var(--win-gray); margin-top: 10px;">
+                Esta accion marcara la actividad como inactiva.
+            </p>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseDeleteModal">Cancelar</button>
+        <button class="legacy-button legacy-button-danger" @onclick="ConfirmDelete">Eliminar</button>
+    </FooterContent>
+</LegacyModal>
+
+@code {
+    private IEnumerable<Actividad>? allActividades;
+    private IEnumerable<Actividad>? filteredActividades;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? successMessage;
+    private bool showInactive = false;
+
+    private bool showFormModal = false;
+    private Actividad? selectedActividad;
+    private string modalTitle = "";
+    private ActividadForm? formComponent;
+
+    private bool showDeleteModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Actividades");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        successMessage = null;
+        try
+        {
+            allActividades = await ActividadRepo.GetAllAsync();
+            FilterData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando actividades: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterData()
+    {
+        if (allActividades == null) return;
+
+        if (showInactive)
+        {
+            filteredActividades = allActividades.OrderBy(a => a.Orden).ThenBy(a => a.Nombre);
+        }
+        else
+        {
+            filteredActividades = allActividades.Where(a => a.Activo).OrderBy(a => a.Orden).ThenBy(a => a.Nombre);
+        }
+    }
+
+    private void ShowNewModal()
+    {
+        selectedActividad = null;
+        modalTitle = "Nueva Actividad";
+        showFormModal = true;
+    }
+
+    private void ShowEditModal(Actividad actividad)
+    {
+        selectedActividad = actividad;
+        modalTitle = $"Editar: {actividad.Nombre}";
+        showFormModal = true;
+    }
+
+    private void CloseFormModal()
+    {
+        showFormModal = false;
+        selectedActividad = null;
+    }
+
+    private async Task SaveForm()
+    {
+        if (formComponent == null) return;
+
+        isSaving = true;
+        try
+        {
+            await formComponent.ValidateAndSaveAsync();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HandleSave(Actividad actividad)
+    {
+        showFormModal = false;
+        successMessage = selectedActividad == null
+            ? $"Actividad '{actividad.Nombre}' creada exitosamente"
+            : $"Actividad '{actividad.Nombre}' actualizada exitosamente";
+        selectedActividad = null;
+        await LoadData();
+        _ = ClearSuccessMessage();
+    }
+
+    private void ShowDeleteConfirm(Actividad actividad)
+    {
+        selectedActividad = actividad;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        selectedActividad = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedActividad == null) return;
+
+        try
+        {
+            await ActividadRepo.DeleteAsync(selectedActividad.Id);
+            successMessage = $"Actividad '{selectedActividad.Nombre}' inactivada";
+            showDeleteModal = false;
+            selectedActividad = null;
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error eliminando actividad: {ex.Message}");
+        }
+    }
+
+    private async Task Reactivate(Actividad actividad)
+    {
+        try
+        {
+            actividad.Activo = true;
+            await ActividadRepo.UpdateAsync(actividad);
+            successMessage = $"Actividad '{actividad.Nombre}' reactivada";
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reactivando actividad: {ex.Message}");
+        }
+    }
+
+    private async Task ClearSuccessMessage()
+    {
+        await Task.Delay(4000);
+        successMessage = null;
+        StateHasChanged();
+    }
+}

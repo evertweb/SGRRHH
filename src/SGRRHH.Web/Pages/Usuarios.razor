@@ -1,0 +1,451 @@
+@page "/usuarios"
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Enums
+@using SGRRHH.Core.Interfaces
+@using SGRRHH.Web.Components.Shared
+@inject IUsuarioService UsuarioService
+@inject IEmpleadoRepository EmpleadoRepo
+@inject AppStateService AppState
+
+<div class="page-content">
+    <div class="page-header">
+        <h3>Gestion de Usuarios</h3>
+        <button class="legacy-button legacy-button-primary" @onclick="ShowCreateModal">
+            + Nuevo Usuario
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="legacy-alert legacy-alert-success">@successMessage</div>
+    }
+
+    @if (isLoading)
+    {
+        <p style="font-style: italic;">Cargando usuarios...</p>
+    }
+    else
+    {
+        <table class="legacy-table">
+            <thead>
+                <tr>
+                    <th style="width: 120px;">Username</th>
+                    <th>Nombre Completo</th>
+                    <th style="width: 200px;">Email</th>
+                    <th style="width: 100px;">Rol</th>
+                    <th style="width: 80px;">Estado</th>
+                    <th style="width: 150px;">Ultimo Acceso</th>
+                    <th style="width: 180px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (usuarios == null || !usuarios.Any())
+                {
+                    <tr>
+                        <td colspan="7" style="text-align: center;">No hay usuarios registrados</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var user in usuarios)
+                    {
+                        <tr class="@(!user.Activo ? "row-inactive" : "")">
+                            <td>@user.Username</td>
+                            <td>@user.NombreCompleto</td>
+                            <td>@(user.Email ?? "-")</td>
+                            <td>
+                                <span class="role-badge @GetRoleClass(user.Rol)">
+                                    @GetRoleLabel(user.Rol)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="@(user.Activo ? "status-active" : "status-inactive")">
+                                    @(user.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td>@(user.UltimoAcceso?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
+                            <td>
+                                <button class="legacy-button legacy-button-small" @onclick="() => ShowEditModal(user)">Editar</button>
+                                <button class="legacy-button legacy-button-small" @onclick="() => ShowResetPasswordModal(user)">Contrasena</button>
+                                @if (user.Activo)
+                                {
+                                    <button class="legacy-button legacy-button-small legacy-button-warning" @onclick="() => ToggleActive(user)">Desactivar</button>
+                                }
+                                else
+                                {
+                                    <button class="legacy-button legacy-button-small" @onclick="() => ToggleActive(user)">Activar</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@* Modal Crear/Editar Usuario *@
+@if (showFormModal)
+{
+    <LegacyModal Title="@(isEditing ? "Editar Usuario" : "Nuevo Usuario")" OnClose="CloseFormModal">
+        <div class="legacy-form-group">
+            <label class="legacy-form-label required">Username</label>
+            <input type="text" class="legacy-form-input" @bind="formUsername" disabled="@isEditing" />
+            @if (!string.IsNullOrEmpty(usernameError))
+            {
+                <div class="legacy-validation-error">@usernameError</div>
+            }
+        </div>
+
+        @if (!isEditing)
+        {
+            <div class="legacy-form-group">
+                <label class="legacy-form-label required">Contrasena</label>
+                <input type="password" class="legacy-form-input" @bind="formPassword" />
+            </div>
+        }
+
+        <div class="legacy-form-group">
+            <label class="legacy-form-label required">Nombre Completo</label>
+            <input type="text" class="legacy-form-input" @bind="formNombreCompleto" />
+        </div>
+
+        <div class="legacy-form-group">
+            <label class="legacy-form-label">Email</label>
+            <input type="email" class="legacy-form-input" @bind="formEmail" />
+        </div>
+
+        <div class="legacy-form-group">
+            <label class="legacy-form-label required">Rol</label>
+            <select class="legacy-form-input" @bind="formRol">
+                <option value="@RolUsuario.Administrador">Administrador</option>
+                <option value="@RolUsuario.Operador">Operador</option>
+                <option value="@RolUsuario.Aprobador">Aprobador</option>
+            </select>
+        </div>
+
+        <div class="legacy-form-group">
+            <label class="legacy-form-label">Empleado Asociado</label>
+            <select class="legacy-form-input" @bind="formEmpleadoId">
+                <option value="">-- Sin empleado asociado --</option>
+                @foreach (var emp in empleados ?? Enumerable.Empty<Empleado>())
+                {
+                    <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+                }
+            </select>
+        </div>
+
+        @if (!string.IsNullOrEmpty(formError))
+        {
+            <div class="legacy-alert legacy-alert-error">@formError</div>
+        }
+
+        <div class="legacy-modal-actions">
+            <button class="legacy-button legacy-button-primary" @onclick="SaveUser" disabled="@isSaving">
+                @(isSaving ? "Guardando..." : "Guardar")
+            </button>
+            <button class="legacy-button" @onclick="CloseFormModal">Cancelar</button>
+        </div>
+    </LegacyModal>
+}
+
+@* Modal Reset Password *@
+@if (showResetPasswordModal)
+{
+    <LegacyModal Title="Restablecer Contrasena" OnClose="CloseResetPasswordModal">
+        <p>Ingrese la nueva contrasena para <strong>@selectedUser?.Username</strong>:</p>
+
+        <div class="legacy-form-group">
+            <label class="legacy-form-label required">Nueva Contrasena</label>
+            <input type="password" class="legacy-form-input" @bind="newPassword" />
+        </div>
+
+        <div class="legacy-form-group">
+            <label class="legacy-form-label required">Confirmar Contrasena</label>
+            <input type="password" class="legacy-form-input" @bind="confirmPassword" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(passwordError))
+        {
+            <div class="legacy-alert legacy-alert-error">@passwordError</div>
+        }
+
+        <div class="legacy-modal-actions">
+            <button class="legacy-button legacy-button-primary" @onclick="ResetPassword" disabled="@isSaving">
+                @(isSaving ? "Guardando..." : "Cambiar Contrasena")
+            </button>
+            <button class="legacy-button" @onclick="CloseResetPasswordModal">Cancelar</button>
+        </div>
+    </LegacyModal>
+}
+
+@code {
+    private List<Usuario>? usuarios;
+    private IEnumerable<Empleado>? empleados;
+    private bool isLoading = true;
+    private string? successMessage;
+
+    // Form state
+    private bool showFormModal = false;
+    private bool isEditing = false;
+    private Usuario? selectedUser;
+    private string formUsername = "";
+    private string formPassword = "";
+    private string formNombreCompleto = "";
+    private string? formEmail;
+    private RolUsuario formRol = RolUsuario.Operador;
+    private int? formEmpleadoId;
+    private string? usernameError;
+    private string? formError;
+    private bool isSaving = false;
+
+    // Reset password state
+    private bool showResetPasswordModal = false;
+    private string newPassword = "";
+    private string confirmPassword = "";
+    private string? passwordError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Usuarios");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            usuarios = await UsuarioService.GetAllAsync();
+            empleados = await EmpleadoRepo.GetAllActiveAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading users: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        isEditing = false;
+        selectedUser = null;
+        formUsername = "";
+        formPassword = "";
+        formNombreCompleto = "";
+        formEmail = "";
+        formRol = RolUsuario.Operador;
+        formEmpleadoId = null;
+        usernameError = null;
+        formError = null;
+        showFormModal = true;
+    }
+
+    private void ShowEditModal(Usuario user)
+    {
+        isEditing = true;
+        selectedUser = user;
+        formUsername = user.Username;
+        formNombreCompleto = user.NombreCompleto;
+        formEmail = user.Email;
+        formRol = user.Rol;
+        formEmpleadoId = user.EmpleadoId;
+        usernameError = null;
+        formError = null;
+        showFormModal = true;
+    }
+
+    private void CloseFormModal()
+    {
+        showFormModal = false;
+        selectedUser = null;
+    }
+
+    private async Task SaveUser()
+    {
+        if (isSaving) return;
+
+        usernameError = null;
+        formError = null;
+
+        // Validations
+        if (string.IsNullOrWhiteSpace(formUsername))
+        {
+            usernameError = "El username es requerido";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(formNombreCompleto))
+        {
+            formError = "El nombre completo es requerido";
+            return;
+        }
+
+        if (!isEditing && string.IsNullOrWhiteSpace(formPassword))
+        {
+            formError = "La contrasena es requerida";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            if (isEditing && selectedUser != null)
+            {
+                var result = await UsuarioService.UpdateAsync(
+                    selectedUser.Id,
+                    formNombreCompleto,
+                    formRol,
+                    formEmail,
+                    formEmpleadoId,
+                    selectedUser.Activo);
+
+                if (!result.Success)
+                {
+                    formError = result.Message;
+                    return;
+                }
+                successMessage = "Usuario actualizado";
+            }
+            else
+            {
+                var result = await UsuarioService.CreateAsync(
+                    formUsername,
+                    formPassword,
+                    formNombreCompleto,
+                    formRol,
+                    formEmail,
+                    formEmpleadoId);
+
+                if (!result.Success)
+                {
+                    if (result.Message?.Contains("username", StringComparison.OrdinalIgnoreCase) == true)
+                        usernameError = result.Message;
+                    else
+                        formError = result.Message;
+                    return;
+                }
+                successMessage = "Usuario creado";
+            }
+
+            CloseFormModal();
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ShowResetPasswordModal(Usuario user)
+    {
+        selectedUser = user;
+        newPassword = "";
+        confirmPassword = "";
+        passwordError = null;
+        showResetPasswordModal = true;
+    }
+
+    private void CloseResetPasswordModal()
+    {
+        showResetPasswordModal = false;
+        selectedUser = null;
+    }
+
+    private async Task ResetPassword()
+    {
+        if (isSaving || selectedUser == null) return;
+
+        passwordError = null;
+
+        if (string.IsNullOrWhiteSpace(newPassword))
+        {
+            passwordError = "La contrasena es requerida";
+            return;
+        }
+
+        if (newPassword != confirmPassword)
+        {
+            passwordError = "Las contrasenas no coinciden";
+            return;
+        }
+
+        if (newPassword.Length < 6)
+        {
+            passwordError = "La contrasena debe tener al menos 6 caracteres";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var result = await UsuarioService.ResetPasswordAsync(selectedUser.Id, newPassword);
+            if (!result.Success)
+            {
+                passwordError = result.Message;
+                return;
+            }
+
+            successMessage = "Contrasena actualizada";
+            CloseResetPasswordModal();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            passwordError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ToggleActive(Usuario user)
+    {
+        try
+        {
+            var result = await UsuarioService.SetActivoAsync(user.Id, !user.Activo);
+            if (result.Success)
+            {
+                successMessage = user.Activo ? "Usuario desactivado" : "Usuario activado";
+                await LoadData();
+                _ = ClearSuccessMessage();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error toggling user: {ex.Message}");
+        }
+    }
+
+    private async Task ClearSuccessMessage()
+    {
+        await Task.Delay(3000);
+        successMessage = null;
+        StateHasChanged();
+    }
+
+    private string GetRoleLabel(RolUsuario rol) => rol switch
+    {
+        RolUsuario.Administrador => "Admin",
+        RolUsuario.Operador => "Operador",
+        RolUsuario.Aprobador => "Aprobador",
+        _ => rol.ToString()
+    };
+
+    private string GetRoleClass(RolUsuario rol) => rol switch
+    {
+        RolUsuario.Administrador => "role-admin",
+        RolUsuario.Operador => "role-operator",
+        RolUsuario.Aprobador => "role-approver",
+        _ => ""
+    };
+}

@@ -1,0 +1,220 @@
+@page "/dashboard"
+@page "/"
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Enums
+@using SGRRHH.Core.Interfaces
+@inject IEmpleadoRepository EmpleadoRepo
+@inject IPermisoRepository PermisoRepo
+@inject IContratoRepository ContratoRepo
+@inject IVacacionRepository VacacionRepo
+@inject AppStateService AppState
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h2>Bienvenido, @(AppState.CurrentUser?.NombreCompleto ?? "Usuario")</h2>
+        <p class="dashboard-date">@DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy")</p>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-indicator">Cargando datos del dashboard...</div>
+    }
+    else
+    {
+        @* Stats Cards *@
+        <div class="stats-grid">
+            <div class="stat-card stat-employees">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <div class="stat-number">@totalEmpleados</div>
+                    <div class="stat-label">Empleados Activos</div>
+                </div>
+            </div>
+            <div class="stat-card stat-permissions">
+                <div class="stat-icon">📋</div>
+                <div class="stat-content">
+                    <div class="stat-number">@permisosPendientes</div>
+                    <div class="stat-label">Permisos Pendientes</div>
+                </div>
+            </div>
+            <div class="stat-card stat-contracts">
+                <div class="stat-icon">📄</div>
+                <div class="stat-content">
+                    <div class="stat-number">@contratosPorVencer</div>
+                    <div class="stat-label">Contratos por Vencer (30d)</div>
+                </div>
+            </div>
+            <div class="stat-card stat-vacations">
+                <div class="stat-icon">🏖️</div>
+                <div class="stat-content">
+                    <div class="stat-number">@vacacionesProgramadas</div>
+                    <div class="stat-label">Vacaciones Programadas</div>
+                </div>
+            </div>
+        </div>
+
+        @* Alerts Section *@
+        @if (alertas.Any())
+        {
+            <fieldset class="alerts-section">
+                <legend>⚠️ Alertas</legend>
+                <div class="alerts-list">
+                    @foreach (var alerta in alertas)
+                    {
+                        <div class="alert-item @alerta.Type">
+                            <span class="alert-icon">@alerta.Icon</span>
+                            <span class="alert-text">@alerta.Message</span>
+                        </div>
+                    }
+                </div>
+            </fieldset>
+        }
+
+        @* Quick Actions *@
+        <fieldset class="quick-actions">
+            <legend>Acciones Rapidas</legend>
+            <div class="actions-grid">
+                <a href="/empleados" class="action-button">
+                    <span class="action-icon">👥</span>
+                    <span>Empleados</span>
+                </a>
+                <a href="/permisos" class="action-button">
+                    <span class="action-icon">📋</span>
+                    <span>Permisos</span>
+                </a>
+                <a href="/contratos" class="action-button">
+                    <span class="action-icon">📄</span>
+                    <span>Contratos</span>
+                </a>
+                <a href="/vacaciones" class="action-button">
+                    <span class="action-icon">🏖️</span>
+                    <span>Vacaciones</span>
+                </a>
+                <a href="/control-diario" class="action-button">
+                    <span class="action-icon">⏱️</span>
+                    <span>Control Diario</span>
+                </a>
+                @if (AppState.IsAdmin)
+                {
+                    <a href="/configuracion" class="action-button">
+                        <span class="action-icon">⚙️</span>
+                        <span>Configuracion</span>
+                    </a>
+                }
+            </div>
+        </fieldset>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private int totalEmpleados;
+    private int permisosPendientes;
+    private int contratosPorVencer;
+    private int vacacionesProgramadas;
+    private List<AlertItem> alertas = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Dashboard");
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        isLoading = true;
+        alertas.Clear();
+
+        try
+        {
+            // Load employees
+            var empleados = await EmpleadoRepo.GetAllActiveAsync();
+            totalEmpleados = empleados.Count();
+
+            // Load pending permissions
+            var permisos = await PermisoRepo.GetAllAsync();
+            permisosPendientes = permisos.Count(p => p.Estado == EstadoPermiso.Pendiente);
+
+            // Load contracts expiring in 30 days
+            var contratos = await ContratoRepo.GetAllAsync();
+            var hoy = DateTime.Today;
+            var en30Dias = hoy.AddDays(30);
+            contratosPorVencer = contratos.Count(c =>
+                c.Estado == EstadoContrato.Activo &&
+                c.FechaFin.HasValue &&
+                c.FechaFin.Value >= hoy &&
+                c.FechaFin.Value <= en30Dias);
+
+            // Load scheduled vacations
+            var vacaciones = await VacacionRepo.GetAllAsync();
+            vacacionesProgramadas = vacaciones.Count(v =>
+                (v.Estado == EstadoVacacion.Aprobada || v.Estado == EstadoVacacion.Programada) &&
+                v.FechaInicio >= hoy);
+
+            // Generate alerts
+            if (permisosPendientes > 0)
+            {
+                alertas.Add(new AlertItem
+                {
+                    Type = "alert-warning",
+                    Icon = "📋",
+                    Message = $"Hay {permisosPendientes} permiso(s) pendiente(s) de aprobacion"
+                });
+            }
+
+            if (contratosPorVencer > 0)
+            {
+                alertas.Add(new AlertItem
+                {
+                    Type = "alert-danger",
+                    Icon = "📄",
+                    Message = $"Hay {contratosPorVencer} contrato(s) por vencer en los proximos 30 dias"
+                });
+            }
+
+            // Check for contracts expiring in 7 days
+            var contratosUrgentes = contratos.Count(c =>
+                c.Estado == EstadoContrato.Activo &&
+                c.FechaFin.HasValue &&
+                c.FechaFin.Value >= hoy &&
+                c.FechaFin.Value <= hoy.AddDays(7));
+
+            if (contratosUrgentes > 0)
+            {
+                alertas.Add(new AlertItem
+                {
+                    Type = "alert-critical",
+                    Icon = "⚠️",
+                    Message = $"URGENTE: {contratosUrgentes} contrato(s) vence(n) en menos de 7 dias"
+                });
+            }
+
+            // Check for pending employee approvals
+            var empleadosPendientes = empleados.Count(e => e.Estado == EstadoEmpleado.PendienteAprobacion);
+            if (empleadosPendientes > 0)
+            {
+                alertas.Add(new AlertItem
+                {
+                    Type = "alert-info",
+                    Icon = "👤",
+                    Message = $"Hay {empleadosPendientes} empleado(s) pendiente(s) de aprobacion"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private class AlertItem
+    {
+        public string Type { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Message { get; set; } = "";
+    }
+}

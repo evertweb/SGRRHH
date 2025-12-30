@@ -1,0 +1,233 @@
+@* Formulario de Actividad - Crear/Editar *@
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Interfaces
+
+<div class="actividad-form">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="legacy-alert legacy-alert-error">
+            @errorMessage
+        </div>
+    }
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">Código</label>
+        <input type="text"
+               class="legacy-form-input"
+               value="@actividad.Codigo"
+               readonly
+               disabled />
+        <div class="legacy-form-hint">El código se genera automáticamente</div>
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label required">Nombre</label>
+        <input type="text"
+               class="legacy-form-input @(hasNombreError ? "input-error" : "")"
+               @bind="actividad.Nombre"
+               @bind:event="oninput"
+               @onfocus="ClearNombreError"
+               maxlength="200"
+               placeholder="Nombre de la actividad" />
+        @if (!string.IsNullOrEmpty(nombreError))
+        {
+            <div class="legacy-validation-error">@nombreError</div>
+        }
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">
+            Descripción
+            <span class="char-counter @(descripcionLength > 450 ? "char-warning" : "")">
+                @descripcionLength/500
+            </span>
+        </label>
+        <textarea class="legacy-form-textarea"
+                  @bind="actividad.Descripcion"
+                  @bind:event="oninput"
+                  rows="2"
+                  maxlength="500"
+                  placeholder="Descripción detallada de la actividad"></textarea>
+    </div>
+
+    <div class="legacy-form-row">
+        <div class="legacy-form-group" style="flex: 1;">
+            <label class="legacy-form-label">Categoría</label>
+            <select class="legacy-form-input" @bind="actividad.Categoria">
+                <option value="">-- Seleccione o escriba --</option>
+                @foreach (var cat in todasCategorias)
+                {
+                    <option value="@cat">@cat</option>
+                }
+            </select>
+            <div class="legacy-form-hint">Categorías predefinidas o personalizadas</div>
+        </div>
+
+        <div class="legacy-form-group" style="width: 100px;">
+            <label class="legacy-form-label">
+                Orden
+                <span class="tooltip-icon" title="Número para ordenar en listas. Menor número = aparece primero">?</span>
+            </label>
+            <input type="number"
+                   class="legacy-form-input"
+                   @bind="actividad.Orden"
+                   min="0"
+                   max="999" />
+        </div>
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-checkbox">
+            <input type="checkbox" @bind="actividad.RequiereProyecto" />
+            <span>Requiere especificar proyecto</span>
+            <span class="tooltip-icon" title="Si está marcado, al registrar esta actividad se deberá seleccionar un proyecto obligatoriamente">?</span>
+        </label>
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-checkbox">
+            <input type="checkbox" @bind="actividad.Activo" />
+            <span>Activo</span>
+        </label>
+        <div class="legacy-form-hint" style="margin-left: 20px;">Las actividades inactivas no aparecen en las listas de selección</div>
+    </div>
+</div>
+
+
+@code {
+
+    [Parameter]
+    public Actividad? ActividadEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<Actividad> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Inject]
+    public IActividadRepository ActividadRepo { get; set; } = default!;
+
+    private Actividad actividad = new();
+    private bool isEditing = false;
+    private string? errorMessage;
+    private string? nombreError;
+    private bool hasNombreError = false;
+    private bool isSaving = false;
+
+    // Categorías predefinidas (como en desktop) + dinámicas
+    private static readonly string[] categoriasPredefinidas = new[]
+    {
+        "Administrativa", "Técnica", "Campo", "Reuniones", "Capacitación",
+        "Supervisión", "Documentación", "Mantenimiento", "Soporte", "Otro"
+    };
+    private List<string> todasCategorias = new();
+
+    // Propiedad calculada para contador de caracteres
+    private int descripcionLength => actividad.Descripcion?.Length ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar categorías existentes y combinar con predefinidas
+        try
+        {
+            var categoriasExistentes = await ActividadRepo.GetCategoriasAsync();
+            todasCategorias = categoriasPredefinidas
+                .Union(categoriasExistentes ?? Enumerable.Empty<string>())
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
+        }
+        catch
+        {
+            todasCategorias = categoriasPredefinidas.ToList();
+        }
+
+        if (ActividadEdit != null)
+        {
+            isEditing = true;
+            actividad = new Actividad
+            {
+                Id = ActividadEdit.Id,
+                Codigo = ActividadEdit.Codigo,
+                Nombre = ActividadEdit.Nombre,
+                Descripcion = ActividadEdit.Descripcion,
+                Categoria = ActividadEdit.Categoria,
+                RequiereProyecto = ActividadEdit.RequiereProyecto,
+                Orden = ActividadEdit.Orden,
+                Activo = ActividadEdit.Activo,
+                FechaCreacion = ActividadEdit.FechaCreacion
+            };
+            actividad.SetFirestoreDocumentId(ActividadEdit.GetFirestoreDocumentId() ?? "");
+        }
+        else
+        {
+            isEditing = false;
+            actividad = new Actividad
+            {
+                Activo = true,
+                Orden = 0,
+                RequiereProyecto = false
+            };
+            try
+            {
+                actividad.Codigo = await ActividadRepo.GetNextCodigoAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al generar código: {ex.Message}");
+                actividad.Codigo = "ACT???";
+            }
+        }
+    }
+
+    private void ClearNombreError()
+    {
+        nombreError = null;
+        hasNombreError = false;
+    }
+
+    public async Task<bool> ValidateAndSaveAsync()
+    {
+        if (isSaving) return false;
+
+        isSaving = true;
+        errorMessage = null;
+        nombreError = null;
+        hasNombreError = false;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(actividad.Nombre))
+            {
+                nombreError = "El nombre es requerido";
+                hasNombreError = true;
+                return false;
+            }
+
+            if (isEditing)
+            {
+                await ActividadRepo.UpdateAsync(actividad);
+            }
+            else
+            {
+                await ActividadRepo.AddAsync(actividad);
+            }
+
+            await OnSave.InvokeAsync(actividad);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar: {ex.Message}";
+            Console.WriteLine($"Error guardando actividad: {ex}");
+            return false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    public bool IsSaving => isSaving;
+}

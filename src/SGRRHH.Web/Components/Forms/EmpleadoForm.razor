@@ -1,0 +1,982 @@
+@* Formulario de Empleado - Crear/Editar *@
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Enums
+@using SGRRHH.Core.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@using SGRRHH.Web.Client
+@using System.IO
+@using System.Text.RegularExpressions
+
+<div class="empleado-form">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="legacy-alert legacy-alert-error">
+            @errorMessage
+        </div>
+    }
+
+    @* === DATOS BÁSICOS === *@
+    <fieldset class="legacy-fieldset">
+        <legend>Datos Básicos</legend>
+        
+        <div class="legacy-form-row">
+            <div class="legacy-form-group" style="width: 100px;">
+                <label class="legacy-form-label">Código</label>
+                <input type="text" class="legacy-form-input" value="@empleado.Codigo" readonly disabled />
+            </div>
+            
+            <div class="legacy-form-group" style="width: 120px;">
+                <label class="legacy-form-label required">Cédula</label>
+                <input type="text" class="legacy-form-input" @bind="empleado.Cedula" maxlength="20" placeholder="Número de cédula" />
+                @if (!string.IsNullOrEmpty(cedulaError))
+                {
+                    <div class="legacy-validation-error">@cedulaError</div>
+                }
+            </div>
+            
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label required">Nombres</label>
+                <input type="text" class="legacy-form-input @(nombresError != null ? "input-error" : "")" 
+                       @bind="empleado.Nombres" maxlength="100" placeholder="Nombres" 
+                       @onblur="ValidateNombres" />
+                @if (!string.IsNullOrEmpty(nombresError))
+                {
+                    <div class="legacy-validation-error">@nombresError</div>
+                }
+            </div>
+            
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label required">Apellidos</label>
+                <input type="text" class="legacy-form-input @(apellidosError != null ? "input-error" : "")" 
+                       @bind="empleado.Apellidos" maxlength="100" placeholder="Apellidos" 
+                       @onblur="ValidateApellidos" />
+                @if (!string.IsNullOrEmpty(apellidosError))
+                {
+                    <div class="legacy-validation-error">@apellidosError</div>
+                }
+            </div>
+        </div>
+        
+        <div class="legacy-form-row">
+            <div class="legacy-form-group" style="width: 140px;">
+                <label class="legacy-form-label">Fecha Nacimiento</label>
+                <input type="date" class="legacy-form-input" 
+                       value="@FormatDate(empleado.FechaNacimiento)"
+                       @onchange="e => empleado.FechaNacimiento = ParseDate(e.Value?.ToString())" />
+            </div>
+            
+            <div class="legacy-form-group" style="width: 120px;">
+                <label class="legacy-form-label">Género</label>
+                <select class="legacy-form-input" @bind="empleado.Genero">
+                    <option value="">-- Seleccione --</option>
+                    <option value="@Genero.Masculino">Masculino</option>
+                    <option value="@Genero.Femenino">Femenino</option>
+                    <option value="@Genero.Otro">Otro</option>
+                </select>
+            </div>
+            
+            <div class="legacy-form-group" style="width: 130px;">
+                <label class="legacy-form-label">Estado Civil</label>
+                <select class="legacy-form-input" @bind="empleado.EstadoCivil">
+                    <option value="">-- Seleccione --</option>
+                    <option value="@EstadoCivil.Soltero">Soltero(a)</option>
+                    <option value="@EstadoCivil.Casado">Casado(a)</option>
+                    <option value="@EstadoCivil.UnionLibre">Unión Libre</option>
+                    <option value="@EstadoCivil.Divorciado">Divorciado(a)</option>
+                    <option value="@EstadoCivil.Viudo">Viudo(a)</option>
+                </select>
+            </div>
+        </div>
+    </fieldset>
+
+    @* === CONTACTO === *@
+    <fieldset class="legacy-fieldset">
+        <legend>Contacto</legend>
+        
+        <div class="legacy-form-row">
+            <div class="legacy-form-group" style="flex: 2;">
+                <label class="legacy-form-label">Dirección</label>
+                <input type="text" class="legacy-form-input" @bind="empleado.Direccion" maxlength="250" placeholder="Dirección de residencia" />
+            </div>
+            
+            <div class="legacy-form-group" style="width: 130px;">
+                <label class="legacy-form-label">Teléfono</label>
+                <input type="tel" class="legacy-form-input @(telefonoError != null ? "input-error" : "")" 
+                       @bind="empleado.Telefono" maxlength="15" placeholder="3001234567" 
+                       @onblur="ValidateTelefono" />
+                @if (!string.IsNullOrEmpty(telefonoError))
+                {
+                    <div class="legacy-validation-error">@telefonoError</div>
+                }
+            </div>
+            
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">Email</label>
+                <input type="email" class="legacy-form-input @(emailError != null ? "input-error" : "")" 
+                       @bind="empleado.Email" maxlength="150" placeholder="correo@ejemplo.com" 
+                       @onblur="ValidateEmail" />
+                @if (!string.IsNullOrEmpty(emailError))
+                {
+                    <div class="legacy-validation-error">@emailError</div>
+                }
+            </div>
+        </div>
+        
+        <div class="legacy-form-row">
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">Contacto Emergencia</label>
+                <input type="text" class="legacy-form-input" @bind="empleado.ContactoEmergencia" maxlength="100" placeholder="Nombre del contacto" />
+            </div>
+            
+            <div class="legacy-form-group" style="width: 120px;">
+                <label class="legacy-form-label">Tel. Emergencia</label>
+                <input type="tel" class="legacy-form-input" @bind="empleado.TelefonoEmergencia" maxlength="20" />
+            </div>
+        </div>
+    </fieldset>
+
+    @* === INFORMACIÓN LABORAL === *@
+    <fieldset class="legacy-fieldset">
+        <legend>Información Laboral</legend>
+        
+        <div class="legacy-form-row">
+            <div class="legacy-form-group" style="width: 140px;">
+                <label class="legacy-form-label required">Fecha Ingreso</label>
+                <input type="date" class="legacy-form-input" 
+                       value="@FormatDate(empleado.FechaIngreso)"
+                       @onchange="e => empleado.FechaIngreso = ParseDateRequired(e.Value?.ToString())" />
+            </div>
+            
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">Departamento</label>
+                <select class="legacy-form-input" value="@empleado.DepartamentoId" @onchange="OnDepartamentoChanged">
+                    <option value="">-- Sin departamento --</option>
+                    @foreach (var dept in departamentos ?? Enumerable.Empty<Departamento>())
+                    {
+                        <option value="@dept.Id">@dept.Nombre</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">Cargo</label>
+                <select class="legacy-form-input" @bind="empleado.CargoId">
+                    <option value="">-- Sin cargo --</option>
+                    @foreach (var cargo in cargosFiltered ?? cargos ?? Enumerable.Empty<Cargo>())
+                    {
+                        <option value="@cargo.Id">@cargo.Nombre</option>
+                    }
+                </select>
+            </div>
+        </div>
+        
+        <div class="legacy-form-row">
+            <div class="legacy-form-group" style="width: 160px;">
+                <label class="legacy-form-label">Tipo Contrato</label>
+                <select class="legacy-form-input" @bind="empleado.TipoContrato">
+                    <option value="@TipoContrato.Indefinido">Indefinido</option>
+                    <option value="@TipoContrato.Fijo">Término Fijo</option>
+                    <option value="@TipoContrato.ObraLabor">Obra o Labor</option>
+                    <option value="@TipoContrato.PrestacionServicios">Prestación de Servicios</option>
+                    <option value="@TipoContrato.Aprendizaje">Aprendizaje</option>
+                </select>
+            </div>
+            
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">Supervisor</label>
+                <select class="legacy-form-input" @bind="empleado.SupervisorId">
+                    <option value="">-- Sin supervisor --</option>
+                    @foreach (var sup in supervisores ?? Enumerable.Empty<Empleado>())
+                    {
+                        <option value="@sup.Id">@sup.NombreCompleto</option>
+                    }
+                </select>
+            </div>
+            
+            @if (isEditing)
+            {
+                <div class="legacy-form-group" style="width: 140px;">
+                    <label class="legacy-form-label">Estado</label>
+                    <select class="legacy-form-input" @bind="empleado.Estado">
+                        <option value="@EstadoEmpleado.Activo">Activo</option>
+                        <option value="@EstadoEmpleado.EnVacaciones">En Vacaciones</option>
+                        <option value="@EstadoEmpleado.EnLicencia">En Licencia</option>
+                        <option value="@EstadoEmpleado.Suspendido">Suspendido</option>
+                        <option value="@EstadoEmpleado.Retirado">Retirado</option>
+                    </select>
+                </div>
+            }
+        </div>
+    </fieldset>
+    
+    @* === FOTO DEL EMPLEADO === *@
+    <fieldset class="legacy-fieldset">
+        <legend>Foto</legend>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            @if (isUploadingPhoto)
+            {
+                <div style="color: #555; font-style: italic;">Subiendo foto...</div>
+            }
+            else if (!string.IsNullOrEmpty(fotoPreviewUrl))
+            {
+                <div>
+                    <img src="@fotoPreviewUrl" alt="Foto" style="max-width: 80px; max-height: 80px; border: 1px solid #ccc; border-radius: 4px;" />
+                </div>
+                <div>
+                    <button type="button" class="legacy-button-small legacy-button-danger" @onclick="RemoverFoto">Quitar Foto</button>
+                </div>
+            }
+            else
+            {
+                <div>
+                    <InputFile OnChange="HandlePhotoSelected" accept="image/*" class="legacy-form-input" />
+                    <div class="legacy-form-hint">PNG, JPG. Máx 2MB.</div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(fotoError))
+            {
+                <div class="legacy-validation-error">@fotoError</div>
+            }
+        </div>
+    </fieldset>
+
+    @* === DOCUMENTOS === *@
+    <fieldset class="legacy-fieldset">
+        <legend>Documentos</legend>
+        <div class="docs-grid">
+            @* Cédula *@
+            <div class="doc-item">
+                <label class="legacy-form-label required">Cédula</label>
+                @if (!string.IsNullOrEmpty(docCedulaName))
+                {
+                    <div class="doc-attached">
+                        <span class="doc-name">@docCedulaName</span>
+                        <button type="button" class="doc-remove" @onclick="() => RemoveDoc(TipoDocumentoEmpleado.Cedula)">✕</button>
+                    </div>
+                }
+                else
+                {
+                    <InputFile OnChange="e => HandleDocSelected(e, TipoDocumentoEmpleado.Cedula)" accept=".pdf,.jpg,.jpeg,.png" class="legacy-form-input" />
+                }
+            </div>
+            @* Hoja de Vida *@
+            <div class="doc-item">
+                <label class="legacy-form-label required">Hoja de Vida</label>
+                @if (!string.IsNullOrEmpty(docHojaVidaName))
+                {
+                    <div class="doc-attached">
+                        <span class="doc-name">@docHojaVidaName</span>
+                        <button type="button" class="doc-remove" @onclick="() => RemoveDoc(TipoDocumentoEmpleado.HojaVida)">✕</button>
+                    </div>
+                }
+                else
+                {
+                    <InputFile OnChange="e => HandleDocSelected(e, TipoDocumentoEmpleado.HojaVida)" accept=".pdf,.jpg,.jpeg,.png" class="legacy-form-input" />
+                }
+            </div>
+            @* Contrato *@
+            <div class="doc-item">
+                <label class="legacy-form-label">Contrato</label>
+                @if (!string.IsNullOrEmpty(docContratoName))
+                {
+                    <div class="doc-attached">
+                        <span class="doc-name">@docContratoName</span>
+                        <button type="button" class="doc-remove" @onclick="() => RemoveDoc(TipoDocumentoEmpleado.ContratoFirmado)">✕</button>
+                    </div>
+                }
+                else
+                {
+                    <InputFile OnChange="e => HandleDocSelected(e, TipoDocumentoEmpleado.ContratoFirmado)" accept=".pdf,.jpg,.jpeg,.png" class="legacy-form-input" />
+                }
+            </div>
+            @* Cert. Bancario *@
+            <div class="doc-item">
+                <label class="legacy-form-label">Cert. Bancario</label>
+                @if (!string.IsNullOrEmpty(docCertBancarioName))
+                {
+                    <div class="doc-attached">
+                        <span class="doc-name">@docCertBancarioName</span>
+                        <button type="button" class="doc-remove" @onclick="() => RemoveDoc(TipoDocumentoEmpleado.CertificadoBancario)">✕</button>
+                    </div>
+                }
+                else
+                {
+                    <InputFile OnChange="e => HandleDocSelected(e, TipoDocumentoEmpleado.CertificadoBancario)" accept=".pdf,.jpg,.jpeg,.png" class="legacy-form-input" />
+                }
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(docError))
+        {
+            <div class="legacy-validation-error">@docError</div>
+        }
+        @if (isEditing)
+        {
+            <div style="margin-top: 10px; text-align: right;">
+                <button type="button" class="legacy-button-small" @onclick="OnVerDocumentosClick">
+                    📂 Ver Todos los Documentos...
+                </button>
+            </div>
+        }
+    </fieldset>
+
+    @* === INFORMACIÓN BANCARIA === *@
+    <fieldset class="legacy-fieldset">
+        <legend>Información Bancaria</legend>
+        <div class="legacy-form-row">
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">Banco</label>
+                <select class="legacy-form-input" @bind="empleado.Banco">
+                    <option value="">-- Seleccione --</option>
+                    <option value="Bancolombia">Bancolombia</option>
+                    <option value="Davivienda">Davivienda</option>
+                    <option value="BBVA">BBVA</option>
+                    <option value="Banco de Bogotá">Banco de Bogotá</option>
+                    <option value="Banco de Occidente">Banco de Occidente</option>
+                    <option value="Banco Popular">Banco Popular</option>
+                    <option value="Banco Caja Social">Banco Caja Social</option>
+                    <option value="Nequi">Nequi</option>
+                    <option value="Daviplata">Daviplata</option>
+                    <option value="Otro">Otro</option>
+                </select>
+            </div>
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">Número de Cuenta</label>
+                <input type="text" class="legacy-form-input" @bind="empleado.NumeroCuenta" 
+                       maxlength="25" placeholder="Número de cuenta bancaria" />
+            </div>
+            <div class="legacy-form-group" style="width: 140px;">
+                <label class="legacy-form-label">Salario Base</label>
+                <input type="number" class="legacy-form-input" @bind="empleado.SalarioBase" 
+                       min="0" step="1000" placeholder="$ 0" />
+            </div>
+        </div>
+    </fieldset>
+
+    @* === EDUCACIÓN Y SEGURIDAD SOCIAL === *@
+    <fieldset class="legacy-fieldset">
+        <legend>Educación y Seguridad Social</legend>
+        <div class="legacy-form-row">
+            <div class="legacy-form-group" style="width: 160px;">
+                <label class="legacy-form-label">Nivel Educación</label>
+                <select class="legacy-form-input" @bind="empleado.NivelEducacion">
+                    <option value="">-- Seleccione --</option>
+                    <option value="@NivelEducacion.Primaria">Primaria</option>
+                    <option value="@NivelEducacion.Secundaria">Secundaria</option>
+                    <option value="@NivelEducacion.Tecnico">Técnico</option>
+                    <option value="@NivelEducacion.Tecnologo">Tecnólogo</option>
+                    <option value="@NivelEducacion.Profesional">Profesional</option>
+                    <option value="@NivelEducacion.Especializacion">Especialización</option>
+                    <option value="@NivelEducacion.Maestria">Maestría</option>
+                    <option value="@NivelEducacion.Doctorado">Doctorado</option>
+                </select>
+            </div>
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">EPS</label>
+                <input type="text" class="legacy-form-input" @bind="empleado.EPS" 
+                       maxlength="100" placeholder="Ej: Sura, Sanitas, Nueva EPS" />
+            </div>
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">ARL</label>
+                <input type="text" class="legacy-form-input" @bind="empleado.ARL" 
+                       maxlength="100" placeholder="Ej: Sura, Positiva, Colmena" />
+            </div>
+            <div class="legacy-form-group" style="flex: 1;">
+                <label class="legacy-form-label">AFP</label>
+                <input type="text" class="legacy-form-input" @bind="empleado.AFP" 
+                       maxlength="100" placeholder="Ej: Porvenir, Protección, Colfondos" />
+            </div>
+        </div>
+    </fieldset>
+
+    @* === OBSERVACIONES === *@
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">Observaciones</label>
+        <textarea class="legacy-form-textarea" @bind="empleado.Observaciones" rows="2" placeholder="Observaciones adicionales"></textarea>
+    </div>
+</div>
+
+
+@code {
+
+    [Parameter]
+    public Empleado? EmpleadoEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<Empleado> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+    
+    [Parameter]
+    public EventCallback<int> OnVerDocumentos { get; set; }
+    
+    [Parameter]
+    public EventCallback<Empleado> OnAskForMoreDocs { get; set; }
+    
+    [Parameter]
+    public EventCallback<Empleado> OnSaveAndNew { get; set; }
+
+    [Inject]
+    public IEmpleadoService EmpleadoService { get; set; } = default!;
+
+    [Inject]
+    public IEmpleadoRepository EmpleadoRepo { get; set; } = default!;
+
+    [Inject]
+    public IDepartamentoRepository DepartamentoRepo { get; set; } = default!;
+
+    [Inject]
+    public ICargoRepository CargoRepo { get; set; } = default!;
+    
+    [Inject]
+    public FirebaseJsInterop Firebase { get; set; } = default!;
+    
+    [Inject]
+    public AppStateService AppState { get; set; } = default!;
+
+    private Empleado empleado = new();
+    private IEnumerable<Departamento>? departamentos;
+    private IEnumerable<Cargo>? cargos;
+    private IEnumerable<Cargo>? cargosFiltered;
+    private IEnumerable<Empleado>? supervisores;
+    private bool isEditing = false;
+    private string? errorMessage;
+    private string? cedulaError;
+    private string? nombresError;
+    private string? apellidosError;
+    private string? telefonoError;
+    private string? emailError;
+    private string? fotoError;
+    private string? docError;
+    private bool isSaving = false;
+    private bool isUploadingPhoto = false;
+    private string? fotoPreviewUrl;
+    private string? pendingPhotoBase64;
+    private string? pendingPhotoContentType;
+    
+    // Documentos pendientes
+    private Dictionary<TipoDocumentoEmpleado, (string Name, string Base64, string ContentType)> pendingDocs = new();
+    private string? docCedulaName;
+    private string? docHojaVidaName;
+    private string? docContratoName;
+    private string? docCertBancarioName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar catálogos
+        try
+        {
+            departamentos = await DepartamentoRepo.GetAllActiveAsync();
+            cargos = await CargoRepo.GetAllActiveAsync();
+            cargosFiltered = cargos; // Inicializar con todos los cargos
+            supervisores = await EmpleadoRepo.GetAllActiveAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando catálogos: {ex.Message}");
+        }
+
+        if (EmpleadoEdit != null)
+        {
+            isEditing = true;
+            empleado = new Empleado
+            {
+                Id = EmpleadoEdit.Id,
+                Codigo = EmpleadoEdit.Codigo,
+                Cedula = EmpleadoEdit.Cedula,
+                Nombres = EmpleadoEdit.Nombres,
+                Apellidos = EmpleadoEdit.Apellidos,
+                FechaNacimiento = EmpleadoEdit.FechaNacimiento,
+                Genero = EmpleadoEdit.Genero,
+                EstadoCivil = EmpleadoEdit.EstadoCivil,
+                Direccion = EmpleadoEdit.Direccion,
+                Telefono = EmpleadoEdit.Telefono,
+                TelefonoEmergencia = EmpleadoEdit.TelefonoEmergencia,
+                ContactoEmergencia = EmpleadoEdit.ContactoEmergencia,
+                Email = EmpleadoEdit.Email,
+                FechaIngreso = EmpleadoEdit.FechaIngreso,
+                DepartamentoId = EmpleadoEdit.DepartamentoId,
+                CargoId = EmpleadoEdit.CargoId,
+                SupervisorId = EmpleadoEdit.SupervisorId,
+                TipoContrato = EmpleadoEdit.TipoContrato,
+                Estado = EmpleadoEdit.Estado,
+                Observaciones = EmpleadoEdit.Observaciones,
+                NumeroCuenta = EmpleadoEdit.NumeroCuenta,
+                Banco = EmpleadoEdit.Banco,
+                NivelEducacion = EmpleadoEdit.NivelEducacion,
+                EPS = EmpleadoEdit.EPS,
+                ARL = EmpleadoEdit.ARL,
+                AFP = EmpleadoEdit.AFP,
+                SalarioBase = EmpleadoEdit.SalarioBase,
+                Activo = EmpleadoEdit.Activo,
+                FechaCreacion = EmpleadoEdit.FechaCreacion
+            };
+            empleado.SetFirestoreDocumentId(EmpleadoEdit.GetFirestoreDocumentId() ?? "");
+            
+            // Load existing photo
+            if (!string.IsNullOrEmpty(EmpleadoEdit.FotoPath))
+            {
+                try
+                {
+                    fotoPreviewUrl = await Firebase.GetStorageUrlAsync(EmpleadoEdit.FotoPath);
+                }
+                catch { /* ignore */ }
+            }
+            
+            // Filtrar el empleado actual de la lista de supervisores
+            supervisores = supervisores?.Where(s => s.Id != empleado.Id);
+        }
+        else
+        {
+            isEditing = false;
+            empleado = new Empleado 
+            { 
+                Activo = true,
+                Estado = EstadoEmpleado.Activo,
+                FechaIngreso = DateTime.Today,
+                TipoContrato = TipoContrato.Indefinido
+            };
+            try
+            {
+                empleado.Codigo = await EmpleadoRepo.GetNextCodigoAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al generar código: {ex.Message}");
+                empleado.Codigo = "EMP???";
+            }
+        }
+    }
+
+    private string FormatDate(DateTime? date) => date?.ToString("yyyy-MM-dd") ?? "";
+    private string FormatDate(DateTime date) => date.ToString("yyyy-MM-dd");
+    
+    private DateTime? ParseDate(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return null;
+        return DateTime.TryParse(value, out var date) ? date : null;
+    }
+    
+    private DateTime ParseDateRequired(string? value)
+    {
+        if (DateTime.TryParse(value, out var date)) return date;
+        return DateTime.Today;
+    }
+    
+    private void OnDepartamentoChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (int.TryParse(value, out var deptId) && deptId > 0)
+        {
+            empleado.DepartamentoId = deptId;
+            // Filtrar cargos por departamento
+            cargosFiltered = cargos?.Where(c => c.DepartamentoId == deptId || c.DepartamentoId == null).ToList();
+        }
+        else
+        {
+            empleado.DepartamentoId = null;
+            cargosFiltered = cargos;
+        }
+        // Limpiar cargo si ya no está en la lista filtrada
+        if (empleado.CargoId.HasValue && cargosFiltered?.Any(c => c.Id == empleado.CargoId) != true)
+        {
+            empleado.CargoId = null;
+        }
+    }
+
+    // === Métodos de validación en tiempo real (onblur) ===
+    private static readonly Regex NombreApellidoRegex = new(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$", RegexOptions.Compiled);
+    private static readonly Regex TelefonoRegex = new(@"^\d{7,15}$", RegexOptions.Compiled);
+    private static readonly Regex EmailRegex = new(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", RegexOptions.Compiled);
+    
+    private void ValidateNombres()
+    {
+        nombresError = null;
+        if (string.IsNullOrWhiteSpace(empleado.Nombres))
+        {
+            nombresError = "Los nombres son requeridos";
+            return;
+        }
+        if (empleado.Nombres.Length > 100)
+        {
+            nombresError = "Máximo 100 caracteres";
+            return;
+        }
+        if (!NombreApellidoRegex.IsMatch(empleado.Nombres.Trim()))
+        {
+            nombresError = "Solo letras y espacios";
+        }
+    }
+    
+    private void ValidateApellidos()
+    {
+        apellidosError = null;
+        if (string.IsNullOrWhiteSpace(empleado.Apellidos))
+        {
+            apellidosError = "Los apellidos son requeridos";
+            return;
+        }
+        if (empleado.Apellidos.Length > 100)
+        {
+            apellidosError = "Máximo 100 caracteres";
+            return;
+        }
+        if (!NombreApellidoRegex.IsMatch(empleado.Apellidos.Trim()))
+        {
+            apellidosError = "Solo letras y espacios";
+        }
+    }
+    
+    private void ValidateTelefono()
+    {
+        telefonoError = null;
+        if (!string.IsNullOrWhiteSpace(empleado.Telefono) && !TelefonoRegex.IsMatch(empleado.Telefono.Trim()))
+        {
+            telefonoError = "Solo números (7-15 dígitos)";
+        }
+    }
+    
+    private void ValidateEmail()
+    {
+        emailError = null;
+        if (!string.IsNullOrWhiteSpace(empleado.Email))
+        {
+            if (empleado.Email.Length > 150)
+            {
+                emailError = "Máximo 150 caracteres";
+                return;
+            }
+            if (!EmailRegex.IsMatch(empleado.Email.Trim()))
+            {
+                emailError = "Formato de email inválido";
+            }
+        }
+    }
+
+    public async Task<bool> ValidateAndSaveAsync(bool saveAndNew = false)
+    {
+        if (isSaving) return false;
+        
+        isSaving = true;
+        errorMessage = null;
+        cedulaError = null;
+        nombresError = null;
+        apellidosError = null;
+        telefonoError = null;
+        emailError = null;
+
+        try
+        {
+            // Ejecutar todas las validaciones
+            ValidateNombres();
+            ValidateApellidos();
+            ValidateTelefono();
+            ValidateEmail();
+            
+            // Si hay errores de validación, no continuar
+            if (!string.IsNullOrEmpty(nombresError) || !string.IsNullOrEmpty(apellidosError) ||
+                !string.IsNullOrEmpty(telefonoError) || !string.IsNullOrEmpty(emailError))
+            {
+                return false;
+            }
+            
+            // Validar cédula
+            if (string.IsNullOrWhiteSpace(empleado.Cedula))
+            {
+                cedulaError = "La cédula es requerida";
+                return false;
+            }
+            
+            // Validar formato cédula colombiana (6-10 dígitos)
+            var cedulaLimpia = empleado.Cedula.Trim().Replace(".", "").Replace(",", "");
+            if (!Regex.IsMatch(cedulaLimpia, @"^\d{6,10}$"))
+            {
+                cedulaError = "La cédula debe tener entre 6 y 10 dígitos";
+                return false;
+            }
+            
+            // Validar apellidos (requeridos)
+            if (string.IsNullOrWhiteSpace(empleado.Apellidos))
+            {
+                apellidosError = "Los apellidos son requeridos";
+                return false;
+            }
+            
+            // Validar fecha de ingreso no sea futura
+            if (empleado.FechaIngreso > DateTime.Today)
+            {
+                errorMessage = "La fecha de ingreso no puede ser futura";
+                return false;
+            }
+            
+            // Validar edad si hay fecha de nacimiento
+            if (empleado.FechaNacimiento.HasValue)
+            {
+                var edad = DateTime.Today.Year - empleado.FechaNacimiento.Value.Year;
+                if (DateTime.Today < empleado.FechaNacimiento.Value.AddYears(edad)) edad--;
+                
+                if (edad < 16)
+                {
+                    errorMessage = "El empleado debe tener al menos 16 años";
+                    return false;
+                }
+                if (edad > 100)
+                {
+                    errorMessage = "La fecha de nacimiento no parece válida";
+                    return false;
+                }
+            }
+
+            // Use service for create/update - includes business validations (unique cédula, email, etc.)
+            if (isEditing)
+            {
+                var result = await EmpleadoService.UpdateAsync(empleado);
+                if (!result.Success)
+                {
+                    if (result.Message?.Contains("cédula", StringComparison.OrdinalIgnoreCase) == true)
+                        cedulaError = result.Message;
+                    else
+                        errorMessage = result.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                // Usar CreateWithRoleAsync para manejar aprobación según rol
+                var userId = AppState.CurrentUser?.Id ?? 0;
+                var userRole = AppState.CurrentUser?.Rol ?? RolUsuario.Operador;
+                var result = await EmpleadoService.CreateWithRoleAsync(empleado, userId, userRole);
+                if (!result.Success)
+                {
+                    if (result.Message?.Contains("cédula", StringComparison.OrdinalIgnoreCase) == true)
+                        cedulaError = result.Message;
+                    else
+                        errorMessage = result.Message;
+                    return false;
+                }
+                empleado = result.Data!;
+            }
+            
+            // Subir documentos pendientes
+            if (pendingDocs.Count > 0)
+            {
+                await UploadPendingDocsAsync();
+            }
+            
+            // Si es creación y faltan documentos, preguntar si desea cargar más
+            if (!isEditing && pendingDocs.Count < 4 && OnAskForMoreDocs.HasDelegate && !saveAndNew)
+            {
+                await OnAskForMoreDocs.InvokeAsync(empleado);
+            }
+
+            // Invocar callback correspondiente
+            if (saveAndNew && OnSaveAndNew.HasDelegate)
+            {
+                await OnSaveAndNew.InvokeAsync(empleado);
+                // Resetear formulario para nuevo empleado
+                await ResetFormForNew();
+            }
+            else
+            {
+                await OnSave.InvokeAsync(empleado);
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar: {ex.Message}";
+            Console.WriteLine($"Error guardando empleado: {ex}");
+            return false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    public bool IsSaving => isSaving;
+    
+    private async Task ResetFormForNew()
+    {
+        // Limpiar errores
+        errorMessage = null;
+        cedulaError = null;
+        nombresError = null;
+        apellidosError = null;
+        telefonoError = null;
+        emailError = null;
+        fotoError = null;
+        docError = null;
+        
+        // Limpiar documentos pendientes
+        pendingDocs.Clear();
+        docCedulaName = null;
+        docHojaVidaName = null;
+        docContratoName = null;
+        docCertBancarioName = null;
+        
+        // Limpiar foto
+        fotoPreviewUrl = null;
+        pendingPhotoBase64 = null;
+        pendingPhotoContentType = null;
+        
+        // Crear nuevo empleado
+        isEditing = false;
+        empleado = new Empleado 
+        { 
+            Activo = true,
+            Estado = EstadoEmpleado.Activo,
+            FechaIngreso = DateTime.Today,
+            TipoContrato = TipoContrato.Indefinido
+        };
+        
+        try
+        {
+            empleado.Codigo = await EmpleadoRepo.GetNextCodigoAsync();
+        }
+        catch
+        {
+            empleado.Codigo = "EMP???";
+        }
+        
+        StateHasChanged();
+    }
+    
+    private async Task HandlePhotoSelected(InputFileChangeEventArgs e)
+    {
+        fotoError = null;
+        var file = e.File;
+        if (file == null) return;
+        
+        if (!file.ContentType.StartsWith("image/"))
+        {
+            fotoError = "Solo se permiten imágenes";
+            return;
+        }
+        
+        if (file.Size > 2 * 1024 * 1024)
+        {
+            fotoError = "La imagen no puede superar 2MB";
+            return;
+        }
+        
+        isUploadingPhoto = true;
+        try
+        {
+            using var stream = file.OpenReadStream(2 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            pendingPhotoBase64 = Convert.ToBase64String(ms.ToArray());
+            pendingPhotoContentType = file.ContentType;
+            fotoPreviewUrl = $"data:{file.ContentType};base64,{pendingPhotoBase64}";
+            
+            // Upload immediately
+            var storagePath = $"empleados/{empleado.Codigo}_foto";
+            var result = await Firebase.UploadFileBase64Async(storagePath, pendingPhotoBase64, pendingPhotoContentType);
+            if (result.Success)
+            {
+                empleado.FotoPath = storagePath;
+                fotoPreviewUrl = await Firebase.GetStorageUrlAsync(storagePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            fotoError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isUploadingPhoto = false;
+        }
+    }
+    
+    private async Task RemoverFoto()
+    {
+        if (!string.IsNullOrEmpty(empleado.FotoPath))
+        {
+            try
+            {
+                await Firebase.DeleteStorageFileAsync(empleado.FotoPath);
+            }
+            catch { /* ignore */ }
+        }
+        empleado.FotoPath = null;
+        fotoPreviewUrl = null;
+        pendingPhotoBase64 = null;
+    }
+    
+    private async Task HandleDocSelected(InputFileChangeEventArgs e, TipoDocumentoEmpleado tipo)
+    {
+        docError = null;
+        var file = e.File;
+        if (file == null) return;
+        
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            docError = "El archivo no puede superar 5MB";
+            return;
+        }
+        
+        try
+        {
+            using var stream = file.OpenReadStream(5 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var base64 = Convert.ToBase64String(ms.ToArray());
+            
+            pendingDocs[tipo] = (file.Name, base64, file.ContentType);
+            UpdateDocName(tipo, file.Name);
+        }
+        catch (Exception ex)
+        {
+            docError = $"Error al cargar archivo: {ex.Message}";
+        }
+    }
+    
+    private void RemoveDoc(TipoDocumentoEmpleado tipo)
+    {
+        pendingDocs.Remove(tipo);
+        UpdateDocName(tipo, null);
+    }
+    
+    private void UpdateDocName(TipoDocumentoEmpleado tipo, string? name)
+    {
+        switch (tipo)
+        {
+            case TipoDocumentoEmpleado.Cedula:
+                docCedulaName = name;
+                break;
+            case TipoDocumentoEmpleado.HojaVida:
+                docHojaVidaName = name;
+                break;
+            case TipoDocumentoEmpleado.ContratoFirmado:
+                docContratoName = name;
+                break;
+            case TipoDocumentoEmpleado.CertificadoBancario:
+                docCertBancarioName = name;
+                break;
+        }
+    }
+    
+    private async Task UploadPendingDocsAsync()
+    {
+        foreach (var (tipo, doc) in pendingDocs)
+        {
+            try
+            {
+                var ext = Path.GetExtension(doc.Name);
+                var storagePath = $"empleados/{empleado.Codigo}/docs/{tipo}{ext}";
+                await Firebase.UploadFileBase64Async(storagePath, doc.Base64, doc.ContentType);
+            }
+            catch { /* continue with others */ }
+        }
+        pendingDocs.Clear();
+    }
+    
+    private async Task OnVerDocumentosClick()
+    {
+        if (empleado.Id > 0 && OnVerDocumentos.HasDelegate)
+        {
+            await OnVerDocumentos.InvokeAsync(empleado.Id);
+        }
+    }
+}

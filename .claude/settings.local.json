@@ -37,7 +37,8 @@
       "Bash(taskkill:*)",
       "Bash(find:*)",
       "Bash(dotnet clean:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(dotnet restore:*)"
     ],
     "deny": [],
     "ask": []

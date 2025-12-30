@@ -1,3 +1,4 @@
+#if !BROWSER
 using Google.Cloud.Firestore;
 using Microsoft.Extensions.Logging;
 using SGRRHH.Core.Entities;
@@ -540,3 +541,4 @@ public abstract class FirestoreRepository<T> : IFirestoreRepository<T>, IReposit
 
     #endregion
 }
+#endif

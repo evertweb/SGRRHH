@@ -1,0 +1,584 @@
+@* Formulario de Contrato - Crear/Editar *@
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Enums
+@using SGRRHH.Core.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@using SGRRHH.Web.Client
+
+<div class="contrato-form">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="legacy-alert legacy-alert-error">
+            @errorMessage
+        </div>
+    }
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label required">Empleado</label>
+        <select class="legacy-form-input" @bind="contrato.EmpleadoId" disabled="@isEditing">
+            <option value="0">-- Seleccione empleado --</option>
+            @foreach (var emp in empleados ?? Enumerable.Empty<Empleado>())
+            {
+                <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+            }
+        </select>
+        @if (!string.IsNullOrEmpty(empleadoError))
+        {
+            <div class="legacy-validation-error">@empleadoError</div>
+        }
+    </div>
+
+    <div class="legacy-form-row">
+        <div class="legacy-form-group" style="flex: 1;">
+            <label class="legacy-form-label required">Tipo de Contrato</label>
+            <select class="legacy-form-input" @bind="contrato.TipoContrato" @bind:after="OnTipoContratoChanged">
+                <option value="@TipoContrato.Indefinido">Indefinido</option>
+                <option value="@TipoContrato.Fijo">Termino Fijo</option>
+                <option value="@TipoContrato.ObraLabor">Obra o Labor</option>
+                <option value="@TipoContrato.PrestacionServicios">Prestacion de Servicios</option>
+                <option value="@TipoContrato.Aprendizaje">Aprendizaje</option>
+            </select>
+        </div>
+
+        <div class="legacy-form-group" style="flex: 1;">
+            <label class="legacy-form-label required">Cargo</label>
+            <select class="legacy-form-input" @bind="contrato.CargoId">
+                <option value="0">-- Seleccione cargo --</option>
+                @foreach (var cargo in cargos ?? Enumerable.Empty<Cargo>())
+                {
+                    <option value="@cargo.Id">@cargo.Nombre</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="legacy-form-row">
+        <div class="legacy-form-group" style="flex: 1;">
+            <label class="legacy-form-label required">Fecha Inicio</label>
+            <input type="date" class="legacy-form-input"
+                   value="@FormatDate(contrato.FechaInicio)"
+                   @onchange="e => contrato.FechaInicio = ParseDate(e.Value?.ToString())" />
+        </div>
+
+        <div class="legacy-form-group" style="flex: 1;">
+            <label class="legacy-form-label">Fecha Fin</label>
+            <input type="date" class="legacy-form-input"
+                   value="@FormatDate(contrato.FechaFin)"
+                   @onchange="e => contrato.FechaFin = ParseDateNullable(e.Value?.ToString())"
+                   disabled="@(contrato.TipoContrato == TipoContrato.Indefinido)" />
+            <div class="legacy-form-hint">
+                @if (contrato.TipoContrato == TipoContrato.Indefinido)
+                {
+                    <span>No aplica para contratos indefinidos</span>
+                }
+                else
+                {
+                    <span>Dejar vacio para contratos indefinidos</span>
+                }
+            </div>
+            @if (!string.IsNullOrEmpty(fechaError))
+            {
+                <div class="legacy-validation-error">@fechaError</div>
+            }
+        </div>
+    </div>
+
+    <div class="legacy-form-row">
+        <div class="legacy-form-group" style="width: 180px;">
+            <label class="legacy-form-label required">Salario Mensual</label>
+            <div class="salary-input-wrapper">
+                <span class="currency-symbol">$</span>
+                <input type="number" class="legacy-form-input salary-input"
+                       @bind="contrato.Salario"
+                       min="0"
+                       step="1000" />
+            </div>
+            @if (!string.IsNullOrEmpty(salarioError))
+            {
+                <div class="legacy-validation-error">@salarioError</div>
+            }
+        </div>
+
+        @if (isEditing)
+        {
+            <div class="legacy-form-group" style="width: 150px;">
+                <label class="legacy-form-label">Estado</label>
+                <select class="legacy-form-input" @bind="contrato.Estado">
+                    <option value="@EstadoContrato.Activo">Activo</option>
+                    <option value="@EstadoContrato.Finalizado">Finalizado</option>
+                    <option value="@EstadoContrato.Renovado">Renovado</option>
+                    <option value="@EstadoContrato.Cancelado">Cancelado</option>
+                </select>
+            </div>
+        }
+
+        @* Informacion de periodo de prueba *@
+        <div class="legacy-form-group" style="flex: 1;">
+            <label class="legacy-form-label">Periodo de Prueba</label>
+            <div class="trial-info">
+                @{
+                    var finPrueba = GetFinPeriodoPrueba();
+                }
+                @if (finPrueba.HasValue)
+                {
+                    <span class="trial-date">Finaliza: @finPrueba.Value.ToString("dd/MM/yyyy")</span>
+                    @if (DateTime.Today <= finPrueba.Value && contrato.Estado == EstadoContrato.Activo)
+                    {
+                        <span class="trial-badge">EN PRUEBA</span>
+                    }
+                }
+                else
+                {
+                    <span class="trial-na">No aplica</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">Observaciones</label>
+        <textarea class="legacy-form-textarea" @bind="contrato.Observaciones" rows="2" placeholder="Observaciones del contrato"></textarea>
+    </div>
+
+    @* Archivo Adjunto (PDF o Imagenes) *@
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">Archivo del Contrato (PDF o Imagen)</label>
+        @if (isUploadingFile)
+        {
+            <div class="upload-progress">
+                <span class="spinner"></span>
+                <span>Subiendo archivo...</span>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(archivoAdjuntoPath) || !string.IsNullOrEmpty(contrato.ArchivoAdjuntoPath))
+        {
+            <div class="file-attached">
+                <span class="file-icon">@GetFileIcon()</span>
+                <span class="file-name">@GetFileName()</span>
+                <div class="file-actions">
+                    <button type="button" class="legacy-button-small" @onclick="VerArchivo">Ver</button>
+                    <button type="button" class="legacy-button-small legacy-button-danger" @onclick="RemoverArchivo">Quitar</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <InputFile OnChange="HandleFileSelected" accept=".pdf,.jpg,.jpeg,.png" class="legacy-form-input" />
+            <div class="legacy-form-hint">Formatos: PDF, JPG, PNG. Maximo 10MB</div>
+        }
+        @if (!string.IsNullOrEmpty(archivoError))
+        {
+            <div class="legacy-validation-error">@archivoError</div>
+        }
+    </div>
+
+    @* Vista previa de imagen *@
+    @if (showImagePreview && !string.IsNullOrEmpty(imagePreviewUrl))
+    {
+        <div class="image-preview-container">
+            <label class="legacy-form-label">Vista Previa</label>
+            <img src="@imagePreviewUrl" alt="Vista previa del contrato" class="image-preview" />
+        </div>
+    }
+</div>
+
+@code {
+    // Constants
+    private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10MB
+    private static readonly string[] AllowedExtensions = { ".pdf", ".jpg", ".jpeg", ".png" };
+    private static readonly string[] ImageExtensions = { ".jpg", ".jpeg", ".png" };
+
+    [Parameter]
+    public Contrato? ContratoEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<Contrato> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    /// <summary>
+    /// Si es true, el form solo valida pero NO guarda. Util para renovacion donde
+    /// el servicio RenovarContratoAsync maneja la creacion del nuevo contrato.
+    /// </summary>
+    [Parameter]
+    public bool SkipSave { get; set; } = false;
+
+    [Inject]
+    public IContratoRepository ContratoRepo { get; set; } = default!;
+
+    [Inject]
+    public IEmpleadoRepository EmpleadoRepo { get; set; } = default!;
+
+    [Inject]
+    public ICargoRepository CargoRepo { get; set; } = default!;
+
+    [Inject]
+    public FirebaseJsInterop Firebase { get; set; } = default!;
+
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; } = default!;
+
+    private Contrato contrato = new();
+    private IEnumerable<Empleado>? empleados;
+    private IEnumerable<Cargo>? cargos;
+    private bool isEditing = false;
+    private string? errorMessage;
+    private string? empleadoError;
+    private string? fechaError;
+    private string? salarioError;
+    private string? archivoError;
+    private bool isSaving = false;
+    private bool isUploadingFile = false;
+    private string? archivoAdjuntoPath;
+    private string? pendingBase64Data;
+    private string? pendingContentType;
+    private IBrowserFile? selectedFile;
+    private bool showImagePreview = false;
+    private string? imagePreviewUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar catalogos
+        try
+        {
+            empleados = await EmpleadoRepo.GetAllActiveAsync();
+            cargos = await CargoRepo.GetAllActiveAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando catalogos: {ex.Message}");
+        }
+
+        if (ContratoEdit != null)
+        {
+            // Solo es edicion si tiene un Id existente (>0)
+            // Si Id = 0, es un nuevo contrato con datos precargados (ej: renovacion)
+            isEditing = ContratoEdit.Id > 0;
+            contrato = new Contrato
+            {
+                Id = ContratoEdit.Id,
+                EmpleadoId = ContratoEdit.EmpleadoId,
+                TipoContrato = ContratoEdit.TipoContrato,
+                FechaInicio = ContratoEdit.FechaInicio,
+                FechaFin = ContratoEdit.FechaFin,
+                Salario = ContratoEdit.Salario,
+                CargoId = ContratoEdit.CargoId,
+                Estado = ContratoEdit.Estado,
+                Observaciones = ContratoEdit.Observaciones,
+                Activo = ContratoEdit.Activo,
+                FechaCreacion = ContratoEdit.FechaCreacion
+            };
+            contrato.SetFirestoreDocumentId(ContratoEdit.GetFirestoreDocumentId() ?? "");
+            archivoAdjuntoPath = ContratoEdit.ArchivoAdjuntoPath;
+        }
+        else
+        {
+            isEditing = false;
+            contrato = new Contrato
+            {
+                Activo = true,
+                Estado = EstadoContrato.Activo,
+                FechaInicio = DateTime.Today,
+                TipoContrato = TipoContrato.Indefinido,
+                Salario = 0
+            };
+        }
+    }
+
+    private string FormatDate(DateTime date) => date.ToString("yyyy-MM-dd");
+    private string FormatDate(DateTime? date) => date?.ToString("yyyy-MM-dd") ?? "";
+
+    private DateTime ParseDate(string? value)
+    {
+        if (DateTime.TryParse(value, out var date)) return date;
+        return DateTime.Today;
+    }
+
+    private DateTime? ParseDateNullable(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return null;
+        return DateTime.TryParse(value, out var date) ? date : null;
+    }
+
+    private void OnTipoContratoChanged()
+    {
+        // Si es indefinido, limpiar fecha fin
+        if (contrato.TipoContrato == TipoContrato.Indefinido)
+        {
+            contrato.FechaFin = null;
+        }
+        else if (!contrato.FechaFin.HasValue)
+        {
+            // Sugerir fecha fin de 1 año
+            contrato.FechaFin = contrato.FechaInicio.AddYears(1);
+        }
+    }
+
+    // Periodo de prueba segun ley colombiana
+    private DateTime? GetFinPeriodoPrueba()
+    {
+        switch (contrato.TipoContrato)
+        {
+            case TipoContrato.Indefinido:
+                return contrato.FechaInicio.AddMonths(2);
+
+            case TipoContrato.Fijo:
+                if (contrato.FechaFin.HasValue)
+                {
+                    var duracionDias = (contrato.FechaFin.Value - contrato.FechaInicio).Days;
+                    if (duracionDias >= 365)
+                    {
+                        return contrato.FechaInicio.AddMonths(2);
+                    }
+                    else
+                    {
+                        var diasPrueba = Math.Min(duracionDias / 5, 60);
+                        return contrato.FechaInicio.AddDays(diasPrueba);
+                    }
+                }
+                return contrato.FechaInicio.AddMonths(2);
+
+            case TipoContrato.Aprendizaje:
+                return contrato.FechaInicio.AddMonths(1);
+
+            default:
+                return null;
+        }
+    }
+
+    public async Task<bool> ValidateAndSaveAsync()
+    {
+        if (isSaving) return false;
+
+        isSaving = true;
+        errorMessage = null;
+        empleadoError = null;
+        fechaError = null;
+        salarioError = null;
+
+        try
+        {
+            // Validaciones
+            if (contrato.EmpleadoId <= 0)
+            {
+                empleadoError = "Debe seleccionar un empleado";
+                return false;
+            }
+
+            if (contrato.CargoId <= 0)
+            {
+                errorMessage = "Debe seleccionar un cargo";
+                return false;
+            }
+
+            if (contrato.FechaFin.HasValue && contrato.FechaFin < contrato.FechaInicio)
+            {
+                fechaError = "La fecha fin no puede ser anterior a la fecha inicio";
+                return false;
+            }
+
+            if (contrato.Salario < 0)
+            {
+                salarioError = "El salario no puede ser negativo";
+                return false;
+            }
+
+            if (contrato.Salario == 0)
+            {
+                salarioError = "El salario debe ser mayor a cero";
+                return false;
+            }
+
+            // Si SkipSave es true, solo validamos y llamamos a OnSave sin guardar
+            // Esto es util para renovacion donde el servicio maneja la creacion
+            if (SkipSave)
+            {
+                await OnSave.InvokeAsync(contrato);
+                return true;
+            }
+
+            // Guardar contrato
+            if (isEditing)
+            {
+                contrato.FechaModificacion = DateTime.Now;
+                await ContratoRepo.UpdateAsync(contrato);
+            }
+            else
+            {
+                contrato.FechaCreacion = DateTime.Now;
+                await ContratoRepo.AddAsync(contrato);
+            }
+
+            // Upload file if pending
+            if (selectedFile != null && !string.IsNullOrEmpty(pendingBase64Data))
+            {
+                var extension = Path.GetExtension(selectedFile.Name).ToLowerInvariant();
+                var storagePath = $"contratos/{contrato.Id}_{DateTime.Now:yyyyMMdd_HHmmss}{extension}";
+                var contentType = pendingContentType ?? GetContentType(extension);
+
+                var result = await Firebase.UploadFileBase64Async(storagePath, pendingBase64Data, contentType);
+                if (result.Success)
+                {
+                    contrato.ArchivoAdjuntoPath = storagePath;
+                    await ContratoRepo.UpdateAsync(contrato);
+                }
+                else
+                {
+                    Console.WriteLine($"Error subiendo archivo: {result.ErrorMessage}");
+                }
+            }
+
+            await OnSave.InvokeAsync(contrato);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar: {ex.Message}";
+            Console.WriteLine($"Error guardando contrato: {ex}");
+            return false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    public bool IsSaving => isSaving;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        archivoError = null;
+        showImagePreview = false;
+        imagePreviewUrl = null;
+
+        var file = e.File;
+
+        if (file == null) return;
+
+        // Validate extension
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+        if (!AllowedExtensions.Contains(extension))
+        {
+            archivoError = $"Formato no permitido. Use: {string.Join(", ", AllowedExtensions)}";
+            return;
+        }
+
+        // Validate size
+        if (file.Size > MaxFileSizeBytes)
+        {
+            archivoError = $"El archivo no puede superar 10MB. Tamaño actual: {file.Size / 1024 / 1024:N1}MB";
+            return;
+        }
+
+        isUploadingFile = true;
+        StateHasChanged();
+
+        try
+        {
+            selectedFile = file;
+            using var stream = file.OpenReadStream(MaxFileSizeBytes);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+            pendingBase64Data = Convert.ToBase64String(bytes);
+            pendingContentType = file.ContentType;
+            archivoAdjuntoPath = file.Name;
+
+            // Show image preview if it's an image
+            if (ImageExtensions.Contains(extension))
+            {
+                imagePreviewUrl = $"data:{file.ContentType};base64,{pendingBase64Data}";
+                showImagePreview = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            archivoError = $"Error leyendo archivo: {ex.Message}";
+        }
+        finally
+        {
+            isUploadingFile = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VerArchivo()
+    {
+        var path = archivoAdjuntoPath ?? contrato.ArchivoAdjuntoPath;
+        if (string.IsNullOrEmpty(path)) return;
+
+        try
+        {
+            // If it's a pending local file with base64 data
+            if (selectedFile != null && !string.IsNullOrEmpty(pendingBase64Data))
+            {
+                var extension = Path.GetExtension(selectedFile.Name).ToLowerInvariant();
+                var contentType = pendingContentType ?? GetContentType(extension);
+                var dataUrl = $"data:{contentType};base64,{pendingBase64Data}";
+                await JSRuntime.InvokeVoidAsync("open", dataUrl, "_blank");
+                return;
+            }
+
+            // Otherwise, get URL from Firebase Storage
+            var url = await Firebase.GetStorageUrlAsync(path);
+            if (!string.IsNullOrEmpty(url))
+            {
+                await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error abriendo archivo: {ex.Message}");
+        }
+    }
+
+    private void RemoverArchivo()
+    {
+        selectedFile = null;
+        pendingBase64Data = null;
+        pendingContentType = null;
+        archivoAdjuntoPath = null;
+        contrato.ArchivoAdjuntoPath = null;
+        showImagePreview = false;
+        imagePreviewUrl = null;
+    }
+
+    private string GetFileIcon()
+    {
+        var path = archivoAdjuntoPath ?? contrato.ArchivoAdjuntoPath ?? "";
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+
+        return extension switch
+        {
+            ".pdf" => "📄",
+            ".jpg" or ".jpeg" or ".png" => "🖼️",
+            _ => "📎"
+        };
+    }
+
+    private string GetFileName()
+    {
+        var path = archivoAdjuntoPath ?? contrato.ArchivoAdjuntoPath ?? "";
+
+        // If it's a Firebase storage path, extract just the filename
+        if (path.StartsWith("contratos/"))
+        {
+            var parts = path.Split('/');
+            return parts.Length > 1 ? parts[^1] : path;
+        }
+
+        return path;
+    }
+
+    private string GetContentType(string extension)
+    {
+        return extension.ToLowerInvariant() switch
+        {
+            ".pdf" => "application/pdf",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            _ => "application/octet-stream"
+        };
+    }
+}

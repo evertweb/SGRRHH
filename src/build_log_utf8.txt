@@ -1,0 +1,23 @@
+﻿  Determining projects to restore...
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Infrastructure\SGRRHH.Infrastructure.csproj : error NU1605: Warning As Error: Detected package downgrade: Microsoft.Extensions.Options from 8.0.2 to 8.0.0. Reference the package directly from the project to select a different version.  [C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj]
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Infrastructure\SGRRHH.Infrastructure.csproj : error NU1605:  SGRRHH.Infrastructure -> Microsoft.Extensions.Caching.Memory 8.0.1 -> Microsoft.Extensions.Options (>= 8.0.2)  [C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj]
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Infrastructure\SGRRHH.Infrastructure.csproj : error NU1605:  SGRRHH.Infrastructure -> Microsoft.Extensions.Options (>= 8.0.0) [C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj]
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj : error NU1605: Warning As Error: Detected package downgrade: Microsoft.Extensions.Configuration.Binder from 8.0.2 to 8.0.0. Reference the package directly from the project to select a different version. 
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj : error NU1605:  SGRRHH.Web -> Microsoft.AspNetCore.Components.WebAssembly 8.0.22 -> Microsoft.Extensions.Configuration.Binder (>= 8.0.2) 
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj : error NU1605:  SGRRHH.Web -> Microsoft.Extensions.Configuration.Binder (>= 8.0.0)
+  Failed to restore C:\Users\evert\Documents\rrhh\src\SGRRHH.Infrastructure\SGRRHH.Infrastructure.csproj (in 446 ms).
+  Failed to restore C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj (in 451 ms).
+  2 of 4 projects are up-to-date for restore.
+
+Build FAILED.
+
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Infrastructure\SGRRHH.Infrastructure.csproj : error NU1605: Warning As Error: Detected package downgrade: Microsoft.Extensions.Options from 8.0.2 to 8.0.0. Reference the package directly from the project to select a different version.  [C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj]
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Infrastructure\SGRRHH.Infrastructure.csproj : error NU1605:  SGRRHH.Infrastructure -> Microsoft.Extensions.Caching.Memory 8.0.1 -> Microsoft.Extensions.Options (>= 8.0.2)  [C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj]
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Infrastructure\SGRRHH.Infrastructure.csproj : error NU1605:  SGRRHH.Infrastructure -> Microsoft.Extensions.Options (>= 8.0.0) [C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj]
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj : error NU1605: Warning As Error: Detected package downgrade: Microsoft.Extensions.Configuration.Binder from 8.0.2 to 8.0.0. Reference the package directly from the project to select a different version. 
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj : error NU1605:  SGRRHH.Web -> Microsoft.AspNetCore.Components.WebAssembly 8.0.22 -> Microsoft.Extensions.Configuration.Binder (>= 8.0.2) 
+C:\Users\evert\Documents\rrhh\src\SGRRHH.Web\SGRRHH.Web.csproj : error NU1605:  SGRRHH.Web -> Microsoft.Extensions.Configuration.Binder (>= 8.0.0)
+    0 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:01.28

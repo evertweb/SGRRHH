@@ -1,3 +1,4 @@
+#if !BROWSER
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
@@ -238,3 +239,4 @@ public class FirebaseInitializer : IDisposable
         _disposed = true;
     }
 }
+#endif

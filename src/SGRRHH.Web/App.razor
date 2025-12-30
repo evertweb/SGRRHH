@@ -1,0 +1,73 @@
+﻿@using SGRRHH.Web.Client
+@inject FirebaseJsInterop Firebase
+@inject FirebaseWebConfig FirebaseConfig
+
+@if (_isInitialized)
+{
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <p role="alert">Sorry, there's nothing at this address.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+}
+else if (_hasError)
+{
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #C0C0C0; font-family: 'Courier New', monospace;">
+        <div style="border: 2px outset white; padding: 20px; background: #C0C0C0; box-shadow: 2px 2px 0 black; max-width: 400px;">
+            <div style="background: #800000; color: white; padding: 2px 5px; font-weight: bold; margin-bottom: 10px;">
+                Error de Inicializacion
+            </div>
+            <div style="font-size: 13px; color: #800000;">
+                @_errorMessage
+            </div>
+            <button onclick="location.reload()" style="margin-top: 15px; padding: 5px 15px; cursor: pointer;">
+                Reintentar
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #C0C0C0; font-family: 'Courier New', monospace;">
+        <div style="border: 2px outset white; padding: 20px; background: #C0C0C0; box-shadow: 2px 2px 0 black;">
+            <div style="background: navy; color: white; padding: 2px 5px; font-weight: bold; margin-bottom: 10px;">
+                SGRRHH - Iniciando...
+            </div>
+            <div style="font-size: 13px;">
+                Conectando con Firebase...<br />
+                Por favor espere.
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isInitialized = false;
+    private bool _hasError = false;
+    private string _errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (!Firebase.IsInitialized)
+            {
+                await Firebase.InitializeAsync(FirebaseConfig);
+            }
+            _isInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            _hasError = true;
+            _errorMessage = $"No se pudo conectar con Firebase: {ex.Message}";
+            Console.WriteLine($"Firebase initialization error: {ex}");
+        }
+    }
+}

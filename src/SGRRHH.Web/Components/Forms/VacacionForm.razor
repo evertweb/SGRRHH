@@ -1,0 +1,284 @@
+@* Formulario de Vacaciones - Crear/Editar *@
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Enums
+@using SGRRHH.Core.Interfaces
+
+<div class="vacacion-form">
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="legacy-alert legacy-alert-error">
+            @errorMessage
+        </div>
+    }
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label required">Empleado</label>
+        <select class="legacy-form-input" @bind="vacacion.EmpleadoId" disabled="@isEditing">
+            <option value="0">-- Seleccione empleado --</option>
+            @foreach (var emp in empleados ?? Enumerable.Empty<Empleado>())
+            {
+                <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto (@emp.Antiguedad años)</option>
+            }
+        </select>
+        @if (!string.IsNullOrEmpty(empleadoError))
+        {
+            <div class="legacy-validation-error">@empleadoError</div>
+        }
+    </div>
+
+    <div class="legacy-form-row">
+        <div class="legacy-form-group" style="flex: 1;">
+            <label class="legacy-form-label required">Fecha Inicio</label>
+            <input type="date" class="legacy-form-input" 
+                   value="@FormatDate(vacacion.FechaInicio)"
+                   @onchange="e => { vacacion.FechaInicio = ParseDate(e.Value?.ToString()); CalculateDays(); }" />
+        </div>
+
+        <div class="legacy-form-group" style="flex: 1;">
+            <label class="legacy-form-label required">Fecha Fin</label>
+            <input type="date" class="legacy-form-input" 
+                   value="@FormatDate(vacacion.FechaFin)"
+                   @onchange="e => { vacacion.FechaFin = ParseDate(e.Value?.ToString()); CalculateDays(); }" />
+            @if (!string.IsNullOrEmpty(fechaError))
+            {
+                <div class="legacy-validation-error">@fechaError</div>
+            }
+        </div>
+
+        <div class="legacy-form-group" style="width: 80px;">
+            <label class="legacy-form-label">Días</label>
+            <input type="number" class="legacy-form-input days-display" 
+                   value="@vacacion.DiasTomados" readonly disabled />
+        </div>
+
+        <div class="legacy-form-group" style="width: 100px;">
+            <label class="legacy-form-label required">Período</label>
+            <input type="number" class="legacy-form-input" 
+                   @bind="vacacion.PeriodoCorrespondiente"
+                   min="2000"
+                   max="2100"
+                   placeholder="Año" />
+            <div class="legacy-form-hint">Año laboral</div>
+        </div>
+    </div>
+
+    <div class="legacy-form-group">
+        <label class="legacy-form-label">Observaciones</label>
+        <textarea class="legacy-form-textarea" @bind="vacacion.Observaciones" rows="2" placeholder="Observaciones adicionales"></textarea>
+    </div>
+
+    @if (isEditing && vacacion.Estado != EstadoVacacion.Pendiente)
+    {
+        <fieldset class="legacy-fieldset">
+            <legend>Estado de la Solicitud</legend>
+            <div class="legacy-form-row">
+                <div class="legacy-form-group" style="flex: 1;">
+                    <label class="legacy-form-label">Estado</label>
+                    <span class="status-badge @GetStatusClass(vacacion.Estado)">
+                        @GetEstadoLabel(vacacion.Estado)
+                    </span>
+                </div>
+                @if (vacacion.FechaAprobacion.HasValue)
+                {
+                    <div class="legacy-form-group" style="flex: 1;">
+                        <label class="legacy-form-label">Fecha Respuesta</label>
+                        <span>@vacacion.FechaAprobacion?.ToString("dd/MM/yyyy")</span>
+                    </div>
+                }
+            </div>
+            @if (!string.IsNullOrEmpty(vacacion.MotivoRechazo))
+            {
+                <div class="legacy-form-group">
+                    <label class="legacy-form-label">Motivo Rechazo</label>
+                    <span style="color: #c62828;">@vacacion.MotivoRechazo</span>
+                </div>
+            }
+        </fieldset>
+    }
+</div>
+
+
+@code {
+
+    [Parameter]
+    public Vacacion? VacacionEdit { get; set; }
+
+    [Parameter]
+    public EventCallback<Vacacion> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Inject]
+    public IVacacionService VacacionService { get; set; } = default!;
+
+    [Inject]
+    public IEmpleadoRepository EmpleadoRepo { get; set; } = default!;
+    
+    [Inject]
+    public IDateCalculationService DateService { get; set; } = default!;
+
+    private Vacacion vacacion = new();
+    private IEnumerable<Empleado>? empleados;
+    private bool isEditing = false;
+    private string? errorMessage;
+    private string? empleadoError;
+    private string? fechaError;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            empleados = await EmpleadoRepo.GetAllActiveAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando empleados: {ex.Message}");
+        }
+
+        if (VacacionEdit != null)
+        {
+            isEditing = true;
+            vacacion = new Vacacion
+            {
+                Id = VacacionEdit.Id,
+                EmpleadoId = VacacionEdit.EmpleadoId,
+                FechaInicio = VacacionEdit.FechaInicio,
+                FechaFin = VacacionEdit.FechaFin,
+                DiasTomados = VacacionEdit.DiasTomados,
+                PeriodoCorrespondiente = VacacionEdit.PeriodoCorrespondiente,
+                Estado = VacacionEdit.Estado,
+                Observaciones = VacacionEdit.Observaciones,
+                FechaSolicitud = VacacionEdit.FechaSolicitud,
+                FechaAprobacion = VacacionEdit.FechaAprobacion,
+                MotivoRechazo = VacacionEdit.MotivoRechazo,
+                Activo = VacacionEdit.Activo,
+                FechaCreacion = VacacionEdit.FechaCreacion
+            };
+            vacacion.SetFirestoreDocumentId(VacacionEdit.GetFirestoreDocumentId() ?? "");
+        }
+        else
+        {
+            isEditing = false;
+            vacacion = new Vacacion 
+            { 
+                Activo = true,
+                Estado = EstadoVacacion.Pendiente,
+                FechaInicio = DateTime.Today.AddDays(14), // 2 weeks from now
+                FechaFin = DateTime.Today.AddDays(28), // 4 weeks from now
+                FechaSolicitud = DateTime.Now,
+                PeriodoCorrespondiente = DateTime.Today.Year,
+                DiasTomados = 15
+            };
+        }
+    }
+
+    private void CalculateDays()
+    {
+        if (vacacion.FechaFin >= vacacion.FechaInicio)
+        {
+            // Use business days calculation (excluding weekends AND Colombian holidays)
+            vacacion.DiasTomados = DateService.CalcularDiasHabilesSinFestivos(vacacion.FechaInicio, vacacion.FechaFin);
+        }
+        else
+        {
+            vacacion.DiasTomados = 0;
+        }
+    }
+
+    private string FormatDate(DateTime date) => date.ToString("yyyy-MM-dd");
+    
+    private DateTime ParseDate(string? value)
+    {
+        if (DateTime.TryParse(value, out var date)) return date;
+        return DateTime.Today;
+    }
+
+    private string GetEstadoLabel(EstadoVacacion estado) => estado switch
+    {
+        EstadoVacacion.Pendiente => "Pendiente",
+        EstadoVacacion.Aprobada => "Aprobada",
+        EstadoVacacion.Rechazada => "Rechazada",
+        EstadoVacacion.Programada => "Programada",
+        EstadoVacacion.Disfrutada => "Disfrutada",
+        EstadoVacacion.Cancelada => "Cancelada",
+        _ => "Desconocido"
+    };
+
+    private string GetStatusClass(EstadoVacacion estado) => estado switch
+    {
+        EstadoVacacion.Pendiente => "status-pending",
+        EstadoVacacion.Aprobada or EstadoVacacion.Programada => "status-active",
+        EstadoVacacion.Disfrutada => "status-success",
+        EstadoVacacion.Rechazada or EstadoVacacion.Cancelada => "status-danger",
+        _ => ""
+    };
+
+    public async Task<bool> ValidateAndSaveAsync()
+    {
+        if (isSaving) return false;
+        
+        isSaving = true;
+        errorMessage = null;
+        empleadoError = null;
+        fechaError = null;
+
+        try
+        {
+            if (vacacion.EmpleadoId <= 0)
+            {
+                empleadoError = "Debe seleccionar un empleado";
+                return false;
+            }
+
+            if (vacacion.FechaFin < vacacion.FechaInicio)
+            {
+                fechaError = "La fecha fin no puede ser anterior a la fecha inicio";
+                return false;
+            }
+
+            if (vacacion.DiasTomados <= 0)
+            {
+                fechaError = "Debe solicitar al menos 1 día";
+                return false;
+            }
+
+            // Use service for create/update - includes business validations
+            if (isEditing)
+            {
+                var result = await VacacionService.UpdateAsync(vacacion);
+                if (!result.Success)
+                {
+                    errorMessage = result.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                var result = await VacacionService.CreateAsync(vacacion);
+                if (!result.Success)
+                {
+                    errorMessage = result.Message;
+                    return false;
+                }
+                vacacion = result.Data!; // Get the saved entity with ID
+            }
+
+            await OnSave.InvokeAsync(vacacion);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar: {ex.Message}";
+            Console.WriteLine($"Error guardando vacación: {ex}");
+            return false;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    public bool IsSaving => isSaving;
+}

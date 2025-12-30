@@ -1,0 +1,396 @@
+@page "/documentos"
+@page "/documentos/{EmpleadoIdParam:int}"
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Enums
+@using SGRRHH.Core.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@inject IDocumentoEmpleadoRepository DocumentoRepo
+@inject IEmpleadoRepository EmpleadoRepo
+@inject AppStateService AppState
+@inject IJSRuntime JS
+@inject FirebaseJsInterop Firebase
+
+<div class="module-container">
+    <div class="module-toolbar">
+        <label>Empleado:</label>
+        <select class="legacy-input" style="width: 250px;" @bind="selectedEmpleadoId" @bind:after="LoadDocumentos">
+            <option value="0">-- Seleccionar Empleado --</option>
+            @foreach (var emp in empleados)
+            {
+                <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+            }
+        </select>
+        <button class="legacy-button" @onclick="LoadDocumentos" disabled="@isLoading">
+            @(isLoading ? "..." : "Actualizar")
+        </button>
+
+        @if (selectedEmpleadoId > 0 && AppState.CanApprove)
+        {
+            <button class="legacy-button legacy-button-primary" @onclick="ShowUploadModal">+ Subir Documento</button>
+        }
+    </div>
+
+    @* Mensaje de exito *@
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="legacy-alert legacy-alert-success">@successMessage</div>
+    }
+
+    @* Contenido principal *@
+    @if (selectedEmpleadoId == 0)
+    {
+        <div class="placeholder-content">
+            <div class="placeholder-icon">Documentos</div>
+            <h3>Gestion de Documentos</h3>
+            <p>Seleccione un empleado para ver sus documentos.</p>
+        </div>
+    }
+    else if (isLoading)
+    {
+        <div class="loading-indicator">Cargando documentos...</div>
+    }
+    else if (!documentos.Any())
+    {
+        <div class="empty-state">
+            <p>No hay documentos registrados para este empleado.</p>
+            @if (AppState.CanApprove)
+            {
+                <button class="legacy-button legacy-button-primary" @onclick="ShowUploadModal">+ Subir Primer Documento</button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="legacy-table">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Nombre</th>
+                        <th style="width: 100px;">Fecha Emision</th>
+                        <th style="width: 100px;">Vencimiento</th>
+                        <th style="width: 80px;">Estado</th>
+                        <th style="width: 150px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in documentos)
+                    {
+                        <tr class="@(doc.EstaVigente ? "" : "expired-row")">
+                            <td><span class="tipo-badge">@GetTipoNombre(doc.TipoDocumento)</span></td>
+                            <td><strong>@doc.Nombre</strong><br/><small class="text-muted">@doc.NombreArchivoOriginal</small></td>
+                            <td>@(doc.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")</td>
+                            <td>@(doc.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")</td>
+                            <td>
+                                @if (doc.EstaVigente)
+                                {
+                                    <span class="status-badge status-active">Vigente</span>
+                                }
+                                else
+                                {
+                                    <span class="status-badge status-expired">Vencido</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(doc.ArchivoPath))
+                                {
+                                    <button class="legacy-button-small" @onclick="() => DownloadDocument(doc)">Ver</button>
+                                }
+                                @if (AppState.IsAdmin)
+                                {
+                                    <button class="legacy-button-small legacy-button-danger" @onclick="() => DeleteDocument(doc)">Eliminar</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="module-footer">
+            Total: <strong>@documentos.Count()</strong> documentos
+        </div>
+    }
+</div>
+
+@* Upload Modal *@
+@if (showUploadModal)
+{
+    <div class="modal-backdrop">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Subir Documento</h3>
+                <button class="modal-close" @onclick="CloseUploadModal">x</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tipo de Documento:</label>
+                    <select class="legacy-input" @bind="uploadTipo">
+                        @foreach (TipoDocumentoEmpleado tipo in Enum.GetValues<TipoDocumentoEmpleado>())
+                        {
+                            <option value="@tipo">@GetTipoNombre(tipo)</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nombre:</label>
+                    <input type="text" class="legacy-input" @bind="uploadNombre" placeholder="Nombre del documento" />
+                </div>
+                <div class="form-group">
+                    <label>Descripcion:</label>
+                    <input type="text" class="legacy-input" @bind="uploadDescripcion" placeholder="Descripcion (opcional)" />
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Emision:</label>
+                    <input type="date" class="legacy-input" @bind="uploadFechaEmision" />
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Vencimiento (si aplica):</label>
+                    <input type="date" class="legacy-input" @bind="uploadFechaVencimiento" />
+                </div>
+                <div class="form-group">
+                    <label>Archivo:</label>
+                    <InputFile OnChange="OnFileSelected" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+                    @if (!string.IsNullOrEmpty(selectedFileName))
+                    {
+                        <small class="text-muted">Archivo seleccionado: @selectedFileName</small>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="legacy-button" @onclick="CloseUploadModal">Cancelar</button>
+                <button class="legacy-button legacy-button-primary" @onclick="UploadDocument" disabled="@isUploading">
+                    @(isUploading ? "Subiendo..." : "Subir Documento")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int EmpleadoIdParam { get; set; }
+
+    private List<Empleado> empleados = new();
+    private List<DocumentoEmpleado> documentos = new();
+    private int selectedEmpleadoId = 0;
+    private bool isLoading = false;
+    private string? successMessage;
+
+    // Upload Modal State
+    private bool showUploadModal = false;
+    private bool isUploading = false;
+    private TipoDocumentoEmpleado uploadTipo = TipoDocumentoEmpleado.Otro;
+    private string uploadNombre = "";
+    private string uploadDescripcion = "";
+    private DateTime? uploadFechaEmision;
+    private DateTime? uploadFechaVencimiento;
+    private string selectedFileName = "";
+    private byte[]? selectedFileBytes;
+    private string? selectedFileMime;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Documentos");
+        try
+        {
+            empleados = (await EmpleadoRepo.GetAllActiveAsync()).ToList();
+            if (EmpleadoIdParam > 0)
+            {
+                selectedEmpleadoId = EmpleadoIdParam;
+                await LoadDocumentos();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading employees: {ex.Message}");
+        }
+    }
+
+    private async Task LoadDocumentos()
+    {
+        if (selectedEmpleadoId == 0)
+        {
+            documentos.Clear();
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            documentos = (await DocumentoRepo.GetByEmpleadoIdAsync(selectedEmpleadoId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading documents: {ex.Message}");
+            documentos.Clear();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetTipoNombre(TipoDocumentoEmpleado tipo) => tipo switch
+    {
+        TipoDocumentoEmpleado.Cedula => "Cedula",
+        TipoDocumentoEmpleado.HojaVida => "Hoja de Vida",
+        TipoDocumentoEmpleado.CertificadoEstudios => "Certificado Estudios",
+        TipoDocumentoEmpleado.CertificadoLaboral => "Certificado Laboral",
+        TipoDocumentoEmpleado.ExamenMedicoIngreso => "Examen Medico Ingreso",
+        TipoDocumentoEmpleado.ExamenMedicoPeriodico => "Examen Medico Periodico",
+        TipoDocumentoEmpleado.ExamenMedicoEgreso => "Examen Medico Egreso",
+        TipoDocumentoEmpleado.AfiliacionEPS => "Afiliacion EPS",
+        TipoDocumentoEmpleado.AfiliacionAFP => "Afiliacion AFP",
+        TipoDocumentoEmpleado.AfiliacionARL => "Afiliacion ARL",
+        TipoDocumentoEmpleado.AfiliacionCajaCompensacion => "Caja Compensacion",
+        TipoDocumentoEmpleado.ReferenciasPersonales => "Referencias Personales",
+        TipoDocumentoEmpleado.ReferenciasLaborales => "Referencias Laborales",
+        TipoDocumentoEmpleado.Antecedentes => "Antecedentes",
+        TipoDocumentoEmpleado.LicenciaConduccion => "Licencia Conduccion",
+        TipoDocumentoEmpleado.LibretaMilitar => "Libreta Militar",
+        TipoDocumentoEmpleado.RUT => "RUT",
+        TipoDocumentoEmpleado.CertificadoBancario => "Certificado Bancario",
+        TipoDocumentoEmpleado.ActaEntregaDotacion => "Entrega Dotacion",
+        TipoDocumentoEmpleado.Capacitacion => "Capacitacion",
+        TipoDocumentoEmpleado.ContratoFirmado => "Contrato Firmado",
+        TipoDocumentoEmpleado.Foto => "Foto",
+        _ => "Otro"
+    };
+
+    private void ShowUploadModal()
+    {
+        uploadTipo = TipoDocumentoEmpleado.Otro;
+        uploadNombre = "";
+        uploadDescripcion = "";
+        uploadFechaEmision = DateTime.Today;
+        uploadFechaVencimiento = null;
+        selectedFileName = "";
+        selectedFileBytes = null;
+        showUploadModal = true;
+    }
+
+    private void CloseUploadModal()
+    {
+        showUploadModal = false;
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            selectedFileName = file.Name;
+            selectedFileMime = file.ContentType;
+
+            // Read file bytes (limit to 10MB)
+            using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            selectedFileBytes = ms.ToArray();
+
+            // Auto-fill name if empty
+            if (string.IsNullOrEmpty(uploadNombre))
+            {
+                uploadNombre = Path.GetFileNameWithoutExtension(file.Name);
+            }
+        }
+    }
+
+    private async Task UploadDocument()
+    {
+        if (string.IsNullOrWhiteSpace(uploadNombre) || selectedFileBytes == null)
+        {
+            return;
+        }
+
+        isUploading = true;
+        try
+        {
+            // Upload file to Firebase Storage
+            var storagePath = $"documentos/empleado_{selectedEmpleadoId}/{Guid.NewGuid()}_{selectedFileName}";
+            var base64Data = Convert.ToBase64String(selectedFileBytes);
+            var contentType = selectedFileMime ?? "application/octet-stream";
+
+            var uploadResult = await Firebase.UploadFileBase64Async(storagePath, base64Data, contentType);
+
+            if (!uploadResult.Success)
+            {
+                Console.WriteLine($"Error uploading to Storage: {uploadResult.ErrorMessage}");
+                return;
+            }
+
+            // Create document record with Storage URL
+            var documento = new DocumentoEmpleado
+            {
+                EmpleadoId = selectedEmpleadoId,
+                TipoDocumento = uploadTipo,
+                Nombre = uploadNombre,
+                Descripcion = uploadDescripcion,
+                NombreArchivoOriginal = selectedFileName,
+                TipoMime = contentType,
+                TamanoArchivo = selectedFileBytes.Length,
+                FechaEmision = uploadFechaEmision,
+                FechaVencimiento = uploadFechaVencimiento,
+                SubidoPorNombre = AppState.CurrentUser?.NombreCompleto,
+                SubidoPorUsuarioId = AppState.CurrentUser?.Id,
+                ArchivoPath = uploadResult.DownloadUrl ?? storagePath,
+                Activo = true,
+                FechaCreacion = DateTime.Now
+            };
+
+            await DocumentoRepo.AddAsync(documento);
+
+            successMessage = "Documento subido exitosamente a Firebase Storage";
+            showUploadModal = false;
+            await LoadDocumentos();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error uploading: {ex.Message}");
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
+    private async Task DownloadDocument(DocumentoEmpleado doc)
+    {
+        if (!string.IsNullOrEmpty(doc.ArchivoPath))
+        {
+            try
+            {
+                // If stored as base64, convert and download
+                var bytes = Convert.FromBase64String(doc.ArchivoPath);
+                await JS.InvokeVoidAsync("downloadFile", doc.NombreArchivoOriginal, doc.TipoMime, bytes);
+            }
+            catch
+            {
+                // If it's a URL, open in new tab
+                await JS.InvokeVoidAsync("open", doc.ArchivoPath, "_blank");
+            }
+        }
+    }
+
+    private async Task DeleteDocument(DocumentoEmpleado doc)
+    {
+        try
+        {
+            await DocumentoRepo.DeleteAsync(doc.Id);
+            successMessage = "Documento eliminado";
+            await LoadDocumentos();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting: {ex.Message}");
+        }
+    }
+
+    private async Task ClearSuccessMessage()
+    {
+        await Task.Delay(4000);
+        successMessage = null;
+        StateHasChanged();
+    }
+}

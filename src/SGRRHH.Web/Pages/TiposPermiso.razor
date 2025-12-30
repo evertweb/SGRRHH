@@ -1,0 +1,293 @@
+@page "/tipos-permiso"
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Interfaces
+@using SGRRHH.Web.Components.Shared
+@using SGRRHH.Web.Components.Forms
+@inject ITipoPermisoRepository TipoPermisoRepo
+@inject AppStateService AppState
+
+<div class="module-container">
+    @* Toolbar *@
+    <div class="module-toolbar">
+        <button class="legacy-button" @onclick="LoadData" disabled="@isLoading">
+            @(isLoading ? "Cargando..." : "Actualizar")
+        </button>
+        <button class="legacy-button" @onclick="ShowNewModal">+ Nuevo Tipo</button>
+
+        <div style="flex: 1;"></div>
+
+        <label class="legacy-form-checkbox" style="margin-right: 15px;">
+            <input type="checkbox" @bind="showInactive" @bind:after="FilterData" />
+            <span>Mostrar Inactivos</span>
+        </label>
+    </div>
+
+    @* Mensaje de exito *@
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="legacy-alert legacy-alert-success">
+            @successMessage
+        </div>
+    }
+
+    @* Contenido principal *@
+    @if (isLoading)
+    {
+        <div class="loading-indicator">Cargando datos...</div>
+    }
+    else if (filteredTipos == null || !filteredTipos.Any())
+    {
+        <div class="empty-state">No hay tipos de permiso registrados.</div>
+    }
+    else
+    {
+        <table class="legacy-table">
+            <thead>
+                <tr>
+                    <th style="width: 30px;"></th>
+                    <th>Nombre</th>
+                    <th>Descripcion</th>
+                    <th style="width: 70px;">Dias</th>
+                    <th style="width: 80px;">Aprob.</th>
+                    <th style="width: 80px;">Doc.</th>
+                    <th style="width: 80px;">Comp.</th>
+                    <th style="width: 60px;">Activo</th>
+                    <th style="width: 150px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tipo in filteredTipos ?? Enumerable.Empty<TipoPermiso>())
+                {
+                    <tr class="@(tipo.Activo ? "" : "inactive-row")">
+                        <td>
+                            <div class="color-badge" style="background-color: @tipo.Color;" title="@tipo.Color"></div>
+                        </td>
+                        <td><strong>@tipo.Nombre</strong></td>
+                        <td>@(tipo.Descripcion ?? "-")</td>
+                        <td style="text-align: center;">@tipo.DiasPorDefecto@(tipo.DiasMaximos > 0 ? $" (max {tipo.DiasMaximos})" : "")</td>
+                        <td style="text-align: center;">@(tipo.RequiereAprobacion ? "Si" : "-")</td>
+                        <td style="text-align: center;">@(tipo.RequiereDocumento ? "Si" : "-")</td>
+                        <td style="text-align: center;">@(tipo.EsCompensable ? "Si" : "-")</td>
+                        <td style="text-align: center;">@(tipo.Activo ? "Si" : "No")</td>
+                        <td>
+                            <button class="legacy-button-small" @onclick="() => ShowEditModal(tipo)">Editar</button>
+                            @if (tipo.Activo)
+                            {
+                                <button class="legacy-button-small legacy-button-danger" @onclick="() => ShowDeleteConfirm(tipo)">Eliminar</button>
+                            }
+                            else
+                            {
+                                <button class="legacy-button-small legacy-button-primary" @onclick="() => Reactivate(tipo)">Reactivar</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@* Modal de Crear/Editar *@
+<LegacyModal Title="@modalTitle"
+             IsVisible="@showFormModal"
+             OnClose="CloseFormModal"
+             Width="550px">
+    <ChildContent>
+        <TipoPermisoForm @ref="formComponent"
+                         TipoPermisoEdit="@selectedTipo"
+                         OnSave="HandleSave"
+                         OnCancel="CloseFormModal" />
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseFormModal" disabled="@isSaving">Cancelar</button>
+        <button class="legacy-button legacy-button-primary" @onclick="SaveForm" disabled="@isSaving">
+            @(isSaving ? "Guardando..." : "Guardar")
+        </button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Confirmacion de Eliminacion *@
+<LegacyModal Title="Confirmar Eliminacion"
+             IsVisible="@showDeleteModal"
+             OnClose="CloseDeleteModal"
+             Width="400px"
+             CloseOnOverlayClick="false">
+    <ChildContent>
+        <div style="text-align: center; padding: 10px;">
+            <p style="font-size: 14px; margin-bottom: 15px;">
+                Esta seguro que desea eliminar el tipo de permiso?
+            </p>
+            <p style="font-weight: bold; font-size: 16px;">
+                <span class="color-badge-inline" style="background-color: @(selectedTipo?.Color ?? "#ccc");"></span>
+                "@selectedTipo?.Nombre"
+            </p>
+            <p style="font-size: 11px; color: var(--win-gray); margin-top: 10px;">
+                Esta accion marcara el tipo como inactivo.
+            </p>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseDeleteModal">Cancelar</button>
+        <button class="legacy-button legacy-button-danger" @onclick="ConfirmDelete">Eliminar</button>
+    </FooterContent>
+</LegacyModal>
+
+@code {
+    private IEnumerable<TipoPermiso>? allTipos;
+    private IEnumerable<TipoPermiso>? filteredTipos;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? successMessage;
+    private bool showInactive = false;
+
+    // Modal de formulario
+    private bool showFormModal = false;
+    private TipoPermiso? selectedTipo;
+    private string modalTitle = "";
+    private TipoPermisoForm? formComponent;
+
+    // Modal de eliminacion
+    private bool showDeleteModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Tipos de Permiso");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        successMessage = null;
+        try
+        {
+            allTipos = await TipoPermisoRepo.GetAllAsync();
+            FilterData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando tipos de permiso: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterData()
+    {
+        if (allTipos == null) return;
+
+        if (showInactive)
+        {
+            filteredTipos = allTipos.OrderBy(t => t.Nombre);
+        }
+        else
+        {
+            filteredTipos = allTipos.Where(t => t.Activo).OrderBy(t => t.Nombre);
+        }
+    }
+
+    // === CREAR ===
+    private void ShowNewModal()
+    {
+        selectedTipo = null;
+        modalTitle = "Nuevo Tipo de Permiso";
+        showFormModal = true;
+    }
+
+    // === EDITAR ===
+    private void ShowEditModal(TipoPermiso tipo)
+    {
+        selectedTipo = tipo;
+        modalTitle = $"Editar: {tipo.Nombre}";
+        showFormModal = true;
+    }
+
+    private void CloseFormModal()
+    {
+        showFormModal = false;
+        selectedTipo = null;
+    }
+
+    private async Task SaveForm()
+    {
+        if (formComponent == null) return;
+
+        isSaving = true;
+        try
+        {
+            await formComponent.ValidateAndSaveAsync();
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HandleSave(TipoPermiso tipo)
+    {
+        showFormModal = false;
+        successMessage = selectedTipo == null
+            ? $"Tipo de permiso '{tipo.Nombre}' creado exitosamente"
+            : $"Tipo de permiso '{tipo.Nombre}' actualizado exitosamente";
+        selectedTipo = null;
+        await LoadData();
+        _ = ClearSuccessMessage();
+    }
+
+    // === ELIMINAR ===
+    private void ShowDeleteConfirm(TipoPermiso tipo)
+    {
+        selectedTipo = tipo;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        selectedTipo = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedTipo == null) return;
+
+        try
+        {
+            await TipoPermisoRepo.DeleteAsync(selectedTipo.Id);
+            successMessage = $"Tipo de permiso '{selectedTipo.Nombre}' inactivado";
+            showDeleteModal = false;
+            selectedTipo = null;
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error eliminando tipo de permiso: {ex.Message}");
+        }
+    }
+
+    private async Task Reactivate(TipoPermiso tipo)
+    {
+        try
+        {
+            tipo.Activo = true;
+            await TipoPermisoRepo.UpdateAsync(tipo);
+            successMessage = $"Tipo de permiso '{tipo.Nombre}' reactivado";
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reactivando tipo de permiso: {ex.Message}");
+        }
+    }
+
+    private async Task ClearSuccessMessage()
+    {
+        await Task.Delay(4000);
+        successMessage = null;
+        StateHasChanged();
+    }
+}

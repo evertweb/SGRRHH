@@ -1,0 +1,473 @@
+@page "/permisos"
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Enums
+@using SGRRHH.Core.Interfaces
+@using SGRRHH.Web.Components.Shared
+@using SGRRHH.Web.Components.Forms
+@inject IPermisoService PermisoService
+@inject IPermisoRepository PermisoRepo
+@inject AppStateService AppState
+
+<div class="module-container">
+    @* Toolbar *@
+    <div class="module-toolbar">
+        <button class="legacy-button" @onclick="LoadData" disabled="@isLoading">
+            @(isLoading ? "Cargando..." : "Actualizar")
+        </button>
+        <button class="legacy-button" @onclick="ShowNewModal">+ Solicitar Permiso</button>
+
+        @if (AppState.CanApprove && pendingCount > 0)
+        {
+            <button class="legacy-button legacy-button-success" @onclick="ApproveAllPending" disabled="@isApprovingAll">
+                @(isApprovingAll ? "Aprobando..." : $"Aprobar Todos ({pendingCount})")
+            </button>
+        }
+
+        <div style="flex: 1;"></div>
+
+        <select class="legacy-input" @bind="filtroEstado" @bind:after="FilterData" style="width: 150px;">
+            <option value="">Todos los estados</option>
+            <option value="@EstadoPermiso.Pendiente">Pendientes</option>
+            <option value="@EstadoPermiso.Aprobado">Aprobados</option>
+            <option value="@EstadoPermiso.Rechazado">Rechazados</option>
+            <option value="@EstadoPermiso.Cancelado">Cancelados</option>
+        </select>
+    </div>
+
+    @* Mensaje de exito *@
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="legacy-alert legacy-alert-success">
+            @successMessage
+        </div>
+    }
+
+    @* Contenido principal *@
+    @if (isLoading)
+    {
+        <div class="loading-indicator">Cargando permisos...</div>
+    }
+    else if (filteredPermisos == null || !filteredPermisos.Any())
+    {
+        <div class="empty-state">No hay permisos registrados.</div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="legacy-table">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Nro. Acta</th>
+                        <th>Empleado</th>
+                        <th style="width: 120px;">Tipo</th>
+                        <th style="width: 100px;">F. Inicio</th>
+                        <th style="width: 100px;">F. Fin</th>
+                        <th style="width: 50px;">Dias</th>
+                        <th style="width: 100px;">Estado</th>
+                        <th style="width: 180px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var permiso in filteredPermisos)
+                    {
+                        <tr class="@GetRowClass(permiso)">
+                            <td><code>@permiso.NumeroActa</code></td>
+                            <td><strong>@(permiso.Empleado?.NombreCompleto ?? $"Empleado #{permiso.EmpleadoId}")</strong></td>
+                            <td>
+                                @if (permiso.TipoPermiso != null)
+                                {
+                                    <span class="tipo-badge" style="background-color: @permiso.TipoPermiso.Color;">
+                                        @permiso.TipoPermiso.Nombre
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>Tipo #@permiso.TipoPermisoId</span>
+                                }
+                            </td>
+                            <td>@permiso.FechaInicio.ToString("dd/MM/yyyy")</td>
+                            <td>@permiso.FechaFin.ToString("dd/MM/yyyy")</td>
+                            <td style="text-align: center; font-weight: bold;">@permiso.TotalDias</td>
+                            <td style="text-align: center;">
+                                <span class="status-badge @GetStatusClass(permiso.Estado)">
+                                    @GetEstadoLabel(permiso.Estado)
+                                </span>
+                            </td>
+                            <td>
+                                <button class="legacy-button-small" @onclick="() => ShowViewModal(permiso)">Ver</button>
+                                @if (permiso.Estado == EstadoPermiso.Pendiente && AppState.CanApprove)
+                                {
+                                    <button class="legacy-button-small legacy-button-success" @onclick="() => ShowApproveModal(permiso)">Aprobar</button>
+                                    <button class="legacy-button-small legacy-button-danger" @onclick="() => ShowRejectModal(permiso)">Rechazar</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="module-footer">
+            Total: <strong>@filteredPermisos.Count()</strong> permisos
+        </div>
+    }
+</div>
+
+@* Modal de Crear/Editar *@
+<LegacyModal Title="@modalTitle"
+             IsVisible="@showFormModal"
+             OnClose="CloseFormModal"
+             Width="600px">
+    <ChildContent>
+        <PermisoForm @ref="formComponent"
+                     PermisoEdit="@selectedPermiso"
+                     OnSave="HandleSave"
+                     OnCancel="CloseFormModal" />
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseFormModal" disabled="@isSaving">Cancelar</button>
+        <button class="legacy-button legacy-button-primary" @onclick="SaveForm" disabled="@isSaving">
+            @(isSaving ? "Guardando..." : "Guardar")
+        </button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Ver Detalle *@
+<LegacyModal Title="@($"Permiso: {selectedPermiso?.NumeroActa}")"
+             IsVisible="@showViewModal"
+             OnClose="CloseViewModal"
+             Width="500px">
+    <ChildContent>
+        @if (selectedPermiso != null)
+        {
+            <div class="detail-view">
+                <div class="detail-row">
+                    <span class="detail-label">Empleado:</span>
+                    <span class="detail-value"><strong>@(selectedPermiso.Empleado?.NombreCompleto ?? "-")</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Tipo:</span>
+                    <span class="detail-value">
+                        @if (selectedPermiso.TipoPermiso != null)
+                        {
+                            <span class="tipo-badge" style="background-color: @selectedPermiso.TipoPermiso.Color;">
+                                @selectedPermiso.TipoPermiso.Nombre
+                            </span>
+                        }
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Periodo:</span>
+                    <span class="detail-value">@selectedPermiso.FechaInicio.ToString("dd/MM/yyyy") - @selectedPermiso.FechaFin.ToString("dd/MM/yyyy") (@selectedPermiso.TotalDias dias)</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Motivo:</span>
+                    <span class="detail-value">@(selectedPermiso.Motivo ?? "-")</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Estado:</span>
+                    <span class="detail-value">
+                        <span class="status-badge @GetStatusClass(selectedPermiso.Estado)">
+                            @GetEstadoLabel(selectedPermiso.Estado)
+                        </span>
+                    </span>
+                </div>
+                @if (!string.IsNullOrEmpty(selectedPermiso.MotivoRechazo))
+                {
+                    <div class="detail-row">
+                        <span class="detail-label">Motivo Rechazo:</span>
+                        <span class="detail-value" style="color: #c62828;">@selectedPermiso.MotivoRechazo</span>
+                    </div>
+                }
+            </div>
+        }
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseViewModal">Cerrar</button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Aprobar *@
+<LegacyModal Title="Aprobar Permiso"
+             IsVisible="@showApproveModal"
+             OnClose="CloseApproveModal"
+             Width="400px">
+    <ChildContent>
+        <div style="text-align: center; padding: 10px;">
+            <p>Aprobar el permiso?</p>
+            <p><strong>@selectedPermiso?.Empleado?.NombreCompleto</strong></p>
+            <p>@selectedPermiso?.FechaInicio.ToString("dd/MM/yyyy") - @selectedPermiso?.FechaFin.ToString("dd/MM/yyyy")</p>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseApproveModal">Cancelar</button>
+        <button class="legacy-button legacy-button-success" @onclick="ConfirmApprove">Aprobar</button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Rechazar *@
+<LegacyModal Title="Rechazar Permiso"
+             IsVisible="@showRejectModal"
+             OnClose="CloseRejectModal"
+             Width="450px">
+    <ChildContent>
+        <div style="padding: 10px;">
+            <p style="margin-bottom: 10px;">Rechazar el permiso de <strong>@selectedPermiso?.Empleado?.NombreCompleto</strong>?</p>
+            <div class="legacy-form-group">
+                <label class="legacy-form-label required">Motivo del Rechazo</label>
+                <textarea class="legacy-form-textarea" @bind="motivoRechazo" rows="3" placeholder="Ingrese el motivo del rechazo"></textarea>
+            </div>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseRejectModal">Cancelar</button>
+        <button class="legacy-button legacy-button-danger" @onclick="ConfirmReject" disabled="@string.IsNullOrWhiteSpace(motivoRechazo)">Rechazar</button>
+    </FooterContent>
+</LegacyModal>
+
+@code {
+    private IEnumerable<Permiso>? allPermisos;
+    private IEnumerable<Permiso>? filteredPermisos;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? successMessage;
+    private EstadoPermiso? filtroEstado;
+
+    // Batch approval
+    private int pendingCount => allPermisos?.Count(p => p.Estado == EstadoPermiso.Pendiente) ?? 0;
+    private bool isApprovingAll = false;
+
+    private bool showFormModal = false;
+    private bool showViewModal = false;
+    private bool showApproveModal = false;
+    private bool showRejectModal = false;
+    private Permiso? selectedPermiso;
+    private string modalTitle = "";
+    private PermisoForm? formComponent;
+    private string motivoRechazo = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Permisos");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        successMessage = null;
+        try
+        {
+            allPermisos = await PermisoRepo.GetAllAsync();
+            FilterData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando permisos: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void FilterData()
+    {
+        if (allPermisos == null) return;
+
+        var query = allPermisos.AsEnumerable();
+
+        if (filtroEstado.HasValue)
+        {
+            query = query.Where(p => p.Estado == filtroEstado.Value);
+        }
+
+        filteredPermisos = query.OrderByDescending(p => p.FechaSolicitud).ToList();
+    }
+
+    private string GetEstadoLabel(EstadoPermiso estado) => estado switch
+    {
+        EstadoPermiso.Pendiente => "Pendiente",
+        EstadoPermiso.Aprobado => "Aprobado",
+        EstadoPermiso.Rechazado => "Rechazado",
+        EstadoPermiso.Cancelado => "Cancelado",
+        _ => "Desconocido"
+    };
+
+    private string GetStatusClass(EstadoPermiso estado) => estado switch
+    {
+        EstadoPermiso.Pendiente => "status-pending",
+        EstadoPermiso.Aprobado => "status-active",
+        EstadoPermiso.Rechazado => "status-danger",
+        EstadoPermiso.Cancelado => "status-neutral",
+        _ => ""
+    };
+
+    private string GetRowClass(Permiso p) => p.Estado switch
+    {
+        EstadoPermiso.Cancelado or EstadoPermiso.Rechazado => "inactive-row",
+        _ => ""
+    };
+
+    private void ShowNewModal()
+    {
+        selectedPermiso = null;
+        modalTitle = "Solicitar Permiso";
+        showFormModal = true;
+    }
+
+    private void ShowViewModal(Permiso permiso)
+    {
+        selectedPermiso = permiso;
+        showViewModal = true;
+    }
+
+    private void CloseFormModal() { showFormModal = false; selectedPermiso = null; }
+    private void CloseViewModal() { showViewModal = false; }
+    private void CloseApproveModal() { showApproveModal = false; selectedPermiso = null; }
+    private void CloseRejectModal() { showRejectModal = false; selectedPermiso = null; motivoRechazo = ""; }
+
+    private async Task SaveForm()
+    {
+        if (formComponent == null) return;
+        isSaving = true;
+        try { await formComponent.ValidateAndSaveAsync(); }
+        finally { isSaving = false; }
+    }
+
+    private async Task HandleSave(Permiso permiso)
+    {
+        showFormModal = false;
+        successMessage = "Permiso registrado exitosamente";
+        selectedPermiso = null;
+        await LoadData();
+        _ = ClearSuccessMessage();
+    }
+
+    private void ShowApproveModal(Permiso permiso)
+    {
+        selectedPermiso = permiso;
+        showApproveModal = true;
+    }
+
+    private void ShowRejectModal(Permiso permiso)
+    {
+        selectedPermiso = permiso;
+        motivoRechazo = "";
+        showRejectModal = true;
+    }
+
+    private async Task ConfirmApprove()
+    {
+        if (selectedPermiso == null) return;
+        try
+        {
+            // Use service for approval with business logic
+            var result = await PermisoService.AprobarPermisoAsync(
+                selectedPermiso.Id,
+                AppState.CurrentUser?.EmpleadoId ?? 0);
+            if (result.Success)
+            {
+                successMessage = "Permiso aprobado";
+                showApproveModal = false;
+                selectedPermiso = null;
+                await LoadData();
+                _ = ClearSuccessMessage();
+            }
+            else
+            {
+                Console.WriteLine($"Error aprobando: {result.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error aprobando: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmReject()
+    {
+        if (selectedPermiso == null || string.IsNullOrWhiteSpace(motivoRechazo)) return;
+        try
+        {
+            // Use service for rejection with business logic
+            var result = await PermisoService.RechazarPermisoAsync(
+                selectedPermiso.Id,
+                AppState.CurrentUser?.EmpleadoId ?? 0,
+                motivoRechazo);
+            if (result.Success)
+            {
+                successMessage = "Permiso rechazado";
+                showRejectModal = false;
+                selectedPermiso = null;
+                motivoRechazo = "";
+                await LoadData();
+                _ = ClearSuccessMessage();
+            }
+            else
+            {
+                Console.WriteLine($"Error rechazando: {result.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rechazando: {ex.Message}");
+        }
+    }
+
+    private async Task ClearSuccessMessage()
+    {
+        await Task.Delay(4000);
+        successMessage = null;
+        StateHasChanged();
+    }
+
+    // Batch approval of all pending permissions
+    private async Task ApproveAllPending()
+    {
+        if (allPermisos == null) return;
+
+        var pendingPermisos = allPermisos.Where(p => p.Estado == EstadoPermiso.Pendiente).ToList();
+        if (pendingPermisos.Count == 0) return;
+
+        isApprovingAll = true;
+        int successCount = 0;
+        int errorCount = 0;
+
+        try
+        {
+            foreach (var permiso in pendingPermisos)
+            {
+                try
+                {
+                    var result = await PermisoService.AprobarPermisoAsync(
+                        permiso.Id,
+                        AppState.CurrentUser?.EmpleadoId ?? 0);
+                    if (result.Success)
+                        successCount++;
+                    else
+                        errorCount++;
+                }
+                catch
+                {
+                    errorCount++;
+                }
+            }
+
+            if (errorCount == 0)
+            {
+                successMessage = $"{successCount} permisos aprobados exitosamente";
+            }
+            else
+            {
+                successMessage = $"Se aprobaron {successCount} permisos, pero hubo {errorCount} errores";
+            }
+
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        finally
+        {
+            isApprovingAll = false;
+        }
+    }
+}

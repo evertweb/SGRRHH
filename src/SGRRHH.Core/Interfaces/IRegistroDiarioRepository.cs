@@ -81,4 +81,36 @@ public interface IRegistroDiarioRepository : IRepository<RegistroDiario>
     /// Obtiene un detalle de actividad solo por su ID (busca en todos los registros)
     /// </summary>
     Task<DetalleActividad?> GetDetalleByIdAsync(int detalleId);
+
+    /// <summary>
+    /// Obtiene las actividades (detalles) asociadas a un proyecto
+    /// </summary>
+    Task<IEnumerable<DetalleActividad>> GetDetallesByProyectoAsync(int proyectoId);
+
+    /// <summary>
+    /// Obtiene las actividades de un proyecto en un rango de fechas
+    /// </summary>
+    Task<IEnumerable<DetalleActividad>> GetDetallesByProyectoRangoFechasAsync(int proyectoId, DateTime fechaInicio, DateTime fechaFin);
+
+    /// <summary>
+    /// Calcula el total de horas trabajadas en un proyecto
+    /// </summary>
+    Task<decimal> GetTotalHorasByProyectoAsync(int proyectoId);
+
+    /// <summary>
+    /// Obtiene un resumen de horas por empleado en un proyecto
+    /// </summary>
+    Task<IEnumerable<ProyectoHorasEmpleado>> GetHorasPorEmpleadoProyectoAsync(int proyectoId);
+}
+
+/// <summary>
+/// Resumen de horas trabajadas por empleado en un proyecto
+/// </summary>
+public class ProyectoHorasEmpleado
+{
+    public int EmpleadoId { get; set; }
+    public string EmpleadoNombre { get; set; } = string.Empty;
+    public decimal TotalHoras { get; set; }
+    public int CantidadActividades { get; set; }
+    public DateTime? UltimaActividad { get; set; }
 }

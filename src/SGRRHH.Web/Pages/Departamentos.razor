@@ -1,0 +1,316 @@
+@page "/departamentos"
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Interfaces
+@using SGRRHH.Web.Components.Shared
+@using SGRRHH.Web.Components.Forms
+@inject IDepartamentoRepository DepartamentoRepo
+@inject IEmpleadoRepository EmpleadoRepo
+@inject AppStateService AppState
+
+<div class="module-container">
+    @* Toolbar *@
+    <div class="module-toolbar">
+        <button class="legacy-button" @onclick="LoadData" disabled="@isLoading">
+            @(isLoading ? "Cargando..." : "Actualizar")
+        </button>
+        @if (AppState.CanCreateDepartamentos)
+        {
+            <button class="legacy-button" @onclick="ShowNewModal">+ Nuevo Departamento</button>
+        }
+
+        <div style="flex: 1;"></div>
+
+        <label class="legacy-form-checkbox" style="margin-right: 15px;">
+            <input type="checkbox" @bind="showInactive" @bind:after="FilterData" />
+            <span>Mostrar Inactivos</span>
+        </label>
+    </div>
+
+    @* Mensaje de exito *@
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="legacy-alert legacy-alert-success">
+            @successMessage
+        </div>
+    }
+
+    @* Contenido principal *@
+    @if (isLoading)
+    {
+        <div class="loading-indicator">Cargando datos...</div>
+    }
+    else if (filteredDepartamentos == null || !filteredDepartamentos.Any())
+    {
+        <div class="empty-state">No hay departamentos registrados.</div>
+    }
+    else
+    {
+        <table class="legacy-table">
+            <thead>
+                <tr>
+                    <th style="width: 80px;">Codigo</th>
+                    <th>Nombre</th>
+                    <th>Jefe</th>
+                    <th>Descripcion</th>
+                    <th style="width: 80px;">Activo</th>
+                    <th style="width: 150px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var dept in filteredDepartamentos ?? Enumerable.Empty<Departamento>())
+                {
+                    <tr class="@(dept.Activo ? "" : "inactive-row")">
+                        <td><code>@dept.Codigo</code></td>
+                        <td><strong>@dept.Nombre</strong></td>
+                        <td>@GetJefeNombre(dept.JefeId)</td>
+                        <td>@(dept.Descripcion ?? "-")</td>
+                        <td style="text-align: center;">@(dept.Activo ? "Si" : "No")</td>
+                        <td>
+                            @if (AppState.CanEditDepartamentos)
+                            {
+                                <button class="legacy-button-small" @onclick="() => ShowEditModal(dept)">Editar</button>
+                            }
+                            @if (dept.Activo)
+                            {
+                                @if (AppState.CanDeleteDepartamentos)
+                                {
+                                    <button class="legacy-button-small legacy-button-danger" @onclick="() => ShowDeleteConfirm(dept)">Eliminar</button>
+                                }
+                            }
+                            else
+                            {
+                                @if (AppState.CanEditDepartamentos)
+                                {
+                                    <button class="legacy-button-small legacy-button-primary" @onclick="() => Reactivate(dept)">Reactivar</button>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@* Modal de Crear/Editar *@
+<LegacyModal Title="@modalTitle"
+             IsVisible="@showFormModal"
+             OnClose="CloseFormModal"
+             Width="450px">
+    <ChildContent>
+        <DepartamentoForm @ref="formComponent"
+                          DepartamentoEdit="@selectedDepartamento"
+                          OnSave="HandleSave"
+                          OnCancel="CloseFormModal" />
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseFormModal" disabled="@isSaving">Cancelar</button>
+        <button class="legacy-button legacy-button-primary" @onclick="SaveForm" disabled="@isSaving">
+            @(isSaving ? "Guardando..." : "Guardar")
+        </button>
+    </FooterContent>
+</LegacyModal>
+
+@* Modal de Confirmacion de Eliminacion *@
+<LegacyModal Title="Confirmar Eliminacion"
+             IsVisible="@showDeleteModal"
+             OnClose="CloseDeleteModal"
+             Width="400px"
+             CloseOnOverlayClick="false">
+    <ChildContent>
+        <div style="text-align: center; padding: 10px;">
+            <p style="font-size: 14px; margin-bottom: 15px;">
+                Esta seguro que desea eliminar el departamento?
+            </p>
+            <p style="font-weight: bold; color: var(--win-navy); font-size: 16px;">
+                "@selectedDepartamento?.Nombre"
+            </p>
+            <p style="font-size: 11px; color: var(--win-gray); margin-top: 10px;">
+                Esta accion marcara el departamento como inactivo.
+            </p>
+        </div>
+    </ChildContent>
+    <FooterContent>
+        <button class="legacy-button" @onclick="CloseDeleteModal">Cancelar</button>
+        <button class="legacy-button legacy-button-danger" @onclick="ConfirmDelete">Eliminar</button>
+    </FooterContent>
+</LegacyModal>
+
+@code {
+    private IEnumerable<Departamento>? allDepartamentos;
+    private IEnumerable<Departamento>? filteredDepartamentos;
+    private IEnumerable<Empleado> empleados = [];
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? successMessage;
+    private bool showInactive = false;
+
+    // Modal de formulario
+    private bool showFormModal = false;
+    private Departamento? selectedDepartamento;
+    private string modalTitle = "";
+    private DepartamentoForm? formComponent;
+
+    // Modal de eliminacion
+    private bool showDeleteModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Departamentos");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        successMessage = null;
+        try
+        {
+            // Cargamos departamentos y empleados en paralelo
+            var departamentosTask = DepartamentoRepo.GetAllAsync();
+            var empleadosTask = EmpleadoRepo.GetAllAsync();
+
+            await Task.WhenAll(departamentosTask, empleadosTask);
+
+            allDepartamentos = await departamentosTask;
+            empleados = await empleadosTask;
+
+            FilterData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando datos: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetJefeNombre(int? jefeId)
+    {
+        if (!jefeId.HasValue) return "-";
+        var empleado = empleados.FirstOrDefault(e => e.Id == jefeId);
+        return empleado?.NombreCompleto ?? "-";
+    }
+
+    private void FilterData()
+    {
+        if (allDepartamentos == null) return;
+
+        if (showInactive)
+        {
+            filteredDepartamentos = allDepartamentos.OrderBy(d => d.Id);
+        }
+        else
+        {
+            filteredDepartamentos = allDepartamentos.Where(d => d.Activo).OrderBy(d => d.Id);
+        }
+    }
+
+    // === CREAR ===
+    private void ShowNewModal()
+    {
+        selectedDepartamento = null;
+        modalTitle = "Nuevo Departamento";
+        showFormModal = true;
+    }
+
+    // === EDITAR ===
+    private void ShowEditModal(Departamento dept)
+    {
+        selectedDepartamento = dept;
+        modalTitle = $"Editar: {dept.Nombre}";
+        showFormModal = true;
+    }
+
+    private void CloseFormModal()
+    {
+        showFormModal = false;
+        selectedDepartamento = null;
+    }
+
+    private async Task SaveForm()
+    {
+        if (formComponent == null) return;
+
+        isSaving = true;
+        try
+        {
+            var saved = await formComponent.ValidateAndSaveAsync();
+            // HandleSave will be called by the form component if successful
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HandleSave(Departamento dept)
+    {
+        showFormModal = false;
+        successMessage = selectedDepartamento == null
+            ? $"Departamento '{dept.Nombre}' creado exitosamente"
+            : $"Departamento '{dept.Nombre}' actualizado exitosamente";
+        selectedDepartamento = null;
+        await LoadData();
+
+        // Limpiar mensaje despues de unos segundos
+        _ = ClearSuccessMessage();
+    }
+
+    // === ELIMINAR ===
+    private void ShowDeleteConfirm(Departamento dept)
+    {
+        selectedDepartamento = dept;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        selectedDepartamento = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (selectedDepartamento == null) return;
+
+        try
+        {
+            await DepartamentoRepo.DeleteAsync(selectedDepartamento.Id);
+            successMessage = $"Departamento '{selectedDepartamento.Nombre}' inactivado";
+            showDeleteModal = false;
+            selectedDepartamento = null;
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error eliminando departamento: {ex.Message}");
+        }
+    }
+
+    private async Task Reactivate(Departamento dept)
+    {
+        try
+        {
+            dept.Activo = true;
+            await DepartamentoRepo.UpdateAsync(dept);
+            successMessage = $"Departamento '{dept.Nombre}' reactivado";
+            await LoadData();
+            _ = ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error reactivando departamento: {ex.Message}");
+        }
+    }
+
+    private async Task ClearSuccessMessage()
+    {
+        await Task.Delay(4000);
+        successMessage = null;
+        StateHasChanged();
+    }
+}
