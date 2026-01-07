@@ -1,8 +1,10 @@
 ﻿@inherits LayoutComponentBase
 @using SGRRHH.Web.Client
 @using SGRRHH.Core.Enums
+@using SGRRHH.Core.Interfaces
 @inject AppStateService AppState
 @inject NavigationManager Navigation
+@inject IFirebaseAuthService AuthService
 @implements IDisposable
 
 <div class="app-container">
@@ -151,8 +153,16 @@
         Navigation.NavigateTo(href);
     }
 
-    private void HandleLogout()
+    private async Task HandleLogout()
     {
+        try
+        {
+            await AuthService.SignOutAsync();
+        }
+        catch
+        {
+            // Ignorar errores al cerrar sesión en Firebase
+        }
         AppState.Logout();
         Navigation.NavigateTo("/login");
     }

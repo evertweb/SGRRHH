@@ -2,11 +2,14 @@
 // Este archivo maneja toda la comunicación con Firebase desde JavaScript
 
 // Variables globales para las instancias de Firebase
+// IMPORTANTE: No almacenar tokens manualmente en localStorage/sessionStorage.
+// Dejar que el SDK de Firebase gestione persistencia y refresh de tokens.
 let app = null;
 let auth = null;
 let db = null;
 let storage = null;
 let currentUser = null;
+let _dotNetAuthCallback = null; // DotNetObjectReference para onAuthStateChanged notifications
 
 /**
  * Inicializa Firebase con la configuración proporcionada
@@ -15,12 +18,21 @@ let currentUser = null;
 export async function initializeFirebase(config) {
     // Importar módulos de Firebase dinámicamente
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+    const { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
     const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
     const { getStorage } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
 
     app = initializeApp(config);
     auth = getAuth(app);
+
+    // Forzar persistencia explícita en el navegador (local = survives tabs and reloads)
+    try {
+        await setPersistence(auth, browserLocalPersistence);
+        console.log('[Firebase] Persistencia de auth establecida: browserLocalPersistence');
+    } catch (err) {
+        console.warn('[Firebase] No se pudo establecer persistencia de auth:', err);
+    }
+
     storage = getStorage(app);
 
     // Si se especifica un databaseId, usarlo (para bases de datos nombradas)
@@ -38,6 +50,24 @@ export async function initializeFirebase(config) {
             console.log('[Firebase] Usuario autenticado:', user.email, 'UID:', user.uid);
         } else {
             console.log('[Firebase] Usuario no autenticado');
+        }
+        // Si hay callback registrado desde .NET, notifícale (se asigna en registerAuthStateChangedCallback)
+        if (typeof _dotNetAuthCallback !== 'undefined' && _dotNetAuthCallback) {
+            if (user) {
+                user.getIdToken().then(idToken => {
+                    const payload = {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName || '',
+                        idToken: idToken,
+                        success: true,
+                        errorMessage: null
+                    };
+                    _dotNetAuthCallback.invokeMethodAsync('NotifyAuthStateChanged', payload).catch(e => console.warn('[Firebase] Error invocando callback .NET:', e));
+                }).catch(e => console.warn('[Firebase] Error obteniendo idToken para callback:', e));
+            } else {
+                _dotNetAuthCallback.invokeMethodAsync('NotifyAuthStateChanged', null).catch(e => console.warn('[Firebase] Error invocando callback .NET (logout):', e));
+            }
         }
     });
 
@@ -178,6 +208,29 @@ export async function getCurrentUser() {
     }
 
     return null;
+}
+
+/**
+ * Registra un callback .NET para onAuthStateChanged (dotnetRef debe ser un DotNetObjectReference)
+ * El callback .NET debe exponer el método instanciado: Task NotifyAuthStateChanged(object? payload)
+ */
+export function registerAuthStateChangedCallback(dotNetRef) {
+    if (!auth) {
+        console.warn('[Firebase] registerAuthStateChangedCallback: auth no inicializado');
+        _dotNetAuthCallback = dotNetRef; // se guardará y será usado cuando auth esté listo
+        return;
+    }
+    _dotNetAuthCallback = dotNetRef;
+}
+
+/**
+ * Opcional: desregistrar callback y limpiar referencia
+ */
+export function unregisterAuthStateChangedCallback() {
+    if (typeof _dotNetAuthCallback !== 'undefined' && _dotNetAuthCallback) {
+        try { _dotNetAuthCallback.dispose(); } catch(e) {}
+    }
+    _dotNetAuthCallback = null;
 }
 
 /**
@@ -344,6 +397,98 @@ export async function queryCollection(collectionPath, field, op, value) {
         return results;
     } catch (error) {
         console.error('[Firebase] Error en query:', error);
+        throw error;
+    }
+}
+
+/**
+ * Consulta documentos con ordenamiento y límite
+ * @param {string} collectionPath 
+ * @param {string} orderByField 
+ * @param {string} direction 'asc' o 'desc'
+ * @param {number} limitCount 
+ */
+export async function queryCollectionOrdered(collectionPath, orderByField, direction, limitCount) {
+    const { collection, query, orderBy, limit, getDocs, getDocsFromServer } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+    ensureAuthenticated();
+    console.log(`[Firebase] QueryOrdered: ${collectionPath} order: ${orderByField} ${direction} limit: ${limitCount}`);
+
+    try {
+        const q = query(
+            collection(db, collectionPath), 
+            orderBy(orderByField, direction),
+            limit(limitCount)
+        );
+
+        let querySnapshot;
+        try {
+            querySnapshot = await getDocsFromServer(q);
+        } catch (serverError) {
+            querySnapshot = await getDocs(q);
+        }
+
+        const results = querySnapshot.docs.map(doc => ({
+            _documentId: doc.id,
+            ...doc.data()
+        }));
+        return results;
+    } catch (error) {
+        console.error('[Firebase] Error en queryOrdered:', error);
+        throw error;
+    }
+}
+
+/**
+ * Consulta documentos con múltiples filtros (composite query)
+ * @param {string} collectionPath 
+ * @param {Array} filters Array de objetos {field, op, value}
+ * @param {string} orderByField Opcional
+ * @param {string} direction Opcional
+ * @param {number} limitCount Opcional
+ */
+export async function queryCollectionComposite(collectionPath, filters, orderByField, direction, limitCount) {
+    const { collection, query, where, orderBy, limit, getDocs, getDocsFromServer } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+    ensureAuthenticated();
+    console.log(`[Firebase] QueryComposite: ${collectionPath} filters: ${filters.length}`);
+
+    try {
+        let constraints = [];
+        
+        // Agregar filtros
+        if (filters && filters.length > 0) {
+            filters.forEach(f => {
+                constraints.push(where(f.field, f.op, f.value));
+            });
+        }
+
+        // Agregar ordenamiento si existe
+        if (orderByField) {
+            constraints.push(orderBy(orderByField, direction || 'asc'));
+        }
+
+        // Agregar límite si existe
+        if (limitCount && limitCount > 0) {
+            constraints.push(limit(limitCount));
+        }
+
+        const q = query(collection(db, collectionPath), ...constraints);
+
+        let querySnapshot;
+        try {
+            querySnapshot = await getDocsFromServer(q);
+        } catch (serverError) {
+            querySnapshot = await getDocs(q);
+        }
+
+        const results = querySnapshot.docs.map(doc => ({
+            _documentId: doc.id,
+            ...doc.data()
+        }));
+        return results;
+    } catch (error) {
+        console.error('[Firebase] Error en queryComposite:', error);
         throw error;
     }
 }
@@ -541,3 +686,20 @@ window.downloadFile = function(filename, content, contentType) {
     }
 };
 window.downloadTextFile = downloadTextFile;
+
+// Helper para POST con 'credentials: include' (permite recibir cookies cross-origin si CORS permite credenciales)
+export async function postWithCredentials(url, payload) {
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const text = await response.text();
+        try { return JSON.parse(text); } catch { return { status: response.status, text }; }
+    } catch (err) {
+        console.warn('[Firebase] postWithCredentials error:', err);
+        throw err;
+    }
+}

@@ -47,7 +47,14 @@ builder.Services.AddScoped<IRepository<DocumentoEmpleado>, WebDocumentoEmpleadoR
 builder.Services.AddScoped<IRepository<ProyectoEmpleado>, WebProyectoEmpleadoRepository>();
 
 // Registro de Servicios de Autenticación
-builder.Services.AddScoped<IFirebaseAuthService, WebAuthService>();
+// WebAuthService requires the AuthServer base URL (if configured in wwwroot/appsettings.json)
+var authServerBaseUrl = builder.Configuration.GetValue<string>("AuthServer:BaseUrl") ?? string.Empty;
+builder.Services.AddScoped<IFirebaseAuthService>(sp => new WebAuthService(
+    sp.GetRequiredService<FirebaseJsInterop>(),
+    sp.GetRequiredService<IUsuarioRepository>(),
+    sp.GetRequiredService<HttpClient>(),
+    authServerBaseUrl
+));
 builder.Services.AddScoped<IAuthService>(sp => sp.GetRequiredService<IFirebaseAuthService>());
 
 // Registro de Servicios de Negocio (Reutilizando lógica de SGRRHH.Infrastructure)
@@ -70,5 +77,7 @@ builder.Services.AddScoped<SGRRHH.Web.Services.ExportService>();
 
 // Estado Global de la aplicación
 builder.Services.AddScoped<AppStateService>();
+// Bridge para recibir eventos de auth desde JS
+builder.Services.AddScoped<AuthJsBridge>();
 
 await builder.Build().RunAsync();

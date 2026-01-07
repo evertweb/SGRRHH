@@ -3,6 +3,7 @@ using SGRRHH.Core.Enums;
 using SGRRHH.Core.Interfaces;
 using FirebaseAuthResult = SGRRHH.Core.Interfaces.FirebaseAuthResult;
 
+
 namespace SGRRHH.Web.Client;
 
 /// <summary>
@@ -12,11 +13,15 @@ public class WebAuthService : IFirebaseAuthService
 {
     private readonly FirebaseJsInterop _firebase;
     private readonly IUsuarioRepository _usuarioRepository;
+    private readonly HttpClient _http;
+    private readonly string _authServerBaseUrl;
 
-    public WebAuthService(FirebaseJsInterop firebase, IUsuarioRepository usuarioRepository)
+    public WebAuthService(FirebaseJsInterop firebase, IUsuarioRepository usuarioRepository, HttpClient http, string authServerBaseUrl)
     {
         _firebase = firebase;
         _usuarioRepository = usuarioRepository;
+        _http = http;
+        _authServerBaseUrl = authServerBaseUrl ?? string.Empty;
     }
 
     public async Task<AuthResult> AuthenticateAsync(string username, string password)
@@ -50,7 +55,7 @@ public class WebAuthService : IFirebaseAuthService
                 return new FirebaseAuthResult { Success = false, Message = "Usuario desactivado" };
             }
 
-            return new FirebaseAuthResult
+            var result = new FirebaseAuthResult
             {
                 Success = true,
                 Message = "Login exitoso",
@@ -58,7 +63,32 @@ public class WebAuthService : IFirebaseAuthService
                 FirebaseUid = authData.Uid,
                 IdToken = authData.IdToken
             };
-        }
+
+            // If AuthServer base URL is configured, send idToken to create server session
+            try
+            {
+                if (!string.IsNullOrEmpty(_authServerBaseUrl) && !string.IsNullOrEmpty(result.IdToken))
+                {
+                    var loginUrl = new Uri(new Uri(_authServerBaseUrl), "api/auth/sessionLogin").ToString();
+                    var payload = new { IdToken = result.IdToken };
+                    // Use FirebaseJsInterop helper that does a fetch with credentials: include to receive cookies cross-origin
+                    try
+                    {
+                        await _firebase.PostWithCredentialsAsync(loginUrl, payload);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Session cookie creation (fetch) failed: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log/ignore: shouldn't block login on session cookie failure
+                Console.WriteLine($"Session cookie creation failed: {ex.Message}");
+            }
+
+            return result;        }
         catch (Exception ex)
         {
             return new FirebaseAuthResult { Success = false, Message = $"Error: {ex.Message}" };
@@ -81,7 +111,22 @@ public class WebAuthService : IFirebaseAuthService
 
     public async Task SignOutAsync()
     {
+        // Sign out from client Firebase SDK
         await _firebase.SignOutAsync();
+
+        // Try to notify server to invalidate session cookie
+        try
+        {
+            if (!string.IsNullOrEmpty(_authServerBaseUrl))
+            {
+                var logoutUrl = new Uri(new Uri(_authServerBaseUrl), "api/auth/sessionLogout").ToString();
+                await _firebase.PostWithCredentialsAsync(logoutUrl, new { });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Server session logout failed: {ex.Message}");
+        }
     }
 
     public async Task<bool> IsFirebaseAvailableAsync() => true;

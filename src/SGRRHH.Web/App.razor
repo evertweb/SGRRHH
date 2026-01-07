@@ -1,6 +1,11 @@
 ﻿@using SGRRHH.Web.Client
+@using SGRRHH.Core.Interfaces
 @inject FirebaseJsInterop Firebase
 @inject FirebaseWebConfig FirebaseConfig
+@inject IFirebaseAuthService AuthService
+@inject AppStateService AppState
+@inject AuthJsBridge AuthJsBridgeInstance
+@implements IAsyncDisposable
 
 @if (_isInitialized)
 {
@@ -53,6 +58,8 @@ else
     private bool _hasError = false;
     private string _errorMessage = "";
 
+    private DotNetObjectReference<object>? _authBridgeRef;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -61,6 +68,44 @@ else
             {
                 await Firebase.InitializeAsync(FirebaseConfig);
             }
+
+            // Intentar restaurar sesión desde Firebase (si existe usuario autenticado)
+            try
+            {
+                var current = await Firebase.GetCurrentUserAsync();
+                if (current != null && current.Success)
+                {
+                    var usuario = await AuthService.GetUserByFirebaseUidAsync(current.Uid);
+                    if (usuario != null)
+                    {
+                        var auth = new FirebaseAuthResult
+                        {
+                            Success = true,
+                            Usuario = usuario,
+                            FirebaseUid = current.Uid,
+                            IdToken = current.IdToken
+                        };
+                        AppState.SetAuth(auth);
+                    }
+                }
+
+                // Registrar callback JS->.NET para onAuthStateChanged (mantener AppState sincronizado entre pestañas)
+                try
+                {
+                    var dotNetRef = DotNetObjectReference.Create((object)AuthJsBridgeInstance);
+                    await Firebase.RegisterAuthStateCallbackAsync(dotNetRef);
+                    _authBridgeRef = dotNetRef; // almacenar para disposicion
+                }
+                catch (Exception exReg)
+                {
+                    Console.WriteLine($"Error registrando callback de auth JS->.NET: {exReg}");
+                }
+            }
+            catch (Exception ex2)
+            {
+                Console.WriteLine($"Error restaurando auth desde Firebase: {ex2}");
+            }
+
             _isInitialized = true;
         }
         catch (Exception ex)
@@ -69,5 +114,19 @@ else
             _errorMessage = $"No se pudo conectar con Firebase: {ex.Message}";
             Console.WriteLine($"Firebase initialization error: {ex}");
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_authBridgeRef != null)
+            {
+                await Firebase.UnregisterAuthStateCallbackAsync();
+                _authBridgeRef.Dispose();
+                _authBridgeRef = null;
+            }
+        }
+        catch { }
     }
 }

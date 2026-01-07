@@ -60,6 +60,37 @@ public class FirebaseJsInterop : IAsyncDisposable
         EnsureInitialized();
         return await _firebaseModule!.InvokeAsync<FirebaseJsAuthResult?>("getCurrentUser");
     }
+
+    public async Task<object?> PostWithCredentialsAsync(string url, object payload)
+    {
+        EnsureInitialized();
+        return await _firebaseModule!.InvokeAsync<object?>("postWithCredentials", url, payload);
+    }
+    /// <summary>
+    /// Registra un callback .NET para que JS invoque onAuthStateChanged
+    /// dotNetRef debe ser un DotNetObjectReference de un objeto con el método
+    /// public Task NotifyAuthStateChanged(object? payload)
+    /// </summary>
+    public async Task RegisterAuthStateCallbackAsync(DotNetObjectReference<object> dotNetRef)
+    {
+        EnsureInitialized();
+        await _firebaseModule!.InvokeVoidAsync("registerAuthStateChangedCallback", dotNetRef);
+    }
+
+    /// <summary>
+    /// Desregistra el callback (.NET -> JS)
+    /// </summary>
+    public async Task UnregisterAuthStateCallbackAsync()
+    {
+        if (_isInitialized && _firebaseModule != null)
+        {
+            try
+            {
+                await _firebaseModule.InvokeVoidAsync("unregisterAuthStateChangedCallback");
+            }
+            catch { }
+        }
+    }
     
     /// <summary>
     /// Obtiene documentos de una colección
@@ -116,6 +147,26 @@ public class FirebaseJsInterop : IAsyncDisposable
         EnsureInitialized();
         return await _firebaseModule!.InvokeAsync<List<T>>(
             "queryCollection", collectionPath, field, op, value);
+    }
+
+    /// <summary>
+    /// Consulta documentos con ordenamiento y límite
+    /// </summary>
+    public async Task<List<T>> QueryCollectionOrderedAsync<T>(string collectionPath, string orderByField, string direction = "asc", int limit = 0)
+    {
+        EnsureInitialized();
+        return await _firebaseModule!.InvokeAsync<List<T>>(
+            "queryCollectionOrdered", collectionPath, orderByField, direction, limit);
+    }
+
+    /// <summary>
+    /// Consulta documentos con múltiples filtros (composite query)
+    /// </summary>
+    public async Task<List<T>> QueryCollectionCompositeAsync<T>(string collectionPath, List<FirestoreFilter> filters, string? orderByField = null, string direction = "asc", int limit = 0)
+    {
+        EnsureInitialized();
+        return await _firebaseModule!.InvokeAsync<List<T>>(
+            "queryCollectionComposite", collectionPath, filters, orderByField, direction, limit);
     }
     
     // ===== FIREBASE STORAGE METHODS =====
@@ -237,5 +288,28 @@ public class FirebaseDownloadResult
     
     [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
     public string? ErrorMessage { get; set; }
+}
+
+/// <summary>
+/// Filtro para consultar Firestore
+/// </summary>
+public class FirestoreFilter
+{
+    [System.Text.Json.Serialization.JsonPropertyName("field")]
+    public string Field { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("op")]
+    public string Op { get; set; } = "==";
+
+    [System.Text.Json.Serialization.JsonPropertyName("value")]
+    public object? Value { get; set; }
+
+    public FirestoreFilter() { }
+    public FirestoreFilter(string field, string op, object? value)
+    {
+        Field = field;
+        Op = op;
+        Value = value;
+    }
 }
 

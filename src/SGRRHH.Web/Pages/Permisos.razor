@@ -116,6 +116,7 @@
 <LegacyModal Title="@modalTitle"
              IsVisible="@showFormModal"
              OnClose="CloseFormModal"
+             OnEnter="SaveForm"
              Width="600px">
     <ChildContent>
         <PermisoForm @ref="formComponent"

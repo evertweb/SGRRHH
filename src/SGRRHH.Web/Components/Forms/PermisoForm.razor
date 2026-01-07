@@ -28,7 +28,7 @@
     <div class="legacy-form-group">
         <label class="legacy-form-label required">Empleado</label>
         <div class="search-select-container">
-            <input type="text"
+            <input id="permiso-empleado-search" type="text"
                    class="legacy-form-input"
                    placeholder="Buscar empleado..."
                    @bind="empleadoSearchText"
@@ -116,7 +116,7 @@
     <div class="legacy-form-row">
         <div class="legacy-form-group" style="flex: 1;">
             <label class="legacy-form-label required">Fecha Inicio</label>
-            <input type="date" class="legacy-form-input"
+            <input id="permiso-fechaInicio" type="date" class="legacy-form-input"
                    value="@FormatDate(permiso.FechaInicio)"
                    min="@(isEditing ? "" : FormatDate(DateTime.Today))"
                    @onchange="OnFechaInicioChanged" />
@@ -128,10 +128,10 @@
 
         <div class="legacy-form-group" style="flex: 1;">
             <label class="legacy-form-label required">Fecha Fin</label>
-            <input type="date" class="legacy-form-input"
+            <input id="permiso-fechaFin" type="date" class="legacy-form-input"
                    value="@FormatDate(permiso.FechaFin)"
                    min="@FormatDate(permiso.FechaInicio)"
-                   @onchange="OnFechaFinChanged" />
+                   @onchange="e => { OnFechaFinChanged(e); fechaFinTouched = true; }" />
             @if (!string.IsNullOrEmpty(fechaFinError))
             {
                 <div class="legacy-validation-error">@fechaFinError</div>
@@ -147,13 +147,20 @@
             {
                 <div class="legacy-validation-error">Máx. 30 días</div>
             }
+            @if (suggestedFechaFin.HasValue && !fechaFinTouched)
+            {
+                <div style="margin-top:6px;">
+                    <small class="legacy-form-hint">Sugerencia (según tipo): @suggestedFechaFin.Value.ToString("dd/MM/yyyy")</small>
+                    <button type="button" class="legacy-button-small" style="margin-left:8px;" @onclick="() => { permiso.FechaFin = suggestedFechaFin.Value; fechaFinTouched = true; CalculateDays(); suggestedFechaFin = null; }">Aplicar</button>
+                </div>
+            }
         </div>
     </div>
 
     @* Motivo *@
     <div class="legacy-form-group">
         <label class="legacy-form-label required">Motivo / Justificación</label>
-        <textarea class="legacy-form-textarea @(!string.IsNullOrEmpty(motivoError) ? "input-error" : "")"
+        <textarea id="permiso-motivo" class="legacy-form-textarea @(!string.IsNullOrEmpty(motivoError) ? "input-error" : "")"
                   @bind="permiso.Motivo"
                   rows="3"
                   placeholder="Describa el motivo del permiso (mínimo 10 caracteres)"
@@ -300,6 +307,9 @@
     [Inject]
     public SGRRHH.Web.Client.FirebaseJsInterop FirebaseJs { get; set; } = default!;
 
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; } = default!;
+
     // Data
     private Permiso permiso = new();
     private IEnumerable<Empleado>? empleados;
@@ -312,6 +322,10 @@
     private bool isLoading = true;
     private bool isSaving = false;
     private bool isUploadingDocument = false;
+
+    // Suggested date (do not override user input silently)
+    private DateTime? suggestedFechaFin;
+    private bool fechaFinTouched = false;
 
     // Búsqueda de empleado
     private string empleadoSearchText = "";
@@ -440,11 +454,15 @@
         selectedTipoPermiso = tiposPermiso?.FirstOrDefault(t => t.Id == permiso.TipoPermisoId);
         tipoPermisoError = null;
 
-        // Aplicar días por defecto si aplica
+        // Compute suggestion for FechaFin if default days apply (do not overwrite user's value)
         if (selectedTipoPermiso != null && selectedTipoPermiso.DiasPorDefecto > 0 && !isEditing)
         {
-            permiso.FechaFin = permiso.FechaInicio.AddDays(selectedTipoPermiso.DiasPorDefecto - 1);
+            suggestedFechaFin = permiso.FechaInicio.AddDays(selectedTipoPermiso.DiasPorDefecto - 1);
             CalculateDays();
+        }
+        else
+        {
+            suggestedFechaFin = null;
         }
 
         // Limpiar fecha de compensación si no es compensable
@@ -460,13 +478,15 @@
         permiso.FechaInicio = ParseDate(e.Value?.ToString());
         fechaInicioError = null;
 
-        // Si hay tipo seleccionado, ajustar fecha fin
+        // Compute suggestion for FechaFin if a default applies
         if (!isEditing && selectedTipoPermiso != null && selectedTipoPermiso.DiasPorDefecto > 0)
         {
-            permiso.FechaFin = permiso.FechaInicio.AddDays(selectedTipoPermiso.DiasPorDefecto - 1);
+            suggestedFechaFin = permiso.FechaInicio.AddDays(selectedTipoPermiso.DiasPorDefecto - 1);
+            // do not overwrite user's FechaFin; show suggestion
         }
         else if (permiso.FechaFin < permiso.FechaInicio)
         {
+            // if user's fechaFin is invalid, reset to start date
             permiso.FechaFin = permiso.FechaInicio;
         }
 
@@ -691,8 +711,13 @@
             if (validationErrors.Any())
             {
                 errorMessage = "Por favor corrija los errores marcados";
+                await FocusFirstInvalid();
                 return false;
             }
+
+            // Confirmar antes de guardar
+            var ok = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar el permiso?");
+            if (!ok) return false;
 
             // Subir documento si hay uno pendiente
             if (pendingDocumentBytes != null && !string.IsNullOrEmpty(documentoFileName))
@@ -780,4 +805,47 @@
     }
 
     public bool IsSaving => isSaving;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e?.Key == "Enter" && !isSaving)
+        {
+            var ok = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar el permiso?");
+            if (ok)
+            {
+                await ValidateAndSaveAsync();
+            }
+        }
+    }
+
+    private async Task FocusFirstInvalid()
+    {
+        if (!string.IsNullOrEmpty(empleadoError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "permiso-empleado-search");
+            return;
+        }
+        if (!string.IsNullOrEmpty(tipoPermisoError))
+        {
+            // Focus the select by name (there's no id on the select, use types)
+            // Try focusing the inicio date if relevant
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "permiso-fechaInicio");
+            return;
+        }
+        if (!string.IsNullOrEmpty(fechaInicioError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "permiso-fechaInicio");
+            return;
+        }
+        if (!string.IsNullOrEmpty(fechaFinError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "permiso-fechaFin");
+            return;
+        }
+        if (!string.IsNullOrEmpty(motivoError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "permiso-motivo");
+            return;
+        }
+    }
 }

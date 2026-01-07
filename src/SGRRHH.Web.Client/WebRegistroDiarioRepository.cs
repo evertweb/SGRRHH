@@ -12,8 +12,22 @@ public class WebRegistroDiarioRepository : WebFirestoreRepository<RegistroDiario
     
     public async Task<RegistroDiario?> GetByFechaEmpleadoAsync(DateTime fecha, int empleadoId)
     {
-        var all = await GetAllAsync();
-        return all.FirstOrDefault(r => r.Fecha.Date == fecha.Date && r.EmpleadoId == empleadoId);
+        var filters = new List<FirestoreFilter>
+        {
+            new("empleadoId", "==", empleadoId),
+            // Timestamp comparison in Firestore requires careful handling, but equality usually works if stored exactly.
+            // However, typically we queried by range or stored YYYY-MM-DD string.
+            // Assuming Date is stored as Timestamp, exact match might be hard if time component differs.
+            // Let's assume we can filter by the stored property "fecha".
+            // Since MapToEntity handles JSON, we rely on how it was saved. 
+            // If saved as string or midnight timestamp, this works.
+            // For now, let's use the composite query assuming exact match on serialized value. 
+            // If this fails, we might need a range query for the day.
+             new("fecha", "==", fecha) 
+        };
+
+        var results = await _firebase.QueryCollectionCompositeAsync<object>(_collectionName, filters, limit: 1);
+        return results.Select(MapToEntity).FirstOrDefault();
     }
     
     public async Task<RegistroDiario?> GetByIdWithDetallesAsync(int id)
@@ -23,29 +37,51 @@ public class WebRegistroDiarioRepository : WebFirestoreRepository<RegistroDiario
     
     public async Task<IEnumerable<RegistroDiario>> GetByEmpleadoRangoFechasAsync(int empleadoId, DateTime fechaInicio, DateTime fechaFin)
     {
-        var all = await GetAllAsync();
-        return all.Where(r => r.EmpleadoId == empleadoId && r.Fecha >= fechaInicio && r.Fecha <= fechaFin)
-                  .OrderByDescending(r => r.Fecha);
+         var filters = new List<FirestoreFilter>
+        {
+            new("empleadoId", "==", empleadoId),
+            new("fecha", ">=", fechaInicio),
+            new("fecha", "<=", fechaFin)
+        };
+
+        var results = await _firebase.QueryCollectionCompositeAsync<object>(
+            _collectionName, filters, orderByField: "fecha", direction: "desc");
+            
+        return results.Select(MapToEntity).ToList();
     }
     
     public async Task<IEnumerable<RegistroDiario>> GetByFechaAsync(DateTime fecha)
     {
-        var all = await GetAllAsync();
-        return all.Where(r => r.Fecha.Date == fecha.Date);
+        // Try strict equality first
+        var results = await _firebase.QueryCollectionAsync<object>(_collectionName, "fecha", "==", fecha);
+        return results.Select(MapToEntity).ToList();
     }
     
     public async Task<IEnumerable<RegistroDiario>> GetByRangoFechasAsync(DateTime fechaInicio, DateTime fechaFin)
     {
-        var all = await GetAllAsync();
-        return all.Where(r => r.Fecha >= fechaInicio && r.Fecha <= fechaFin)
-                  .OrderByDescending(r => r.Fecha);
+        var filters = new List<FirestoreFilter>
+        {
+            new("fecha", ">=", fechaInicio),
+            new("fecha", "<=", fechaFin)
+        };
+        
+        var results = await _firebase.QueryCollectionCompositeAsync<object>(
+            _collectionName, filters, orderByField: "fecha", direction: "desc");
+
+        return results.Select(MapToEntity).ToList();
     }
     
     public async Task<IEnumerable<RegistroDiario>> GetByEmpleadoWithDetallesAsync(int empleadoId, int? cantidad = null)
     {
-        var all = await GetAllAsync();
-        var query = all.Where(r => r.EmpleadoId == empleadoId).OrderByDescending(r => r.Fecha);
-        return cantidad.HasValue ? query.Take(cantidad.Value) : query;
+         var filters = new List<FirestoreFilter>
+        {
+            new("empleadoId", "==", empleadoId)
+        };
+
+        var results = await _firebase.QueryCollectionCompositeAsync<object>(
+            _collectionName, filters, orderByField: "fecha", direction: "desc", limit: cantidad ?? 0);
+            
+        return results.Select(MapToEntity).ToList();
     }
     
     public async Task<IEnumerable<RegistroDiario>> GetByEmpleadoMesActualAsync(int empleadoId)

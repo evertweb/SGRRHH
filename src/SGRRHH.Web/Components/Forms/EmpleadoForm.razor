@@ -7,7 +7,12 @@
 @using System.IO
 @using System.Text.RegularExpressions
 
-<div class="empleado-form">
+<div class="empleado-form form-centered" @onkeydown="HandleKeyDown" style="position: relative;">
+    @if (isSaving)
+    {
+        <div class="saving-overlay"><div class="saving-box">Guardando...</div></div>
+    }
+
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="legacy-alert legacy-alert-error">
@@ -27,7 +32,7 @@
             
             <div class="legacy-form-group" style="width: 120px;">
                 <label class="legacy-form-label required">Cédula</label>
-                <input type="text" class="legacy-form-input" @bind="empleado.Cedula" maxlength="20" placeholder="Número de cédula" />
+                <input id="emp-cedula" type="text" class="legacy-form-input" @bind="empleado.Cedula" maxlength="20" placeholder="Número de cédula" />
                 @if (!string.IsNullOrEmpty(cedulaError))
                 {
                     <div class="legacy-validation-error">@cedulaError</div>
@@ -36,7 +41,7 @@
             
             <div class="legacy-form-group" style="flex: 1;">
                 <label class="legacy-form-label required">Nombres</label>
-                <input type="text" class="legacy-form-input @(nombresError != null ? "input-error" : "")" 
+                <input id="emp-nombres" type="text" class="legacy-form-input @(nombresError != null ? "input-error" : "")" 
                        @bind="empleado.Nombres" maxlength="100" placeholder="Nombres" 
                        @onblur="ValidateNombres" />
                 @if (!string.IsNullOrEmpty(nombresError))
@@ -47,7 +52,7 @@
             
             <div class="legacy-form-group" style="flex: 1;">
                 <label class="legacy-form-label required">Apellidos</label>
-                <input type="text" class="legacy-form-input @(apellidosError != null ? "input-error" : "")" 
+                <input id="emp-apellidos" type="text" class="legacy-form-input @(apellidosError != null ? "input-error" : "")" 
                        @bind="empleado.Apellidos" maxlength="100" placeholder="Apellidos" 
                        @onblur="ValidateApellidos" />
                 @if (!string.IsNullOrEmpty(apellidosError))
@@ -101,7 +106,7 @@
             
             <div class="legacy-form-group" style="width: 130px;">
                 <label class="legacy-form-label">Teléfono</label>
-                <input type="tel" class="legacy-form-input @(telefonoError != null ? "input-error" : "")" 
+                <input id="emp-telefono" type="tel" class="legacy-form-input @(telefonoError != null ? "input-error" : "")" 
                        @bind="empleado.Telefono" maxlength="15" placeholder="3001234567" 
                        @onblur="ValidateTelefono" />
                 @if (!string.IsNullOrEmpty(telefonoError))
@@ -112,7 +117,7 @@
             
             <div class="legacy-form-group" style="flex: 1;">
                 <label class="legacy-form-label">Email</label>
-                <input type="email" class="legacy-form-input @(emailError != null ? "input-error" : "")" 
+                <input id="emp-email" type="email" class="legacy-form-input @(emailError != null ? "input-error" : "")" 
                        @bind="empleado.Email" maxlength="150" placeholder="correo@ejemplo.com" 
                        @onblur="ValidateEmail" />
                 @if (!string.IsNullOrEmpty(emailError))
@@ -142,7 +147,7 @@
         <div class="legacy-form-row">
             <div class="legacy-form-group" style="width: 140px;">
                 <label class="legacy-form-label required">Fecha Ingreso</label>
-                <input type="date" class="legacy-form-input" 
+                <input id="emp-fechaIngreso" type="date" class="legacy-form-input" 
                        value="@FormatDate(empleado.FechaIngreso)"
                        @onchange="e => empleado.FechaIngreso = ParseDateRequired(e.Value?.ToString())" />
             </div>
@@ -434,6 +439,9 @@
     [Inject]
     public AppStateService AppState { get; set; } = default!;
 
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; } = default!;
+
     private Empleado empleado = new();
     private IEnumerable<Departamento>? departamentos;
     private IEnumerable<Cargo>? cargos;
@@ -677,6 +685,7 @@
             if (!string.IsNullOrEmpty(nombresError) || !string.IsNullOrEmpty(apellidosError) ||
                 !string.IsNullOrEmpty(telefonoError) || !string.IsNullOrEmpty(emailError))
             {
+                await FocusFirstInvalid();
                 return false;
             }
             
@@ -684,6 +693,14 @@
             if (string.IsNullOrWhiteSpace(empleado.Cedula))
             {
                 cedulaError = "La cédula es requerida";
+                await FocusFirstInvalid();
+                return false;
+            }
+
+            // Confirmación antes de guardar
+            var confirm = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar los cambios?");
+            if (!confirm)
+            {
                 return false;
             }
             
@@ -752,6 +769,7 @@
                         cedulaError = result.Message;
                     else
                         errorMessage = result.Message;
+                    await FocusFirstInvalid();
                     return false;
                 }
                 empleado = result.Data!;
@@ -795,7 +813,48 @@
     }
 
     public bool IsSaving => isSaving;
-    
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e?.Key == "Enter" && !isSaving)
+        {
+            var ok = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar los cambios?");
+            if (ok)
+            {
+                await ValidateAndSaveAsync();
+            }
+        }
+    }
+
+    private async Task FocusFirstInvalid()
+    {
+        if (!string.IsNullOrEmpty(cedulaError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "emp-cedula");
+            return;
+        }
+        if (!string.IsNullOrEmpty(nombresError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "emp-nombres");
+            return;
+        }
+        if (!string.IsNullOrEmpty(apellidosError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "emp-apellidos");
+            return;
+        }
+        if (!string.IsNullOrEmpty(telefonoError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "emp-telefono");
+            return;
+        }
+        if (!string.IsNullOrEmpty(emailError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "emp-email");
+            return;
+        }
+    }
+
     private async Task ResetFormForNew()
     {
         // Limpiar errores

@@ -2,7 +2,12 @@
 @using SGRRHH.Core.Entities
 @using SGRRHH.Core.Interfaces
 
-<div class="registro-form">
+<div class="registro-form form-centered" @onkeydown="HandleKeyDown" style="position: relative;">
+    @if (isSaving)
+    {
+        <div class="saving-overlay"><div class="saving-box">Guardando...</div></div>
+    }
+
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="legacy-alert legacy-alert-error">
@@ -13,7 +18,7 @@
     <div class="legacy-form-row">
         <div class="legacy-form-group" style="flex: 2;">
             <label class="legacy-form-label required">Empleado</label>
-            <select class="legacy-form-input" @bind="registro.EmpleadoId" disabled="@isEditing">
+            <select id="registro-empleado" class="legacy-form-input" @bind="registro.EmpleadoId" disabled="@isEditing">
                 <option value="0">-- Seleccione empleado --</option>
                 @foreach (var emp in empleados ?? Enumerable.Empty<Empleado>())
                 {
@@ -28,7 +33,7 @@
 
         <div class="legacy-form-group" style="width: 140px;">
             <label class="legacy-form-label required">Fecha</label>
-            <input type="date" class="legacy-form-input" 
+            <input id="registro-fecha" type="date" class="legacy-form-input" 
                    value="@FormatDate(registro.Fecha)"
                    @onchange="e => registro.Fecha = ParseDate(e.Value?.ToString())"
                    disabled="@isEditing" />
@@ -38,14 +43,14 @@
     <div class="legacy-form-row">
         <div class="legacy-form-group" style="flex: 1;">
             <label class="legacy-form-label">Hora Entrada</label>
-            <input type="time" class="legacy-form-input" 
+            <input id="registro-horaEntrada" type="time" class="legacy-form-input" 
                    value="@FormatTime(registro.HoraEntrada)"
                    @onchange="e => registro.HoraEntrada = ParseTime(e.Value?.ToString())" />
         </div>
 
         <div class="legacy-form-group" style="flex: 1;">
             <label class="legacy-form-label">Hora Salida</label>
-            <input type="time" class="legacy-form-input" 
+            <input id="registro-horaSalida" type="time" class="legacy-form-input" 
                    value="@FormatTime(registro.HoraSalida)"
                    @onchange="e => registro.HoraSalida = ParseTime(e.Value?.ToString())" />
         </div>
@@ -173,6 +178,9 @@
     [Inject]
     public IRepository<Proyecto> ProyectoRepo { get; set; } = default!;
 
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; } = default!;
+
     private RegistroDiario registro = new();
     private IEnumerable<Empleado>? empleados;
     private IEnumerable<Actividad>? actividades;
@@ -288,6 +296,7 @@
             if (registro.EmpleadoId <= 0)
             {
                 empleadoError = "Debe seleccionar un empleado";
+                await FocusFirstInvalid();
                 return false;
             }
 
@@ -297,9 +306,14 @@
                 if (registro.HoraSalida < registro.HoraEntrada)
                 {
                     errorMessage = "La hora de salida no puede ser anterior a la hora de entrada";
+                    await FocusFirstInvalid();
                     return false;
                 }
             }
+
+            // Confirm before saving
+            var ok = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar el registro diario?");
+            if (!ok) return false;
 
             // Copy activities to registro before saving
             registro.DetallesActividades = detallesActividades;
@@ -329,4 +343,30 @@
     }
 
     public bool IsSaving => isSaving;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e?.Key == "Enter" && !isSaving)
+        {
+            var ok = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar el registro diario?");
+            if (ok)
+            {
+                await ValidateAndSaveAsync();
+            }
+        }
+    }
+
+    private async Task FocusFirstInvalid()
+    {
+        if (!string.IsNullOrEmpty(empleadoError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "registro-empleado");
+            return;
+        }
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "registro-fecha");
+            return;
+        }
+    }
 }

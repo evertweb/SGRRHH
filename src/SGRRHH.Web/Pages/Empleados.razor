@@ -101,6 +101,7 @@
 <LegacyModal Title="@modalTitle"
              IsVisible="@showFormModal"
              OnClose="CloseFormModal"
+             OnEnter="SaveForm"
              Width="750px">
     <ChildContent>
         <EmpleadoForm @ref="formComponent"

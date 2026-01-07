@@ -9,8 +9,10 @@
 @inject IRepository<Actividad> ActividadRepo
 @inject IRepository<Proyecto> ProyectoRepo
 @inject AppStateService AppState
+@inject NavigationManager Nav
+@inject IJSRuntime JS
 
-<div class="module-container">
+<div class="module-container @(isWizardMode ? "module-container-wizard-fixed" : "")">
     @if (!isWizardMode)
     {
         @* ===== VISTA LISTA ===== *@
@@ -51,7 +53,7 @@
             <div style="flex: 1;"></div>
 
             <button class="legacy-button" @onclick="ShowNewModal">+ Nuevo</button>
-            <button class="legacy-button legacy-button-primary" @onclick="StartWizard">Wizard</button>
+            <button class="legacy-button legacy-button-primary" @onclick="OpenWizardWindow">Wizard</button>
         </div>
 
     @* Mensaje de exito *@
@@ -123,176 +125,147 @@
     else @* isWizardMode = true *@
     {
         @* ===== WIZARD VIEW ===== *@
-        <fieldset class="legacy-fieldset">
-            <legend>Registro Batch - Paso @(wizardStep + 1) de 5</legend>
-            <div style="text-align: right; margin-bottom: 10px;">
-                <button class="legacy-button-small" @onclick="CancelWizard">Cancelar</button>
+        <fieldset class="legacy-fieldset wizard-container wizard-container-fixed" role="form">
+            <legend>Registro Batch - Control Diario</legend>
+
+            <div class="wizard-header">
+                <h2>Formulario control diario</h2>
+                <button class="legacy-button-small" @onclick="CancelWizard" disabled="@isWizardSaving">Cancelar</button>
             </div>
 
-            @* Step Content *@
-            <div class="wizard-content">
-                @switch (wizardStep)
+            <div class="wizard-content wizard-content-single">
+                <h3>1) Seleccionar Empleados</h3>
+                <p>Seleccione los empleados para los que desea registrar actividades:</p>
+                <div class="employee-list">
+                    @foreach (var emp in allEmpleados)
+                    {
+                        <label class="employee-checkbox">
+                            <input type="checkbox" checked="@selectedEmpleadoIds.Contains(emp.Id)"
+                                   @onchange="() => ToggleEmpleado(emp.Id)" />
+                            <span>@emp.Codigo - @emp.NombreCompleto</span>
+                            <small>(@emp.Departamento?.Nombre)</small>
+                        </label>
+                    }
+                </div>
+                <div class="selection-summary">@selectedEmpleadoIds.Count empleado(s) seleccionado(s)</div>
+
+                <h3>2) Fecha</h3>
+                <p>Seleccione la fecha del registro:</p>
+                <input type="date" class="legacy-input wizard-date-input" @bind="wizardDate" />
+
+                <h3>3) Horarios y Horas</h3>
+                <p>Ingrese la hora de entrada y salida:</p>
+                <div class="time-inputs">
+                    <div class="time-group">
+                        <label>Hora Entrada:</label>
+                        <input type="time" class="legacy-input"
+                               value="@FormatWizardTime(wizardHoraEntrada)"
+                               @onchange="@(e => { wizardHoraEntrada = ParseWizardTime(e.Value?.ToString()); UpdateHorasFromTimes(); })" />
+                    </div>
+                    <div class="time-group">
+                        <label>Hora Salida:</label>
+                        <input type="time" class="legacy-input"
+                               value="@FormatWizardTime(wizardHoraSalida)"
+                               @onchange="@(e => { wizardHoraSalida = ParseWizardTime(e.Value?.ToString()); UpdateHorasFromTimes(); })" />
+                    </div>
+                </div>
+                @if (wizardHoraEntrada.HasValue && wizardHoraSalida.HasValue)
                 {
-                    case 0: @* Select Employees *@
-                        <h3>Paso 1: Seleccionar Empleados</h3>
-                        <p>Seleccione los empleados para los que desea registrar actividades:</p>
-                        <div class="employee-list">
-                            @foreach (var emp in allEmpleados)
-                            {
-                                <label class="employee-checkbox">
-                                    <input type="checkbox" checked="@selectedEmpleadoIds.Contains(emp.Id)"
-                                           @onchange="() => ToggleEmpleado(emp.Id)" />
-                                    <span>@emp.Codigo - @emp.NombreCompleto</span>
-                                    <small>(@emp.Departamento?.Nombre)</small>
-                                </label>
-                            }
-                        </div>
-                        <div class="selection-summary">@selectedEmpleadoIds.Count empleado(s) seleccionado(s)</div>
-                        break;
+                    <div class="legacy-form-group" style="margin-top: 10px;">
+                        <label>Total Horas:</label>
+                        <span style="margin-left: 5px;"><strong>@GetWizardDurationLabel()</strong> (@wizardHorasManual.ToString("F2") horas)</span>
+                    </div>
+                    <div class="legacy-form-group">
+                        <label>Ajuste manual:</label>
+                        <input type="number" class="legacy-input" style="width: 80px; margin-left: 5px;"
+                               min="0.01" max="24" step="0.01"
+                               @bind="wizardHorasManual" />
+                        <span style="margin-left: 5px; font-size: 11px;">horas</span>
+                    </div>
+                }
 
-                    case 1: @* Select Date *@
-                        <h3>Paso 2: Seleccionar Fecha</h3>
-                        <p>Seleccione la fecha del registro:</p>
-                        <input type="date" class="legacy-input wizard-date-input" @bind="wizardDate" />
-                        break;
-
-                    case 2: @* Entry/Exit Times *@
-                        <h3>Paso 3: Horarios y Horas</h3>
-                        <p>Ingrese la hora de entrada y salida:</p>
-                        <div class="time-inputs">
-                            <div class="time-group">
-                                <label>Hora Entrada:</label>
-                                <input type="time" class="legacy-input"
-                                       value="@FormatWizardTime(wizardHoraEntrada)"
-                                       @onchange="@(e => { wizardHoraEntrada = ParseWizardTime(e.Value?.ToString()); UpdateHorasFromTimes(); })" />
-                            </div>
-                            <div class="time-group">
-                                <label>Hora Salida:</label>
-                                <input type="time" class="legacy-input"
-                                       value="@FormatWizardTime(wizardHoraSalida)"
-                                       @onchange="@(e => { wizardHoraSalida = ParseWizardTime(e.Value?.ToString()); UpdateHorasFromTimes(); })" />
-                            </div>
-                        </div>
-                        @if (wizardHoraEntrada.HasValue && wizardHoraSalida.HasValue)
+                <h3>4) Actividad y Proyecto</h3>
+                <div class="form-group">
+                    <label>Actividad:</label>
+                    <select class="legacy-input" @bind="wizardActividadId">
+                        <option value="0">-- Seleccione --</option>
+                        @foreach (var act in allActividades)
                         {
-                            <div class="legacy-form-group" style="margin-top: 10px;">
-                                <label>Total Horas:</label>
-                                <span style="margin-left: 5px;"><strong>@wizardHorasManual.ToString("F1")</strong> (calculado: @wizardHoraEntrada?.ToString(@"hh\:mm") - @wizardHoraSalida?.ToString(@"hh\:mm"))</span>
-                            </div>
-                            <div class="legacy-form-group">
-                                <label>Ajuste manual:</label>
-                                <input type="number" class="legacy-input" style="width: 80px; margin-left: 5px;" 
-                                       min="0.5" max="24" step="0.5" 
-                                       @bind="wizardHorasManual" />
-                                <span style="margin-left: 5px; font-size: 11px;">horas</span>
-                            </div>
+                            <option value="@act.Id">@act.Nombre</option>
                         }
-                        break;
-
-                    case 3: @* Activity + Project *@
-                        <h3>Paso 4: Actividad y Proyecto</h3>
-                        <div class="form-group">
-                            <label>Actividad:</label>
-                            <select class="legacy-input" @bind="wizardActividadId">
-                                <option value="0">-- Seleccione --</option>
-                                @foreach (var act in allActividades)
-                                {
-                                    <option value="@act.Id">@act.Nombre</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Proyecto (opcional):</label>
-                            <select class="legacy-input" @bind="wizardProyectoId">
-                                <option value="">-- Ninguno --</option>
-                                @foreach (var proy in allProyectos)
-                                {
-                                    <option value="@proy.Id">@proy.Nombre</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Descripcion:</label>
-                            <input type="text" class="legacy-input" @bind="wizardDescripcion" placeholder="Descripcion de la actividad" />
-                        </div>
-                        break;
-
-                    case 4: @* Review + Save *@
-                        <p><strong>Paso 5: Revisar y Guardar</strong></p>
-                        <table class="legacy-table" style="margin: 10px 0;">
-                            <tr>
-                                <td style="width: 120px;"><strong>Fecha:</strong></td>
-                                <td>@wizardDate.ToString("dd/MM/yyyy")</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Horario:</strong></td>
-                                <td>@wizardHoraEntrada?.ToString(@"hh\:mm") - @wizardHoraSalida?.ToString(@"hh\:mm") (@wizardHorasManual.ToString("F1") horas)</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Empleados:</strong></td>
-                                <td>
-                                    @selectedEmpleadoIds.Count empleado(s):
-                                    @foreach (var empId in selectedEmpleadoIds.Take(5))
-                                    {
-                                        var emp = allEmpleados.FirstOrDefault(e => e.Id == empId);
-                                        if (emp != null)
-                                        {
-                                            <span>@emp.NombreCompleto, </span>
-                                        }
-                                    }
-                                    @if (selectedEmpleadoIds.Count > 5)
-                                    {
-                                        <span>... y @(selectedEmpleadoIds.Count - 5) mas</span>
-                                    }
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Actividad:</strong></td>
-                                <td>@(allActividades.FirstOrDefault(a => a.Id == wizardActividadId)?.Nombre ?? "-")</td>
-                            </tr>
-                            @if (wizardProyectoId.HasValue)
-                            {
-                                <tr>
-                                    <td><strong>Proyecto:</strong></td>
-                                    <td>@(allProyectos.FirstOrDefault(p => p.Id == wizardProyectoId)?.Nombre ?? "-")</td>
-                                </tr>
-                            }
-                            <tr>
-                                <td><strong>Descripcion:</strong></td>
-                                <td>@(string.IsNullOrEmpty(wizardDescripcion) ? "(Sin descripcion)" : wizardDescripcion)</td>
-                            </tr>
-                        </table>
-                        @if (!string.IsNullOrEmpty(wizardError))
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Proyecto (opcional):</label>
+                    <select class="legacy-input" @bind="wizardProyectoId">
+                        <option value="">-- Ninguno --</option>
+                        @foreach (var proy in allProyectos)
                         {
-                            <div class="legacy-alert legacy-alert-error">@wizardError</div>
+                            <option value="@proy.Id">@proy.Nombre</option>
                         }
-                        break;
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Descripcion:</label>
+                    <input type="text" class="legacy-input" @bind="wizardDescripcion" placeholder="Descripcion de la actividad" />
+                </div>
+
+                <h3>5) Revisar</h3>
+                <table class="legacy-table" style="margin: 10px 0;">
+                    <tr>
+                        <td style="width: 120px;"><strong>Fecha:</strong></td>
+                        <td>@wizardDate.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Horario:</strong></td>
+                        <td>@wizardHoraEntrada?.ToString(@"hh\:mm") - @wizardHoraSalida?.ToString(@"hh\:mm") (@GetWizardDurationLabel(), @wizardHorasManual.ToString("F2") horas)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Empleados:</strong></td>
+                        <td>
+                            @selectedEmpleadoIds.Count empleado(s):
+                            @foreach (var empId in selectedEmpleadoIds.Take(5))
+                            {
+                                var emp = allEmpleados.FirstOrDefault(e => e.Id == empId);
+                                if (emp != null)
+                                {
+                                    <span>@emp.NombreCompleto, </span>
+                                }
+                            }
+                            @if (selectedEmpleadoIds.Count > 5)
+                            {
+                                <span>... y @(selectedEmpleadoIds.Count - 5) mas</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Actividad:</strong></td>
+                        <td>@(allActividades.FirstOrDefault(a => a.Id == wizardActividadId)?.Nombre ?? "-")</td>
+                    </tr>
+                    @if (wizardProyectoId.HasValue)
+                    {
+                        <tr>
+                            <td><strong>Proyecto:</strong></td>
+                            <td>@(allProyectos.FirstOrDefault(p => p.Id == wizardProyectoId)?.Nombre ?? "-")</td>
+                        </tr>
+                    }
+                    <tr>
+                        <td><strong>Descripcion:</strong></td>
+                        <td>@(string.IsNullOrEmpty(wizardDescripcion) ? "(Sin descripcion)" : wizardDescripcion)</td>
+                    </tr>
+                </table>
+
+                @if (!string.IsNullOrEmpty(wizardError))
+                {
+                    <div class="legacy-alert legacy-alert-error">@wizardError</div>
                 }
             </div>
 
-            @* Navigation Buttons *@
             <div class="wizard-footer">
-                @if (wizardStep > 0)
-                {
-                    <button class="legacy-button" @onclick="WizardBack">Anterior</button>
-                }
-                else
-                {
-                    <div></div>
-                }
-
-                @if (wizardStep < 4)
-                {
-                    <button class="legacy-button legacy-button-primary" @onclick="WizardNext" disabled="@(!CanAdvanceWizard())">
-                        Siguiente
-                    </button>
-                }
-                else
-                {
-                    <button class="legacy-button legacy-button-success" @onclick="WizardSave" disabled="@isWizardSaving">
-                        @(isWizardSaving ? "Guardando..." : "Guardar Todo")
-                    </button>
-                }
+                <button class="legacy-button" @onclick="CancelWizard" disabled="@isWizardSaving">Cancelar</button>
+                <button class="legacy-button legacy-button-success" @onclick="WizardSave" disabled="@(!CanSaveWizard() || isWizardSaving)">
+                    @(isWizardSaving ? "Guardando..." : "Guardar Todo")
+                </button>
             </div>
         </fieldset>
     }
@@ -362,6 +335,7 @@
     {
         AppState.SetViewTitle("Control Diario");
         await LoadEmpleados();
+        await LoadDataWithFilters();
         await LoadStats();
     }
 
@@ -572,15 +546,35 @@
 
     private void UpdateHorasFromTimes()
     {
-        if (wizardHoraEntrada.HasValue && wizardHoraSalida.HasValue && wizardHoraSalida > wizardHoraEntrada)
+        var duration = GetWizardDuration();
+        if (duration.HasValue)
         {
-            wizardHorasManual = (decimal)(wizardHoraSalida.Value - wizardHoraEntrada.Value).TotalHours;
+            // Keep minute precision so UI doesn't round 11h59m up to 12.0
+            wizardHorasManual = Math.Round((decimal)duration.Value.TotalMinutes / 60m, 4, MidpointRounding.AwayFromZero);
         }
     }
 
-    private async Task StartWizard()
+    private TimeSpan? GetWizardDuration()
     {
-        isWizardMode = true;
+        if (!wizardHoraEntrada.HasValue || !wizardHoraSalida.HasValue) return null;
+        if (wizardHoraSalida <= wizardHoraEntrada) return null;
+        return wizardHoraSalida.Value - wizardHoraEntrada.Value;
+    }
+
+    private string GetWizardDurationLabel()
+    {
+        var duration = GetWizardDuration();
+        if (!duration.HasValue) return "-";
+
+        var totalMinutes = (int)Math.Round(duration.Value.TotalMinutes);
+        var hours = totalMinutes / 60;
+        var minutes = totalMinutes % 60;
+
+        return $"{hours} horas y {minutes:00} minutos";
+    }
+
+    private async Task InitializeWizardAsync()
+    {
         wizardStep = 0;
         wizardError = null;
         selectedEmpleadoIds.Clear();
@@ -603,6 +597,12 @@
         {
             Console.WriteLine($"Error loading wizard data: {ex.Message}");
         }
+    }
+
+    private async Task OpenWizardWindow()
+    {
+        var url = Nav.ToAbsoluteUri("/control-diario/wizard").ToString();
+        await JS.InvokeVoidAsync("formHelpers.openCenteredWindow", url, "ControlDiarioWizard", 1980, 1080);
     }
 
     private void CancelWizard()
@@ -630,6 +630,15 @@
             4 => true,
             _ => true
         };
+    }
+
+    private bool CanSaveWizard()
+    {
+        return selectedEmpleadoIds.Count > 0
+            && wizardHoraEntrada.HasValue
+            && wizardHoraSalida.HasValue
+            && wizardHoraSalida > wizardHoraEntrada
+            && wizardActividadId > 0;
     }
 
     private void WizardNext()

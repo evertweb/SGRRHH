@@ -3,7 +3,12 @@
 @using SGRRHH.Core.Enums
 @using SGRRHH.Core.Interfaces
 
-<div class="vacacion-form">
+<div class="vacacion-form form-centered" @onkeydown="HandleKeyDown" style="position: relative;">
+    @if (isSaving)
+    {
+        <div class="saving-overlay"><div class="saving-box">Guardando...</div></div>
+    }
+
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="legacy-alert legacy-alert-error">
@@ -13,7 +18,7 @@
 
     <div class="legacy-form-group">
         <label class="legacy-form-label required">Empleado</label>
-        <select class="legacy-form-input" @bind="vacacion.EmpleadoId" disabled="@isEditing">
+        <select id="vacacion-empleado" class="legacy-form-input" @bind="vacacion.EmpleadoId" disabled="@isEditing">
             <option value="0">-- Seleccione empleado --</option>
             @foreach (var emp in empleados ?? Enumerable.Empty<Empleado>())
             {
@@ -29,14 +34,14 @@
     <div class="legacy-form-row">
         <div class="legacy-form-group" style="flex: 1;">
             <label class="legacy-form-label required">Fecha Inicio</label>
-            <input type="date" class="legacy-form-input" 
+            <input id="vacacion-fechaInicio" type="date" class="legacy-form-input" 
                    value="@FormatDate(vacacion.FechaInicio)"
                    @onchange="e => { vacacion.FechaInicio = ParseDate(e.Value?.ToString()); CalculateDays(); }" />
         </div>
 
         <div class="legacy-form-group" style="flex: 1;">
             <label class="legacy-form-label required">Fecha Fin</label>
-            <input type="date" class="legacy-form-input" 
+            <input id="vacacion-fechaFin" type="date" class="legacy-form-input" 
                    value="@FormatDate(vacacion.FechaFin)"
                    @onchange="e => { vacacion.FechaFin = ParseDate(e.Value?.ToString()); CalculateDays(); }" />
             @if (!string.IsNullOrEmpty(fechaError))
@@ -53,7 +58,7 @@
 
         <div class="legacy-form-group" style="width: 100px;">
             <label class="legacy-form-label required">Período</label>
-            <input type="number" class="legacy-form-input" 
+            <input id="vacacion-periodo" type="number" class="legacy-form-input" 
                    @bind="vacacion.PeriodoCorrespondiente"
                    min="2000"
                    max="2100"
@@ -138,6 +143,9 @@
 
     [Inject]
     public AppStateService AppState { get; set; } = default!;
+
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; } = default!;
 
     private Vacacion vacacion = new();
     private IEnumerable<Empleado>? empleados;
@@ -262,20 +270,27 @@
             if (vacacion.EmpleadoId <= 0)
             {
                 empleadoError = "Debe seleccionar un empleado";
+                await FocusFirstInvalid();
                 return false;
             }
 
             if (vacacion.FechaFin < vacacion.FechaInicio)
             {
                 fechaError = "La fecha fin no puede ser anterior a la fecha inicio";
+                await FocusFirstInvalid();
                 return false;
             }
 
             if (vacacion.DiasTomados <= 0)
             {
                 fechaError = "Debe solicitar al menos 1 día";
+                await FocusFirstInvalid();
                 return false;
             }
+
+            // Confirm before saving
+            var ok = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar la solicitud de vacaciones?");
+            if (!ok) return false;
 
             // Use service for create/update - includes business validations
             if (isEditing)
@@ -314,4 +329,30 @@
     }
 
     public bool IsSaving => isSaving;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e?.Key == "Enter" && !isSaving)
+        {
+            var ok = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar la solicitud de vacaciones?");
+            if (ok)
+            {
+                await ValidateAndSaveAsync();
+            }
+        }
+    }
+
+    private async Task FocusFirstInvalid()
+    {
+        if (!string.IsNullOrEmpty(empleadoError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "vacacion-empleado");
+            return;
+        }
+        if (!string.IsNullOrEmpty(fechaError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "vacacion-fechaInicio");
+            return;
+        }
+    }
 }

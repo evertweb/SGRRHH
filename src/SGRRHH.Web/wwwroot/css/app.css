@@ -414,6 +414,7 @@ input, button, select, textarea, table, th, td, label, span, div, p, a, li, h1, 
     max-height: 90%;
     display: flex;
     flex-direction: column;
+    position: relative;
     
     /* Efecto 3D Outset */
     border-top: 2px solid white;
@@ -424,6 +425,28 @@ input, button, select, textarea, table, th, td, label, span, div, p, a, li, h1, 
         inset 1px 1px 0 #DFDFDF,
         inset -1px -1px 0 #808080,
         4px 4px 10px rgba(0,0,0,0.3);
+} 
+
+/* Centered form helper and saving overlay */
+.form-centered { margin: 0 auto; max-width: 700px; position: relative; }
+.form-centered .legacy-form-row { display: block; }
+.form-centered .legacy-form-group { width: 100% !important; flex: none; }
+.saving-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+.saving-box {
+    padding: 12px 18px;
+    background: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+    border-radius: 6px;
+    font-weight: bold;
 }
 
 .legacy-modal-titlebar {
@@ -1306,6 +1329,24 @@ input, button, select, textarea, table, th, td, label, span, div, p, a, li, h1, 
     background: var(--win-silver);
 }
 
+/* Tamaño obligatorio: 1980x1080 (sin resize; scroll solo vertical dentro del contenido) */
+.wizard-container-fixed {
+    width: 1980px;
+    height: 1080px;
+    max-width: 1980px;
+    max-height: 1080px;
+    overflow: hidden;
+}
+
+.module-container-wizard-fixed {
+    overflow-x: hidden;
+}
+
+.wizard-container-fixed,
+.wizard-container-fixed * {
+    box-sizing: border-box;
+}
+
 .wizard-header {
     display: flex;
     justify-content: space-between;
@@ -1345,7 +1386,27 @@ input, button, select, textarea, table, th, td, label, span, div, p, a, li, h1, 
     background: white;
     border: 2px inset var(--win-gray);
     padding: 20px;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.wizard-content-single {
+    /* Asegura que no aparezca desplazamiento horizontal */
+    max-width: 100%;
+}
+
+/* Wizard dentro de modal: un solo scroll vertical y sin horizontal */
+.wizard-modal-body {
+    height: 75vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.wizard-modal-body .wizard-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .wizard-content h3 {
@@ -1373,6 +1434,7 @@ input, button, select, textarea, table, th, td, label, span, div, p, a, li, h1, 
 .employee-list {
     max-height: 300px;
     overflow-y: auto;
+    overflow-x: hidden;
     border: 2px inset var(--win-gray);
     padding: 10px;
     background: white;
@@ -1448,6 +1510,7 @@ input, button, select, textarea, table, th, td, label, span, div, p, a, li, h1, 
     display: flex;
     gap: 30px;
     margin-top: 15px;
+    flex-wrap: wrap;
 }
 
 .time-group {

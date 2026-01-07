@@ -5,7 +5,12 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using SGRRHH.Web.Client
 
-<div class="contrato-form">
+<div class="contrato-form form-centered" @onkeydown="HandleKeyDown" style="position: relative;">
+    @if (isSaving)
+    {
+        <div class="saving-overlay"><div class="saving-box">Guardando...</div></div>
+    }
+
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="legacy-alert legacy-alert-error">
@@ -15,7 +20,7 @@
 
     <div class="legacy-form-group">
         <label class="legacy-form-label required">Empleado</label>
-        <select class="legacy-form-input" @bind="contrato.EmpleadoId" disabled="@isEditing">
+        <select id="contrato-empleado" class="legacy-form-input" @bind="contrato.EmpleadoId" disabled="@isEditing">
             <option value="0">-- Seleccione empleado --</option>
             @foreach (var emp in empleados ?? Enumerable.Empty<Empleado>())
             {
@@ -31,7 +36,7 @@
     <div class="legacy-form-row">
         <div class="legacy-form-group" style="flex: 1;">
             <label class="legacy-form-label required">Tipo de Contrato</label>
-            <select class="legacy-form-input" @bind="contrato.TipoContrato" @bind:after="OnTipoContratoChanged">
+            <select id="contrato-tipo" class="legacy-form-input" @bind="contrato.TipoContrato" @bind:after="OnTipoContratoChanged">
                 <option value="@TipoContrato.Indefinido">Indefinido</option>
                 <option value="@TipoContrato.Fijo">Termino Fijo</option>
                 <option value="@TipoContrato.ObraLabor">Obra o Labor</option>
@@ -55,16 +60,16 @@
     <div class="legacy-form-row">
         <div class="legacy-form-group" style="flex: 1;">
             <label class="legacy-form-label required">Fecha Inicio</label>
-            <input type="date" class="legacy-form-input"
+            <input id="contrato-fechaInicio" type="date" class="legacy-form-input"
                    value="@FormatDate(contrato.FechaInicio)"
-                   @onchange="e => contrato.FechaInicio = ParseDate(e.Value?.ToString())" />
+                   @onchange="e => { contrato.FechaInicio = ParseDate(e.Value?.ToString()); OnFechaInicioChanged(); }" />
         </div>
 
         <div class="legacy-form-group" style="flex: 1;">
             <label class="legacy-form-label">Fecha Fin</label>
-            <input type="date" class="legacy-form-input"
+            <input id="contrato-fechaFin" type="date" class="legacy-form-input"
                    value="@FormatDate(contrato.FechaFin)"
-                   @onchange="e => contrato.FechaFin = ParseDateNullable(e.Value?.ToString())"
+                   @onchange="e => { contrato.FechaFin = ParseDateNullable(e.Value?.ToString()); fechaFinTouched = true; }"
                    disabled="@(contrato.TipoContrato == TipoContrato.Indefinido)" />
             <div class="legacy-form-hint">
                 @if (contrato.TipoContrato == TipoContrato.Indefinido)
@@ -74,6 +79,13 @@
                 else
                 {
                     <span>Dejar vacio para contratos indefinidos</span>
+                }
+                @if (suggestedFechaFin.HasValue && !fechaFinTouched)
+                {
+                    <div style="margin-top:6px;">
+                        <small class="legacy-form-hint">Sugerencia: @suggestedFechaFin.Value.ToString("dd/MM/yyyy")</small>
+                        <button type="button" class="legacy-button-small" style="margin-left:8px;" @onclick="ApplySuggestedFechaFin">Aplicar</button>
+                    </div>
                 }
             </div>
             @if (!string.IsNullOrEmpty(fechaError))
@@ -88,7 +100,7 @@
             <label class="legacy-form-label required">Salario Mensual</label>
             <div class="salary-input-wrapper">
                 <span class="currency-symbol">$</span>
-                <input type="number" class="legacy-form-input salary-input"
+                <input id="contrato-salario" type="number" class="legacy-form-input salary-input"
                        @bind="contrato.Salario"
                        min="0"
                        step="1000" />
@@ -237,6 +249,10 @@
     private bool showImagePreview = false;
     private string? imagePreviewUrl;
 
+    // Suggested date behavior (do not auto-override user input)
+    private DateTime? suggestedFechaFin;
+    private bool fechaFinTouched = false;
+
     protected override async Task OnInitializedAsync()
     {
         // Cargar catalogos
@@ -303,15 +319,43 @@
 
     private void OnTipoContratoChanged()
     {
-        // Si es indefinido, limpiar fecha fin
+        // Do not silently overwrite FechaFin. We compute a suggestion and display it.
         if (contrato.TipoContrato == TipoContrato.Indefinido)
         {
             contrato.FechaFin = null;
+            suggestedFechaFin = null;
+            fechaFinTouched = true;
         }
-        else if (!contrato.FechaFin.HasValue)
+        else
         {
-            // Sugerir fecha fin de 1 año
-            contrato.FechaFin = contrato.FechaInicio.AddYears(1);
+            suggestedFechaFin = contrato.FechaInicio.AddYears(1);
+            // do not overwrite user's value; show suggestion until user applies it
+            if (!contrato.FechaFin.HasValue)
+            {
+                fechaFinTouched = false;
+            }
+        }
+    }
+
+    private void OnFechaInicioChanged()
+    {
+        if (contrato.TipoContrato != TipoContrato.Indefinido)
+        {
+            suggestedFechaFin = contrato.FechaInicio.AddYears(1);
+        }
+        else
+        {
+            suggestedFechaFin = null;
+        }
+    }
+
+    private void ApplySuggestedFechaFin()
+    {
+        if (suggestedFechaFin.HasValue)
+        {
+            contrato.FechaFin = suggestedFechaFin;
+            fechaFinTouched = true;
+            suggestedFechaFin = null;
         }
     }
 
@@ -360,35 +404,44 @@
         try
         {
             // Validaciones
-            if (contrato.EmpleadoId <= 0)
+                if (contrato.EmpleadoId <= 0)
             {
                 empleadoError = "Debe seleccionar un empleado";
+                await FocusFirstInvalid();
                 return false;
             }
 
             if (contrato.CargoId <= 0)
             {
                 errorMessage = "Debe seleccionar un cargo";
+                await FocusFirstInvalid();
                 return false;
             }
 
             if (contrato.FechaFin.HasValue && contrato.FechaFin < contrato.FechaInicio)
             {
                 fechaError = "La fecha fin no puede ser anterior a la fecha inicio";
+                await FocusFirstInvalid();
                 return false;
             }
 
             if (contrato.Salario < 0)
             {
                 salarioError = "El salario no puede ser negativo";
+                await FocusFirstInvalid();
                 return false;
             }
 
             if (contrato.Salario == 0)
             {
                 salarioError = "El salario debe ser mayor a cero";
+                await FocusFirstInvalid();
                 return false;
             }
+
+            // Confirm before saving
+            var confirm = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar el contrato?");
+            if (!confirm) return false;
 
             // Si SkipSave es true, solo validamos y llamamos a OnSave sin guardar
             // Esto es util para renovacion donde el servicio maneja la creacion
@@ -445,6 +498,37 @@
     }
 
     public bool IsSaving => isSaving;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e?.Key == "Enter" && !isSaving)
+        {
+            var ok = await JSRuntime.InvokeAsync<bool>("confirm", "¿Desea guardar el contrato?");
+            if (ok)
+            {
+                await ValidateAndSaveAsync();
+            }
+        }
+    }
+
+    private async Task FocusFirstInvalid()
+    {
+        if (!string.IsNullOrEmpty(empleadoError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "contrato-empleado");
+            return;
+        }
+        if (!string.IsNullOrEmpty(fechaError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "contrato-fechaFin");
+            return;
+        }
+        if (!string.IsNullOrEmpty(salarioError))
+        {
+            await JSRuntime.InvokeVoidAsync("formHelpers.focusElementById", "contrato-salario");
+            return;
+        }
+    }
 
     private async Task HandleFileSelected(InputFileChangeEventArgs e)
     {

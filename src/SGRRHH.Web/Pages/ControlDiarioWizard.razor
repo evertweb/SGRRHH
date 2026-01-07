@@ -1,0 +1,335 @@
+@page "/control-diario/wizard"
+@layout SGRRHH.Web.Layout.EmptyLayout
+@using SGRRHH.Core.Entities
+@using SGRRHH.Core.Interfaces
+@inject IControlDiarioService ControlDiarioService
+@inject IEmpleadoRepository EmpleadoRepo
+@inject IRepository<Actividad> ActividadRepo
+@inject IRepository<Proyecto> ProyectoRepo
+@inject IJSRuntime JS
+@inject AppStateService AppState
+
+<div class="module-container module-container-wizard-fixed">
+    <fieldset class="legacy-fieldset wizard-container wizard-container-fixed" role="form">
+        <legend>Registro Batch - Control Diario</legend>
+
+        <div class="wizard-header">
+            <h2>Formulario control diario</h2>
+            <button class="legacy-button-small" @onclick="Cancel" disabled="@isWizardSaving">Cancelar</button>
+        </div>
+
+        <div class="wizard-content wizard-content-single">
+            <h3>1) Seleccionar Empleados</h3>
+            <p>Seleccione los empleados para los que desea registrar actividades:</p>
+            <div class="employee-list">
+                @foreach (var emp in allEmpleados)
+                {
+                    <label class="employee-checkbox">
+                        <input type="checkbox" checked="@selectedEmpleadoIds.Contains(emp.Id)"
+                               @onchange="() => ToggleEmpleado(emp.Id)" />
+                        <span>@emp.Codigo - @emp.NombreCompleto</span>
+                        <small>(@emp.Departamento?.Nombre)</small>
+                    </label>
+                }
+            </div>
+            <div class="selection-summary">@selectedEmpleadoIds.Count empleado(s) seleccionado(s)</div>
+
+            <h3>2) Fecha</h3>
+            <p>Seleccione la fecha del registro:</p>
+            <input type="date" class="legacy-input wizard-date-input" @bind="wizardDate" />
+
+            <h3>3) Horarios y Horas</h3>
+            <p>Ingrese la hora de entrada y salida:</p>
+            <div class="time-inputs">
+                <div class="time-group">
+                    <label>Hora Entrada:</label>
+                    <input type="time" class="legacy-input"
+                           value="@FormatWizardTime(wizardHoraEntrada)"
+                           @onchange="@(e => { wizardHoraEntrada = ParseWizardTime(e.Value?.ToString()); UpdateHorasFromTimes(); })" />
+                </div>
+                <div class="time-group">
+                    <label>Hora Salida:</label>
+                    <input type="time" class="legacy-input"
+                           value="@FormatWizardTime(wizardHoraSalida)"
+                           @onchange="@(e => { wizardHoraSalida = ParseWizardTime(e.Value?.ToString()); UpdateHorasFromTimes(); })" />
+                </div>
+            </div>
+
+            @if (wizardHoraEntrada.HasValue && wizardHoraSalida.HasValue)
+            {
+                <div class="legacy-form-group" style="margin-top: 10px;">
+                    <label>Total Horas:</label>
+                    <span style="margin-left: 5px;"><strong>@GetWizardDurationLabel()</strong> (@wizardHorasManual.ToString("F2") horas)</span>
+                </div>
+                <div class="legacy-form-group">
+                    <label>Ajuste manual:</label>
+                    <input type="number" class="legacy-input" style="width: 80px; margin-left: 5px;"
+                           min="0.01" max="24" step="0.01"
+                           @bind="wizardHorasManual" />
+                    <span style="margin-left: 5px; font-size: 11px;">horas</span>
+                </div>
+            }
+
+            <h3>4) Actividad y Proyecto</h3>
+            <div class="form-group">
+                <label>Actividad:</label>
+                <select class="legacy-input" @bind="wizardActividadId">
+                    <option value="0">-- Seleccione --</option>
+                    @foreach (var act in allActividades)
+                    {
+                        <option value="@act.Id">@act.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Proyecto (opcional):</label>
+                <select class="legacy-input" @bind="wizardProyectoId">
+                    <option value="">-- Ninguno --</option>
+                    @foreach (var proy in allProyectos)
+                    {
+                        <option value="@proy.Id">@proy.Nombre</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Descripcion:</label>
+                <input type="text" class="legacy-input" @bind="wizardDescripcion" placeholder="Descripcion de la actividad" />
+            </div>
+
+            <h3>5) Revisar</h3>
+            <table class="legacy-table" style="margin: 10px 0;">
+                <tr>
+                    <td style="width: 120px;"><strong>Fecha:</strong></td>
+                    <td>@wizardDate.ToString("dd/MM/yyyy")</td>
+                </tr>
+                <tr>
+                    <td><strong>Horario:</strong></td>
+                    <td>@wizardHoraEntrada?.ToString(@"hh\:mm") - @wizardHoraSalida?.ToString(@"hh\:mm") (@GetWizardDurationLabel(), @wizardHorasManual.ToString("F2") horas)</td>
+                </tr>
+                <tr>
+                    <td><strong>Empleados:</strong></td>
+                    <td>
+                        @selectedEmpleadoIds.Count empleado(s):
+                        @foreach (var empId in selectedEmpleadoIds.Take(5))
+                        {
+                            var emp = allEmpleados.FirstOrDefault(e => e.Id == empId);
+                            if (emp != null)
+                            {
+                                <span>@emp.NombreCompleto, </span>
+                            }
+                        }
+                        @if (selectedEmpleadoIds.Count > 5)
+                        {
+                            <span>... y @(selectedEmpleadoIds.Count - 5) mas</span>
+                        }
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Actividad:</strong></td>
+                    <td>@(allActividades.FirstOrDefault(a => a.Id == wizardActividadId)?.Nombre ?? "-")</td>
+                </tr>
+                @if (wizardProyectoId.HasValue)
+                {
+                    <tr>
+                        <td><strong>Proyecto:</strong></td>
+                        <td>@(allProyectos.FirstOrDefault(p => p.Id == wizardProyectoId)?.Nombre ?? "-")</td>
+                    </tr>
+                }
+                <tr>
+                    <td><strong>Descripcion:</strong></td>
+                    <td>@(string.IsNullOrEmpty(wizardDescripcion) ? "(Sin descripcion)" : wizardDescripcion)</td>
+                </tr>
+            </table>
+
+            @if (!string.IsNullOrEmpty(wizardError))
+            {
+                <div class="legacy-alert legacy-alert-error">@wizardError</div>
+            }
+        </div>
+
+        <div class="wizard-footer">
+            <button class="legacy-button" @onclick="Cancel" disabled="@isWizardSaving">Cancelar</button>
+            <button class="legacy-button legacy-button-success" @onclick="WizardSave" disabled="@(!CanSaveWizard() || isWizardSaving)">
+                @(isWizardSaving ? "Guardando..." : "Guardar Todo")
+            </button>
+        </div>
+    </fieldset>
+</div>
+
+@code {
+    private bool isWizardSaving = false;
+    private string? wizardError;
+
+    private List<Empleado> allEmpleados = new();
+    private List<Actividad> allActividades = new();
+    private List<Proyecto> allProyectos = new();
+
+    private HashSet<int> selectedEmpleadoIds = new();
+    private DateTime wizardDate = DateTime.Today;
+    private TimeSpan? wizardHoraEntrada = new TimeSpan(8, 0, 0);
+    private TimeSpan? wizardHoraSalida = new TimeSpan(17, 0, 0);
+    private decimal wizardHorasManual = 9;
+    private int wizardActividadId = 0;
+    private int? wizardProyectoId;
+    private string wizardDescripcion = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        AppState.SetViewTitle("Control Diario - Wizard");
+        await InitializeWizardAsync();
+    }
+
+    private async Task InitializeWizardAsync()
+    {
+        wizardError = null;
+        selectedEmpleadoIds.Clear();
+        wizardDate = DateTime.Today;
+        wizardHoraEntrada = new TimeSpan(8, 0, 0);
+        wizardHoraSalida = new TimeSpan(17, 0, 0);
+        wizardHorasManual = 9;
+        wizardActividadId = 0;
+        wizardProyectoId = null;
+        wizardDescripcion = "";
+
+        try
+        {
+            allEmpleados = (await EmpleadoRepo.GetAllActiveAsync()).ToList();
+            allActividades = (await ActividadRepo.GetAllAsync()).Where(a => a.Activo).ToList();
+            allProyectos = (await ProyectoRepo.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading wizard data: {ex.Message}");
+        }
+    }
+
+    private void ToggleEmpleado(int empleadoId)
+    {
+        if (selectedEmpleadoIds.Contains(empleadoId))
+            selectedEmpleadoIds.Remove(empleadoId);
+        else
+            selectedEmpleadoIds.Add(empleadoId);
+    }
+
+    private string FormatWizardTime(TimeSpan? time) => time?.ToString(@"hh\:mm") ?? "";
+
+    private TimeSpan? ParseWizardTime(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return null;
+        return TimeSpan.TryParse(value, out var time) ? time : null;
+    }
+
+    private void UpdateHorasFromTimes()
+    {
+        var duration = GetWizardDuration();
+        if (duration.HasValue)
+        {
+            wizardHorasManual = Math.Round((decimal)duration.Value.TotalMinutes / 60m, 4, MidpointRounding.AwayFromZero);
+        }
+    }
+
+    private TimeSpan? GetWizardDuration()
+    {
+        if (!wizardHoraEntrada.HasValue || !wizardHoraSalida.HasValue) return null;
+        if (wizardHoraSalida <= wizardHoraEntrada) return null;
+        return wizardHoraSalida.Value - wizardHoraEntrada.Value;
+    }
+
+    private string GetWizardDurationLabel()
+    {
+        var duration = GetWizardDuration();
+        if (!duration.HasValue) return "-";
+
+        var totalMinutes = (int)Math.Round(duration.Value.TotalMinutes);
+        var hours = totalMinutes / 60;
+        var minutes = totalMinutes % 60;
+
+        return $"{hours} horas y {minutes:00} minutos";
+    }
+
+    private bool CanSaveWizard()
+    {
+        return selectedEmpleadoIds.Count > 0
+            && wizardHoraEntrada.HasValue
+            && wizardHoraSalida.HasValue
+            && wizardHoraSalida > wizardHoraEntrada
+            && wizardActividadId > 0;
+    }
+
+    private async Task WizardSave()
+    {
+        if (!CanSaveWizard())
+        {
+            wizardError = "Complete los campos obligatorios";
+            return;
+        }
+
+        isWizardSaving = true;
+        wizardError = null;
+
+        try
+        {
+            var successCount = 0;
+            var errorCount = 0;
+
+            foreach (var empleadoId in selectedEmpleadoIds)
+            {
+                try
+                {
+                    var registro = new RegistroDiario
+                    {
+                        EmpleadoId = empleadoId,
+                        Fecha = wizardDate.Date,
+                        HoraEntrada = wizardHoraEntrada,
+                        HoraSalida = wizardHoraSalida,
+                        Estado = EstadoRegistroDiario.Borrador,
+                        Activo = true,
+                        FechaCreacion = DateTime.Now,
+                        DetallesActividades = new List<DetalleActividad>()
+                    };
+
+                    registro.DetallesActividades.Add(new DetalleActividad
+                    {
+                        ActividadId = wizardActividadId,
+                        ProyectoId = wizardProyectoId,
+                        Horas = wizardHorasManual,
+                        Descripcion = wizardDescripcion,
+                        Activo = true,
+                        FechaCreacion = DateTime.Now
+                    });
+
+                    var result = await ControlDiarioService.SaveRegistroAsync(registro);
+                    if (result.Success)
+                        successCount++;
+                    else
+                        errorCount++;
+                }
+                catch
+                {
+                    errorCount++;
+                }
+            }
+
+            if (errorCount == 0)
+            {
+                // Close and refresh opener
+                await JS.InvokeVoidAsync("formHelpers.closeCurrentWindow", true);
+            }
+            else
+            {
+                wizardError = $"Se crearon {successCount} registros, pero hubo {errorCount} errores";
+            }
+        }
+        finally
+        {
+            isWizardSaving = false;
+        }
+    }
+
+    private async Task Cancel()
+    {
+        await JS.InvokeVoidAsync("formHelpers.closeCurrentWindow", false);
+    }
+}

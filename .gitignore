@@ -31,6 +31,10 @@ appsettings.json
 firebase-credentials.json
 *-firebase-adminsdk-*.json
 serviceAccountKey.json
+# Local service account for AuthServer (do not commit)
+rrhh-service-account.json
+# Local keys folder
+keys/*.json
 
 # Windows device files
 nul

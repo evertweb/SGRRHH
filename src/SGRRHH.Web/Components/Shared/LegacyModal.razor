@@ -1,8 +1,9 @@
 @* Componente Modal Reutilizable - Estilo Windows Classic *@
+@using Microsoft.AspNetCore.Components.Web
 
 @if (IsVisible)
 {
-    <div class="legacy-modal-overlay" @onclick="HandleOverlayClick">
+    <div class="legacy-modal-overlay" @onclick="HandleOverlayClick" @onkeydown="HandleKeyDown" tabindex="0" @ref="overlayRef">
         <div class="legacy-modal" style="@GetWidthStyle()" @onclick:stopPropagation="true">
             @* Barra de título *@
             <div class="legacy-modal-titlebar">
@@ -46,6 +47,12 @@
     public EventCallback OnClose { get; set; }
 
     /// <summary>
+    /// Evento cuando se presiona Enter en el modal (usado para guardar)
+    /// </summary>
+    [Parameter]
+    public EventCallback OnEnter { get; set; }
+
+    /// <summary>
     /// Ancho del modal (ej: "500px", "600px")
     /// </summary>
     [Parameter]
@@ -69,6 +76,8 @@
     [Parameter]
     public bool CloseOnOverlayClick { get; set; } = true;
 
+    private ElementReference overlayRef;
+
     private async Task Close()
     {
         await OnClose.InvokeAsync();
@@ -82,8 +91,40 @@
         }
     }
 
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e == null) return;
+        if (e.Key == "Escape")
+        {
+            await Close();
+            return;
+        }
+
+        if (e.Key == "Enter")
+        {
+            if (OnEnter.HasDelegate)
+            {
+                await OnEnter.InvokeAsync();
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible)
+        {
+            try
+            {
+                await overlayRef.FocusAsync();
+            }
+            catch { /* ignore focus errors */ }
+        }
+    }
+
     private string GetWidthStyle()
     {
         return $"width: {Width};";
     }
 }
+
+

@@ -214,8 +214,7 @@
 @* Modal de Crear/Editar Contrato *@
 <LegacyModal Title="@modalTitle"
              IsVisible="@showFormModal"
-             OnClose="CloseFormModal"
-             Width="650px">
+             OnClose="CloseFormModal"             OnEnter="SaveForm"             Width="650px">
     <ChildContent>
         <ContratoForm @ref="formComponent"
                       ContratoEdit="@selectedContrato"

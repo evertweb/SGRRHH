@@ -183,10 +183,22 @@ public abstract class WebFirestoreRepository<T> : IFirestoreRepository<T>, IRepo
 
     protected virtual async Task<int> GetNextIdAsync()
     {
-        // Simplificación para la versión web: obtener todos y buscar el max
-        // En una app real esto debería ser más eficiente (vía una colección de contadores)
-        var all = await GetAllAsync();
-        if (!all.Any()) return 1;
-        return all.Max(x => x.Id) + 1;
+        // Optimization: Use server-side sorting and limiting to get only the last ID
+        try 
+        {
+            var lastItems = await _firebase.QueryCollectionOrderedAsync<object>(
+                _collectionName, "id", "desc", 1);
+            
+            var lastEntity = lastItems.Select(MapToEntity).FirstOrDefault();
+            return (lastEntity?.Id ?? 0) + 1;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WebFirestoreRepository] Error getting next ID for {_collectionName}: {ex.Message}. Fallback to GetAllAsync.");
+            // Fallback in case index is missing (requires composite index sometimes, though single field desc should work auto)
+            var all = await GetAllAsync();
+            if (!all.Any()) return 1;
+            return all.Max(x => x.Id) + 1;
+        }
     }
 }
