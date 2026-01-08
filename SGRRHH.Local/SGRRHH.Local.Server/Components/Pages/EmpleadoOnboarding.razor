@@ -1,0 +1,1303 @@
+@page "/empleados/onboarding"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@inject IAuthService AuthService
+@inject IEmpleadoRepository EmpleadoRepo
+@inject IDocumentoEmpleadoRepository DocumentoRepo
+@inject ICatalogCacheService CatalogCache
+@inject ILocalStorageService StorageService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject ILogger<EmpleadoOnboarding> Logger
+
+<PageTitle>Onboarding de Empleado - SGRRHH</PageTitle>
+
+<!-- Toast Messages -->
+<MessageToast @ref="messageToast" />
+
+<div class="wizard-container">
+    <!-- Header del Wizard -->
+    <div class="wizard-header">
+        <h1 style="margin: 0; font-size: 18px; font-weight: bold;">
+            🧑‍💼 ASISTENTE DE INGRESO DE EMPLEADO
+        </h1>
+        <p style="margin: 8px 0 0 0; font-size: 12px; color: #333;">
+            Complete los siguientes pasos para registrar un nuevo empleado en el sistema
+        </p>
+    </div>
+
+    <!-- Barra de Progreso -->
+    <div class="wizard-progress">
+        <div class="progress-steps">
+            @for (int i = 1; i <= 4; i++)
+            {
+                var stepNumber = i;
+                <div class="progress-step @(currentStep == stepNumber ? "active" : "") @(currentStep > stepNumber ? "completed" : "")">
+                    <div class="step-circle">
+                        @if (currentStep > stepNumber)
+                        {
+                            <span>✓</span>
+                        }
+                        else
+                        {
+                            <span>@stepNumber</span>
+                        }
+                    </div>
+                    <div class="step-label">@GetStepName(stepNumber)</div>
+                </div>
+                @if (i < 4)
+                {
+                    <div class="step-connector @(currentStep > stepNumber ? "completed" : "")"></div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Contenido del Paso Actual -->
+    <div class="wizard-content">
+        @if (currentStep == 1)
+        {
+            @RenderStep1DatosBasicos()
+        }
+        else if (currentStep == 2)
+        {
+            @RenderStep2DocumentosObligatorios()
+        }
+        else if (currentStep == 3)
+        {
+            @RenderStep3DocumentosOpcionales()
+        }
+        else if (currentStep == 4)
+        {
+            @RenderStep4Revisar()
+        }
+    </div>
+
+    <!-- Botones de Navegación -->
+    <div class="wizard-footer">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <button @onclick="Cancelar" disabled="@isSaving" style="background-color: #CC0000; color: white;">
+                CANCELAR
+            </button>
+            <div style="display: flex; gap: 8px;">
+                @if (currentStep > 1)
+                {
+                    <button @onclick="Anterior" disabled="@isSaving">
+                        ◀ ANTERIOR
+                    </button>
+                }
+                @if (currentStep < 4)
+                {
+                    <button @onclick="Siguiente" disabled="@(!CanGoNext() || isSaving)" style="background-color: #0066CC; color: white;">
+                        SIGUIENTE ▶
+                    </button>
+                }
+                else
+                {
+                    <button @onclick="Finalizar" disabled="@isSaving" style="background-color: #00AA00; color: white;">
+                        @(isSaving ? "GUARDANDO..." : "✓ FINALIZAR Y GUARDAR")
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private MessageToast? messageToast;
+    
+    private int currentStep = 1;
+    private bool isSaving = false;
+    
+    // Datos del empleado
+    private Empleado empleado = new Empleado
+    {
+        FechaIngreso = DateTime.Today,
+        Estado = EstadoEmpleado.Activo
+    };
+    
+    // Catálogos
+    private List<Cargo> cargos = new();
+    private List<Departamento> departamentos = new();
+    
+    // Foto
+    private IBrowserFile? fotoFile;
+    private string? fotoPreviewUrl;
+    
+    // Documentos
+    private List<DocumentoUpload> documentosObligatorios = new();
+    private List<DocumentoUpload> documentosOpcionales = new();
+    
+    private class DocumentoUpload
+    {
+        public TipoDocumentoEmpleado Tipo { get; set; }
+        public string Nombre { get; set; } = "";
+        public string NombreTipo { get; set; } = "";
+        public bool EsObligatorio { get; set; }
+        public IBrowserFile? Archivo { get; set; }
+        public string? ArchivoNombre { get; set; }
+        public DateTime? FechaEmision { get; set; }
+        public DateTime? FechaVencimiento { get; set; }
+        public bool Subido { get; set; }
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        // Cargar catálogos
+        await CargarCatalogos();
+        
+        // Inicializar documentos
+        InicializarDocumentos();
+        
+        // Obtener siguiente código
+        empleado.Codigo = await EmpleadoRepo.GetNextCodigoAsync();
+    }
+    
+    private async Task CargarCatalogos()
+    {
+        try
+        {
+            cargos = await CatalogCache.GetCargosAsync();
+            departamentos = await CatalogCache.GetDepartamentosAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando catálogos");
+            messageToast?.ShowError("Error al cargar catálogos");
+        }
+    }
+    
+    private void InicializarDocumentos()
+    {
+        // Documentos OBLIGATORIOS según legislación colombiana
+        var obligatorios = new[]
+        {
+            (TipoDocumentoEmpleado.Cedula, "Fotocopia de Cédula"),
+            (TipoDocumentoEmpleado.HojaVida, "Hoja de Vida / Curriculum"),
+            (TipoDocumentoEmpleado.CertificadoEstudios, "Certificados de Estudios"),
+            (TipoDocumentoEmpleado.CertificadoLaboral, "Certificados Laborales"),
+            (TipoDocumentoEmpleado.ReferenciasPersonales, "Referencias Personales (mín. 2)"),
+            (TipoDocumentoEmpleado.ReferenciasLaborales, "Referencias Laborales (mín. 2)"),
+            (TipoDocumentoEmpleado.ExamenMedicoIngreso, "Examen Médico de Ingreso"),
+            (TipoDocumentoEmpleado.AfiliacionEPS, "Afiliación EPS"),
+            (TipoDocumentoEmpleado.AfiliacionAFP, "Afiliación AFP (Pensión)"),
+            (TipoDocumentoEmpleado.AfiliacionARL, "Afiliación ARL"),
+            (TipoDocumentoEmpleado.AfiliacionCajaCompensacion, "Afiliación Caja Compensación"),
+            (TipoDocumentoEmpleado.Antecedentes, "Certificado de Antecedentes"),
+            (TipoDocumentoEmpleado.RUT, "RUT (Registro Único Tributario)"),
+            (TipoDocumentoEmpleado.CertificadoBancario, "Certificación Bancaria"),
+            (TipoDocumentoEmpleado.ContratoFirmado, "Contrato de Trabajo Firmado"),
+            (TipoDocumentoEmpleado.LibretaMilitar, "Libreta Militar (hombres)"),
+            (TipoDocumentoEmpleado.Foto, "Foto 3x4 tipo documento")
+        };
+        
+        foreach (var (tipo, nombre) in obligatorios)
+        {
+            documentosObligatorios.Add(new DocumentoUpload
+            {
+                Tipo = tipo,
+                Nombre = nombre,
+                NombreTipo = nombre,
+                EsObligatorio = true,
+                FechaEmision = DateTime.Today
+            });
+        }
+        
+        // Documentos OPCIONALES
+        var opcionales = new[]
+        {
+            (TipoDocumentoEmpleado.LicenciaConduccion, "Licencia de Conducción"),
+            (TipoDocumentoEmpleado.ActaEntregaDotacion, "Acta Entrega de Dotación"),
+            (TipoDocumentoEmpleado.Capacitacion, "Certificados de Capacitación"),
+            (TipoDocumentoEmpleado.ExamenMedicoPeriodico, "Exámenes Médicos Periódicos"),
+            (TipoDocumentoEmpleado.Otro, "Otros Documentos")
+        };
+        
+        foreach (var (tipo, nombre) in opcionales)
+        {
+            documentosOpcionales.Add(new DocumentoUpload
+            {
+                Tipo = tipo,
+                Nombre = nombre,
+                NombreTipo = nombre,
+                EsObligatorio = false,
+                FechaEmision = DateTime.Today
+            });
+        }
+    }
+    
+    private string GetStepName(int step) => step switch
+    {
+        1 => "Datos Básicos",
+        2 => "Documentos Obligatorios",
+        3 => "Documentos Opcionales",
+        4 => "Revisar y Confirmar",
+        _ => ""
+    };
+    
+    private bool CanGoNext()
+    {
+        return currentStep switch
+        {
+            1 => ValidarStep1(),
+            2 => true, // Documentos obligatorios se validan pero no bloquean
+            3 => true, // Documentos opcionales no bloquean
+            _ => false
+        };
+    }
+    
+    private bool ValidarStep1()
+    {
+        return !string.IsNullOrWhiteSpace(empleado.Codigo) &&
+               !string.IsNullOrWhiteSpace(empleado.Cedula) &&
+               !string.IsNullOrWhiteSpace(empleado.Nombres) &&
+               !string.IsNullOrWhiteSpace(empleado.Apellidos) &&
+               empleado.FechaIngreso != default;
+    }
+    
+    private void Siguiente()
+    {
+        if (currentStep < 4 && CanGoNext())
+        {
+            currentStep++;
+        }
+    }
+    
+    private void Anterior()
+    {
+        if (currentStep > 1)
+        {
+            currentStep--;
+        }
+    }
+    
+    private async Task Cancelar()
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "¿Está seguro que desea cancelar? Se perderán todos los datos ingresados.");
+        if (confirmed)
+        {
+            Navigation.NavigateTo("/empleados");
+        }
+    }
+    
+    private async Task Finalizar()
+    {
+        if (!ValidarStep1())
+        {
+            messageToast?.ShowError("Debe completar los datos básicos del empleado");
+            return;
+        }
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            // 1. Validar código único
+            if (await EmpleadoRepo.ExistsCodigoAsync(empleado.Codigo, null))
+            {
+                messageToast?.ShowError($"Ya existe un empleado con el código {empleado.Codigo}");
+                return;
+            }
+            
+            // 2. Validar cédula única
+            if (await EmpleadoRepo.ExistsCedulaAsync(empleado.Cedula, null))
+            {
+                messageToast?.ShowError($"Ya existe un empleado con la cédula {empleado.Cedula}");
+                return;
+            }
+            
+            // 3. Validar email único (si se proporcionó)
+            if (!string.IsNullOrWhiteSpace(empleado.Email) && 
+                await EmpleadoRepo.ExistsEmailAsync(empleado.Email, null))
+            {
+                messageToast?.ShowError($"Ya existe un empleado con el email {empleado.Email}");
+                return;
+            }
+            
+            // 4. Crear empleado primero para obtener el ID
+            empleado = await EmpleadoRepo.AddAsync(empleado);
+            Logger.LogInformation("Empleado creado: {Id} - {Codigo}", empleado.Id, empleado.Codigo);
+            
+            // 5. Guardar foto si se seleccionó
+            if (fotoFile != null)
+            {
+                try
+                {
+                    using var stream = fotoFile.OpenReadStream(2 * 1024 * 1024);
+                    using var ms = new MemoryStream();
+                    await stream.CopyToAsync(ms);
+                    var extension = Path.GetExtension(fotoFile.Name).ToLowerInvariant();
+                    var result = await StorageService.SaveEmpleadoFotoAsync(empleado.Id, ms.ToArray(), extension);
+                    
+                    if (result.IsSuccess)
+                    {
+                        empleado.FotoPath = result.Value;
+                        // Actualizar empleado con el path de la foto
+                        await EmpleadoRepo.UpdateAsync(empleado);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error guardando foto");
+                }
+            }
+            
+            // 6. Subir documentos obligatorios
+            var docsSubidos = 0;
+            foreach (var doc in documentosObligatorios.Where(d => d.Archivo != null))
+            {
+                try
+                {
+                    await SubirDocumento(empleado.Id, doc);
+                    docsSubidos++;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error subiendo documento {Tipo}", doc.Tipo);
+                }
+            }
+            
+            // 7. Subir documentos opcionales
+            foreach (var doc in documentosOpcionales.Where(d => d.Archivo != null))
+            {
+                try
+                {
+                    await SubirDocumento(empleado.Id, doc);
+                    docsSubidos++;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error subiendo documento {Tipo}", doc.Tipo);
+                }
+            }
+            
+            Logger.LogInformation("Onboarding completado: Empleado {Codigo} con {Docs} documentos", 
+                empleado.Codigo, docsSubidos);
+            
+            messageToast?.ShowSuccess($"Empleado {empleado.Codigo} creado exitosamente con {docsSubidos} documento(s)");
+            
+            await Task.Delay(1500);
+            Navigation.NavigateTo("/empleados");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error en onboarding");
+            messageToast?.ShowError("Error al guardar: " + ex.Message);
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task SubirDocumento(int empleadoId, DocumentoUpload doc)
+    {
+        if (doc.Archivo == null) return;
+        
+        using var stream = doc.Archivo.OpenReadStream(10 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        
+        var storageResult = await StorageService.SaveDocumentoEmpleadoAsync(
+            empleadoId,
+            doc.NombreTipo,
+            ms.ToArray(),
+            doc.Archivo.Name
+        );
+        
+        if (storageResult.IsSuccess)
+        {
+            var documento = new DocumentoEmpleado
+            {
+                EmpleadoId = empleadoId,
+                TipoDocumento = doc.Tipo,
+                Nombre = doc.Nombre,
+                NombreArchivoOriginal = doc.Archivo.Name,
+                TipoMime = doc.Archivo.ContentType,
+                TamanoArchivo = doc.Archivo.Size,
+                FechaEmision = doc.FechaEmision,
+                FechaVencimiento = doc.FechaVencimiento,
+                SubidoPorNombre = AuthService.CurrentUser?.NombreCompleto,
+                SubidoPorUsuarioId = AuthService.CurrentUser?.Id,
+                ArchivoPath = storageResult.Value,
+                Activo = true,
+                FechaCreacion = DateTime.Now
+            };
+            
+            await DocumentoRepo.AddAsync(documento);
+            doc.Subido = true;
+        }
+    }
+    
+    // Renders de cada paso
+    private RenderFragment RenderStep1DatosBasicos() => __builder =>
+    {
+        <div class="step-content">
+            <h3 class="step-title">📋 PASO 1: DATOS BÁSICOS DEL EMPLEADO</h3>
+            <p class="step-description">Complete la información personal y laboral del nuevo empleado. Los campos marcados con * son obligatorios.</p>
+            
+            <div class="form-grid">
+                <!-- Columna Izquierda -->
+                <div class="form-column">
+                    <h4 class="section-title">INFORMACIÓN PERSONAL</h4>
+                    
+                    <div class="form-group required">
+                        <label>Código:</label>
+                        <input type="text" @bind="empleado.Codigo" maxlength="20" readonly />
+                        <small>Código automático asignado</small>
+                    </div>
+                    
+                    <div class="form-group required">
+                        <label>Cédula:</label>
+                        <input type="text" @bind="empleado.Cedula" maxlength="20" />
+                    </div>
+                    
+                    <div class="form-group required">
+                        <label>Nombres:</label>
+                        <input type="text" @bind="empleado.Nombres" maxlength="100" />
+                    </div>
+                    
+                    <div class="form-group required">
+                        <label>Apellidos:</label>
+                        <input type="text" @bind="empleado.Apellidos" maxlength="100" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Fecha Nacimiento:</label>
+                        <input type="date" @bind="empleado.FechaNacimiento" />
+                        @if (empleado.FechaNacimiento.HasValue)
+                        {
+                            var edad = CalcularEdad(empleado.FechaNacimiento.Value);
+                            <small>Edad: @edad años</small>
+                        }
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Género:</label>
+                        <select @bind="empleado.Genero">
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var g in Enum.GetValues<Genero>())
+                            {
+                                <option value="@g">@g</option>
+                            }
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Estado Civil:</label>
+                        <select @bind="empleado.EstadoCivil">
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var ec in Enum.GetValues<EstadoCivil>())
+                            {
+                                <option value="@ec">@ec</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Columna Derecha -->
+                <div class="form-column">
+                    <h4 class="section-title">INFORMACIÓN DE CONTACTO Y LABORAL</h4>
+                    
+                    <div class="form-group">
+                        <label>Teléfono:</label>
+                        <input type="text" @bind="empleado.Telefono" maxlength="20" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" @bind="empleado.Email" maxlength="100" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Dirección:</label>
+                        <textarea @bind="empleado.Direccion" rows="2" maxlength="250"></textarea>
+                    </div>
+                    
+                    <div class="form-group required">
+                        <label>Fecha Ingreso:</label>
+                        <input type="date" @bind="empleado.FechaIngreso" />
+                        @if (empleado.FechaIngreso != default)
+                        {
+                            var antiguedad = CalcularAntiguedad(empleado.FechaIngreso);
+                            <small>Antigüedad: @antiguedad</small>
+                        }
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Departamento:</label>
+                        <select @bind="empleado.DepartamentoId">
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var d in departamentos)
+                            {
+                                <option value="@d.Id">@d.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Cargo:</label>
+                        <select @bind="empleado.CargoId">
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var c in cargos)
+                            {
+                                <option value="@c.Id">@c.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Estado:</label>
+                        <select @bind="empleado.Estado">
+                            @foreach (var estado in Enum.GetValues<EstadoEmpleado>())
+                            {
+                                <option value="@estado">@estado</option>
+                            }
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Foto (Opcional):</label>
+                        <InputFile OnChange="OnFotoSelected" accept="image/*" />
+                        <small>JPG, PNG. Max 2MB</small>
+                        @if (fotoPreviewUrl != null)
+                        {
+                            <div style="margin-top: 8px;">
+                                <img src="@fotoPreviewUrl" style="max-width: 120px; max-height: 120px; border: 2px solid #000;" alt="Vista previa" />
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contacto de Emergencia -->
+            <div class="emergency-section">
+                <h4 class="section-title">⚠️ CONTACTO DE EMERGENCIA</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Nombre Contacto:</label>
+                        <input type="text" @bind="empleado.ContactoEmergencia" maxlength="100" />
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono Emergencia:</label>
+                        <input type="text" @bind="empleado.TelefonoEmergencia" maxlength="20" />
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Observaciones -->
+            <div class="form-group">
+                <label>Observaciones (Opcional):</label>
+                <textarea @bind="empleado.Observaciones" rows="3" maxlength="500"></textarea>
+            </div>
+        </div>
+    };
+    
+    private RenderFragment RenderStep2DocumentosObligatorios() => __builder =>
+    {
+        <div class="step-content">
+            <h3 class="step-title">📄 PASO 2: DOCUMENTOS OBLIGATORIOS</h3>
+            <p class="step-description">
+                Suba los 17 documentos obligatorios según la legislación colombiana. Puede omitir documentos y subirlos después.
+            </p>
+            
+            <div class="docs-summary">
+                <strong>Progreso:</strong> @documentosObligatorios.Count(d => d.Archivo != null) de @documentosObligatorios.Count documentos seleccionados
+            </div>
+            
+            <div class="docs-list">
+                @foreach (var doc in documentosObligatorios)
+                {
+                    <div class="doc-item @(doc.Archivo != null ? "uploaded" : "")">
+                        <div class="doc-header">
+                            <span class="doc-icon">@(doc.Archivo != null ? "✓" : "📄")</span>
+                            <strong>@doc.NombreTipo</strong>
+                            @if (doc.Archivo != null)
+                            {
+                                <span class="doc-status">✓ Seleccionado</span>
+                            }
+                        </div>
+                        <div class="doc-fields">
+                            <div class="doc-field">
+                                <label>Archivo:</label>
+                                <InputFile OnChange="@(e => OnDocumentoSelected(e, doc))" 
+                                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+                                @if (doc.Archivo != null)
+                                {
+                                    <small style="color: #006600;">@doc.Archivo.Name (@FormatFileSize(doc.Archivo.Size))</small>
+                                }
+                            </div>
+                            <div class="doc-field">
+                                <label>F. Emisión:</label>
+                                <input type="date" @bind="doc.FechaEmision" style="width: 140px;" />
+                            </div>
+                            <div class="doc-field">
+                                <label>F. Vencimiento:</label>
+                                <input type="date" @bind="doc.FechaVencimiento" style="width: 140px;" />
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <div class="info-box">
+                <strong>ℹ️ IMPORTANTE:</strong> No es obligatorio subir todos los documentos en este momento. 
+                Puede continuar y subir los documentos faltantes posteriormente desde el módulo de Documentos.
+            </div>
+        </div>
+    };
+    
+    private RenderFragment RenderStep3DocumentosOpcionales() => __builder =>
+    {
+        <div class="step-content">
+            <h3 class="step-title">📎 PASO 3: DOCUMENTOS OPCIONALES</h3>
+            <p class="step-description">
+                Suba documentos adicionales según el cargo. Estos son completamente opcionales.
+            </p>
+            
+            <div class="docs-summary">
+                <strong>Documentos opcionales seleccionados:</strong> @documentosOpcionales.Count(d => d.Archivo != null)
+            </div>
+            
+            <div class="docs-list">
+                @foreach (var doc in documentosOpcionales)
+                {
+                    <div class="doc-item @(doc.Archivo != null ? "uploaded" : "")">
+                        <div class="doc-header">
+                            <span class="doc-icon">@(doc.Archivo != null ? "✓" : "📎")</span>
+                            <strong>@doc.NombreTipo</strong>
+                            @if (doc.Archivo != null)
+                            {
+                                <span class="doc-status">✓ Seleccionado</span>
+                            }
+                        </div>
+                        <div class="doc-fields">
+                            <div class="doc-field">
+                                <label>Archivo:</label>
+                                <InputFile OnChange="@(e => OnDocumentoSelected(e, doc))" 
+                                          accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+                                @if (doc.Archivo != null)
+                                {
+                                    <small style="color: #006600;">@doc.Archivo.Name (@FormatFileSize(doc.Archivo.Size))</small>
+                                }
+                            </div>
+                            <div class="doc-field">
+                                <label>F. Emisión:</label>
+                                <input type="date" @bind="doc.FechaEmision" style="width: 140px;" />
+                            </div>
+                            <div class="doc-field">
+                                <label>F. Vencimiento:</label>
+                                <input type="date" @bind="doc.FechaVencimiento" style="width: 140px;" />
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    };
+    
+    private RenderFragment RenderStep4Revisar() => __builder =>
+    {
+        <div class="step-content">
+            <h3 class="step-title">✓ PASO 4: REVISAR Y CONFIRMAR</h3>
+            <p class="step-description">
+                Revise la información antes de crear el empleado. Una vez confirmado, se creará el registro y se subirán los documentos.
+            </p>
+            
+            <!-- Resumen de Datos -->
+            <div class="review-section">
+                <h4 class="section-title">👤 DATOS DEL EMPLEADO</h4>
+                <div class="review-grid">
+                    <div class="review-item">
+                        <strong>Código:</strong>
+                        <span>@empleado.Codigo</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Cédula:</strong>
+                        <span>@empleado.Cedula</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Nombre Completo:</strong>
+                        <span>@empleado.Nombres @empleado.Apellidos</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Fecha Nacimiento:</strong>
+                        <span>@(empleado.FechaNacimiento?.ToString("dd/MM/yyyy") ?? "No especificada")</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Género:</strong>
+                        <span>@(empleado.Genero?.ToString() ?? "No especificado")</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Estado Civil:</strong>
+                        <span>@(empleado.EstadoCivil?.ToString() ?? "No especificado")</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Teléfono:</strong>
+                        <span>@(empleado.Telefono ?? "No especificado")</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Email:</strong>
+                        <span>@(empleado.Email ?? "No especificado")</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Fecha Ingreso:</strong>
+                        <span>@empleado.FechaIngreso.ToString("dd/MM/yyyy")</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Departamento:</strong>
+                        <span>@(departamentos.FirstOrDefault(d => d.Id == empleado.DepartamentoId)?.Nombre ?? "No asignado")</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Cargo:</strong>
+                        <span>@(cargos.FirstOrDefault(c => c.Id == empleado.CargoId)?.Nombre ?? "No asignado")</span>
+                    </div>
+                    <div class="review-item">
+                        <strong>Estado:</strong>
+                        <span class="badge badge-@empleado.Estado.ToString().ToLower()">@empleado.Estado</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Resumen de Documentos -->
+            <div class="review-section">
+                <h4 class="section-title">📄 DOCUMENTOS A SUBIR</h4>
+                
+                @{
+                    var docsObligatoriosSubir = documentosObligatorios.Where(d => d.Archivo != null).ToList();
+                    var docsOpcionalesSubir = documentosOpcionales.Where(d => d.Archivo != null).ToList();
+                    var totalDocs = docsObligatoriosSubir.Count + docsOpcionalesSubir.Count;
+                }
+                
+                <div class="docs-stats">
+                    <div class="stat-box">
+                        <div class="stat-number">@docsObligatoriosSubir.Count</div>
+                        <div class="stat-label">Documentos Obligatorios</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">@docsOpcionalesSubir.Count</div>
+                        <div class="stat-label">Documentos Opcionales</div>
+                    </div>
+                    <div class="stat-box highlight">
+                        <div class="stat-number">@totalDocs</div>
+                        <div class="stat-label">Total a Subir</div>
+                    </div>
+                </div>
+                
+                @if (totalDocs > 0)
+                {
+                    <div class="docs-preview">
+                        <strong>Archivos seleccionados:</strong>
+                        <ul>
+                            @foreach (var doc in docsObligatoriosSubir)
+                            {
+                                <li>✓ @doc.NombreTipo - <small>@doc.Archivo!.Name</small></li>
+                            }
+                            @foreach (var doc in docsOpcionalesSubir)
+                            {
+                                <li>✓ @doc.NombreTipo - <small>@doc.Archivo!.Name</small></li>
+                            }
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <div class="warning-box">
+                        ⚠️ No se han seleccionado documentos. Puede subirlos después desde el módulo de Documentos.
+                    </div>
+                }
+            </div>
+            
+            @if (fotoFile != null)
+            {
+                <div class="review-section">
+                    <h4 class="section-title">📷 FOTO</h4>
+                    <div style="text-align: center;">
+                        <img src="@fotoPreviewUrl" style="max-width: 200px; max-height: 200px; border: 2px solid #000;" alt="Foto empleado" />
+                    </div>
+                </div>
+            }
+            
+            <div class="confirm-box">
+                <strong>✓</strong> Al hacer clic en <strong>FINALIZAR Y GUARDAR</strong>, se creará el empleado y se subirán todos los documentos seleccionados.
+            </div>
+        </div>
+    };
+    
+    // Event Handlers
+    private async Task OnFotoSelected(InputFileChangeEventArgs e)
+    {
+        fotoFile = e.File;
+        
+        if (fotoFile != null)
+        {
+            try
+            {
+                using var stream = fotoFile.OpenReadStream(2 * 1024 * 1024);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                var base64 = Convert.ToBase64String(ms.ToArray());
+                fotoPreviewUrl = $"data:{fotoFile.ContentType};base64,{base64}";
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error cargando foto");
+                messageToast?.ShowError("Error al cargar foto");
+            }
+        }
+    }
+    
+    private void OnDocumentoSelected(InputFileChangeEventArgs e, DocumentoUpload doc)
+    {
+        doc.Archivo = e.File;
+        doc.ArchivoNombre = e.File.Name;
+        StateHasChanged();
+    }
+    
+    // Helpers
+    private int CalcularEdad(DateTime fechaNacimiento)
+    {
+        var hoy = DateTime.Today;
+        var edad = hoy.Year - fechaNacimiento.Year;
+        if (fechaNacimiento.Date > hoy.AddYears(-edad))
+            edad--;
+        return edad;
+    }
+    
+    private string CalcularAntiguedad(DateTime fechaIngreso)
+    {
+        var hoy = DateTime.Today;
+        var años = hoy.Year - fechaIngreso.Year;
+        if (fechaIngreso.Date > hoy.AddYears(-años))
+            años--;
+        
+        var meses = hoy.Month - fechaIngreso.Month;
+        if (meses < 0)
+        {
+            años--;
+            meses += 12;
+        }
+        
+        if (años > 0 && meses > 0)
+            return $"{años} año(s) {meses} mes(es)";
+        else if (años > 0)
+            return $"{años} año(s)";
+        else
+            return $"{meses} mes(es)";
+    }
+    
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}
+
+<style>
+    .wizard-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: #C0C0C0;
+        border: 4px solid #000000;
+        border-style: outset;
+    }
+
+    .wizard-header {
+        background: linear-gradient(to right, #000080, #1084D0);
+        color: white;
+        padding: 16px 20px;
+        border-bottom: 2px solid #000000;
+    }
+
+    .wizard-progress {
+        background-color: #F0F0F0;
+        padding: 24px 20px;
+        border-bottom: 2px solid #808080;
+    }
+
+    .progress-steps {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .progress-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+    }
+
+    .step-circle {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 3px solid #808080;
+        background-color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 18px;
+        color: #666;
+    }
+
+    .progress-step.active .step-circle {
+        border-color: #000080;
+        background-color: #000080;
+        color: white;
+    }
+
+    .progress-step.completed .step-circle {
+        border-color: #00AA00;
+        background-color: #00AA00;
+        color: white;
+    }
+
+    .step-label {
+        font-size: 11px;
+        font-weight: bold;
+        text-align: center;
+        color: #666;
+    }
+
+    .progress-step.active .step-label {
+        color: #000080;
+    }
+
+    .progress-step.completed .step-label {
+        color: #00AA00;
+    }
+
+    .step-connector {
+        height: 3px;
+        flex: 1;
+        background-color: #CCCCCC;
+        margin: 0 8px;
+        margin-bottom: 28px;
+    }
+
+    .step-connector.completed {
+        background-color: #00AA00;
+    }
+
+    .wizard-content {
+        padding: 24px;
+        background-color: #F0F0F0;
+        min-height: 500px;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .wizard-footer {
+        background-color: #C0C0C0;
+        padding: 16px 20px;
+        border-top: 2px solid #FFFFFF;
+    }
+
+    .step-content {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .step-title {
+        font-size: 20px;
+        font-weight: bold;
+        margin: 0 0 12px 0;
+        color: #000080;
+        border-bottom: 2px solid #000080;
+        padding-bottom: 8px;
+    }
+
+    .step-description {
+        font-size: 12px;
+        color: #333;
+        margin-bottom: 24px;
+        line-height: 1.5;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 20px;
+    }
+
+    .form-column {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .section-title {
+        font-size: 13px;
+        font-weight: bold;
+        color: #000;
+        margin: 0 0 12px 0;
+        padding: 6px 8px;
+        background-color: #CCCCCC;
+        border: 1px solid #808080;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .form-group.required label::after {
+        content: " *";
+        color: #CC0000;
+        font-weight: bold;
+    }
+
+    .form-group label {
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 4px 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        border: 2px solid #808080;
+        border-style: inset;
+        background-color: white;
+    }
+
+    .form-group small {
+        font-size: 10px;
+        color: #666;
+        font-style: italic;
+    }
+
+    .emergency-section {
+        margin-top: 20px;
+        padding: 16px;
+        background-color: #FFFFCC;
+        border: 2px solid #CC9900;
+    }
+
+    .docs-summary {
+        background-color: #CCCCCC;
+        border: 2px solid #808080;
+        padding: 12px;
+        margin-bottom: 16px;
+        font-size: 12px;
+    }
+
+    .docs-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .doc-item {
+        background-color: white;
+        border: 2px solid #808080;
+        border-style: outset;
+        padding: 12px;
+    }
+
+    .doc-item.uploaded {
+        background-color: #E8FFE8;
+        border-color: #00AA00;
+    }
+
+    .doc-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #CCCCCC;
+    }
+
+    .doc-icon {
+        font-size: 18px;
+    }
+
+    .doc-status {
+        margin-left: auto;
+        font-size: 11px;
+        color: #00AA00;
+        font-weight: bold;
+    }
+
+    .doc-fields {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 12px;
+        align-items: end;
+    }
+
+    .doc-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .doc-field label {
+        font-size: 11px;
+        font-weight: bold;
+    }
+
+    .info-box {
+        background-color: #CCE5FF;
+        border: 2px solid #0066CC;
+        padding: 12px;
+        margin-top: 16px;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .warning-box {
+        background-color: #FFFFCC;
+        border: 2px solid #CC9900;
+        padding: 12px;
+        font-size: 12px;
+        text-align: center;
+    }
+
+    .review-section {
+        background-color: white;
+        border: 2px solid #808080;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .review-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        font-size: 12px;
+    }
+
+    .review-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        background-color: #F8F8F8;
+        border: 1px solid #CCCCCC;
+    }
+
+    .review-item strong {
+        color: #000080;
+    }
+
+    .docs-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .stat-box {
+        background-color: #F0F0F0;
+        border: 2px solid #808080;
+        padding: 16px;
+        text-align: center;
+    }
+
+    .stat-box.highlight {
+        background-color: #CCE5FF;
+        border-color: #0066CC;
+    }
+
+    .stat-number {
+        font-size: 32px;
+        font-weight: bold;
+        color: #000080;
+    }
+
+    .stat-label {
+        font-size: 11px;
+        margin-top: 4px;
+    }
+
+    .docs-preview {
+        background-color: #F8F8F8;
+        border: 2px solid #CCCCCC;
+        padding: 12px;
+        font-size: 12px;
+    }
+
+    .docs-preview ul {
+        margin: 8px 0 0 0;
+        padding-left: 20px;
+    }
+
+    .docs-preview li {
+        margin-bottom: 4px;
+    }
+
+    .confirm-box {
+        background-color: #CCFFCC;
+        border: 3px solid #00AA00;
+        padding: 16px;
+        margin-top: 20px;
+        font-size: 13px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border: 1px solid #000;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    .badge-activo {
+        background-color: #CCFFCC;
+        color: #006600;
+    }
+
+    button {
+        background-color: #E0E0E0;
+        border: 2px solid #000000;
+        border-style: outset;
+        padding: 8px 16px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:hover:not(:disabled) {
+        background-color: #D0D0D0;
+    }
+
+    button:active:not(:disabled) {
+        border-style: inset;
+    }
+
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+</style>

@@ -1,0 +1,267 @@
+@inject INotificationService NotificationService
+@implements IDisposable
+
+<div class="notification-bell-container">
+    <button class="notification-bell" @onclick="ToggleDropdown" title="Notificaciones">
+        <span class="bell-icon">🔔</span>
+        @if (NotificationService.UnreadCount > 0)
+        {
+            <span class="notification-badge">@(NotificationService.UnreadCount > 9 ? "9+" : NotificationService.UnreadCount.ToString())</span>
+        }
+    </button>
+    
+    @if (showDropdown)
+    {
+        <div class="notification-dropdown">
+            <div class="notification-header">
+                <span>Notificaciones</span>
+                @if (NotificationService.UnreadCount > 0)
+                {
+                    <button class="mark-all-read" @onclick="MarkAllAsRead">Marcar todas leídas</button>
+                }
+            </div>
+            
+            <div class="notification-list">
+                @if (!NotificationService.UnreadNotifications.Any())
+                {
+                    <div class="notification-empty">
+                        No hay notificaciones nuevas
+                    </div>
+                }
+                else
+                {
+                    @foreach (var notification in NotificationService.UnreadNotifications.Take(10))
+                    {
+                        <div class="notification-item notification-@notification.Type.ToString().ToLower()" 
+                             @onclick="() => HandleNotificationClick(notification)">
+                            <div class="notification-icon">
+                                @GetNotificationIcon(notification.Type)
+                            </div>
+                            <div class="notification-content">
+                                <strong>@notification.Title</strong>
+                                <span>@notification.Message</span>
+                                <small>@GetTimeAgo(notification.CreatedAt)</small>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    
+    private bool showDropdown = false;
+    
+    protected override void OnInitialized()
+    {
+        NotificationService.OnNotification += HandleNewNotification;
+    }
+    
+    private void HandleNewNotification(object? sender, NotificationEventArgs args)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private void ToggleDropdown()
+    {
+        showDropdown = !showDropdown;
+    }
+    
+    private void MarkAllAsRead()
+    {
+        NotificationService.MarkAllAsRead();
+        StateHasChanged();
+    }
+    
+    private void HandleNotificationClick(AppNotification notification)
+    {
+        NotificationService.MarkAsRead(notification.Id);
+        showDropdown = false;
+        
+        if (!string.IsNullOrEmpty(notification.Link))
+        {
+            Navigation.NavigateTo(notification.Link);
+        }
+    }
+    
+    private string GetNotificationIcon(NotificationType type)
+    {
+        return type switch
+        {
+            NotificationType.Success => "✓",
+            NotificationType.Error => "✕",
+            NotificationType.Warning => "⚠",
+            NotificationType.Info => "ℹ",
+            NotificationType.PermisoNuevo => "📋",
+            NotificationType.PermisoAprobado => "✓",
+            NotificationType.PermisoRechazado => "✕",
+            NotificationType.VacacionNueva => "🏖",
+            NotificationType.VacacionAprobada => "✓",
+            NotificationType.Sistema => "⚙",
+            _ => "📌"
+        };
+    }
+    
+    private string GetTimeAgo(DateTime dateTime)
+    {
+        var diff = DateTime.Now - dateTime;
+        
+        if (diff.TotalMinutes < 1)
+            return "Ahora mismo";
+        if (diff.TotalMinutes < 60)
+            return $"Hace {(int)diff.TotalMinutes} min";
+        if (diff.TotalHours < 24)
+            return $"Hace {(int)diff.TotalHours} hora(s)";
+        
+        return dateTime.ToString("dd/MM HH:mm");
+    }
+    
+    public void Dispose()
+    {
+        NotificationService.OnNotification -= HandleNewNotification;
+    }
+}
+
+<style>
+    .notification-bell-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .notification-bell {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+        position: relative;
+        font-size: 16px;
+    }
+
+    .notification-bell:hover {
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .bell-icon {
+        font-size: 18px;
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background-color: #CC0000;
+        color: white;
+        border-radius: 50%;
+        padding: 2px 5px;
+        font-size: 10px;
+        font-weight: bold;
+        min-width: 14px;
+        text-align: center;
+    }
+
+    .notification-dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background-color: #FFFFFF;
+        border: 2px solid #000000;
+        box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
+        min-width: 320px;
+        max-width: 400px;
+        z-index: 1000;
+    }
+
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background-color: #E0E0E0;
+        border-bottom: 1px solid #808080;
+        font-weight: bold;
+        font-size: 12px;
+    }
+
+    .mark-all-read {
+        background: none;
+        border: none;
+        color: #0066CC;
+        cursor: pointer;
+        font-size: 10px;
+        text-decoration: underline;
+    }
+
+    .notification-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .notification-empty {
+        padding: 24px;
+        text-align: center;
+        color: #808080;
+        font-style: italic;
+        font-size: 12px;
+    }
+
+    .notification-item {
+        display: flex;
+        gap: 12px;
+        padding: 10px 12px;
+        border-bottom: 1px solid #E0E0E0;
+        cursor: pointer;
+        font-size: 11px;
+    }
+
+    .notification-item:hover {
+        background-color: #F5F5F5;
+    }
+
+    .notification-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .notification-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .notification-content strong {
+        font-size: 11px;
+    }
+
+    .notification-content span {
+        color: #666;
+    }
+
+    .notification-content small {
+        color: #999;
+        font-size: 10px;
+    }
+
+    .notification-permisonuevo .notification-icon,
+    .notification-vacacionnueva .notification-icon {
+        color: #FF9800;
+    }
+
+    .notification-success .notification-icon,
+    .notification-permisoaprobado .notification-icon,
+    .notification-vacacionaprobada .notification-icon {
+        color: #4CAF50;
+    }
+
+    .notification-error .notification-icon,
+    .notification-permisorechazado .notification-icon {
+        color: #F44336;
+    }
+
+    .notification-warning .notification-icon {
+        color: #FFC107;
+    }
+</style>

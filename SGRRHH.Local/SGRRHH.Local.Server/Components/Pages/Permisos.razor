@@ -6,8 +6,8 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject IAuthService AuthService
 @inject IPermisoRepository PermisoRepository
-@inject IEmpleadoRepository EmpleadoRepository
-@inject ITipoPermisoRepository TipoPermisoRepository
+@inject IReportService ReportService
+@inject ICatalogCacheService CatalogCache
 @inject ILocalStorageService StorageService
 @inject NavigationManager Navigation
 @inject ILogger<Permisos> Logger
@@ -434,16 +434,12 @@
         
         try
         {
-            // Cargar empleados
-            var empleados = await EmpleadoRepository.GetAllAsync();
-            todosEmpleados = empleados.OrderBy(e => e.NombreCompleto).ToList();
-            empleadosActivos = todosEmpleados
-                .Where(e => e.Estado == EstadoEmpleado.Activo)
-                .ToList();
+            // Cargar empleados desde caché
+            todosEmpleados = await CatalogCache.GetEmpleadosTodosAsync();
+            empleadosActivos = await CatalogCache.GetEmpleadosActivosAsync();
             
-            // Cargar tipos de permiso
-            var tipos = await TipoPermisoRepository.GetAllAsync();
-            tiposPermiso = tipos.Where(t => t.Activo).OrderBy(t => t.Nombre).ToList();
+            // Cargar tipos de permiso desde caché
+            tiposPermiso = await CatalogCache.GetTiposPermisoAsync();
             
             // Cargar permisos
             await CargarPermisos();
@@ -906,16 +902,38 @@
     {
         try
         {
-            // TODO: Implementar con ReportService cuando esté disponible
-            successMessage = "Funcionalidad de PDF en desarrollo (Fase 7)";
-            _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
+            isLoading = true;
+            StateHasChanged();
             
-            await Task.CompletedTask;
+            var result = await ReportService.GenerarActaPermisoAsync(permisoId);
+            
+            if (result.IsSuccess && result.Value != null)
+            {
+                var permiso = await PermisoRepository.GetByIdAsync(permisoId);
+                var fileName = $"Acta_Permiso_{permiso?.NumeroActa ?? permisoId.ToString()}_{DateTime.Now:yyyyMMdd}.pdf";
+                var base64 = Convert.ToBase64String(result.Value);
+                
+                await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "application/pdf", base64);
+                
+                successMessage = $"Acta de permiso generada: {fileName}";
+                Logger.LogInformation("Acta de permiso generada: {PermisoId}", permisoId);
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Error al generar el acta de permiso";
+            }
+            
+            _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error generando acta PDF");
             errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
         }
     }
     

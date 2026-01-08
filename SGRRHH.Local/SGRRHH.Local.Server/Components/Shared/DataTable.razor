@@ -1,62 +1,113 @@
 @typeparam TItem
+@inject IJSRuntime JSRuntime
 
-<table>
-    <thead>
-        <tr>
-            @HeaderTemplate
-        </tr>
-    </thead>
-    <tbody>
-        @if (Items == null || !Items.Any())
-        {
+<div class="datatable-container" id="@TableId" tabindex="0" @onkeydown="HandleKeyDown">
+    <table>
+        <thead>
             <tr>
-                <td colspan="100" class="empty-state">
-                    @(EmptyMessage ?? "No hay registros para mostrar")
-                </td>
+                @HeaderTemplate
             </tr>
-        }
-        else
-        {
-            @foreach (var item in Items)
+        </thead>
+        <tbody>
+            @if (IsLoading)
             {
-                <tr class="@(IsSelected(item) ? "selected" : "")"
-                    @onclick="() => SelectItem(item)"
-                    @ondblclick="() => OnDoubleClick.InvokeAsync(item)">
-                    @RowTemplate?.Invoke(item)
+                <tr>
+                    <td colspan="100" class="loading">
+                        Cargando...
+                    </td>
                 </tr>
             }
-        }
-    </tbody>
-</table>
+            else if (Items == null || !Items.Any())
+            {
+                <tr>
+                    <td colspan="100" class="empty-state">
+                        @(EmptyMessage ?? "No hay registros para mostrar")
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Items)
+                {
+                    <tr class="@(IsSelected(item) ? "selected" : "")"
+                        @onclick="() => SelectItem(item)"
+                        @ondblclick="() => OnDoubleClick.InvokeAsync(item)">
+                        @RowTemplate?.Invoke(item)
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
 
-@if (ShowPagination && TotalPages > 1)
-{
-    <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-        <span>Mostrando @(Items?.Count() ?? 0) de @TotalItems registros</span>
-        <div>
-            <button @onclick="PreviousPage" disabled="@(CurrentPage <= 1)">← ANTERIOR</button>
-            <span style="margin: 0 8px;">Página @CurrentPage de @TotalPages</span>
-            <button @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">SIGUIENTE →</button>
+    @if (ShowPagination && TotalPages > 1)
+    {
+        <div class="datatable-pagination">
+            <span class="pagination-info">
+                Mostrando @(((CurrentPage - 1) * PageSize) + 1) - @(Math.Min(CurrentPage * PageSize, TotalItems)) de @TotalItems registros
+            </span>
+            <div class="pagination-controls">
+                <button @onclick="FirstPage" disabled="@(CurrentPage <= 1)" title="Primera página">⏮</button>
+                <button @onclick="PreviousPage" disabled="@(CurrentPage <= 1)" title="Anterior">←</button>
+                <span class="pagination-pages">
+                    Página 
+                    <input type="number" min="1" max="@TotalPages" value="@CurrentPage" 
+                           @onchange="OnPageInputChange" style="width: 50px; text-align: center;" />
+                    de @TotalPages
+                </span>
+                <button @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)" title="Siguiente">→</button>
+                <button @onclick="LastPage" disabled="@(CurrentPage >= TotalPages)" title="Última página">⏭</button>
+            </div>
+            <div class="pagination-size">
+                <select @bind="PageSize" @bind:after="OnPageSizeChanged">
+                    <option value="10">10 por pág.</option>
+                    <option value="20">20 por pág.</option>
+                    <option value="50">50 por pág.</option>
+                    <option value="100">100 por pág.</option>
+                </select>
+            </div>
         </div>
-    </div>
-}
+    }
+    
+    @if (ShowKeyboardHints)
+    {
+        <div class="datatable-hints">
+            <span><kbd>↑↓</kbd> Navegar</span>
+            <span><kbd>Enter</kbd> Abrir</span>
+            <span><kbd>Home</kbd> Inicio</span>
+            <span><kbd>End</kbd> Fin</span>
+        </div>
+    }
+</div>
 
 @code {
     [Parameter] public IEnumerable<TItem>? Items { get; set; }
     [Parameter] public RenderFragment? HeaderTemplate { get; set; }
     [Parameter] public RenderFragment<TItem>? RowTemplate { get; set; }
     [Parameter] public string? EmptyMessage { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
     
     [Parameter] public TItem? SelectedItem { get; set; }
     [Parameter] public EventCallback<TItem?> SelectedItemChanged { get; set; }
     [Parameter] public EventCallback<TItem> OnDoubleClick { get; set; }
+    [Parameter] public EventCallback<TItem> OnEnterPressed { get; set; }
     
     [Parameter] public bool ShowPagination { get; set; }
     [Parameter] public int CurrentPage { get; set; } = 1;
     [Parameter] public EventCallback<int> CurrentPageChanged { get; set; }
     [Parameter] public int PageSize { get; set; } = 20;
+    [Parameter] public EventCallback<int> PageSizeChanged { get; set; }
     [Parameter] public int TotalItems { get; set; }
     [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+    
+    [Parameter] public bool ShowKeyboardHints { get; set; } = true;
+    [Parameter] public string? TableId { get; set; }
+    
+    private string _tableId = "";
+    
+    protected override void OnInitialized()
+    {
+        _tableId = TableId ?? $"datatable-{Guid.NewGuid():N}";
+    }
 
     private int TotalPages => TotalItems > 0 ? (int)Math.Ceiling((double)TotalItems / PageSize) : 1;
 
@@ -70,6 +121,42 @@
     {
         SelectedItem = item;
         await SelectedItemChanged.InvokeAsync(item);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                await SelectNextAsync();
+                break;
+            case "ArrowUp":
+                await SelectPreviousAsync();
+                break;
+            case "Enter":
+                if (SelectedItem != null)
+                {
+                    await OnEnterPressed.InvokeAsync(SelectedItem);
+                    await OnDoubleClick.InvokeAsync(SelectedItem);
+                }
+                break;
+            case "Home":
+                await SelectFirstAsync();
+                break;
+            case "End":
+                await SelectLastAsync();
+                break;
+        }
+    }
+
+    private async Task FirstPage()
+    {
+        if (CurrentPage != 1)
+        {
+            CurrentPage = 1;
+            await CurrentPageChanged.InvokeAsync(CurrentPage);
+            await OnPageChanged.InvokeAsync(CurrentPage);
+        }
     }
 
     private async Task PreviousPage()
@@ -92,6 +179,38 @@
         }
     }
 
+    private async Task LastPage()
+    {
+        if (CurrentPage != TotalPages)
+        {
+            CurrentPage = TotalPages;
+            await CurrentPageChanged.InvokeAsync(CurrentPage);
+            await OnPageChanged.InvokeAsync(CurrentPage);
+        }
+    }
+
+    private async Task OnPageInputChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newPage))
+        {
+            newPage = Math.Max(1, Math.Min(newPage, TotalPages));
+            if (CurrentPage != newPage)
+            {
+                CurrentPage = newPage;
+                await CurrentPageChanged.InvokeAsync(CurrentPage);
+                await OnPageChanged.InvokeAsync(CurrentPage);
+            }
+        }
+    }
+
+    private async Task OnPageSizeChanged()
+    {
+        CurrentPage = 1;
+        await PageSizeChanged.InvokeAsync(PageSize);
+        await CurrentPageChanged.InvokeAsync(CurrentPage);
+        await OnPageChanged.InvokeAsync(CurrentPage);
+    }
+
     /// <summary>
     /// Selecciona el siguiente item en la lista
     /// </summary>
@@ -105,6 +224,7 @@
         if (currentIndex < itemList.Count - 1)
         {
             await SelectItem(itemList[currentIndex + 1]);
+            await ScrollToSelected();
         }
     }
 
@@ -121,6 +241,7 @@
         if (currentIndex > 0)
         {
             await SelectItem(itemList[currentIndex - 1]);
+            await ScrollToSelected();
         }
     }
 
@@ -132,6 +253,154 @@
         if (Items != null && Items.Any())
         {
             await SelectItem(Items.First());
+            await ScrollToSelected();
+        }
+    }
+
+    /// <summary>
+    /// Selecciona el último item
+    /// </summary>
+    public async Task SelectLastAsync()
+    {
+        if (Items != null && Items.Any())
+        {
+            await SelectItem(Items.Last());
+            await ScrollToSelected();
+        }
+    }
+
+    private async Task ScrollToSelected()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("scrollToSelectedRow", _tableId);
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// Enfoca la tabla para navegación con teclado
+    /// </summary>
+    public async Task FocusAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("focusTable", _tableId);
+        }
+        catch { }
+    }
+
+    // Métodos invocables desde JS
+    [JSInvokable]
+    public async Task SelectNextRow() => await SelectNextAsync();
+    
+    [JSInvokable]
+    public async Task SelectPreviousRow() => await SelectPreviousAsync();
+    
+    [JSInvokable]
+    public async Task SelectFirstRow() => await SelectFirstAsync();
+    
+    [JSInvokable]
+    public async Task SelectLastRow() => await SelectLastAsync();
+    
+    [JSInvokable]
+    public async Task OpenSelectedRow()
+    {
+        if (SelectedItem != null)
+        {
+            await OnDoubleClick.InvokeAsync(SelectedItem);
         }
     }
 }
+
+<style>
+    .datatable-container {
+        outline: none;
+    }
+    
+    .datatable-container:focus {
+        outline: 2px solid #0066CC;
+        outline-offset: 2px;
+    }
+
+    .datatable-pagination {
+        margin-top: 12px;
+        padding: 8px 12px;
+        background-color: #F0F0F0;
+        border: 1px solid #808080;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 12px;
+    }
+
+    .pagination-info {
+        color: #666;
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .pagination-controls button {
+        padding: 4px 8px;
+        font-size: 11px;
+        min-width: 28px;
+    }
+
+    .pagination-pages {
+        margin: 0 8px;
+    }
+
+    .pagination-pages input {
+        margin: 0 4px;
+        padding: 2px 4px;
+        font-size: 11px;
+        border: 1px solid #808080;
+    }
+
+    .pagination-size select {
+        padding: 4px 8px;
+        font-size: 11px;
+        border: 1px solid #808080;
+    }
+
+    .datatable-hints {
+        margin-top: 8px;
+        padding: 4px 8px;
+        background-color: #E8E8E8;
+        border: 1px solid #C0C0C0;
+        font-size: 10px;
+        color: #666;
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .datatable-hints kbd {
+        background-color: #333;
+        color: #FFF;
+        padding: 1px 4px;
+        border-radius: 2px;
+        font-family: monospace;
+        font-size: 10px;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 24px;
+        color: #666666;
+        font-style: italic;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 32px;
+        color: #999999;
+        font-style: italic;
+    }
+</style>

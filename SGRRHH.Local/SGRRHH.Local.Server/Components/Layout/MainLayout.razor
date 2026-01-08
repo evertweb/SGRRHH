@@ -1,6 +1,10 @@
 ﻿@inherits LayoutComponentBase
+@using SGRRHH.Local.Domain.Enums
 @inject IAuthService AuthService
+@inject ISessionService SessionService
+@inject INotificationService NotificationService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 @if (!AuthService.IsAuthenticated)
@@ -9,6 +13,18 @@
 }
 else
 {
+    <!-- Toast Messages Component -->
+    <MessageToast @ref="messageToast" />
+    
+    <!-- Session Expiring Warning -->
+    @if (showSessionWarning)
+    {
+        <div class="session-warning-bar">
+            <span>⚠ Su sesión expirará en @sessionRemainingMinutes minuto(s). </span>
+            <button @onclick="ExtendSession">EXTENDER SESIÓN</button>
+        </div>
+    }
+
     <!-- MARCA DE AGUA -->
     <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
                 width: 400px; height: 400px; 
@@ -21,16 +37,21 @@ else
         <!-- Header del Sistema -->
         <header class="system-header">
             <span class="title">SGRRHH LOCAL v1.0</span>
-            <span class="info">
-                Usuario: @AuthService.CurrentUser?.NombreCompleto 
-                (@GetRolDisplay()) | 
-                @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+            <span class="info" style="display: flex; align-items: center; gap: 12px;">
+                @if (AuthService.IsAprobador)
+                {
+                    <NotificationBell />
+                }
+                <span>
+                    Usuario: @AuthService.CurrentUser?.NombreCompleto 
+                    (@GetRolDisplay()) | 
+                    @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                </span>
             </span>
         </header>
 
         <!-- Menú de Navegación Textual -->
         <nav class="nav-menu">
-            <NavLink href="/dashboard" Match="NavLinkMatch.All">INICIO</NavLink>
             <NavLink href="/empleados">EMPLEADOS</NavLink>
             <NavLink href="/documentos">DOCUMENTOS</NavLink>
             <NavLink href="/permisos">PERMISOS</NavLink>
@@ -44,6 +65,7 @@ else
                     <NavLink href="/catalogos">CATÁLOGOS</NavLink>
                     <NavLink href="/usuarios">USUARIOS</NavLink>
                     <NavLink href="/reportes">REPORTES</NavLink>
+                    <NavLink href="/auditoria">AUDITORÍA</NavLink>
                     <NavLink href="/configuracion">CONFIG</NavLink>
                 </span>
             }
@@ -77,9 +99,34 @@ else
 </div>
 
 @code {
-    protected override void OnInitialized()
+    private MessageToast? messageToast;
+    private bool showSessionWarning = false;
+    private int sessionRemainingMinutes = 5;
+    private DotNetObjectReference<MainLayout>? _dotNetRef;
+    private Timer? _notificationTimer;
+    
+    protected override async Task OnInitializedAsync()
     {
         AuthService.OnAuthStateChanged += OnAuthChanged;
+        SessionService.OnSessionExpiring += OnSessionExpiring;
+        SessionService.OnSessionExpired += OnSessionExpired;
+        
+        // Iniciar verificación de notificaciones cada 2 minutos
+        _notificationTimer = new Timer(async _ =>
+        {
+            await NotificationService.CheckForNewNotificationsAsync();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(2));
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AuthService.IsAuthenticated)
+        {
+            // Configurar registro de actividad de sesión
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("setupSessionActivity", _dotNetRef);
+        }
     }
 
     private void OnAuthChanged(object? sender, Usuario? user)
@@ -89,6 +136,38 @@ else
             Navigation.NavigateTo("/login");
         }
         InvokeAsync(StateHasChanged);
+    }
+    
+    private void OnSessionExpiring(object? sender, EventArgs e)
+    {
+        showSessionWarning = true;
+        sessionRemainingMinutes = SessionService.SessionTimeRemainingSeconds / 60;
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private void OnSessionExpired(object? sender, EventArgs e)
+    {
+        InvokeAsync(async () =>
+        {
+            messageToast?.ShowWarning("Su sesión ha expirado por inactividad");
+            await Task.Delay(2000);
+            await AuthService.LogoutAsync();
+            Navigation.NavigateTo("/login");
+        });
+    }
+    
+    private async Task ExtendSession()
+    {
+        await SessionService.ExtendSessionAsync();
+        showSessionWarning = false;
+        messageToast?.ShowSuccess("Sesión extendida");
+        StateHasChanged();
+    }
+    
+    [JSInvokable]
+    public void RegisterActivity()
+    {
+        SessionService.RegisterActivity();
     }
 
     private string GetRolDisplay()
@@ -109,17 +188,31 @@ else
         var uri = new Uri(Navigation.Uri);
         var path = uri.AbsolutePath.Trim('/');
 
-        if (string.IsNullOrEmpty(path) || path == "dashboard") 
-            return "INICIO";
+        if (string.IsNullOrEmpty(path)) 
+            return GetDefaultPageName();
 
         var segments = path.Split('/');
-        var breadcrumb = "INICIO > " + string.Join(" > ", segments.Select(s => s.ToUpper()));
+        var breadcrumb = GetDefaultPageName() + " > " + string.Join(" > ", segments.Select(s => s.ToUpper()));
         
         return breadcrumb;
+    }
+    
+    private string GetDefaultPageName()
+    {
+        if (AuthService.CurrentUser == null) return "INICIO";
+        
+        return AuthService.CurrentUser.Rol switch
+        {
+            RolUsuario.Administrador => "USUARIOS",
+            RolUsuario.Aprobador => "EMPLEADOS",
+            RolUsuario.Operador => "CONTROL DIARIO",
+            _ => "EMPLEADOS"
+        };
     }
 
     private async Task Logout()
     {
+        await SessionService.EndSessionAsync();
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("/login");
     }
@@ -127,6 +220,41 @@ else
     public void Dispose()
     {
         AuthService.OnAuthStateChanged -= OnAuthChanged;
+        SessionService.OnSessionExpiring -= OnSessionExpiring;
+        SessionService.OnSessionExpired -= OnSessionExpired;
+        _notificationTimer?.Dispose();
+        
+        if (_dotNetRef != null)
+        {
+            _ = JSRuntime.InvokeVoidAsync("removeSessionActivity");
+            _dotNetRef.Dispose();
+        }
     }
 }
+
+<style>
+    .session-warning-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background-color: #FFC107;
+        color: #000;
+        padding: 8px 16px;
+        text-align: center;
+        z-index: 10000;
+        font-weight: bold;
+        font-size: 12px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .session-warning-bar button {
+        padding: 4px 12px;
+        font-size: 11px;
+        font-weight: bold;
+    }
+</style>
 

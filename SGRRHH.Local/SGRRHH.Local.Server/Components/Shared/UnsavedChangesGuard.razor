@@ -1,0 +1,87 @@
+@* Componente para confirmar salida cuando hay cambios sin guardar *@
+@inject IJSRuntime JSRuntime
+
+@if (ShowDialog)
+{
+    <ConfirmDialog @bind-IsVisible="ShowDialog"
+                   Titulo="CAMBIOS SIN GUARDAR"
+                   Mensaje="Hay cambios sin guardar. ¿Está seguro que desea salir sin guardar?"
+                   TextoConfirmar="SALIR SIN GUARDAR"
+                   TextoCancelar="CONTINUAR EDITANDO"
+                   Tipo="warning"
+                   Icono="⚠"
+                   OnConfirm="ConfirmExit"
+                   OnCancel="CancelExit" />
+}
+
+@code {
+    [Parameter] public bool HasChanges { get; set; }
+    [Parameter] public EventCallback OnConfirmExit { get; set; }
+    [Parameter] public EventCallback OnCancelExit { get; set; }
+    
+    private bool ShowDialog { get; set; }
+    private TaskCompletionSource<bool>? _pendingConfirmation;
+    
+    private DotNetObjectReference<UnsavedChangesGuard>? _dotNetRef;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("setupBeforeUnloadWarning", _dotNetRef);
+        }
+    }
+    
+    /// <summary>
+    /// Muestra el diálogo de confirmación y retorna true si el usuario confirma salir
+    /// </summary>
+    public async Task<bool> ConfirmNavigationAsync()
+    {
+        if (!HasChanges)
+            return true;
+        
+        _pendingConfirmation = new TaskCompletionSource<bool>();
+        ShowDialog = true;
+        StateHasChanged();
+        
+        return await _pendingConfirmation.Task;
+    }
+    
+    /// <summary>
+    /// Verifica si hay cambios y muestra confirmación si es necesario
+    /// </summary>
+    public async Task<bool> CanCloseAsync()
+    {
+        return await ConfirmNavigationAsync();
+    }
+    
+    private async Task ConfirmExit()
+    {
+        ShowDialog = false;
+        _pendingConfirmation?.TrySetResult(true);
+        await OnConfirmExit.InvokeAsync();
+    }
+    
+    private async Task CancelExit()
+    {
+        ShowDialog = false;
+        _pendingConfirmation?.TrySetResult(false);
+        await OnCancelExit.InvokeAsync();
+    }
+    
+    [JSInvokable]
+    public bool HasUnsavedChanges()
+    {
+        return HasChanges;
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        if (_dotNetRef != null)
+        {
+            await JSRuntime.InvokeVoidAsync("removeBeforeUnloadWarning");
+            _dotNetRef.Dispose();
+        }
+    }
+}

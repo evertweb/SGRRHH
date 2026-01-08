@@ -21,7 +21,7 @@
     <div class="error-block">
         <h3>ACCESO DENEGADO</h3>
         <p>Esta página solo está disponible para administradores.</p>
-        <button @onclick="@(() => Navigation.NavigateTo("/dashboard"))">IR AL DASHBOARD</button>
+        <button @onclick="@(() => Navigation.NavigateTo("/empleados"))">VOLVER</button>
     </div>
     return;
 }
@@ -321,8 +321,7 @@
            Width="500px"
            OnSaveClicked="ConfirmarAccion"
            OnCancelClicked="() => showConfirmModal = false"
-           IsSaving="isSaving"
-           SaveButtonText="@confirmButtonText">
+           IsSaving="isSaving">
     
     <p>@confirmModalMessage</p>
     

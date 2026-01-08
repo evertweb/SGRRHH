@@ -84,7 +84,7 @@
 ## 6. Contratos
 
 ### Alertas de Vencimiento
-- El dashboard muestra contratos próximos a vencer
+- La pantalla de contratos muestra contratos próximos a vencer
 - Configuración define días de anticipación (default: 30)
 
 ### Renovar Contrato

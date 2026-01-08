@@ -19,54 +19,95 @@
                 <p class="user-role">@AuthService.CurrentUser.Rol</p>
             </div>
             
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="dashboard" Match="NavLinkMatch.All">
-                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
-                </NavLink>
-            </div>
-
+            <!-- GESTIÓN DE PERSONAL -->
+            <div class="nav-section">PERSONAL</div>
+            
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="empleados">
-                    <span class="bi bi-people-fill" aria-hidden="true"></span> Empleados
+                    <span class="nav-icon">👥</span> Empleados
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="contratos">
+                    <span class="nav-icon">📄</span> Contratos
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="documentos">
+                    <span class="nav-icon">📁</span> Documentos
                 </NavLink>
             </div>
 
+            <!-- SOLICITUDES -->
+            <div class="nav-section">SOLICITUDES</div>
+            
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="permisos">
-                    <span class="bi bi-calendar-check-fill" aria-hidden="true"></span> Permisos
+                    <span class="nav-icon">🗓️</span> Permisos
                 </NavLink>
             </div>
             
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="vacaciones">
-                    <span class="bi bi-calendar-event-fill" aria-hidden="true"></span> Vacaciones
+                    <span class="nav-icon">🏖️</span> Vacaciones
                 </NavLink>
             </div>
             
+            <!-- CONTROL DE TIEMPO -->
+            <div class="nav-section">CONTROL DIARIO</div>
+            
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="control-diario">
-                    <span class="bi bi-clipboard-check-fill" aria-hidden="true"></span> Control Diario
+                    <span class="nav-icon">⏱️</span> Registro Diario
                 </NavLink>
             </div>
             
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="control-diario-wizard">
-                    <span class="bi bi-magic" aria-hidden="true"></span> Control Diario Wizard
+                    <span class="nav-icon">✨</span> Wizard Rápido
                 </NavLink>
             </div>
             
+            <!-- REPORTES -->
+            <div class="nav-section">INFORMES</div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="reportes">
+                    <span class="nav-icon">📊</span> Reportes
+                </NavLink>
+            </div>
+            
+            @if (AuthService.IsAdmin || AuthService.IsAprobador)
+            {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="auditoria">
+                        <span class="nav-icon">🔍</span> Auditoría
+                    </NavLink>
+                </div>
+            }
+            
+            <!-- ADMINISTRACIÓN (Solo Admin) -->
             @if (AuthService.IsAdmin)
             {
-                <hr />
+                <div class="nav-section">ADMINISTRACIÓN</div>
+                
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="catalogos">
+                        <span class="nav-icon">📚</span> Catálogos
+                    </NavLink>
+                </div>
+                
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="usuarios">
-                        <span class="bi bi-person-badge-fill" aria-hidden="true"></span> Usuarios
+                        <span class="nav-icon">👤</span> Usuarios
                     </NavLink>
                 </div>
                 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="configuracion">
-                        <span class="bi bi-gear-fill" aria-hidden="true"></span> Configuración
+                        <span class="nav-icon">⚙️</span> Configuración
                     </NavLink>
                 </div>
             }
@@ -74,7 +115,7 @@
             <hr />
             <div class="nav-item px-3">
                 <button class="btn-logout" @onclick="HandleLogout">
-                    <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Cerrar Sesión
+                    <span class="nav-icon">🚪</span> Cerrar Sesión
                 </button>
             </div>
         }
@@ -115,6 +156,21 @@
     margin: 4px 0 0 0;
     font-size: 12px;
     color: #CCCCCC;
+}
+
+.nav-section {
+    padding: 12px 16px 4px 16px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #888888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 8px;
+}
+
+.nav-icon {
+    margin-right: 8px;
+    font-size: 14px;
 }
 
 .btn-logout {

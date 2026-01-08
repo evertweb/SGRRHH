@@ -6,8 +6,7 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject IAuthService AuthService
 @inject IEmpleadoRepository EmpleadoRepository
-@inject ICargoRepository CargoRepository
-@inject IDepartamentoRepository DepartamentoRepository
+@inject ICatalogCacheService CatalogCache
 @inject ILocalStorageService StorageService
 @inject IExportService ExportService
 @inject NavigationManager Navigation
@@ -16,30 +15,24 @@
 
 <PageTitle>Empleados - SGRRHH</PageTitle>
 
+<!-- Toast Messages -->
+<MessageToast @ref="messageToast" />
+
+<!-- Unsaved Changes Guard -->
+<UnsavedChangesGuard @ref="unsavedChangesGuard" HasChanges="hasUnsavedChanges" />
+
 <KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
 
 <h1 class="page-title">GESTIÓN DE EMPLEADOS</h1>
 
-@if (errorMessage != null)
-{
-    <div class="error-block">
-        <h3>ERROR</h3>
-        <p>@errorMessage</p>
-        <button @onclick="() => errorMessage = null">ACEPTAR</button>
-    </div>
-}
-
-@if (successMessage != null)
-{
-    <div class="success-block">
-        <p>@successMessage</p>
-    </div>
-}
+@* Messages are now handled by MessageToast component *@
 
 <!-- Header con controles -->
 <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
     <div style="display: flex; gap: 8px;">
-        <button @onclick="NuevoEmpleado">NUEVO (F3)</button>
+        <button @onclick="NuevoEmpleadoOnboarding" style="background-color: #00AA00; color: white;">
+            🧑‍💼 NUEVO EMPLEADO (F3)
+        </button>
         <button @onclick="CargarEmpleados">ACTUALIZAR (F5)</button>
         @if (selectedEmpleado != null)
         {
@@ -150,188 +143,28 @@
     </table>
 </div>
 
-<!-- Modal de Empleado (Nuevo/Editar) -->
-<FormModal @bind-IsVisible="showModal" 
-           Title="@(isEditing ? $"EDITAR EMPLEADO - {empleadoEdit?.Codigo}" : "NUEVO EMPLEADO")"
-           Width="900px"
-           OnSaveClicked="Guardar"
-           OnCancelClicked="CerrarModal"
-           IsSaving="isSaving">
-    
-    @if (empleadoEdit != null)
-    {
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <!-- Columna izquierda: Datos básicos -->
-            <div class="form-column">
-                <h4 style="margin-top: 0; padding-bottom: 8px; border-bottom: 1px solid #808080;">DATOS BÁSICOS</h4>
-                
-                <div class="form-group required">
-                    <label>Código:</label>
-                    <input type="text" @bind="empleadoEdit.Codigo" maxlength="20" 
-                           readonly="@isEditing" disabled="@isSaving" />
-                    <small>Único e irrepetible</small>
-                </div>
-                
-                <div class="form-group required">
-                    <label>Cédula:</label>
-                    <input type="text" @bind="empleadoEdit.Cedula" maxlength="20" 
-                           disabled="@isSaving" />
-                    <small>Documento de identidad</small>
-                </div>
-                
-                <div class="form-group required">
-                    <label>Nombres:</label>
-                    <input type="text" @bind="empleadoEdit.Nombres" maxlength="100" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group required">
-                    <label>Apellidos:</label>
-                    <input type="text" @bind="empleadoEdit.Apellidos" maxlength="100" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>Fecha Nacimiento:</label>
-                    <input type="date" @bind="empleadoEdit.FechaNacimiento" 
-                           disabled="@isSaving" />
-                    @if (empleadoEdit.FechaNacimiento.HasValue)
-                    {
-                        var edad = CalcularEdad(empleadoEdit.FechaNacimiento.Value);
-                        <small>Edad: @edad años</small>
-                    }
-                </div>
-                
-                <div class="form-group">
-                    <label>Género:</label>
-                    <select @bind="empleadoEdit.Genero" disabled="@isSaving">
-                        <option value="">-- Seleccione --</option>
-                        @foreach (var g in Enum.GetValues<Genero>())
-                        {
-                            <option value="@g">@g</option>
-                        }
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Estado Civil:</label>
-                    <select @bind="empleadoEdit.EstadoCivil" disabled="@isSaving">
-                        <option value="">-- Seleccione --</option>
-                        @foreach (var ec in Enum.GetValues<EstadoCivil>())
-                        {
-                            <option value="@ec">@ec</option>
-                        }
-                    </select>
-                </div>
-            </div>
-            
-            <!-- Columna derecha: Contacto y laboral -->
-            <div class="form-column">
-                <h4 style="margin-top: 0; padding-bottom: 8px; border-bottom: 1px solid #808080;">CONTACTO Y LABORAL</h4>
-                
-                <div class="form-group">
-                    <label>Teléfono:</label>
-                    <input type="text" @bind="empleadoEdit.Telefono" maxlength="20" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>Email:</label>
-                    <input type="email" @bind="empleadoEdit.Email" maxlength="100" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>Dirección:</label>
-                    <textarea @bind="empleadoEdit.Direccion" rows="2" maxlength="250" 
-                              disabled="@isSaving"></textarea>
-                </div>
-                
-                <div class="form-group required">
-                    <label>Fecha Ingreso:</label>
-                    <input type="date" @bind="empleadoEdit.FechaIngreso" 
-                           disabled="@isSaving" />
-                    @if (empleadoEdit.FechaIngreso != default)
-                    {
-                        var antiguedad = CalcularAntiguedad(empleadoEdit.FechaIngreso);
-                        <small>Antigüedad: @antiguedad</small>
-                    }
-                </div>
-                
-                <div class="form-group">
-                    <label>Departamento:</label>
-                    <select @bind="empleadoEdit.DepartamentoId" disabled="@isSaving">
-                        <option value="">-- Seleccione --</option>
-                        @foreach (var d in departamentos)
-                        {
-                            <option value="@d.Id">@d.Nombre</option>
-                        }
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Cargo:</label>
-                    <select @bind="empleadoEdit.CargoId" disabled="@isSaving">
-                        <option value="">-- Seleccione --</option>
-                        @foreach (var c in cargos)
-                        {
-                            <option value="@c.Id">@c.Nombre</option>
-                        }
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Estado:</label>
-                    <select @bind="empleadoEdit.Estado" disabled="@isSaving">
-                        @foreach (var estado in Enum.GetValues<EstadoEmpleado>())
-                        {
-                            <option value="@estado">@estado</option>
-                        }
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Foto:</label>
-                    <InputFile OnChange="OnFotoSelected" accept="image/*" 
-                               disabled="@isSaving" />
-                    <small>JPG, PNG. Max 2MB</small>
-                    @if (fotoPreviewUrl != null)
-                    {
-                        <div style="margin-top: 8px;">
-                            <img src="@fotoPreviewUrl" style="max-width: 150px; max-height: 150px; border: 2px solid #000;" alt="Vista previa" />
-                        </div>
-                    }
-                </div>
-            </div>
+<!-- Paginación -->
+@if (totalEmpleados > pageSize)
+{
+    <div class="pagination-controls" style="margin-top: 12px; padding: 8px 12px; background-color: #F0F0F0; border: 1px solid #808080; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; color: #666;">
+            Mostrando @(((currentPage - 1) * pageSize) + 1) - @(Math.Min(currentPage * pageSize, totalEmpleados)) de @totalEmpleados
+        </span>
+        <div style="display: flex; align-items: center; gap: 4px;">
+            <button @onclick="() => CambiarPagina(1)" disabled="@(currentPage <= 1)" style="padding: 4px 8px; font-size: 11px;">⏮</button>
+            <button @onclick="() => CambiarPagina(currentPage - 1)" disabled="@(currentPage <= 1)" style="padding: 4px 8px; font-size: 11px;">←</button>
+            <span style="margin: 0 8px; font-size: 12px;">Página @currentPage de @((int)Math.Ceiling((double)totalEmpleados / pageSize))</span>
+            <button @onclick="() => CambiarPagina(currentPage + 1)" disabled="@(currentPage >= Math.Ceiling((double)totalEmpleados / pageSize))" style="padding: 4px 8px; font-size: 11px;">→</button>
+            <button @onclick="() => CambiarPagina((int)Math.Ceiling((double)totalEmpleados / pageSize))" disabled="@(currentPage >= Math.Ceiling((double)totalEmpleados / pageSize))" style="padding: 4px 8px; font-size: 11px;">⏭</button>
         </div>
-        
-        <!-- Sección adicional: Contacto de emergencia -->
-        <div style="margin-top: 20px; padding: 12px; background-color: #F5F5F5; border: 1px solid #808080;">
-            <h4 style="margin: 0 0 12px 0;">CONTACTO DE EMERGENCIA</h4>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="form-group">
-                    <label>Nombre Contacto:</label>
-                    <input type="text" @bind="empleadoEdit.ContactoEmergencia" maxlength="100" 
-                           disabled="@isSaving" />
-                </div>
-                <div class="form-group">
-                    <label>Teléfono Emergencia:</label>
-                    <input type="text" @bind="empleadoEdit.TelefonoEmergencia" maxlength="20" 
-                           disabled="@isSaving" />
-                </div>
-            </div>
-        </div>
-        
-        <!-- Observaciones -->
-        <div style="margin-top: 16px;">
-            <div class="form-group">
-                <label>Observaciones:</label>
-                <textarea @bind="empleadoEdit.Observaciones" rows="3" maxlength="500" 
-                          disabled="@isSaving"></textarea>
-            </div>
-        </div>
-    }
-</FormModal>
+        <select @bind="pageSize" @bind:after="OnPageSizeChanged" style="font-size: 11px; padding: 4px;">
+            <option value="10">10 por pág.</option>
+            <option value="20">20 por pág.</option>
+            <option value="50">50 por pág.</option>
+            <option value="100">100 por pág.</option>
+        </select>
+    </div>
+}
 
 <!-- Modal de Confirmación para Eliminar/Desactivar -->
 @if (showConfirmModal)
@@ -354,26 +187,33 @@
     [Parameter] public int? EmpleadoIdParam { get; set; }
     
     private KeyboardHandler? keyboardHandler;
+    private MessageToast? messageToast;
+    private UnsavedChangesGuard? unsavedChangesGuard;
     private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
     
+    private List<Empleado> todosEmpleados = new();
     private List<Empleado> empleados = new();
     private List<Cargo> cargos = new();
     private List<Departamento> departamentos = new();
     
     private Empleado? selectedEmpleado;
     private Empleado? empleadoEdit;
+    private Empleado? empleadoOriginal; // Para detectar cambios
+    
+    // Paginación
+    private int currentPage = 1;
+    private int pageSize = 20;
+    private int totalEmpleados;
     
     private bool isLoading;
     private bool showModal;
     private bool isSaving;
     private bool isEditing;
     private bool isExporting;
-    private string? errorMessage;
-    private string? successMessage;
+    private bool hasUnsavedChanges;
     
     private string searchTerm = "";
     private string filtroEstado = "";
-    private int totalEmpleados;
     
     private IBrowserFile? fotoFile;
     private string? fotoPreviewUrl;
@@ -394,7 +234,7 @@
         shortcuts = new List<KeyboardHandler.KeyboardShortcut>
         {
             new() { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = FocusBusqueda },
-            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = NuevoEmpleado },
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = () => { NuevoEmpleadoOnboarding(); return Task.CompletedTask; } },
             new() { Key = "F4", KeyDisplay = "F4", Description = "Editar", Action = EditarSeleccionado },
             new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarEmpleados },
             new() { Key = "F10", KeyDisplay = "F10", Description = "Exportar Excel", Action = ExportarExcel },
@@ -419,21 +259,17 @@
     {
         try
         {
-            var cargosTask = CargoRepository.GetAllAsync();
-            var departamentosTask = DepartamentoRepository.GetAllAsync();
+            // Usar caché para catálogos
+            cargos = await CatalogCache.GetCargosAsync();
+            departamentos = await CatalogCache.GetDepartamentosAsync();
             
-            await Task.WhenAll(cargosTask, departamentosTask);
-            
-            cargos = (await cargosTask).ToList();
-            departamentos = (await departamentosTask).ToList();
-            
-            Logger.LogInformation("Catálogos cargados: {CargosCount} cargos, {DeptoCount} departamentos", 
+            Logger.LogInformation("Catálogos cargados desde caché: {CargosCount} cargos, {DeptoCount} departamentos", 
                 cargos.Count, departamentos.Count);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error cargando catálogos");
-            errorMessage = "Error al cargar catálogos: " + ex.Message;
+            messageToast?.ShowError("Error al cargar catálogos: " + ex.Message);
         }
     }
     
@@ -444,11 +280,10 @@
             isLoading = true;
             StateHasChanged();
             
-            var todosEmpleados = await EmpleadoRepository.GetAllWithRelationsAsync();
-            totalEmpleados = todosEmpleados.Count();
+            todosEmpleados = (await EmpleadoRepository.GetAllWithRelationsAsync()).ToList();
             
             // Aplicar filtros
-            empleados = todosEmpleados
+            var filtrados = todosEmpleados
                 .Where(e => string.IsNullOrEmpty(filtroEstado) || e.Estado == (EstadoEmpleado)int.Parse(filtroEstado))
                 .Where(e => string.IsNullOrEmpty(searchTerm) || 
                     e.Codigo.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
@@ -459,12 +294,21 @@
                 .OrderBy(e => e.Codigo)
                 .ToList();
             
-            Logger.LogInformation("Empleados cargados: {Count} de {Total}", empleados.Count, totalEmpleados);
+            totalEmpleados = filtrados.Count;
+            
+            // Aplicar paginación
+            empleados = filtrados
+                .Skip((currentPage - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+            
+            Logger.LogInformation("Empleados cargados: {Count} de {Total} (Página {Page})", 
+                empleados.Count, totalEmpleados, currentPage);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error cargando empleados");
-            errorMessage = "Error al cargar empleados: " + ex.Message;
+            messageToast?.ShowError("Error al cargar empleados: " + ex.Message);
         }
         finally
         {
@@ -473,31 +317,9 @@
         }
     }
     
-    private async Task NuevoEmpleado()
+    private void NuevoEmpleadoOnboarding()
     {
-        try
-        {
-            var nextCodigo = await EmpleadoRepository.GetNextCodigoAsync();
-            
-            empleadoEdit = new Empleado
-            {
-                Codigo = nextCodigo,
-                FechaIngreso = DateTime.Today,
-                Estado = EstadoEmpleado.Activo
-            };
-            
-            isEditing = false;
-            showModal = true;
-            fotoFile = null;
-            fotoPreviewUrl = null;
-            
-            Logger.LogInformation("Nuevo empleado iniciado con código: {Codigo}", nextCodigo);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al preparar nuevo empleado");
-            errorMessage = "Error al preparar nuevo empleado: " + ex.Message;
-        }
+        Navigation.NavigateTo("/empleados/onboarding");
     }
     
     private async Task EditarEmpleado(Empleado empleado)
@@ -508,7 +330,7 @@
             var empleadoCompleto = await EmpleadoRepository.GetByIdWithRelationsAsync(empleado.Id);
             if (empleadoCompleto == null)
             {
-                errorMessage = "No se pudo cargar el empleado";
+                messageToast?.ShowError("No se pudo cargar el empleado");
                 return;
             }
             
@@ -539,6 +361,7 @@
             isEditing = true;
             showModal = true;
             fotoFile = null;
+            hasUnsavedChanges = false;
             
             // Cargar preview de foto existente
             if (!string.IsNullOrEmpty(empleadoCompleto.FotoPath))
@@ -555,7 +378,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al preparar edición de empleado {Id}", empleado.Id);
-            errorMessage = "Error al cargar empleado: " + ex.Message;
+            messageToast?.ShowError("Error al cargar empleado: " + ex.Message);
         }
     }
     
@@ -574,51 +397,50 @@
         try
         {
             isSaving = true;
-            errorMessage = null;
             StateHasChanged();
             
             // Validaciones
             if (string.IsNullOrWhiteSpace(empleadoEdit.Codigo))
             {
-                errorMessage = "El código es requerido";
+                messageToast?.ShowError("El código es requerido");
                 return;
             }
             
             if (string.IsNullOrWhiteSpace(empleadoEdit.Cedula))
             {
-                errorMessage = "La cédula es requerida";
+                messageToast?.ShowError("La cédula es requerida");
                 return;
             }
             
             if (string.IsNullOrWhiteSpace(empleadoEdit.Nombres))
             {
-                errorMessage = "Los nombres son requeridos";
+                messageToast?.ShowError("Los nombres son requeridos");
                 return;
             }
             
             if (string.IsNullOrWhiteSpace(empleadoEdit.Apellidos))
             {
-                errorMessage = "Los apellidos son requeridos";
+                messageToast?.ShowError("Los apellidos son requeridos");
                 return;
             }
             
             if (empleadoEdit.FechaIngreso == default)
             {
-                errorMessage = "La fecha de ingreso es requerida";
+                messageToast?.ShowError("La fecha de ingreso es requerida");
                 return;
             }
             
             // Validar código único
             if (await EmpleadoRepository.ExistsCodigoAsync(empleadoEdit.Codigo, isEditing ? empleadoEdit.Id : null))
             {
-                errorMessage = $"Ya existe un empleado con el código {empleadoEdit.Codigo}";
+                messageToast?.ShowError($"Ya existe un empleado con el código {empleadoEdit.Codigo}");
                 return;
             }
             
             // Validar cédula única
             if (await EmpleadoRepository.ExistsCedulaAsync(empleadoEdit.Cedula, isEditing ? empleadoEdit.Id : null))
             {
-                errorMessage = $"Ya existe un empleado con la cédula {empleadoEdit.Cedula}";
+                messageToast?.ShowError($"Ya existe un empleado con la cédula {empleadoEdit.Cedula}");
                 return;
             }
             
@@ -626,7 +448,7 @@
             if (!string.IsNullOrWhiteSpace(empleadoEdit.Email) && 
                 await EmpleadoRepository.ExistsEmailAsync(empleadoEdit.Email, isEditing ? empleadoEdit.Id : null))
             {
-                errorMessage = $"Ya existe un empleado con el email {empleadoEdit.Email}";
+                messageToast?.ShowError($"Ya existe un empleado con el email {empleadoEdit.Email}");
                 return;
             }
             
@@ -638,7 +460,7 @@
                     var maxFileSize = 2 * 1024 * 1024; // 2MB
                     if (fotoFile.Size > maxFileSize)
                     {
-                        errorMessage = "La foto no puede superar los 2MB";
+                        messageToast?.ShowError("La foto no puede superar los 2MB");
                         return;
                     }
                     
@@ -646,7 +468,7 @@
                     var extension = Path.GetExtension(fotoFile.Name).ToLowerInvariant();
                     if (!allowedExtensions.Contains(extension))
                     {
-                        errorMessage = "Solo se permiten archivos JPG, JPEG o PNG";
+                        messageToast?.ShowError("Solo se permiten archivos JPG, JPEG o PNG");
                         return;
                     }
                     
@@ -662,14 +484,14 @@
                     }
                     else
                     {
-                        errorMessage = "Error al guardar la foto: " + (result.Error ?? result.Message);
+                        messageToast?.ShowError("Error al guardar la foto: " + (result.Error ?? result.Message));
                         return;
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.LogError(ex, "Error procesando foto");
-                    errorMessage = "Error al procesar la foto: " + ex.Message;
+                    messageToast?.ShowError("Error al procesar la foto: " + ex.Message);
                     return;
                 }
             }
@@ -678,31 +500,25 @@
             if (isEditing)
             {
                 await EmpleadoRepository.UpdateAsync(empleadoEdit);
-                successMessage = $"Empleado {empleadoEdit.Codigo} actualizado correctamente";
+                messageToast?.ShowSuccess($"Empleado {empleadoEdit.Codigo} actualizado correctamente");
                 Logger.LogInformation("Empleado actualizado: {Id} - {Codigo}", empleadoEdit.Id, empleadoEdit.Codigo);
             }
             else
             {
                 var id = await EmpleadoRepository.AddAsync(empleadoEdit);
-                successMessage = $"Empleado {empleadoEdit.Codigo} creado correctamente (ID: {id})";
+                messageToast?.ShowSuccess($"Empleado {empleadoEdit.Codigo} creado correctamente (ID: {id})");
                 Logger.LogInformation("Empleado creado: {Id} - {Codigo}", id, empleadoEdit.Codigo);
             }
             
             // Cerrar modal y recargar
             showModal = false;
+            hasUnsavedChanges = false;
             await CargarEmpleados();
-            
-            // Limpiar mensaje de éxito después de 3 segundos
-            _ = Task.Delay(3000).ContinueWith(_ => 
-            {
-                successMessage = null;
-                InvokeAsync(StateHasChanged);
-            });
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error guardando empleado");
-            errorMessage = "Error al guardar: " + ex.Message;
+            messageToast?.ShowError("Error al guardar: " + ex.Message);
         }
         finally
         {
@@ -715,14 +531,38 @@
     {
         if (!isSaving)
         {
+            // Verificar si hay cambios sin guardar
+            if (hasUnsavedChanges)
+            {
+                // El UnsavedChangesGuard manejará la confirmación
+                return Task.CompletedTask;
+            }
+            
             showModal = false;
             empleadoEdit = null;
+            empleadoOriginal = null;
             fotoFile = null;
             fotoPreviewUrl = null;
-            errorMessage = null;
+            hasUnsavedChanges = false;
             StateHasChanged();
         }
         return Task.CompletedTask;
+    }
+    
+    private async Task CambiarPagina(int nuevaPagina)
+    {
+        var totalPaginas = (int)Math.Ceiling((double)totalEmpleados / pageSize);
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas)
+        {
+            currentPage = nuevaPagina;
+            await CargarEmpleados();
+        }
+    }
+    
+    private async Task OnPageSizeChanged()
+    {
+        currentPage = 1;
+        await CargarEmpleados();
     }
     
     private void SelectEmpleado(Empleado empleado)
@@ -767,6 +607,7 @@
     private async Task OnFotoSelected(InputFileChangeEventArgs e)
     {
         fotoFile = e.File;
+        hasUnsavedChanges = true;
         
         // Crear preview
         if (fotoFile != null)
@@ -784,7 +625,7 @@
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error creando preview de foto");
-                errorMessage = "Error al cargar vista previa de foto";
+                messageToast?.ShowError("Error al cargar vista previa de foto");
             }
         }
     }
@@ -835,7 +676,6 @@
         try
         {
             isExporting = true;
-            errorMessage = null;
             StateHasChanged();
             
             // Obtener empleados actuales (con filtros aplicados)
@@ -843,7 +683,7 @@
             
             if (!empleadosExportar.Any())
             {
-                errorMessage = "No hay empleados para exportar";
+                messageToast?.ShowWarning("No hay empleados para exportar");
                 return;
             }
             
@@ -865,25 +705,17 @@
                 Logger.LogInformation("Empleados exportados a Excel: {Count} registros por {User}", 
                     empleadosExportar.Count, AuthService.CurrentUser?.Username);
                 
-                successMessage = $"Se exportaron {empleadosExportar.Count} empleado(s) a Excel correctamente";
-                
-                // Limpiar mensaje después de 3 segundos
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(3000);
-                    successMessage = null;
-                    await InvokeAsync(StateHasChanged);
-                });
+                messageToast?.ShowSuccess($"Se exportaron {empleadosExportar.Count} empleado(s) a Excel correctamente");
             }
             else
             {
-                errorMessage = result.Message ?? "Error al exportar empleados";
+                messageToast?.ShowError(result.Message ?? "Error al exportar empleados");
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error exportando empleados a Excel");
-            errorMessage = "Error al exportar: " + ex.Message;
+            messageToast?.ShowError("Error al exportar: " + ex.Message);
         }
         finally
         {

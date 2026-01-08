@@ -16,6 +16,9 @@ QuestPDF.Settings.License = LicenseType.Community;
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Memory Cache (requerido para CatalogCacheService)
+builder.Services.AddMemoryCache();
+
 // Data access registration
 builder.Services.AddSingleton<DatabasePathResolver>();
 builder.Services.AddSingleton<DapperContext>();
@@ -49,6 +52,11 @@ builder.Services.AddScoped<IBackupService, BackupService>();
 builder.Services.AddScoped<IExportService, ExportService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
+
+// Cache y Session services
+builder.Services.AddScoped<ICatalogCacheService, CatalogCacheService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Background services
 builder.Services.AddHostedService<BackupSchedulerService>();

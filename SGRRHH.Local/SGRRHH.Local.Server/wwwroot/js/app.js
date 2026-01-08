@@ -94,3 +94,232 @@ window.scrollToElement = function(elementId) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 };
+
+// ========================================
+// GESTIÓN DE CAMBIOS SIN GUARDAR
+// ========================================
+
+let unsavedChangesRef = null;
+
+/**
+ * Configura el aviso de cambios sin guardar al cerrar la ventana
+ */
+window.setupBeforeUnloadWarning = function(dotNetRef) {
+    unsavedChangesRef = dotNetRef;
+    window.addEventListener('beforeunload', handleBeforeUnload);
+};
+
+/**
+ * Remueve el aviso de cambios sin guardar
+ */
+window.removeBeforeUnloadWarning = function() {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    unsavedChangesRef = null;
+};
+
+function handleBeforeUnload(e) {
+    if (unsavedChangesRef) {
+        try {
+            const hasChanges = unsavedChangesRef.invokeMethodAsync('HasUnsavedChanges');
+            if (hasChanges) {
+                e.preventDefault();
+                e.returnValue = '¿Seguro que desea salir? Hay cambios sin guardar.';
+                return e.returnValue;
+            }
+        } catch (err) {
+            console.warn('Error checking unsaved changes:', err);
+        }
+    }
+}
+
+// ========================================
+// GESTIÓN DE SESIÓN
+// ========================================
+
+let sessionActivityRef = null;
+let sessionActivityTimeout = null;
+
+/**
+ * Configura el registro de actividad de sesión
+ */
+window.setupSessionActivity = function(dotNetRef) {
+    sessionActivityRef = dotNetRef;
+    
+    // Registrar eventos de actividad
+    document.addEventListener('click', registerSessionActivity);
+    document.addEventListener('keypress', registerSessionActivity);
+    document.addEventListener('mousemove', throttledActivityRegistration);
+    document.addEventListener('scroll', throttledActivityRegistration);
+};
+
+/**
+ * Remueve el registro de actividad de sesión
+ */
+window.removeSessionActivity = function() {
+    document.removeEventListener('click', registerSessionActivity);
+    document.removeEventListener('keypress', registerSessionActivity);
+    document.removeEventListener('mousemove', throttledActivityRegistration);
+    document.removeEventListener('scroll', throttledActivityRegistration);
+    sessionActivityRef = null;
+};
+
+function registerSessionActivity() {
+    if (sessionActivityRef) {
+        try {
+            sessionActivityRef.invokeMethodAsync('RegisterActivity');
+        } catch (err) {
+            console.warn('Error registering activity:', err);
+        }
+    }
+}
+
+function throttledActivityRegistration() {
+    if (!sessionActivityTimeout) {
+        sessionActivityTimeout = setTimeout(() => {
+            registerSessionActivity();
+            sessionActivityTimeout = null;
+        }, 30000); // Throttle a cada 30 segundos para mousemove/scroll
+    }
+}
+
+// ========================================
+// NAVEGACIÓN CON TECLADO EN TABLAS
+// ========================================
+
+/**
+ * Configura la navegación con teclado en una tabla
+ */
+window.setupTableKeyboardNavigation = function(tableId, dotNetRef) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    table.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('SelectNextRow');
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('SelectPreviousRow');
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('OpenSelectedRow');
+        } else if (e.key === 'Home') {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('SelectFirstRow');
+        } else if (e.key === 'End') {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('SelectLastRow');
+        }
+    });
+    
+    // Hacer la tabla enfocable
+    table.setAttribute('tabindex', '0');
+};
+
+/**
+ * Enfoca una tabla para navegación con teclado
+ */
+window.focusTable = function(tableId) {
+    const table = document.getElementById(tableId);
+    if (table) {
+        table.focus();
+    }
+};
+
+/**
+ * Scroll a la fila seleccionada de una tabla
+ */
+window.scrollToSelectedRow = function(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const selectedRow = table.querySelector('tr.selected');
+    if (selectedRow) {
+        selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+};
+
+// ========================================
+// NOTIFICACIONES DEL NAVEGADOR
+// ========================================
+
+/**
+ * Solicita permiso para notificaciones del navegador
+ */
+window.requestNotificationPermission = async function() {
+    if (!('Notification' in window)) {
+        return 'not-supported';
+    }
+    
+    if (Notification.permission === 'granted') {
+        return 'granted';
+    }
+    
+    const permission = await Notification.requestPermission();
+    return permission;
+};
+
+/**
+ * Muestra una notificación del navegador
+ */
+window.showBrowserNotification = function(title, body, icon) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+        return false;
+    }
+    
+    const notification = new Notification(title, {
+        body: body,
+        icon: icon || '/images/logo.png',
+        badge: '/images/badge.png'
+    });
+    
+    notification.onclick = function() {
+        window.focus();
+        notification.close();
+    };
+    
+    return true;
+};
+
+// ========================================
+// LOCAL STORAGE HELPERS
+// ========================================
+
+/**
+ * Guarda un valor en localStorage
+ */
+window.setLocalStorage = function(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+    } catch (err) {
+        console.error('Error saving to localStorage:', err);
+        return false;
+    }
+};
+
+/**
+ * Obtiene un valor de localStorage
+ */
+window.getLocalStorage = function(key) {
+    try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : null;
+    } catch (err) {
+        console.error('Error reading from localStorage:', err);
+        return null;
+    }
+};
+
+/**
+ * Elimina un valor de localStorage
+ */
+window.removeLocalStorage = function(key) {
+    try {
+        localStorage.removeItem(key);
+        return true;
+    } catch (err) {
+        console.error('Error removing from localStorage:', err);
+        return false;
+    }
+};

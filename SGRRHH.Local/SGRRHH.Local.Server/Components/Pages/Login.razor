@@ -2,6 +2,7 @@
 @page "/"
 @layout EmptyLayout
 @using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Domain.Enums
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 
@@ -63,10 +64,10 @@
     
     protected override void OnInitialized()
     {
-        // Si ya está autenticado, ir al dashboard
+        // Si ya está autenticado, ir a la página por defecto según rol
         if (AuthService.IsAuthenticated)
         {
-            Navigation.NavigateTo("/dashboard");
+            Navigation.NavigateTo(GetDefaultPageByRole());
         }
     }
     
@@ -92,7 +93,7 @@
             
             if (result.IsSuccess)
             {
-                Navigation.NavigateTo("/dashboard");
+                Navigation.NavigateTo(GetDefaultPageByRole());
             }
             else
             {
@@ -104,5 +105,19 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+    
+    private string GetDefaultPageByRole()
+    {
+        if (AuthService.CurrentUser == null)
+            return "/login";
+        
+        return AuthService.CurrentUser.Rol switch
+        {
+            RolUsuario.Administrador => "/usuarios",
+            RolUsuario.Aprobador => "/empleados", // Ingeniera
+            RolUsuario.Operador => "/control-diario", // Secretaria
+            _ => "/empleados"
+        };
     }
 }
