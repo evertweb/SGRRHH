@@ -1,0 +1,188 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+@* Barra de atajos de teclado visible *@
+@if (ShowShortcutBar)
+{
+    <div class="keyboard-shortcut-bar">
+        @foreach (var shortcut in Shortcuts.Where(s => s.ShowInBar))
+        {
+            <span class="shortcut-item">
+                <kbd>@shortcut.KeyDisplay</kbd> @shortcut.Description
+            </span>
+        }
+        <span class="keyboard-mode-indicator">
+            MODO TECLADO: @(IsEnabled ? "ACTIVO" : "INACTIVO")
+        </span>
+    </div>
+}
+
+@code {
+    [Parameter] public bool ShowShortcutBar { get; set; } = true;
+    [Parameter] public bool IsEnabled { get; set; } = true;
+    [Parameter] public List<KeyboardShortcut> Shortcuts { get; set; } = new();
+    [Parameter] public EventCallback<KeyboardEventArgs> OnKeyPressedCallback { get; set; }
+
+    private DotNetObjectReference<KeyboardHandler>? dotNetRef;
+    private bool isInitialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && IsEnabled)
+        {
+            await InitializeAsync();
+        }
+    }
+
+    public async Task InitializeAsync()
+    {
+        if (isInitialized) return;
+        try
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("KeyboardHandler.initialize", dotNetRef);
+            isInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error inicializando KeyboardHandler: {ex.Message}");
+        }
+    }
+
+    public async Task SetEnabledAsync(bool enabled)
+    {
+        IsEnabled = enabled;
+        if (isInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("KeyboardHandler.setEnabled", enabled);
+            }
+            catch { }
+        }
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public async Task OnKeyPressed(KeyboardEventArgs e)
+    {
+        var shortcut = Shortcuts.FirstOrDefault(s =>
+            s.Key == e.Key &&
+            s.CtrlKey == e.CtrlKey &&
+            s.AltKey == e.AltKey &&
+            s.ShiftKey == e.ShiftKey);
+
+        if (shortcut?.Action != null)
+        {
+            await shortcut.Action.Invoke();
+            StateHasChanged();
+        }
+
+        await OnKeyPressedCallback.InvokeAsync(e);
+    }
+
+    public async Task FocusElementAsync(string elementId)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("KeyboardHandler.focusElement", elementId);
+        }
+        catch { }
+    }
+
+    public async Task FocusFirstAsync(string? containerId = null)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("KeyboardHandler.focusFirst", containerId);
+        }
+        catch { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (isInitialized)
+        {
+            try 
+            { 
+                await JSRuntime.InvokeVoidAsync("KeyboardHandler.dispose"); 
+            }
+            catch { }
+        }
+        dotNetRef?.Dispose();
+    }
+
+    /// <summary>
+    /// Crea atajos de teclado estándar para listados
+    /// </summary>
+    public static List<KeyboardShortcut> CreateListShortcuts(
+        Func<Task>? onSearch = null,
+        Func<Task>? onNew = null,
+        Func<Task>? onEdit = null,
+        Func<Task>? onRefresh = null,
+        Func<Task>? onDelete = null,
+        Func<Task>? onHelp = null)
+    {
+        var shortcuts = new List<KeyboardShortcut>();
+
+        if (onHelp != null)
+            shortcuts.Add(new KeyboardShortcut { Key = "F1", KeyDisplay = "F1", Description = "Ayuda", Action = onHelp });
+        
+        if (onSearch != null)
+            shortcuts.Add(new KeyboardShortcut { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = onSearch });
+        
+        if (onNew != null)
+            shortcuts.Add(new KeyboardShortcut { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = onNew });
+        
+        if (onEdit != null)
+            shortcuts.Add(new KeyboardShortcut { Key = "F4", KeyDisplay = "F4", Description = "Editar", Action = onEdit });
+        
+        if (onRefresh != null)
+            shortcuts.Add(new KeyboardShortcut { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = onRefresh });
+        
+        if (onDelete != null)
+            shortcuts.Add(new KeyboardShortcut { Key = "F8", KeyDisplay = "F8", Description = "Eliminar", Action = onDelete });
+
+        return shortcuts;
+    }
+
+    /// <summary>
+    /// Crea atajos de teclado estándar para formularios
+    /// </summary>
+    public static List<KeyboardShortcut> CreateFormShortcuts(
+        Func<Task>? onSave = null,
+        Func<Task>? onCancel = null)
+    {
+        var shortcuts = new List<KeyboardShortcut>();
+
+        if (onSave != null)
+            shortcuts.Add(new KeyboardShortcut { Key = "F9", KeyDisplay = "F9", Description = "Guardar", Action = onSave });
+        
+        if (onCancel != null)
+            shortcuts.Add(new KeyboardShortcut { Key = "Escape", KeyDisplay = "ESC", Description = "Cancelar", Action = onCancel });
+
+        return shortcuts;
+    }
+
+    public class KeyboardShortcut
+    {
+        public string Key { get; set; } = string.Empty;
+        public string KeyDisplay { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public bool CtrlKey { get; set; } = false;
+        public bool AltKey { get; set; } = false;
+        public bool ShiftKey { get; set; } = false;
+        public bool ShowInBar { get; set; } = true;
+        public Func<Task>? Action { get; set; }
+    }
+
+    public class KeyboardEventArgs
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
+        public bool CtrlKey { get; set; }
+        public bool AltKey { get; set; }
+        public bool ShiftKey { get; set; }
+    }
+}

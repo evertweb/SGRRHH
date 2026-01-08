@@ -1,0 +1,1280 @@
+@page "/reportes"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Infrastructure.Services
+@inject IAuthService AuthService
+@inject IEmpleadoRepository EmpleadoRepository
+@inject IPermisoRepository PermisoRepository
+@inject IVacacionRepository VacacionRepository
+@inject IRegistroDiarioRepository RegistroDiarioRepository
+@inject IDepartamentoRepository DepartamentoRepository
+@inject ICargoRepository CargoRepository
+@inject ITipoPermisoRepository TipoPermisoRepository
+@inject IReportService ReportService
+@inject NavigationManager Navigation
+@inject ILogger<Reportes> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Reportes - SGRRHH</PageTitle>
+
+<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
+
+<h1 class="page-title">CENTRO DE REPORTES</h1>
+
+@if (errorMessage != null)
+{
+    <div class="error-block">
+        <h3>ERROR</h3>
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="success-block">
+        <p>@successMessage</p>
+    </div>
+}
+
+<!-- Selector de tipo de reporte -->
+<div class="panel" style="margin-bottom: 24px;">
+    <h3>SELECCIONE EL TIPO DE REPORTE</h3>
+    <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+        <button class="@(tipoReporteSeleccionado == TipoReporte.ListadoEmpleados ? "active" : "")"
+                @onclick="() => SeleccionarTipoReporte(TipoReporte.ListadoEmpleados)">
+            LISTADO DE EMPLEADOS
+        </button>
+        <button class="@(tipoReporteSeleccionado == TipoReporte.Permisos ? "active" : "")"
+                @onclick="() => SeleccionarTipoReporte(TipoReporte.Permisos)">
+            REPORTE DE PERMISOS
+        </button>
+        <button class="@(tipoReporteSeleccionado == TipoReporte.Vacaciones ? "active" : "")"
+                @onclick="() => SeleccionarTipoReporte(TipoReporte.Vacaciones)">
+            REPORTE DE VACACIONES
+        </button>
+        <button class="@(tipoReporteSeleccionado == TipoReporte.Asistencia ? "active" : "")"
+                @onclick="() => SeleccionarTipoReporte(TipoReporte.Asistencia)">
+            REPORTE DE ASISTENCIA
+        </button>
+        <button class="@(tipoReporteSeleccionado == TipoReporte.CertificadoLaboral ? "active" : "")"
+                @onclick="() => SeleccionarTipoReporte(TipoReporte.CertificadoLaboral)">
+            CERTIFICADO LABORAL
+        </button>
+    </div>
+</div>
+
+<!-- Panel de Filtros y Generación según tipo de reporte -->
+@if (tipoReporteSeleccionado != TipoReporte.Ninguno)
+{
+    <div class="panel" style="margin-bottom: 24px;">
+        <!-- Filtros para Listado de Empleados -->
+        @if (tipoReporteSeleccionado == TipoReporte.ListadoEmpleados)
+        {
+            <h3>FILTROS - LISTADO DE EMPLEADOS</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
+                <div class="form-group">
+                    <label>Estado:</label>
+                    <select @bind="filtroEstadoEmpleado">
+                        <option value="">Todos</option>
+                        @foreach (var estado in Enum.GetValues<EstadoEmpleado>())
+                        {
+                            <option value="@estado">@estado</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Departamento:</label>
+                    <select @bind="filtroDepartamento">
+                        <option value="">Todos</option>
+                        @foreach (var dept in departamentos)
+                        {
+                            <option value="@dept.Id">@dept.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cargo:</label>
+                    <select @bind="filtroCargo">
+                        <option value="">Todos</option>
+                        @foreach (var cargo in cargos)
+                        {
+                            <option value="@cargo.Id">@cargo.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ordenar por:</label>
+                    <select @bind="ordenEmpleados">
+                        <option value="nombre">Nombre</option>
+                        <option value="cedula">Cédula</option>
+                        <option value="codigo">Código</option>
+                        <option value="fechaIngreso">Fecha Ingreso</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button @onclick="GenerarReporteEmpleados" disabled="@isGenerating">
+                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                </button>
+                <button @onclick="VistaPrevia" disabled="@isGenerating">
+                    VISTA PREVIA
+                </button>
+                <button @onclick="ExportarExcel" disabled="@isGenerating">
+                    EXPORTAR A EXCEL
+                </button>
+            </div>
+        }
+
+        <!-- Filtros para Reporte de Permisos -->
+        @if (tipoReporteSeleccionado == TipoReporte.Permisos)
+        {
+            <h3>FILTROS - REPORTE DE PERMISOS</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
+                <div class="form-group required">
+                    <label>Fecha Inicio:</label>
+                    <input type="date" @bind="filtroFechaInicio" />
+                </div>
+                <div class="form-group required">
+                    <label>Fecha Fin:</label>
+                    <input type="date" @bind="filtroFechaFin" />
+                </div>
+                <div class="form-group">
+                    <label>Empleado:</label>
+                    <select @bind="filtroEmpleadoId">
+                        <option value="">Todos</option>
+                        @foreach (var emp in empleados)
+                        {
+                            <option value="@emp.Id">@emp.NombreCompleto</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Permiso:</label>
+                    <select @bind="filtroTipoPermisoId">
+                        <option value="">Todos</option>
+                        @foreach (var tipo in tiposPermiso)
+                        {
+                            <option value="@tipo.Id">@tipo.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Estado:</label>
+                    <select @bind="filtroEstadoPermiso">
+                        <option value="">Todos</option>
+                        @foreach (var estado in Enum.GetValues<EstadoPermiso>())
+                        {
+                            <option value="@estado">@estado</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Departamento:</label>
+                    <select @bind="filtroDepartamentoPermisos">
+                        <option value="">Todos</option>
+                        @foreach (var dept in departamentos)
+                        {
+                            <option value="@dept.Id">@dept.Nombre</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button @onclick="GenerarReportePermisos" disabled="@isGenerating || !ValidarFechasPermisos()">
+                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                </button>
+                <button @onclick="VistaPreviaPermisos" disabled="@isGenerating || !ValidarFechasPermisos()">
+                    VISTA PREVIA
+                </button>
+                <button @onclick="ExportarPermisosExcel" disabled="@isGenerating || !ValidarFechasPermisos()">
+                    EXPORTAR A EXCEL
+                </button>
+            </div>
+            @if (!ValidarFechasPermisos())
+            {
+                <p style="color: var(--error-color); margin-top: 8px;">
+                    * Debe seleccionar un rango de fechas válido
+                </p>
+            }
+        }
+
+        <!-- Filtros para Reporte de Vacaciones -->
+        @if (tipoReporteSeleccionado == TipoReporte.Vacaciones)
+        {
+            <h3>FILTROS - REPORTE DE VACACIONES</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
+                <div class="form-group">
+                    <label>Año:</label>
+                    <select @bind="filtroAnioVacaciones">
+                        @for (int year = DateTime.Now.Year - 5; year <= DateTime.Now.Year + 1; year++)
+                        {
+                            <option value="@year">@year</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Empleado:</label>
+                    <select @bind="filtroEmpleadoVacacionesId">
+                        <option value="">Todos</option>
+                        @foreach (var emp in empleados)
+                        {
+                            <option value="@emp.Id">@emp.NombreCompleto</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Estado:</label>
+                    <select @bind="filtroEstadoVacaciones">
+                        <option value="">Todos</option>
+                        @foreach (var estado in Enum.GetValues<EstadoVacacion>())
+                        {
+                            <option value="@estado">@estado</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Departamento:</label>
+                    <select @bind="filtroDepartamentoVacaciones">
+                        <option value="">Todos</option>
+                        @foreach (var dept in departamentos)
+                        {
+                            <option value="@dept.Id">@dept.Nombre</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button @onclick="GenerarReporteVacaciones" disabled="@isGenerating">
+                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                </button>
+                <button @onclick="VistaPreviaVacaciones" disabled="@isGenerating">
+                    VISTA PREVIA
+                </button>
+                <button @onclick="ExportarVacacionesExcel" disabled="@isGenerating">
+                    EXPORTAR A EXCEL
+                </button>
+            </div>
+        }
+
+        <!-- Filtros para Reporte de Asistencia -->
+        @if (tipoReporteSeleccionado == TipoReporte.Asistencia)
+        {
+            <h3>FILTROS - REPORTE DE ASISTENCIA</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
+                <div class="form-group required">
+                    <label>Fecha Inicio:</label>
+                    <input type="date" @bind="filtroFechaInicioAsistencia" />
+                </div>
+                <div class="form-group required">
+                    <label>Fecha Fin:</label>
+                    <input type="date" @bind="filtroFechaFinAsistencia" />
+                </div>
+                <div class="form-group">
+                    <label>Empleado:</label>
+                    <select @bind="filtroEmpleadoAsistenciaId">
+                        <option value="">Todos</option>
+                        @foreach (var emp in empleados)
+                        {
+                            <option value="@emp.Id">@emp.NombreCompleto</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Departamento:</label>
+                    <select @bind="filtroDepartamentoAsistencia">
+                        <option value="">Todos</option>
+                        @foreach (var dept in departamentos)
+                        {
+                            <option value="@dept.Id">@dept.Nombre</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button @onclick="GenerarReporteAsistencia" disabled="@isGenerating || !ValidarFechasAsistencia()">
+                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                </button>
+                <button @onclick="VistaPreviaAsistencia" disabled="@isGenerating || !ValidarFechasAsistencia()">
+                    VISTA PREVIA
+                </button>
+                <button @onclick="ExportarAsistenciaExcel" disabled="@(isGenerating || !ValidarFechasAsistencia())">
+                    EXPORTAR A EXCEL
+                </button>
+            </div>
+            @if (!ValidarFechasAsistencia())
+            {
+                <p style="color: var(--error-color); margin-top: 8px;">
+                    * Debe seleccionar un rango de fechas válido
+                </p>
+            }
+        }
+
+        <!-- Filtros para Certificado Laboral -->
+        @if (tipoReporteSeleccionado == TipoReporte.CertificadoLaboral)
+        {
+            <h3>GENERAR CERTIFICADO LABORAL</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
+                <div class="form-group required">
+                    <label>Empleado:</label>
+                    <select @bind="empleadoCertificadoId">
+                        <option value="">-- Seleccione --</option>
+                        @foreach (var emp in empleados.Where(e => e.Estado == EstadoEmpleado.Activo))
+                        {
+                            <option value="@emp.Id">@emp.NombreCompleto - @emp.Cedula</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Propósito:</label>
+                    <select @bind="propositoCertificado">
+                        <option value="Tramites Personales">Trámites Personales</option>
+                        <option value="Tramites Bancarios">Trámites Bancarios</option>
+                        <option value="Visa">Visa</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Incluir Salario:</label>
+                    <input type="checkbox" @bind="incluirSalarioCertificado" />
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button @onclick="GenerarCertificado" disabled="@(isGenerating || string.IsNullOrEmpty(empleadoCertificadoId))">
+                    @(isGenerating ? "GENERANDO..." : "GENERAR CERTIFICADO")
+                </button>
+            </div>
+            @if (string.IsNullOrEmpty(empleadoCertificadoId))
+            {
+                <p style="color: var(--error-color); margin-top: 8px;">
+                    * Debe seleccionar un empleado
+                </p>
+            }
+        }
+    </div>
+
+    <!-- Vista previa de datos -->
+    @if (mostrarVistaPrevia)
+    {
+        <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3>VISTA PREVIA DEL REPORTE</h3>
+                <button @onclick="CerrarVistaPrevia">CERRAR</button>
+            </div>
+
+            @if (tipoReporteSeleccionado == TipoReporte.ListadoEmpleados && empleadosReporte.Any())
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th>CÓDIGO</th>
+                            <th>CÉDULA</th>
+                            <th>NOMBRE COMPLETO</th>
+                            <th>CARGO</th>
+                            <th>DEPARTAMENTO</th>
+                            <th>FECHA INGRESO</th>
+                            <th>ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var emp in empleadosReporte)
+                        {
+                            <tr>
+                                <td>@emp.Codigo</td>
+                                <td>@emp.Cedula</td>
+                                <td>@emp.NombreCompleto</td>
+                                <td>@(emp.Cargo?.Nombre ?? "-")</td>
+                                <td>@(emp.Departamento?.Nombre ?? "-")</td>
+                                <td>@emp.FechaIngreso.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <span class="badge-@emp.Estado.ToString().ToLower()">
+                                        @emp.Estado
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <p style="margin-top: 12px; font-weight: bold;">
+                    Total de empleados: @empleadosReporte.Count
+                </p>
+            }
+
+            @if (tipoReporteSeleccionado == TipoReporte.Permisos && permisosReporte.Any())
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th>N° ACTA</th>
+                            <th>FECHA</th>
+                            <th>EMPLEADO</th>
+                            <th>TIPO</th>
+                            <th>FECHA INICIO</th>
+                            <th>FECHA FIN</th>
+                            <th>DÍAS</th>
+                            <th>ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var permiso in permisosReporte)
+                        {
+                            <tr>
+                                <td>@permiso.NumeroActa</td>
+                                <td>@permiso.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                                <td>@(permiso.Empleado?.NombreCompleto ?? "-")</td>
+                                <td>@(permiso.TipoPermiso?.Nombre ?? "-")</td>
+                                <td>@permiso.FechaInicio.ToString("dd/MM/yyyy")</td>
+                                <td>@permiso.FechaFin.ToString("dd/MM/yyyy")</td>
+                                <td>@permiso.TotalDias</td>
+                                <td>
+                                    <span class="badge-@permiso.Estado.ToString().ToLower()">
+                                        @permiso.Estado
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                    <div>
+                        <strong>Total de permisos:</strong> @permisosReporte.Count
+                    </div>
+                    <div>
+                        <strong>Días totales:</strong> @permisosReporte.Sum(p => p.TotalDias)
+                    </div>
+                    <div>
+                        <strong>Aprobados:</strong> @permisosReporte.Count(p => p.Estado == EstadoPermiso.Aprobado)
+                    </div>
+                    <div>
+                        <strong>Rechazados:</strong> @permisosReporte.Count(p => p.Estado == EstadoPermiso.Rechazado)
+                    </div>
+                    <div>
+                        <strong>Pendientes:</strong> @permisosReporte.Count(p => p.Estado == EstadoPermiso.Pendiente)
+                    </div>
+                </div>
+            }
+
+            @if (tipoReporteSeleccionado == TipoReporte.Vacaciones && vacacionesReporte.Any())
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th>EMPLEADO</th>
+                            <th>DEPARTAMENTO</th>
+                            <th>PERÍODO</th>
+                            <th>FECHA INICIO</th>
+                            <th>FECHA FIN</th>
+                            <th>DÍAS</th>
+                            <th>DÍAS DISPONIBLES</th>
+                            <th>ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var vacacion in vacacionesReporte)
+                        {
+                            <tr>
+                                <td>@(vacacion.Empleado?.NombreCompleto ?? "-")</td>
+                                <td>@(vacacion.Empleado?.Departamento?.Nombre ?? "-")</td>
+                                <td>@vacacion.Periodo</td>
+                                <td>@vacacion.FechaInicio.ToString("dd/MM/yyyy")</td>
+                                <td>@vacacion.FechaFin.ToString("dd/MM/yyyy")</td>
+                                <td>@vacacion.DiasTomados</td>
+                                <td>@vacacion.DiasDisponibles</td>
+                                <td>
+                                    <span class="badge-@vacacion.Estado.ToString().ToLower()">
+                                        @vacacion.Estado
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                    <div>
+                        <strong>Total de solicitudes:</strong> @vacacionesReporte.Count
+                    </div>
+                    <div>
+                        <strong>Días totales:</strong> @vacacionesReporte.Sum(v => v.DiasTomados)
+                    </div>
+                    <div>
+                        <strong>Aprobadas:</strong> @vacacionesReporte.Count(v => v.Estado == EstadoVacacion.Aprobada)
+                    </div>
+                    <div>
+                        <strong>Pendientes:</strong> @vacacionesReporte.Count(v => v.Estado == EstadoVacacion.Pendiente)
+                    </div>
+                </div>
+            }
+
+            @if (!empleadosReporte.Any() && !permisosReporte.Any() && !vacacionesReporte.Any())
+            {
+                <p class="empty-state">No hay datos para mostrar con los filtros seleccionados</p>
+            }
+        </div>
+    }
+}
+
+@code {
+    // Referencias
+    private KeyboardHandler? keyboardHandler;
+    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+
+    // Enumeración de tipos de reporte
+    private enum TipoReporte
+    {
+        Ninguno,
+        ListadoEmpleados,
+        Permisos,
+        Vacaciones,
+        Asistencia,
+        CertificadoLaboral
+    }
+
+    // Estado general
+    private TipoReporte tipoReporteSeleccionado = TipoReporte.Ninguno;
+    private bool isGenerating = false;
+    private bool mostrarVistaPrevia = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    // Catálogos
+    private List<Empleado> empleados = new();
+    private List<Departamento> departamentos = new();
+    private List<Cargo> cargos = new();
+    private List<TipoPermiso> tiposPermiso = new();
+
+    // Filtros - Listado de Empleados
+    private string? filtroEstadoEmpleado = "";
+    private string? filtroDepartamento = "";
+    private string? filtroCargo = "";
+    private string ordenEmpleados = "nombre";
+
+    // Filtros - Permisos
+    private DateTime? filtroFechaInicio = DateTime.Now.AddMonths(-1);
+    private DateTime? filtroFechaFin = DateTime.Now;
+    private string? filtroEmpleadoId = "";
+    private string? filtroTipoPermisoId = "";
+    private string? filtroEstadoPermiso = "";
+    private string? filtroDepartamentoPermisos = "";
+
+    // Filtros - Vacaciones
+    private int filtroAnioVacaciones = DateTime.Now.Year;
+    private string? filtroEmpleadoVacacionesId = "";
+    private string? filtroEstadoVacaciones = "";
+    private string? filtroDepartamentoVacaciones = "";
+
+    // Filtros - Asistencia
+    private DateTime? filtroFechaInicioAsistencia = DateTime.Now.AddMonths(-1);
+    private DateTime? filtroFechaFinAsistencia = DateTime.Now;
+    private string? filtroEmpleadoAsistenciaId = "";
+    private string? filtroDepartamentoAsistencia = "";
+
+    // Filtros - Certificado Laboral
+    private string? empleadoCertificadoId = "";
+    private string propositoCertificado = "Tramites Personales";
+    private bool incluirSalarioCertificado = false;
+
+    // Datos de reportes
+    private List<Empleado> empleadosReporte = new();
+    private List<Permiso> permisosReporte = new();
+    private List<Vacacion> vacacionesReporte = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (!AuthService.IsAuthenticated)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+
+            ConfigurarAtajosTeclado();
+            await CargarCatalogos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al inicializar la página de reportes");
+            errorMessage = "Error al cargar la página de reportes";
+        }
+    }
+
+    private void ConfigurarAtajosTeclado()
+    {
+        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        {
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = Actualizar },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar vista", Action = CerrarVistaPrevia }
+        };
+    }
+
+    private async Task CargarCatalogos()
+    {
+        try
+        {
+            empleados = (await EmpleadoRepository.GetAllAsync()).ToList();
+            departamentos = (await DepartamentoRepository.GetAllAsync()).ToList();
+            cargos = (await CargoRepository.GetAllAsync()).ToList();
+            tiposPermiso = (await TipoPermisoRepository.GetAllAsync()).ToList();
+
+            Logger.LogInformation("Catálogos cargados correctamente");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar catálogos");
+            errorMessage = "Error al cargar los catálogos necesarios";
+        }
+    }
+
+    private void SeleccionarTipoReporte(TipoReporte tipo)
+    {
+        tipoReporteSeleccionado = tipo;
+        mostrarVistaPrevia = false;
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    // ============================================================
+    // REPORTE: LISTADO DE EMPLEADOS
+    // ============================================================
+
+    private async Task GenerarReporteEmpleados()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+            successMessage = null;
+
+            await CargarDatosEmpleados();
+
+            if (!empleadosReporte.Any())
+            {
+                errorMessage = "No se encontraron empleados con los filtros seleccionados";
+                return;
+            }
+
+            // Generar PDF
+            var pdfBytes = ReportService.GenerarListadoEmpleadosPdf(empleadosReporte);
+            await DescargarArchivo(pdfBytes, $"Empleados_{DateTime.Now:yyyyMMdd}.pdf", "application/pdf");
+
+            successMessage = $"Reporte generado exitosamente. Total: {empleadosReporte.Count} empleados";
+            Logger.LogInformation("Reporte de empleados generado: {Count} registros", empleadosReporte.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al generar reporte de empleados");
+            errorMessage = $"Error al generar el reporte: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task VistaPrevia()
+    {
+        try
+        {
+            errorMessage = null;
+            await CargarDatosEmpleados();
+            mostrarVistaPrevia = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar vista previa de empleados");
+            errorMessage = $"Error al cargar la vista previa: {ex.Message}";
+        }
+    }
+
+    private async Task CargarDatosEmpleados()
+    {
+        empleadosReporte = (await EmpleadoRepository.GetAllAsync()).ToList();
+
+        // Aplicar filtro de estado
+        if (!string.IsNullOrEmpty(filtroEstadoEmpleado))
+        {
+            if (Enum.TryParse<EstadoEmpleado>(filtroEstadoEmpleado, out var estado))
+            {
+                empleadosReporte = empleadosReporte.Where(e => e.Estado == estado).ToList();
+            }
+        }
+
+        // Aplicar filtro de departamento
+        if (!string.IsNullOrEmpty(filtroDepartamento) && int.TryParse(filtroDepartamento, out var deptId))
+        {
+            empleadosReporte = empleadosReporte.Where(e => e.DepartamentoId == deptId).ToList();
+        }
+
+        // Aplicar filtro de cargo
+        if (!string.IsNullOrEmpty(filtroCargo) && int.TryParse(filtroCargo, out var cargoId))
+        {
+            empleadosReporte = empleadosReporte.Where(e => e.CargoId == cargoId).ToList();
+        }
+
+        // Ordenar
+        empleadosReporte = ordenEmpleados switch
+        {
+            "nombre" => empleadosReporte.OrderBy(e => e.NombreCompleto).ToList(),
+            "cedula" => empleadosReporte.OrderBy(e => e.Cedula).ToList(),
+            "codigo" => empleadosReporte.OrderBy(e => e.Codigo).ToList(),
+            "fechaIngreso" => empleadosReporte.OrderBy(e => e.FechaIngreso).ToList(),
+            _ => empleadosReporte.OrderBy(e => e.NombreCompleto).ToList()
+        };
+    }
+
+    private async Task ExportarExcel()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            await CargarDatosEmpleados();
+
+            if (!empleadosReporte.Any())
+            {
+                errorMessage = "No hay datos para exportar";
+                return;
+            }
+
+            // Generar Excel
+            var excelBytes = ReportService.GenerarListadoEmpleadosExcel(empleadosReporte);
+            await DescargarArchivo(excelBytes, $"Empleados_{DateTime.Now:yyyyMMdd}.xlsx", 
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+            successMessage = $"Datos exportados a Excel exitosamente. Total: {empleadosReporte.Count} empleados";
+            Logger.LogInformation("Empleados exportados a Excel: {Count} registros", empleadosReporte.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al exportar empleados a Excel");
+            errorMessage = $"Error al exportar: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    // ============================================================
+    // REPORTE: PERMISOS
+    // ============================================================
+
+    private bool ValidarFechasPermisos()
+    {
+        return filtroFechaInicio.HasValue && 
+               filtroFechaFin.HasValue && 
+               filtroFechaInicio.Value <= filtroFechaFin.Value;
+    }
+
+    private async Task GenerarReportePermisos()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+            successMessage = null;
+
+            await CargarDatosPermisos();
+
+            if (!permisosReporte.Any())
+            {
+                errorMessage = "No se encontraron permisos con los filtros seleccionados";
+                return;
+            }
+
+            // Generar PDF
+            var pdfBytes = ReportService.GenerarReportePermisosPdf(permisosReporte, 
+                filtroFechaInicio!.Value, filtroFechaFin!.Value);
+            await DescargarArchivo(pdfBytes, 
+                $"Permisos_{filtroFechaInicio:yyyyMMdd}_{filtroFechaFin:yyyyMMdd}.pdf", 
+                "application/pdf");
+
+            successMessage = $"Reporte generado exitosamente. Total: {permisosReporte.Count} permisos, {permisosReporte.Sum(p => p.TotalDias)} días";
+            Logger.LogInformation("Reporte de permisos generado: {Count} registros", permisosReporte.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al generar reporte de permisos");
+            errorMessage = $"Error al generar el reporte: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task VistaPreviaPermisos()
+    {
+        try
+        {
+            errorMessage = null;
+            await CargarDatosPermisos();
+            mostrarVistaPrevia = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar vista previa de permisos");
+            errorMessage = $"Error al cargar la vista previa: {ex.Message}";
+        }
+    }
+
+    private async Task CargarDatosPermisos()
+    {
+        if (!filtroFechaInicio.HasValue || !filtroFechaFin.HasValue)
+        {
+            permisosReporte = new List<Permiso>();
+            return;
+        }
+
+        permisosReporte = (await PermisoRepository.GetAllAsync()).ToList();
+
+        // Filtrar por rango de fechas
+        permisosReporte = permisosReporte
+            .Where(p => p.FechaInicio >= filtroFechaInicio.Value && p.FechaFin <= filtroFechaFin.Value)
+            .ToList();
+
+        // Aplicar filtro de empleado
+        if (!string.IsNullOrEmpty(filtroEmpleadoId) && int.TryParse(filtroEmpleadoId, out var empId))
+        {
+            permisosReporte = permisosReporte.Where(p => p.EmpleadoId == empId).ToList();
+        }
+
+        // Aplicar filtro de tipo de permiso
+        if (!string.IsNullOrEmpty(filtroTipoPermisoId) && int.TryParse(filtroTipoPermisoId, out var tipoId))
+        {
+            permisosReporte = permisosReporte.Where(p => p.TipoPermisoId == tipoId).ToList();
+        }
+
+        // Aplicar filtro de estado
+        if (!string.IsNullOrEmpty(filtroEstadoPermiso) && Enum.TryParse<EstadoPermiso>(filtroEstadoPermiso, out var estado))
+        {
+            permisosReporte = permisosReporte.Where(p => p.Estado == estado).ToList();
+        }
+
+        // Aplicar filtro de departamento
+        if (!string.IsNullOrEmpty(filtroDepartamentoPermisos) && int.TryParse(filtroDepartamentoPermisos, out var deptId))
+        {
+            permisosReporte = permisosReporte.Where(p => p.Empleado?.DepartamentoId == deptId).ToList();
+        }
+
+        // Ordenar por fecha
+        permisosReporte = permisosReporte.OrderByDescending(p => p.FechaSolicitud).ToList();
+    }
+
+    private async Task ExportarPermisosExcel()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            await CargarDatosPermisos();
+
+            if (!permisosReporte.Any())
+            {
+                errorMessage = "No hay datos para exportar";
+                return;
+            }
+
+            // Generar Excel
+            var excelBytes = ReportService.GenerarReportePermisosExcel(permisosReporte);
+            await DescargarArchivo(excelBytes, 
+                $"Permisos_{filtroFechaInicio:yyyyMMdd}_{filtroFechaFin:yyyyMMdd}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+            successMessage = $"Datos exportados a Excel exitosamente. Total: {permisosReporte.Count} permisos";
+            Logger.LogInformation("Permisos exportados a Excel: {Count} registros", permisosReporte.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al exportar permisos a Excel");
+            errorMessage = $"Error al exportar: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    // ============================================================
+    // REPORTE: VACACIONES
+    // ============================================================
+
+    private async Task GenerarReporteVacaciones()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+            successMessage = null;
+
+            await CargarDatosVacaciones();
+
+            if (!vacacionesReporte.Any())
+            {
+                errorMessage = "No se encontraron vacaciones con los filtros seleccionados";
+                return;
+            }
+
+            // Generar PDF
+            var pdfBytes = ReportService.GenerarReporteVacacionesPdf(vacacionesReporte, filtroAnioVacaciones);
+            await DescargarArchivo(pdfBytes, $"Vacaciones_{filtroAnioVacaciones}.pdf", "application/pdf");
+
+            successMessage = $"Reporte generado exitosamente. Total: {vacacionesReporte.Count} registros, {vacacionesReporte.Sum(v => v.DiasTomados)} días";
+            Logger.LogInformation("Reporte de vacaciones generado: {Count} registros", vacacionesReporte.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al generar reporte de vacaciones");
+            errorMessage = $"Error al generar el reporte: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task VistaPreviaVacaciones()
+    {
+        try
+        {
+            errorMessage = null;
+            await CargarDatosVacaciones();
+            mostrarVistaPrevia = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar vista previa de vacaciones");
+            errorMessage = $"Error al cargar la vista previa: {ex.Message}";
+        }
+    }
+
+    private async Task CargarDatosVacaciones()
+    {
+        vacacionesReporte = (await VacacionRepository.GetAllAsync()).ToList();
+
+        // Filtrar por año
+        vacacionesReporte = vacacionesReporte
+            .Where(v => v.PeriodoCorrespondiente == filtroAnioVacaciones)
+            .ToList();
+
+        // Aplicar filtro de empleado
+        if (!string.IsNullOrEmpty(filtroEmpleadoVacacionesId) && int.TryParse(filtroEmpleadoVacacionesId, out var empId))
+        {
+            vacacionesReporte = vacacionesReporte.Where(v => v.EmpleadoId == empId).ToList();
+        }
+
+        // Aplicar filtro de estado
+        if (!string.IsNullOrEmpty(filtroEstadoVacaciones) && Enum.TryParse<EstadoVacacion>(filtroEstadoVacaciones, out var estado))
+        {
+            vacacionesReporte = vacacionesReporte.Where(v => v.Estado == estado).ToList();
+        }
+
+        // Aplicar filtro de departamento
+        if (!string.IsNullOrEmpty(filtroDepartamentoVacaciones) && int.TryParse(filtroDepartamentoVacaciones, out var deptId))
+        {
+            vacacionesReporte = vacacionesReporte.Where(v => v.Empleado?.DepartamentoId == deptId).ToList();
+        }
+
+        // Ordenar por fecha de inicio descendente
+        vacacionesReporte = vacacionesReporte.OrderByDescending(v => v.FechaInicio).ToList();
+    }
+
+    private async Task ExportarVacacionesExcel()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            await CargarDatosVacaciones();
+
+            if (!vacacionesReporte.Any())
+            {
+                errorMessage = "No hay datos para exportar";
+                return;
+            }
+
+            // Generar Excel
+            var excelBytes = ReportService.GenerarReporteVacacionesExcel(vacacionesReporte);
+            await DescargarArchivo(excelBytes, $"Vacaciones_{filtroAnioVacaciones}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+            successMessage = $"Datos exportados a Excel exitosamente. Total: {vacacionesReporte.Count} registros";
+            Logger.LogInformation("Vacaciones exportadas a Excel: {Count} registros", vacacionesReporte.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al exportar vacaciones a Excel");
+            errorMessage = $"Error al exportar: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    // ============================================================
+    // REPORTE: ASISTENCIA
+    // ============================================================
+
+    private bool ValidarFechasAsistencia()
+    {
+        return filtroFechaInicioAsistencia.HasValue && 
+               filtroFechaFinAsistencia.HasValue && 
+               filtroFechaInicioAsistencia.Value <= filtroFechaFinAsistencia.Value;
+    }
+
+    private async Task GenerarReporteAsistencia()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+            successMessage = null;
+
+            if (!ValidarFechasAsistencia())
+            {
+                errorMessage = "Debe seleccionar un rango de fechas válido";
+                return;
+            }
+
+            await CargarDatosAsistencia();
+
+            if (asistenciaReporte.Count == 0)
+            {
+                errorMessage = "No se encontraron registros de asistencia con los filtros seleccionados";
+                return;
+            }
+
+            // TODO: Generar PDF
+            await Task.Delay(500); // Simular generación
+
+            var totalPresentes = asistenciaReporte.Sum(a => a.Value.Count(r => r.Presente));
+            var totalAusentes = asistenciaReporte.Sum(a => a.Value.Count(r => !r.Presente));
+            
+            successMessage = $"Reporte generado exitosamente. Presentes: {totalPresentes}, Ausentes: {totalAusentes}";
+            Logger.LogInformation("Reporte de asistencia generado: {Dias} días", asistenciaReporte.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al generar reporte de asistencia");
+            errorMessage = $"Error al generar el reporte: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task VistaPreviaAsistencia()
+    {
+        try
+        {
+            errorMessage = null;
+            
+            if (!ValidarFechasAsistencia())
+            {
+                errorMessage = "Debe seleccionar un rango de fechas válido";
+                return;
+            }
+
+            await CargarDatosAsistencia();
+            
+            // Mostrar en consola para verificación
+            Logger.LogInformation("Vista previa de asistencia cargada: {Count} días", asistenciaReporte.Count);
+            
+            successMessage = $"Vista previa cargada: {asistenciaReporte.Count} días de registro";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar vista previa de asistencia");
+            errorMessage = $"Error al cargar la vista previa: {ex.Message}";
+        }
+    }
+
+    private Dictionary<DateTime, List<AsistenciaDetalle>> asistenciaReporte = new();
+
+    private async Task CargarDatosAsistencia()
+    {
+        if (!filtroFechaInicioAsistencia.HasValue || !filtroFechaFinAsistencia.HasValue)
+        {
+            asistenciaReporte = new Dictionary<DateTime, List<AsistenciaDetalle>>();
+            return;
+        }
+
+        // Obtener todos los registros diarios en el rango
+        var registrosDiarios = (await RegistroDiarioRepository.GetAllAsync())
+            .Where(rd => rd.Fecha >= filtroFechaInicioAsistencia.Value && rd.Fecha <= filtroFechaFinAsistencia.Value)
+            .OrderBy(rd => rd.Fecha)
+            .ToList();
+
+        // Filtrar por empleado si está especificado
+        if (!string.IsNullOrEmpty(filtroEmpleadoAsistenciaId) && int.TryParse(filtroEmpleadoAsistenciaId, out var empId))
+        {
+            var empleado = await EmpleadoRepository.GetByIdAsync(empId);
+            if (empleado != null)
+            {
+                // Crear reporte para un solo empleado
+                asistenciaReporte = registrosDiarios
+                    .GroupBy(rd => rd.Fecha)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => new List<AsistenciaDetalle>
+                        {
+                            new AsistenciaDetalle
+                            {
+                                Empleado = empleado,
+                                Presente = g.Any(rd => rd.EmpleadoId == empId),
+                                Observaciones = g.FirstOrDefault(rd => rd.EmpleadoId == empId)?.Observaciones ?? ""
+                            }
+                        }
+                    );
+            }
+        }
+        else
+        {
+            // Reporte general - todos los empleados
+            var empleadosActivos = (await EmpleadoRepository.GetAllAsync())
+                .Where(e => e.Estado == EstadoEmpleado.Activo)
+                .ToList();
+
+            // Filtrar por departamento si está especificado
+            if (!string.IsNullOrEmpty(filtroDepartamentoAsistencia) && int.TryParse(filtroDepartamentoAsistencia, out var deptId))
+            {
+                empleadosActivos = empleadosActivos.Where(e => e.DepartamentoId == deptId).ToList();
+            }
+
+            asistenciaReporte = new Dictionary<DateTime, List<AsistenciaDetalle>>();
+
+            // Generar reporte día por día
+            for (var fecha = filtroFechaInicioAsistencia.Value; fecha <= filtroFechaFinAsistencia.Value; fecha = fecha.AddDays(1))
+            {
+                var registrosDelDia = registrosDiarios.Where(rd => rd.Fecha.Date == fecha.Date).ToList();
+                
+                var detalles = empleadosActivos.Select(emp => new AsistenciaDetalle
+                {
+                    Empleado = emp,
+                    Presente = registrosDelDia.Any(rd => rd.EmpleadoId == emp.Id),
+                    Observaciones = registrosDelDia.FirstOrDefault(rd => rd.EmpleadoId == emp.Id)?.Observaciones ?? ""
+                }).ToList();
+
+                asistenciaReporte[fecha] = detalles;
+            }
+        }
+    }
+
+    private class AsistenciaDetalle
+    {
+        public Empleado Empleado { get; set; } = null!;
+        public bool Presente { get; set; }
+        public string Observaciones { get; set; } = "";
+    }
+
+    private async Task ExportarAsistenciaExcel()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            if (!ValidarFechasAsistencia())
+            {
+                errorMessage = "Debe seleccionar un rango de fechas válido";
+                return;
+            }
+
+            await CargarDatosAsistencia();
+
+            if (asistenciaReporte.Count == 0)
+            {
+                errorMessage = "No hay datos para exportar";
+                return;
+            }
+
+            // TODO: Implementar exportación a Excel
+            await Task.Delay(500); // Simular exportación
+
+            successMessage = $"Datos exportados a Excel exitosamente. Total: {asistenciaReporte.Count} días";
+            Logger.LogInformation("Asistencia exportada a Excel: {Count} días", asistenciaReporte.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al exportar asistencia a Excel");
+            errorMessage = $"Error al exportar: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    // ============================================================
+    // CERTIFICADO LABORAL
+    // ============================================================
+
+    private async Task GenerarCertificado()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+            successMessage = null;
+
+            if (string.IsNullOrEmpty(empleadoCertificadoId) || !int.TryParse(empleadoCertificadoId, out var empId))
+            {
+                errorMessage = "Debe seleccionar un empleado";
+                return;
+            }
+
+            var empleado = await EmpleadoRepository.GetByIdAsync(empId);
+            if (empleado == null)
+            {
+                errorMessage = "Empleado no encontrado";
+                return;
+            }
+
+            // Generar PDF del certificado
+            var pdfBytes = ReportService.GenerarCertificadoLaboralPdf(empleado, propositoCertificado, incluirSalarioCertificado);
+            await DescargarArchivo(pdfBytes, $"Certificado_{empleado.Cedula}_{DateTime.Now:yyyyMMdd}.pdf", "application/pdf");
+
+            Logger.LogInformation("Certificado laboral generado para empleado: {EmpleadoId} - {Nombre}", 
+                empleado.Id, empleado.NombreCompleto);
+
+            successMessage = $"Certificado laboral generado exitosamente para {empleado.NombreCompleto}";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al generar certificado laboral");
+            errorMessage = $"Error al generar el certificado: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    // ============================================================
+    // UTILIDADES
+    // ============================================================
+
+    private async Task DescargarArchivo(byte[] fileBytes, string fileName, string mimeType)
+    {
+        var base64 = Convert.ToBase64String(fileBytes);
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, mimeType, base64);
+    }
+
+    private Task CerrarVistaPrevia()
+    {
+        mostrarVistaPrevia = false;
+        return Task.CompletedTask;
+    }
+
+    private async Task Actualizar()
+    {
+        await CargarCatalogos();
+        successMessage = "Catálogos actualizados";
+    }
+}

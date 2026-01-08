@@ -1,0 +1,59 @@
+@* Panel de Resumen de Vacaciones - Componente Reutilizable *@
+@using SGRRHH.Local.Domain.DTOs
+
+@if (Resumen != null)
+{
+    <div class="vacation-summary-panel">
+        <div style="border: 1px solid #808080; margin-bottom: 16px; background-color: #F5F5F5;">
+            <div style="background-color: #E0E0E0; padding: 8px; border-bottom: 1px solid #808080; font-weight: bold; font-size: 12px;">
+                <span style="margin-right: 8px;">[i]</span> RESUMEN DE VACACIONES
+            </div>
+            <div style="padding: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                            <span style="color: #666; font-size: 12px;">Antigüedad:</span>
+                            <span style="font-weight: bold;">@Resumen.AntiguedadAnos años</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                            <span style="color: #666; font-size: 12px;">Período:</span>
+                            <span style="font-weight: bold;">@Resumen.PeriodoActual</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                            <span style="color: #666; font-size: 12px;">Días Ganados:</span>
+                            <span style="color: #4CAF50; font-weight: bold;">@Resumen.DiasGanadosPeriodo</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                            <span style="color: #666; font-size: 12px;">Días Tomados:</span>
+                            <span style="color: #F44336; font-weight: bold;">@Resumen.DiasTomadosPeriodo</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #CCC;">
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                        <span style="color: #666; font-size: 12px;">Disponibles:</span>
+                        <span style="color: #2196F3; font-weight: bold;">@Resumen.DiasDisponiblesPeriodo</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                        <span style="color: #666; font-size: 12px;">Acumulados:</span>
+                        <span style="color: #FF9800; font-weight: bold;">@Resumen.DiasAcumuladosAnteriores</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 16px; padding-top: 12px; border-top: 2px solid #808080; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: bold; font-size: 13px;">TOTAL DISPONIBLE:</span>
+                    <span style="font-size: 20px; font-weight: bold; color: #1976D2;">@Resumen.TotalDiasDisponibles días</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public ResumenVacaciones? Resumen { get; set; }
+}

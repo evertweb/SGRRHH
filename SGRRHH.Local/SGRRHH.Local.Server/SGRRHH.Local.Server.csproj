@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\SGRRHH.Local.Domain\SGRRHH.Local.Domain.csproj" />
+    <ProjectReference Include="..\SGRRHH.Local.Shared\SGRRHH.Local.Shared.csproj" />
+    <ProjectReference Include="..\SGRRHH.Local.Infrastructure\SGRRHH.Local.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="QuestPDF" Version="2025.12.1" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

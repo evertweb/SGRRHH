@@ -1,0 +1,458 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Shared.Interfaces
+@inject IProyectoRepository ProyectoRepository
+@inject IEmpleadoRepository EmpleadoRepository
+@inject ILogger<ProyectosTab> Logger
+
+<!-- Header con controles -->
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; gap: 8px;">
+        <button @onclick="Nuevo">NUEVO (F3)</button>
+        <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+        @if (selectedItem != null)
+        {
+            <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
+        }
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="text" placeholder="Buscar..." 
+               @bind="searchTerm" @bind:event="oninput" />
+        <button @onclick="Buscar">BUSCAR</button>
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button @onclick="LimpiarBusqueda">LIMPIAR</button>
+        }
+        <select @bind="filtroEstado" @bind:after="Filtrar">
+            <option value="">Todos los estados</option>
+            <option value="@((int)EstadoProyecto.Activo)">Activos</option>
+            <option value="@((int)EstadoProyecto.Suspendido)">Suspendidos</option>
+            <option value="@((int)EstadoProyecto.Finalizado)">Finalizados</option>
+            <option value="@((int)EstadoProyecto.Cancelado)">Cancelados</option>
+        </select>
+    </div>
+</div>
+
+<!-- Tabla -->
+<table>
+    <thead>
+        <tr>
+            <th style="width: 100px;">CÓDIGO</th>
+            <th>NOMBRE</th>
+            <th>CLIENTE</th>
+            <th>RESPONSABLE</th>
+            <th style="width: 100px;">PROGRESO</th>
+            <th style="width: 120px;">ESTADO</th>
+            <th style="width: 150px;">ACCIONES</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (isLoading)
+        {
+            <tr><td colspan="7" class="loading">Cargando proyectos...</td></tr>
+        }
+        else if (!itemsFiltrados.Any())
+        {
+            <tr><td colspan="7" class="empty-state">No hay proyectos para mostrar</td></tr>
+        }
+        else
+        {
+            @foreach (var item in itemsFiltrados)
+            {
+                <tr class="@(selectedItem?.Id == item.Id ? "selected" : "")"
+                    @onclick="() => SelectItem(item)">
+                    <td><strong>@item.Codigo</strong></td>
+                    <td>@item.Nombre</td>
+                    <td>@(item.Cliente ?? "-")</td>
+                    <td>@(item.Responsable?.NombreCompleto ?? "-")</td>
+                    <td style="text-align: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="flex: 1; height: 20px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                                <div style="width: @item.Progreso%; height: 100%; background-color: #4caf50;"></div>
+                            </div>
+                            <span>@item.Progreso%</span>
+                        </div>
+                    </td>
+                    <td style="text-align: center;">
+                        <span class="badge badge-@item.Estado.ToString().ToLower()">
+                            @item.Estado
+                        </span>
+                    </td>
+                    <td class="actions-cell">
+                        <button @onclick="() => Editar(item)" @onclick:stopPropagation="true">
+                            EDITAR
+                        </button>
+                        <button @onclick="() => ConfirmarEliminar(item)" @onclick:stopPropagation="true">
+                            ELIMINAR
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<!-- Modal de edición -->
+<FormModal @bind-IsVisible="showModal" 
+           Title="@(isEditing ? $"EDITAR PROYECTO - {editItem?.Codigo}" : "NUEVO PROYECTO")"
+           Width="800px"
+           OnSaveClicked="Guardar"
+           OnCancelClicked="CerrarModal"
+           IsSaving="isSaving">
+    
+    @if (editItem != null)
+    {
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+                <div class="form-group required">
+                    <label>Código:</label>
+                    <input type="text" @bind="editItem.Codigo" maxlength="20" 
+                           readonly="@isEditing" disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group required">
+                    <label>Nombre:</label>
+                    <input type="text" @bind="editItem.Nombre" maxlength="200" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Cliente:</label>
+                    <input type="text" @bind="editItem.Cliente" maxlength="200" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Ubicación:</label>
+                    <input type="text" @bind="editItem.Ubicacion" maxlength="200" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Presupuesto:</label>
+                    <input type="number" @bind="editItem.Presupuesto" step="0.01" min="0" 
+                           disabled="@isSaving" />
+                </div>
+            </div>
+            
+            <div>
+                <div class="form-group">
+                    <label>Responsable:</label>
+                    <select @bind="editItem.ResponsableId" disabled="@isSaving">
+                        <option value="">-- Sin asignar --</option>
+                        @foreach (var emp in empleadosActivos)
+                        {
+                            <option value="@emp.Id">@emp.NombreCompleto</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Fecha Inicio:</label>
+                    <input type="date" @bind="editItem.FechaInicio" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Fecha Fin:</label>
+                    <input type="date" @bind="editItem.FechaFin" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Progreso (%):</label>
+                    <input type="number" @bind="editItem.Progreso" min="0" max="100" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Estado:</label>
+                    <select @bind="editItem.Estado" disabled="@isSaving">
+                        @foreach (var estado in Enum.GetValues<EstadoProyecto>())
+                        {
+                            <option value="@estado">@estado</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Descripción:</label>
+            <textarea @bind="editItem.Descripcion" rows="3" 
+                     disabled="@isSaving" 
+                     maxlength="1000"></textarea>
+        </div>
+    }
+</FormModal>
+
+<!-- Modal de confirmación de eliminación -->
+<FormModal @bind-IsVisible="showConfirmModal"
+           Title="CONFIRMAR ELIMINACIÓN"
+           Width="400px"
+           OnSaveClicked="EliminarConfirmado"
+           OnCancelClicked="() => showConfirmModal = false"
+           IsSaving="isSaving">
+    <p>¿Está seguro que desea eliminar el proyecto <strong>@itemToDelete?.Nombre</strong>?</p>
+    <p style="color: #ff6b6b; margin-top: 12px;">
+        <strong>Advertencia:</strong> Esta acción no se puede deshacer.
+    </p>
+</FormModal>
+
+@code {
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback<string?> ErrorMessageChanged { get; set; }
+    [Parameter] public string? SuccessMessage { get; set; }
+    [Parameter] public EventCallback<string?> SuccessMessageChanged { get; set; }
+    
+    private List<Proyecto> items = new();
+    private List<Proyecto> itemsFiltrados = new();
+    private List<Empleado> empleadosActivos = new();
+    private Proyecto? selectedItem;
+    private Proyecto? editItem;
+    private Proyecto? itemToDelete;
+    
+    private bool isLoading;
+    private bool showModal;
+    private bool showConfirmModal;
+    private bool isSaving;
+    private bool isEditing;
+    private string searchTerm = "";
+    private string filtroEstado = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+    
+    private async Task CargarDatos()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            var proyectos = await ProyectoRepository.GetAllAsync();
+            items = proyectos.OrderBy(p => p.Nombre).ToList();
+            
+            var empleados = await EmpleadoRepository.GetAllActiveAsync();
+            empleadosActivos = empleados.OrderBy(e => e.NombreCompleto).ToList();
+            
+            Filtrar();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar proyectos");
+            await SetError($"Error al cargar proyectos: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void Filtrar()
+    {
+        itemsFiltrados = items;
+        
+        if (!string.IsNullOrWhiteSpace(filtroEstado))
+        {
+            if (int.TryParse(filtroEstado, out int estadoId))
+            {
+                itemsFiltrados = itemsFiltrados.Where(p => (int)p.Estado == estadoId).ToList();
+            }
+        }
+        
+        Buscar();
+    }
+    
+    private void Buscar()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            itemsFiltrados = itemsFiltrados.Where(p => 
+                p.Codigo.ToLower().Contains(term) ||
+                p.Nombre.ToLower().Contains(term) ||
+                (p.Cliente ?? "").ToLower().Contains(term) ||
+                (p.Descripcion ?? "").ToLower().Contains(term)
+            ).ToList();
+        }
+        StateHasChanged();
+    }
+    
+    private void LimpiarBusqueda()
+    {
+        searchTerm = "";
+        Filtrar();
+    }
+    
+    private void SelectItem(Proyecto item)
+    {
+        selectedItem = item;
+        StateHasChanged();
+    }
+    
+    private void Nuevo()
+    {
+        editItem = new Proyecto
+        {
+            Activo = true,
+            Estado = EstadoProyecto.Activo,
+            Progreso = 0,
+            FechaCreacion = DateTime.Now
+        };
+        isEditing = false;
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void Editar(Proyecto item)
+    {
+        editItem = new Proyecto
+        {
+            Id = item.Id,
+            Codigo = item.Codigo,
+            Nombre = item.Nombre,
+            Descripcion = item.Descripcion,
+            Cliente = item.Cliente,
+            Ubicacion = item.Ubicacion,
+            Presupuesto = item.Presupuesto,
+            Progreso = item.Progreso,
+            FechaInicio = item.FechaInicio,
+            FechaFin = item.FechaFin,
+            Estado = item.Estado,
+            ResponsableId = item.ResponsableId,
+            Activo = item.Activo,
+            FechaCreacion = item.FechaCreacion,
+            FechaModificacion = DateTime.Now
+        };
+        isEditing = true;
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void EditarSeleccionado()
+    {
+        if (selectedItem != null)
+        {
+            Editar(selectedItem);
+        }
+    }
+    
+    private async Task Guardar()
+    {
+        if (editItem == null) return;
+        
+        // Validaciones
+        if (string.IsNullOrWhiteSpace(editItem.Codigo))
+        {
+            await SetError("El código es requerido");
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(editItem.Nombre))
+        {
+            await SetError("El nombre es requerido");
+            return;
+        }
+        
+        if (editItem.FechaInicio.HasValue && editItem.FechaFin.HasValue && 
+            editItem.FechaFin < editItem.FechaInicio)
+        {
+            await SetError("La fecha fin no puede ser menor a la fecha inicio");
+            return;
+        }
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            if (isEditing)
+            {
+                await ProyectoRepository.UpdateAsync(editItem);
+                await SetSuccess($"Proyecto '{editItem.Nombre}' actualizado correctamente");
+                Logger.LogInformation($"Proyecto actualizado: {editItem.Codigo}");
+            }
+            else
+            {
+                await ProyectoRepository.AddAsync(editItem);
+                await SetSuccess($"Proyecto '{editItem.Nombre}' creado correctamente");
+                Logger.LogInformation($"Proyecto creado: {editItem.Codigo}");
+            }
+            
+            await CargarDatos();
+            CerrarModal();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar proyecto");
+            await SetError($"Error al guardar: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ConfirmarEliminar(Proyecto item)
+    {
+        itemToDelete = item;
+        showConfirmModal = true;
+        StateHasChanged();
+    }
+    
+    private async Task EliminarConfirmado()
+    {
+        if (itemToDelete == null) return;
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            await ProyectoRepository.DeleteAsync(itemToDelete.Id);
+            await SetSuccess($"Proyecto '{itemToDelete.Nombre}' eliminado correctamente");
+            Logger.LogInformation($"Proyecto eliminado: {itemToDelete.Codigo}");
+            
+            await CargarDatos();
+            showConfirmModal = false;
+            itemToDelete = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al eliminar proyecto");
+            await SetError($"Error al eliminar: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void CerrarModal()
+    {
+        showModal = false;
+        editItem = null;
+        StateHasChanged();
+    }
+    
+    private async Task SetError(string message)
+    {
+        ErrorMessage = message;
+        await ErrorMessageChanged.InvokeAsync(message);
+    }
+    
+    private async Task SetSuccess(string message)
+    {
+        SuccessMessage = message;
+        await SuccessMessageChanged.InvokeAsync(message);
+        
+        await Task.Delay(3000);
+        SuccessMessage = null;
+        await SuccessMessageChanged.InvokeAsync(null);
+    }
+}

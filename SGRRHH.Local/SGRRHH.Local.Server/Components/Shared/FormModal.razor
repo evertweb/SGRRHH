@@ -1,0 +1,92 @@
+@if (IsVisible)
+{
+    <div class="modal-overlay" @onclick="OnBackdropClick">
+        <div class="modal-box" @onclick:stopPropagation="true" style="min-width: @Width;">
+            @if (!string.IsNullOrEmpty(Title))
+            {
+                <h3>@Title</h3>
+            }
+            
+            <!-- Barra de atajos del formulario -->
+            <div class="keyboard-hint-bar">
+                <span><kbd>F9</kbd> Guardar</span>
+                <span><kbd>ESC</kbd> Cancelar</span>
+                <span><kbd>Enter</kbd> Siguiente campo</span>
+                @if (AdditionalHints != null)
+                {
+                    @AdditionalHints
+                }
+            </div>
+            
+            <div class="modal-content">
+                @ChildContent
+            </div>
+            
+            <div class="modal-actions">
+                @if (ShowCancelButton)
+                {
+                    <button @onclick="OnCancel">CANCELAR (ESC)</button>
+                }
+                @if (ShowSaveButton)
+                {
+                    <button class="btn-primary" @onclick="OnSave" disabled="@IsSaving">
+                        @if (IsSaving)
+                        {
+                            <span>GUARDANDO...</span>
+                        }
+                        else
+                        {
+                            <span>GUARDAR (F9)</span>
+                        }
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string Width { get; set; } = "500px";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? AdditionalHints { get; set; }
+    [Parameter] public EventCallback OnSaveClicked { get; set; }
+    [Parameter] public EventCallback OnCancelClicked { get; set; }
+    [Parameter] public bool ShowSaveButton { get; set; } = true;
+    [Parameter] public bool ShowCancelButton { get; set; } = true;
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = false;
+
+    private async Task OnSave()
+    {
+        await OnSaveClicked.InvokeAsync();
+    }
+
+    private async Task OnCancel()
+    {
+        await OnCancelClicked.InvokeAsync();
+        await Close();
+    }
+
+    private async Task OnBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await Close();
+        }
+    }
+
+    public async Task Close()
+    {
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(false);
+    }
+
+    public async Task Open()
+    {
+        IsVisible = true;
+        await IsVisibleChanged.InvokeAsync(true);
+    }
+}

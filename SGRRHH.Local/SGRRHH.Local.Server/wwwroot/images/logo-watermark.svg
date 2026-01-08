@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <defs>
+    <style>
+      .text { font-family: 'Courier New', monospace; font-size: 48px; font-weight: bold; fill: #E0E0E0; }
+      .subtext { font-family: 'Courier New', monospace; font-size: 16px; fill: #E0E0E0; }
+    </style>
+  </defs>
+  <rect width="400" height="400" fill="none"/>
+  <circle cx="200" cy="150" r="80" fill="none" stroke="#E0E0E0" stroke-width="4"/>
+  <text x="200" y="165" text-anchor="middle" class="text">RRHH</text>
+  <text x="200" y="280" text-anchor="middle" class="subtext">Sistema de Gestión</text>
+  <text x="200" y="310" text-anchor="middle" class="subtext">de Recursos Humanos</text>
+</svg>

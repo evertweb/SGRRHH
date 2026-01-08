@@ -1,0 +1,148 @@
+@page "/catalogos"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@inject IAuthService AuthService
+@inject IDepartamentoRepository DepartamentoRepository
+@inject ICargoRepository CargoRepository
+@inject ITipoPermisoRepository TipoPermisoRepository
+@inject IProyectoRepository ProyectoRepository
+@inject IActividadRepository ActividadRepository
+@inject IEmpleadoRepository EmpleadoRepository
+@inject NavigationManager Navigation
+@inject ILogger<Catalogos> Logger
+
+<PageTitle>Catálogos - SGRRHH</PageTitle>
+
+<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
+
+<h1 class="page-title">GESTIÓN DE CATÁLOGOS</h1>
+
+@if (errorMessage != null)
+{
+    <div class="error-block">
+        <h3>ERROR</h3>
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="success-block">
+        <p>@successMessage</p>
+    </div>
+}
+
+<!-- Tabs -->
+<div class="tabs-container">
+    <div class="tabs-header">
+        <button class="tab-button @(activeTab == "departamentos" ? "active" : "")" 
+                @onclick='() => ChangeTab("departamentos")'>
+            DEPARTAMENTOS
+        </button>
+        <button class="tab-button @(activeTab == "cargos" ? "active" : "")" 
+                @onclick='() => ChangeTab("cargos")'>
+            CARGOS
+        </button>
+        <button class="tab-button @(activeTab == "tiposPermiso" ? "active" : "")" 
+                @onclick='() => ChangeTab("tiposPermiso")'>
+            TIPOS DE PERMISO
+        </button>
+        <button class="tab-button @(activeTab == "proyectos" ? "active" : "")" 
+                @onclick='() => ChangeTab("proyectos")'>
+            PROYECTOS
+        </button>
+        <button class="tab-button @(activeTab == "actividades" ? "active" : "")" 
+                @onclick='() => ChangeTab("actividades")'>
+            ACTIVIDADES
+        </button>
+    </div>
+    
+    <div class="tabs-content">
+        @if (activeTab == "departamentos")
+        {
+            <DepartamentosTab @bind-ErrorMessage="errorMessage" 
+                             @bind-SuccessMessage="successMessage" />
+        }
+        else if (activeTab == "cargos")
+        {
+            <CargosTab @bind-ErrorMessage="errorMessage" 
+                      @bind-SuccessMessage="successMessage" />
+        }
+        else if (activeTab == "tiposPermiso")
+        {
+            <TiposPermisoTab @bind-ErrorMessage="errorMessage" 
+                            @bind-SuccessMessage="successMessage" />
+        }
+        else if (activeTab == "proyectos")
+        {
+            <ProyectosTab @bind-ErrorMessage="errorMessage" 
+                         @bind-SuccessMessage="successMessage" />
+        }
+        else if (activeTab == "actividades")
+        {
+            <ActividadesTab @bind-ErrorMessage="errorMessage" 
+                           @bind-SuccessMessage="successMessage" />
+        }
+    </div>
+</div>
+
+@code {
+    private KeyboardHandler? keyboardHandler;
+    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    
+    private string activeTab = "departamentos";
+    private string? errorMessage;
+    private string? successMessage;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        // Solo administradores y supervisores pueden acceder a catálogos
+        if (!AuthService.IsAdmin && !AuthService.IsSupervisor)
+        {
+            errorMessage = "No tiene permisos para acceder a esta sección";
+            return;
+        }
+        
+        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        {
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = NuevoItem, ShowInBar = true },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = ActualizarTab, ShowInBar = true },
+            new() { Key = "1", KeyDisplay = "1", Description = "Departamentos", Action = async () => ChangeTab("departamentos"), ShowInBar = false },
+            new() { Key = "2", KeyDisplay = "2", Description = "Cargos", Action = async () => ChangeTab("cargos"), ShowInBar = false },
+            new() { Key = "3", KeyDisplay = "3", Description = "Tipos Permiso", Action = async () => ChangeTab("tiposPermiso"), ShowInBar = false },
+            new() { Key = "4", KeyDisplay = "4", Description = "Proyectos", Action = async () => ChangeTab("proyectos"), ShowInBar = false },
+            new() { Key = "5", KeyDisplay = "5", Description = "Actividades", Action = async () => ChangeTab("actividades"), ShowInBar = false }
+        };
+    }
+    
+    private void ChangeTab(string tab)
+    {
+        activeTab = tab;
+        errorMessage = null;
+        successMessage = null;
+        StateHasChanged();
+    }
+    
+    private Task NuevoItem()
+    {
+        // Esta acción será manejada por el tab activo
+        Logger.LogInformation($"Nuevo item solicitado en tab: {activeTab}");
+        return Task.CompletedTask;
+    }
+    
+    private Task ActualizarTab()
+    {
+        // Esta acción será manejada por el tab activo
+        Logger.LogInformation($"Actualizar solicitado en tab: {activeTab}");
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+}

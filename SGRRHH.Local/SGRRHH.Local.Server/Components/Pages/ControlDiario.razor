@@ -1,0 +1,1583 @@
+@page "/control-diario"
+@page "/control-diario/{FechaParam}"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@inject IAuthService AuthService
+@inject IRegistroDiarioRepository RegistroDiarioRepository
+@inject IEmpleadoRepository EmpleadoRepository
+@inject IDepartamentoRepository DepartamentoRepository
+@inject IActividadRepository ActividadRepository
+@inject IProyectoRepository ProyectoRepository
+@inject IDetalleActividadRepository DetalleActividadRepository
+@inject NavigationManager Navigation
+@inject ILogger<ControlDiario> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Control Diario - SGRRHH</PageTitle>
+
+<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
+
+<h1 class="page-title">CONTROL DIARIO DE ACTIVIDADES</h1>
+
+@if (errorMessage != null)
+{
+    <div class="error-block">
+        <h3>ERROR</h3>
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="success-block">
+        <p>@successMessage</p>
+    </div>
+}
+
+<!-- Header con controles de fecha y acciones -->
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <button @onclick="RetrocederDia" title="Día anterior">◀ ANTERIOR</button>
+        
+        <div style="display: flex; gap: 4px; align-items: center;">
+            <label style="font-weight: bold; margin: 0;">FECHA:</label>
+            <input type="date" 
+                   id="fechaInput"
+                   @bind="fechaSeleccionada" 
+                   @bind:after="CambiarFecha"
+                   style="min-width: 150px;" />
+        </div>
+        
+        <button @onclick="AvanzarDia" title="Día siguiente">SIGUIENTE ▶</button>
+        <button @onclick="IrHoy" title="Ir a hoy">HOY (F2)</button>
+        
+        <span style="margin-left: 8px; padding: 4px 12px; background-color: #F5F5F5; border: 1px solid #808080; font-weight: bold;">
+            @fechaSeleccionada.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"))
+        </span>
+    </div>
+    
+    <div style="display: flex; gap: 8px;">
+        <button @onclick="CargarRegistros">ACTUALIZAR (F5)</button>
+        @if (registroSeleccionado != null)
+        {
+            <button @onclick="AgregarActividad">AGREGAR ACTIVIDAD (F3)</button>
+        }
+        <button @onclick="AbrirWizard" title="Abrir asistente de registro masivo">🧙 WIZARD</button>
+        <button @onclick="ExportarReporte" disabled="@(!registrosDia.Any())">EXPORTAR</button>
+    </div>
+</div>
+
+<!-- Panel de estadísticas del día -->
+<div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
+    <div class="stats-card">
+        <div class="stats-label">Registros del Día</div>
+        <div class="stats-value">@registrosDia.Count()</div>
+        <div class="stats-sublabel">empleados registrados</div>
+    </div>
+    <div class="stats-card">
+        <div class="stats-label">Completados</div>
+        <div class="stats-value">@registrosDia.Count(r => r.Estado == EstadoRegistroDiario.Completado)</div>
+        <div class="stats-sublabel">con actividades</div>
+    </div>
+    <div class="stats-card">
+        <div class="stats-label">Total Horas</div>
+        <div class="stats-value">@registrosDia.Sum(r => r.TotalHoras).ToString("F1")</div>
+        <div class="stats-sublabel">horas registradas</div>
+    </div>
+    <div class="stats-card">
+        <div class="stats-label">Total Actividades</div>
+        <div class="stats-value">@registrosDia.Sum(r => r.DetallesActividades?.Count ?? 0)</div>
+        <div class="stats-sublabel">actividades asignadas</div>
+    </div>
+</div>
+
+<!-- Filtros y búsqueda -->
+<div style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+    <input type="text" 
+           id="searchInput"
+           placeholder="Buscar empleado..." 
+           @bind="searchTerm" 
+           @bind:event="oninput"
+           style="min-width: 250px;" />
+    <button @onclick="BuscarEmpleados">BUSCAR</button>
+    @if (!string.IsNullOrEmpty(searchTerm))
+    {
+        <button @onclick="LimpiarBusqueda">LIMPIAR</button>
+    }
+    
+    <select @bind="filtroEstado" @bind:after="FiltrarRegistros">
+        <option value="">Todos los estados</option>
+        <option value="@((int)EstadoRegistroDiario.Borrador)">Borrador</option>
+        <option value="@((int)EstadoRegistroDiario.Completado)">Completado</option>
+        <option value="@((int)EstadoRegistroDiario.Aprobado)">Aprobado</option>
+    </select>
+    
+    <select @bind="filtroDepartamento" @bind:after="FiltrarRegistros">
+        <option value="">Todos los departamentos</option>
+        @foreach (var dept in departamentos)
+        {
+            <option value="@dept.Id">@dept.Nombre</option>
+        }
+    </select>
+    
+    <label style="margin-left: 8px;">
+        <input type="checkbox" @bind="mostrarSoloActivos" @bind:after="FiltrarRegistros" />
+        Solo empleados activos
+    </label>
+</div>
+
+<!-- Información de resultados -->
+<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+    Mostrando @registrosFiltrados.Count() de @registrosDia.Count() registro(s)
+</div>
+
+<!-- Tabla principal de registros -->
+<div style="overflow-x: auto;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50px;">
+                    <input type="checkbox" 
+                           @onchange="SeleccionarTodos"
+                           checked="@todosMarcados"
+                           title="Seleccionar todos" />
+                </th>
+                <th style="width: 60px;">FOTO</th>
+                <th style="width: 100px;">CÓDIGO</th>
+                <th>EMPLEADO</th>
+                <th>DEPARTAMENTO</th>
+                <th style="width: 100px;">ENTRADA</th>
+                <th style="width: 100px;">SALIDA</th>
+                <th style="width: 80px;">HORAS</th>
+                <th style="width: 100px;">ACTIVIDADES</th>
+                <th style="width: 120px;">ESTADO</th>
+                <th style="width: 200px;">ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (isLoading)
+            {
+                <tr><td colspan="11" class="loading">Cargando registros...</td></tr>
+            }
+            else if (!registrosFiltrados.Any())
+            {
+                <tr><td colspan="11" class="empty-state">
+                    @if (empleadosSinRegistro.Any())
+                    {
+                        <div>
+                            <p>No hay registros para esta fecha.</p>
+                            <button @onclick="CrearRegistrosParaTodos">
+                                CREAR REGISTROS PARA TODOS LOS EMPLEADOS ACTIVOS
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <span>No hay registros para mostrar</span>
+                    }
+                </td></tr>
+            }
+            else
+            {
+                @foreach (var registro in registrosFiltrados)
+                {
+                    var empleado = registro.Empleado;
+                    var isSelected = registroSeleccionado?.Id == registro.Id;
+                    var cantActividades = registro.DetallesActividades?.Count ?? 0;
+                    
+                    <tr class="@(isSelected ? "selected" : "")"
+                        @onclick="() => SeleccionarRegistro(registro)">
+                        <td @onclick:stopPropagation="true">
+                            <input type="checkbox" 
+                                   @onchange="(e) => ToggleSeleccion(registro, e)"
+                                   checked="@registrosSeleccionados.Contains(registro.Id)" />
+                        </td>
+                        <td>
+                            <img src="@GetFotoUrl(empleado)" 
+                                 class="empleado-foto-mini" 
+                                 onerror="this.src='/images/default-avatar.png'" 
+                                 alt="@empleado?.NombreCompleto" />
+                        </td>
+                        <td>@empleado?.Codigo</td>
+                        <td><strong>@empleado?.NombreCompleto</strong></td>
+                        <td>@(empleado?.Departamento?.Nombre ?? "-")</td>
+                        <td>
+                            @if (editandoHorarios.Contains(registro.Id))
+                            {
+                                <input type="time" 
+                                       value="@FormatTimeSpan(registro.HoraEntrada)"
+                                       @onchange="@(e => { registro.HoraEntrada = ParseTimeSpan(e.Value?.ToString()); _ = GuardarHorario(registro); })"
+                                       style="width: 90px;"
+                                       @onclick:stopPropagation="true" />
+                            }
+                            else
+                            {
+                                <span @onclick="() => EditarHorario(registro)" @onclick:stopPropagation="true" 
+                                      style="cursor: pointer;" title="Click para editar">
+                                    @(registro.HoraEntrada?.ToString(@"hh\:mm") ?? "-")
+                                </span>
+                            }
+                        </td>
+                        <td>
+                            @if (editandoHorarios.Contains(registro.Id))
+                            {
+                                <input type="time" 
+                                       value="@FormatTimeSpan(registro.HoraSalida)"
+                                       @onchange="@(e => { registro.HoraSalida = ParseTimeSpan(e.Value?.ToString()); _ = GuardarHorario(registro); })"
+                                       style="width: 90px;"
+                                       @onclick:stopPropagation="true" />
+                            }
+                            else
+                            {
+                                <span @onclick="() => EditarHorario(registro)" @onclick:stopPropagation="true" 
+                                      style="cursor: pointer;" title="Click para editar">
+                                    @(registro.HoraSalida?.ToString(@"hh\:mm") ?? "-")
+                                </span>
+                            }
+                        </td>
+                        <td style="text-align: center; font-weight: bold;">
+                            @registro.TotalHoras.ToString("F1")
+                        </td>
+                        <td style="text-align: center;">
+                            @if (cantActividades > 0)
+                            {
+                                <span class="badge-completado">@cantActividades</span>
+                            }
+                            else
+                            {
+                                <span style="color: #999;">0</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge-@registro.Estado.ToString().ToLower()">
+                                @registro.Estado
+                            </span>
+                        </td>
+                        <td class="actions-cell">
+                            <button @onclick="() => AgregarActividadParaRegistro(registro)" 
+                                    @onclick:stopPropagation="true"
+                                    title="Agregar actividad">
+                                + ACT
+                            </button>
+                            <button @onclick="() => VerDetalleRegistro(registro)" 
+                                    @onclick:stopPropagation="true"
+                                    title="Ver detalle">
+                                VER
+                            </button>
+                            @if (cantActividades > 0 && registro.Estado == EstadoRegistroDiario.Borrador)
+                            {
+                                <button @onclick="() => CompletarRegistro(registro)" 
+                                        @onclick:stopPropagation="true"
+                                        title="Marcar como completado">
+                                    ✓
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Panel de detalle del registro seleccionado -->
+@if (registroSeleccionado != null && mostrarDetalle)
+{
+    var empleado = registroSeleccionado.Empleado;
+    var detalles = registroSeleccionado.DetallesActividades?.OrderBy(d => d.Orden).ToList() ?? new List<DetalleActividad>();
+    
+    <div class="panel" style="margin-top: 24px; border: 2px solid #000;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="margin: 0;">
+                DETALLE DE ACTIVIDADES - @empleado?.NombreCompleto
+            </h3>
+            <button @onclick="CerrarDetalle">CERRAR (ESC)</button>
+        </div>
+        
+        <!-- Información del registro -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; padding: 12px; background-color: #F5F5F5; border: 1px solid #808080;">
+            <div>
+                <strong>Código:</strong> @empleado?.Codigo
+            </div>
+            <div>
+                <strong>Departamento:</strong> @(empleado?.Departamento?.Nombre ?? "-")
+            </div>
+            <div>
+                <strong>Entrada:</strong> @(registroSeleccionado.HoraEntrada?.ToString(@"hh\:mm") ?? "-")
+            </div>
+            <div>
+                <strong>Salida:</strong> @(registroSeleccionado.HoraSalida?.ToString(@"hh\:mm") ?? "-")
+            </div>
+            <div>
+                <strong>Total Horas:</strong> @registroSeleccionado.TotalHoras.ToString("F1")
+            </div>
+            <div>
+                <strong>Estado:</strong> 
+                <span class="badge-@registroSeleccionado.Estado.ToString().ToLower()">
+                    @registroSeleccionado.Estado
+                </span>
+            </div>
+        </div>
+        
+        <!-- Observaciones del registro -->
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 4px;">Observaciones del Día:</label>
+            @if (editandoObservaciones)
+            {
+                <div style="display: flex; gap: 8px;">
+                    <textarea @bind="registroSeleccionado.Observaciones" 
+                              rows="2" 
+                              style="flex: 1;"
+                              placeholder="Observaciones generales del día..."></textarea>
+                    <button @onclick="GuardarObservaciones">GUARDAR</button>
+                    <button @onclick="() => editandoObservaciones = false">CANCELAR</button>
+                </div>
+            }
+            else
+            {
+                <div style="padding: 8px; background-color: white; border: 1px solid #808080; min-height: 50px; cursor: pointer;"
+                     @onclick="() => editandoObservaciones = true">
+                    @if (!string.IsNullOrEmpty(registroSeleccionado.Observaciones))
+                    {
+                        @registroSeleccionado.Observaciones
+                    }
+                    else
+                    {
+                        <span style="color: #999;">Click para agregar observaciones...</span>
+                    }
+                </div>
+            }
+        </div>
+        
+        <!-- Botón para agregar actividad -->
+        <div style="margin-bottom: 12px;">
+            <button @onclick="() => AgregarActividadParaRegistro(registroSeleccionado)">
+                + AGREGAR ACTIVIDAD (F3)
+            </button>
+        </div>
+        
+        <!-- Tabla de actividades -->
+        @if (!detalles.Any())
+        {
+            <div style="padding: 20px; text-align: center; background-color: #F5F5F5; border: 1px solid #808080;">
+                <p style="margin: 0; color: #666;">No hay actividades registradas</p>
+                <button @onclick="() => AgregarActividadParaRegistro(registroSeleccionado)" 
+                        style="margin-top: 8px;">
+                    AGREGAR PRIMERA ACTIVIDAD
+                </button>
+            </div>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">ORDEN</th>
+                        <th>ACTIVIDAD</th>
+                        <th>PROYECTO</th>
+                        <th style="width: 100px;">INICIO</th>
+                        <th style="width: 100px;">FIN</th>
+                        <th style="width: 80px;">HORAS</th>
+                        <th>DESCRIPCIÓN</th>
+                        <th style="width: 150px;">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var detalle in detalles)
+                    {
+                        <tr>
+                            <td style="text-align: center;">@detalle.Orden</td>
+                            <td><strong>@detalle.Actividad?.Nombre</strong></td>
+                            <td>@(detalle.Proyecto?.Nombre ?? "-")</td>
+                            <td>@(detalle.HoraInicio?.ToString(@"hh\:mm") ?? "-")</td>
+                            <td>@(detalle.HoraFin?.ToString(@"hh\:mm") ?? "-")</td>
+                            <td style="text-align: center; font-weight: bold;">@detalle.Horas.ToString("F1")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(detalle.Descripcion))
+                                {
+                                    <span title="@detalle.Descripcion">
+                                        @(detalle.Descripcion.Length > 50 
+                                            ? detalle.Descripcion.Substring(0, 50) + "..." 
+                                            : detalle.Descripcion)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span style="color: #999;">-</span>
+                                }
+                            </td>
+                            <td class="actions-cell">
+                                <button @onclick="() => EditarActividad(detalle)" title="Editar">
+                                    EDITAR
+                                </button>
+                                <button @onclick="() => EliminarActividad(detalle)" title="Eliminar">
+                                    ELIMINAR
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                    <tr style="background-color: #F5F5F5; font-weight: bold;">
+                        <td colspan="5" style="text-align: right; padding-right: 16px;">TOTAL:</td>
+                        <td style="text-align: center;">@detalles.Sum(d => d.Horas).ToString("F1")</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tbody>
+            </table>
+        }
+    </div>
+}
+
+<!-- Modal para agregar/editar actividad -->
+<FormModal @bind-IsVisible="showModalActividad" 
+           Title="@(isEditingActividad ? "EDITAR ACTIVIDAD" : "AGREGAR ACTIVIDAD")"
+           Width="700px"
+           OnSaveClicked="GuardarActividad"
+           OnCancelClicked="CerrarModalActividad"
+           IsSaving="isSaving">
+    
+    @if (actividadEdit != null && registroSeleccionado != null)
+    {
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <!-- Columna izquierda -->
+            <div>
+                <div class="form-group required">
+                    <label>Actividad:</label>
+                    <select @bind="actividadEdit.ActividadId" 
+                            @bind:after="OnActividadChanged"
+                            disabled="@isSaving">
+                        <option value="">-- Seleccione --</option>
+                        @foreach (var act in actividades)
+                        {
+                            <option value="@act.Id">@act.Nombre</option>
+                        }
+                    </select>
+                </div>
+                
+                @if (actividadSeleccionadaRequiereProyecto)
+                {
+                    <div class="form-group required">
+                        <label>Proyecto:</label>
+                        <select @bind="actividadEdit.ProyectoId" disabled="@isSaving">
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var proy in proyectos)
+                            {
+                                <option value="@proy.Id">@proy.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                }
+                
+                <div class="form-group required">
+                    <label>Horas:</label>
+                    <input type="number" 
+                           @bind="actividadEdit.Horas" 
+                           min="0.25" 
+                           max="24" 
+                           step="0.25"
+                           disabled="@isSaving" />
+                    <small>En formato decimal (ej: 1.5 = 1 hora 30 min)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Orden:</label>
+                    <input type="number" 
+                           @bind="actividadEdit.Orden" 
+                           min="1"
+                           disabled="@isSaving" />
+                    <small>Orden de ejecución de la actividad</small>
+                </div>
+            </div>
+            
+            <!-- Columna derecha -->
+            <div>
+                <div class="form-group">
+                    <label>Hora Inicio:</label>
+                    <input type="time" 
+                           value="@FormatTimeSpan(actividadEdit?.HoraInicio)"
+                           @onchange="@(e => { if (actividadEdit != null) actividadEdit.HoraInicio = ParseTimeSpan(e.Value?.ToString()); CalcularHorasFin(); })"
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Hora Fin:</label>
+                    <input type="time" 
+                           value="@FormatTimeSpan(actividadEdit?.HoraFin)"
+                           @onchange="@(e => { if (actividadEdit != null) actividadEdit.HoraFin = ParseTimeSpan(e.Value?.ToString()); CalcularHorasDesdeRango(); })"
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <textarea @bind="actividadEdit.Descripcion" 
+                              rows="4" 
+                              maxlength="500"
+                              placeholder="Describa la actividad realizada..."
+                              disabled="@isSaving"></textarea>
+                    <small>Máximo 500 caracteres</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Información del empleado -->
+        <div style="margin-top: 16px; padding: 12px; background-color: #F5F5F5; border: 1px solid #808080;">
+            <strong>Empleado:</strong> @registroSeleccionado.Empleado?.NombreCompleto
+            <span style="margin-left: 16px;">
+                <strong>Fecha:</strong> @fechaSeleccionada.ToString("dd/MM/yyyy")
+            </span>
+            <span style="margin-left: 16px;">
+                <strong>Total horas actuales:</strong> @registroSeleccionado.TotalHoras.ToString("F1")
+            </span>
+        </div>
+    }
+</FormModal>
+
+<!-- Modal de confirmación para eliminar -->
+@if (showConfirmModal)
+{
+    <div class="modal-overlay" @onclick:stopPropagation="true">
+        <div class="modal-box" style="min-width: 450px;">
+            <h3>CONFIRMAR ACCIÓN</h3>
+            <div class="modal-content">
+                <p>@confirmMessage</p>
+                @if (actividadAEliminar != null)
+                {
+                    <div style="padding: 12px; background-color: #FFF3CD; border: 1px solid #FFC107; margin-top: 12px;">
+                        <strong>Actividad:</strong> @actividadAEliminar.Actividad?.Nombre<br/>
+                        <strong>Horas:</strong> @actividadAEliminar.Horas.ToString("F1")<br/>
+                        @if (!string.IsNullOrEmpty(actividadAEliminar.Descripcion))
+                        {
+                            <strong>Descripción:</strong> @actividadAEliminar.Descripcion
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-actions">
+                <button @onclick="() => showConfirmModal = false">CANCELAR</button>
+                <button class="btn-danger" @onclick="ConfirmarAccion">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Panel de empleados sin registro (expandible) -->
+@if (empleadosSinRegistro.Any())
+{
+    <div class="panel" style="margin-top: 24px; border: 1px solid #FFC107; background-color: #FFF3CD;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; color: #856404;">
+                ⚠ EMPLEADOS SIN REGISTRO (@empleadosSinRegistro.Count())
+            </h3>
+            <div style="display: flex; gap: 8px;">
+                <button @onclick="CrearRegistrosParaTodos">
+                    CREAR REGISTROS PARA TODOS
+                </button>
+                <button @onclick="() => mostrarEmpleadosSinRegistro = !mostrarEmpleadosSinRegistro">
+                    @(mostrarEmpleadosSinRegistro ? "OCULTAR" : "MOSTRAR")
+                </button>
+            </div>
+        </div>
+        
+        @if (mostrarEmpleadosSinRegistro)
+        {
+            <div style="margin-top: 12px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">FOTO</th>
+                            <th>CÓDIGO</th>
+                            <th>NOMBRE</th>
+                            <th>DEPARTAMENTO</th>
+                            <th>CARGO</th>
+                            <th style="width: 150px;">ACCIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var emp in empleadosSinRegistro.Take(50))
+                        {
+                            <tr>
+                                <td>
+                                    <img src="@GetFotoUrl(emp)" 
+                                         class="empleado-foto-mini" 
+                                         onerror="this.src='/images/default-avatar.png'" 
+                                         alt="@emp.NombreCompleto" />
+                                </td>
+                                <td>@emp.Codigo</td>
+                                <td><strong>@emp.NombreCompleto</strong></td>
+                                <td>@(emp.Departamento?.Nombre ?? "-")</td>
+                                <td>@(emp.Cargo?.Nombre ?? "-")</td>
+                                <td class="actions-cell">
+                                    <button @onclick="() => CrearRegistroParaEmpleado(emp)">
+                                        CREAR REGISTRO
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                        @if (empleadosSinRegistro.Count() > 50)
+                        {
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 12px; color: #666;">
+                                    ... y @(empleadosSinRegistro.Count() - 50) más
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    // ============================================
+    // PARÁMETROS DE RUTA
+    // ============================================
+    [Parameter] public string? FechaParam { get; set; }
+    
+    // ============================================
+    // COMPONENTES Y REFERENCIAS
+    // ============================================
+    private KeyboardHandler? keyboardHandler;
+    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    
+    // ============================================
+    // COLECCIONES DE DATOS
+    // ============================================
+    private List<RegistroDiario> registrosDia = new();
+    private List<RegistroDiario> registrosFiltrados = new();
+    private List<Empleado> todosEmpleados = new();
+    private List<Empleado> empleadosSinRegistro = new();
+    private List<Departamento> departamentos = new();
+    private List<Actividad> actividades = new();
+    private List<Proyecto> proyectos = new();
+    
+    // ============================================
+    // ESTADO DE LA PÁGINA
+    // ============================================
+    private DateTime fechaSeleccionada = DateTime.Today;
+    private RegistroDiario? registroSeleccionado;
+    private DetalleActividad? actividadEdit;
+    private DetalleActividad? actividadAEliminar;
+    private Actividad? actividadSeleccionadaObj;
+    
+    private bool isLoading = false;
+    private bool isSaving = false;
+    private bool showModalActividad = false;
+    private bool showConfirmModal = false;
+    private bool isEditingActividad = false;
+    private bool mostrarDetalle = false;
+    private bool mostrarEmpleadosSinRegistro = false;
+    private bool editandoObservaciones = false;
+    private bool todosMarcados = false;
+    
+    // ============================================
+    // FILTROS Y BÚSQUEDA
+    // ============================================
+    private string searchTerm = string.Empty;
+    private string filtroEstado = string.Empty;
+    private string filtroDepartamento = string.Empty;
+    private bool mostrarSoloActivos = true;
+    
+    // ============================================
+    // SELECCIÓN Y EDICIÓN
+    // ============================================
+    private HashSet<int> registrosSeleccionados = new();
+    private HashSet<int> editandoHorarios = new();
+    
+    // ============================================
+    // MENSAJES
+    // ============================================
+    private string? errorMessage;
+    private string? successMessage;
+    private string? confirmMessage;
+    private Func<Task>? confirmarAccionCallback;
+    
+    // ============================================
+    // PROPIEDADES CALCULADAS
+    // ============================================
+    private bool actividadSeleccionadaRequiereProyecto => 
+        actividadSeleccionadaObj?.RequiereProyecto ?? false;
+    
+    // ============================================
+    // CICLO DE VIDA DEL COMPONENTE
+    // ============================================
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Validar autenticación
+            if (!AuthService.IsAuthenticated)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+            
+            // Configurar atajos de teclado
+            ConfigurarAtajos();
+            
+            // Parsear fecha del parámetro si existe
+            if (!string.IsNullOrEmpty(FechaParam))
+            {
+                if (DateTime.TryParse(FechaParam, out var fecha))
+                {
+                    fechaSeleccionada = fecha;
+                }
+            }
+            
+            // Cargar datos iniciales
+            await CargarDatosIniciales();
+            
+            Logger.LogInformation("ControlDiario inicializado correctamente para fecha {Fecha}", 
+                fechaSeleccionada.ToString("yyyy-MM-dd"));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al inicializar ControlDiario");
+            errorMessage = $"Error al cargar la página: {ex.Message}";
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && keyboardHandler != null)
+        {
+            await keyboardHandler.InitializeAsync();
+        }
+    }
+    
+    // ============================================
+    // CONFIGURACIÓN DE ATAJOS DE TECLADO
+    // ============================================
+    private void ConfigurarAtajos()
+    {
+        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        {
+            new() { Key = "F2", KeyDisplay = "F2", Description = "Ir a Hoy", Action = IrHoy },
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Agregar Actividad", Action = AgregarActividad },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarRegistros },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModales }
+        };
+    }
+    
+    // ============================================
+    // CARGA DE DATOS
+    // ============================================
+    private async Task CargarDatosIniciales()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            // Cargar en paralelo los datos maestros
+            var empleadosTask = EmpleadoRepository.GetAllActiveAsync();
+            var departamentosTask = DepartamentoRepository.GetAllActiveAsync();
+            var actividadesTask = ActividadRepository.GetAllActiveAsync();
+            var proyectosTask = ProyectoRepository.GetByEstadoAsync(EstadoProyecto.Activo);
+            
+            await Task.WhenAll(empleadosTask, departamentosTask, actividadesTask, proyectosTask);
+            
+            todosEmpleados = (await empleadosTask).ToList();
+            departamentos = (await departamentosTask).ToList();
+            actividades = (await actividadesTask).OrderBy(a => a.Orden).ToList();
+            proyectos = (await proyectosTask).OrderBy(p => p.Nombre).ToList();
+            
+            // Cargar registros del día
+            await CargarRegistros();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar datos iniciales");
+            errorMessage = $"Error al cargar datos: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CargarRegistros()
+    {
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            // Cargar registros del día con sus relaciones
+            var registros = await RegistroDiarioRepository.GetByFechaAsync(fechaSeleccionada);
+            registrosDia = registros.OrderBy(r => r.Empleado?.NombreCompleto).ToList();
+            
+            // Cargar detalles de actividades para cada registro
+            foreach (var registro in registrosDia)
+            {
+                if (registro.Empleado == null && registro.EmpleadoId > 0)
+                {
+                    registro.Empleado = await EmpleadoRepository.GetByIdAsync(registro.EmpleadoId);
+                }
+                
+                var detalles = await DetalleActividadRepository.GetByRegistroAsync(registro.Id);
+                registro.DetallesActividades = detalles.ToList();
+            }
+            
+            // Identificar empleados sin registro
+            var empleadosConRegistro = registrosDia.Select(r => r.EmpleadoId).ToHashSet();
+            empleadosSinRegistro = todosEmpleados
+                .Where(e => e.Estado == EstadoEmpleado.Activo && !empleadosConRegistro.Contains(e.Id))
+                .OrderBy(e => e.NombreCompleto)
+                .ToList();
+            
+            // Aplicar filtros
+            await FiltrarRegistros();
+            
+            Logger.LogInformation("Cargados {Count} registros para fecha {Fecha}", 
+                registrosDia.Count, fechaSeleccionada.ToString("yyyy-MM-dd"));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar registros");
+            errorMessage = $"Error al cargar registros: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    // ============================================
+    // NAVEGACIÓN DE FECHAS
+    // ============================================
+    private async Task CambiarFecha()
+    {
+        await CargarRegistros();
+        Navigation.NavigateTo($"/control-diario/{fechaSeleccionada:yyyy-MM-dd}");
+    }
+    
+    private async Task RetrocederDia()
+    {
+        fechaSeleccionada = fechaSeleccionada.AddDays(-1);
+        await CambiarFecha();
+    }
+    
+    private async Task AvanzarDia()
+    {
+        fechaSeleccionada = fechaSeleccionada.AddDays(1);
+        await CambiarFecha();
+    }
+    
+    private async Task IrHoy()
+    {
+        fechaSeleccionada = DateTime.Today;
+        await CambiarFecha();
+    }
+    
+    // ============================================
+    // FILTROS Y BÚSQUEDA
+    // ============================================
+    private async Task FiltrarRegistros()
+    {
+        registrosFiltrados = registrosDia;
+        
+        // Filtro por búsqueda
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var termino = searchTerm.ToLower();
+            registrosFiltrados = registrosFiltrados.Where(r =>
+                r.Empleado?.NombreCompleto.ToLower().Contains(termino) == true ||
+                r.Empleado?.Codigo.ToLower().Contains(termino) == true ||
+                r.Empleado?.Cedula.Contains(termino) == true
+            ).ToList();
+        }
+        
+        // Filtro por estado
+        if (!string.IsNullOrEmpty(filtroEstado) && int.TryParse(filtroEstado, out var estadoInt))
+        {
+            var estado = (EstadoRegistroDiario)estadoInt;
+            registrosFiltrados = registrosFiltrados.Where(r => r.Estado == estado).ToList();
+        }
+        
+        // Filtro por departamento
+        if (!string.IsNullOrEmpty(filtroDepartamento) && int.TryParse(filtroDepartamento, out var deptId))
+        {
+            registrosFiltrados = registrosFiltrados.Where(r => r.Empleado?.DepartamentoId == deptId).ToList();
+        }
+        
+        // Filtro por empleados activos
+        if (mostrarSoloActivos)
+        {
+            registrosFiltrados = registrosFiltrados
+                .Where(r => r.Empleado?.Estado == EstadoEmpleado.Activo)
+                .ToList();
+        }
+        
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+    
+    private async Task BuscarEmpleados()
+    {
+        await FiltrarRegistros();
+    }
+    
+    private async Task LimpiarBusqueda()
+    {
+        searchTerm = string.Empty;
+        await FiltrarRegistros();
+        
+        // Enfocar el input de búsqueda
+        if (keyboardHandler != null)
+        {
+            await keyboardHandler.FocusElementAsync("searchInput");
+        }
+    }
+    
+    // ============================================
+    // SELECCIÓN DE REGISTROS
+    // ============================================
+    private void SeleccionarRegistro(RegistroDiario registro)
+    {
+        registroSeleccionado = registro;
+        mostrarDetalle = true;
+        StateHasChanged();
+    }
+    
+    private void ToggleSeleccion(RegistroDiario registro, ChangeEventArgs e)
+    {
+        if (e.Value is bool isChecked)
+        {
+            if (isChecked)
+            {
+                registrosSeleccionados.Add(registro.Id);
+            }
+            else
+            {
+                registrosSeleccionados.Remove(registro.Id);
+            }
+        }
+        
+        todosMarcados = registrosFiltrados.All(r => registrosSeleccionados.Contains(r.Id));
+        StateHasChanged();
+    }
+    
+    private void SeleccionarTodos(ChangeEventArgs e)
+    {
+        if (e.Value is bool isChecked)
+        {
+            if (isChecked)
+            {
+                registrosSeleccionados = registrosFiltrados.Select(r => r.Id).ToHashSet();
+            }
+            else
+            {
+                registrosSeleccionados.Clear();
+            }
+            
+            todosMarcados = isChecked;
+        }
+        
+        StateHasChanged();
+    }
+    
+    // ============================================
+    // CREACIÓN DE REGISTROS
+    // ============================================
+    private async Task CrearRegistrosParaTodos()
+    {
+        if (!empleadosSinRegistro.Any())
+        {
+            errorMessage = "No hay empleados sin registro";
+            return;
+        }
+        
+        isSaving = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            var registrosCreados = 0;
+            
+            foreach (var empleado in empleadosSinRegistro)
+            {
+                var nuevoRegistro = new RegistroDiario
+                {
+                    Fecha = fechaSeleccionada,
+                    EmpleadoId = empleado.Id,
+                    Estado = EstadoRegistroDiario.Borrador,
+                    FechaCreacion = DateTime.Now,
+                    CreadoPorId = AuthService.CurrentUserId
+                };
+                
+                await RegistroDiarioRepository.AddAsync(nuevoRegistro);
+                registrosCreados++;
+            }
+            
+            successMessage = $"Se crearon {registrosCreados} registros exitosamente";
+            Logger.LogInformation("Creados {Count} registros para fecha {Fecha}", 
+                registrosCreados, fechaSeleccionada.ToString("yyyy-MM-dd"));
+            
+            await CargarRegistros();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al crear registros masivos");
+            errorMessage = $"Error al crear registros: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+            
+            // Ocultar mensaje de éxito después de 3 segundos
+            if (successMessage != null)
+            {
+                await Task.Delay(3000);
+                successMessage = null;
+                StateHasChanged();
+            }
+        }
+    }
+    
+    private async Task CrearRegistroParaEmpleado(Empleado empleado)
+    {
+        isSaving = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            var nuevoRegistro = new RegistroDiario
+            {
+                Fecha = fechaSeleccionada,
+                EmpleadoId = empleado.Id,
+                Empleado = empleado,
+                Estado = EstadoRegistroDiario.Borrador,
+                FechaCreacion = DateTime.Now,
+                CreadoPorId = AuthService.CurrentUserId
+            };
+            
+            var registroCreado = await RegistroDiarioRepository.AddAsync(nuevoRegistro);
+            
+            successMessage = $"Registro creado para {empleado.NombreCompleto}";
+            Logger.LogInformation("Creado registro {Id} para empleado {EmpleadoId} fecha {Fecha}", 
+                registroCreado.Id, empleado.Id, fechaSeleccionada.ToString("yyyy-MM-dd"));
+            
+            await CargarRegistros();
+            
+            // Seleccionar el nuevo registro
+            registroSeleccionado = registrosDia.FirstOrDefault(r => r.Id == registroCreado.Id);
+            if (registroSeleccionado != null)
+            {
+                mostrarDetalle = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al crear registro para empleado {EmpleadoId}", empleado.Id);
+            errorMessage = $"Error al crear registro: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+            
+            // Ocultar mensaje de éxito después de 3 segundos
+            if (successMessage != null)
+            {
+                await Task.Delay(3000);
+                successMessage = null;
+                StateHasChanged();
+            }
+        }
+    }
+    
+    // ============================================
+    // EDICIÓN DE HORARIOS
+    // ============================================
+    private void EditarHorario(RegistroDiario registro)
+    {
+        editandoHorarios.Add(registro.Id);
+        StateHasChanged();
+    }
+    
+    private async Task GuardarHorario(RegistroDiario registro)
+    {
+        try
+        {
+            await RegistroDiarioRepository.UpdateAsync(registro);
+            editandoHorarios.Remove(registro.Id);
+            
+            Logger.LogInformation("Actualizado horario del registro {Id}", registro.Id);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al actualizar horario del registro {Id}", registro.Id);
+            errorMessage = $"Error al guardar horario: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+    
+    // ============================================
+    // OBSERVACIONES
+    // ============================================
+    private async Task GuardarObservaciones()
+    {
+        if (registroSeleccionado == null) return;
+        
+        try
+        {
+            await RegistroDiarioRepository.UpdateAsync(registroSeleccionado);
+            editandoObservaciones = false;
+            
+            Logger.LogInformation("Actualizadas observaciones del registro {Id}", registroSeleccionado.Id);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al actualizar observaciones del registro {Id}", registroSeleccionado.Id);
+            errorMessage = $"Error al guardar observaciones: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+    
+    // ============================================
+    // GESTIÓN DE ACTIVIDADES
+    // ============================================
+    private async Task AgregarActividad()
+    {
+        if (registroSeleccionado == null)
+        {
+            errorMessage = "Debe seleccionar un registro primero";
+            return;
+        }
+        
+        await AgregarActividadParaRegistro(registroSeleccionado);
+    }
+    
+    private async Task AgregarActividadParaRegistro(RegistroDiario registro)
+    {
+        registroSeleccionado = registro;
+        isEditingActividad = false;
+        
+        var maxOrden = registro.DetallesActividades?.Any() == true 
+            ? registro.DetallesActividades.Max(d => d.Orden) 
+            : 0;
+        
+        actividadEdit = new DetalleActividad
+        {
+            RegistroDiarioId = registro.Id,
+            RegistroDiario = registro,
+            Horas = 1.0m,
+            Orden = maxOrden + 1,
+            FechaCreacion = DateTime.Now
+        };
+        
+        actividadSeleccionadaObj = null;
+        showModalActividad = true;
+        StateHasChanged();
+        
+        await Task.CompletedTask;
+    }
+    
+    private async Task EditarActividad(DetalleActividad detalle)
+    {
+        isEditingActividad = true;
+        actividadEdit = new DetalleActividad
+        {
+            Id = detalle.Id,
+            RegistroDiarioId = detalle.RegistroDiarioId,
+            ActividadId = detalle.ActividadId,
+            ProyectoId = detalle.ProyectoId,
+            Horas = detalle.Horas,
+            Descripcion = detalle.Descripcion,
+            HoraInicio = detalle.HoraInicio,
+            HoraFin = detalle.HoraFin,
+            Orden = detalle.Orden
+        };
+        
+        actividadSeleccionadaObj = actividades.FirstOrDefault(a => a.Id == detalle.ActividadId);
+        showModalActividad = true;
+        StateHasChanged();
+        
+        await Task.CompletedTask;
+    }
+    
+    private async Task GuardarActividad()
+    {
+        if (actividadEdit == null || registroSeleccionado == null)
+        {
+            errorMessage = "Datos incompletos";
+            return;
+        }
+        
+        // Validaciones
+        if (actividadEdit.ActividadId <= 0)
+        {
+            errorMessage = "Debe seleccionar una actividad";
+            return;
+        }
+        
+        if (actividadSeleccionadaRequiereProyecto && (actividadEdit.ProyectoId == null || actividadEdit.ProyectoId <= 0))
+        {
+            errorMessage = "Esta actividad requiere un proyecto";
+            return;
+        }
+        
+        if (actividadEdit.Horas <= 0)
+        {
+            errorMessage = "Las horas deben ser mayor a 0";
+            return;
+        }
+        
+        isSaving = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            if (isEditingActividad)
+            {
+                // Actualizar actividad existente
+                await RegistroDiarioRepository.UpdateDetalleAsync(actividadEdit);
+                
+                Logger.LogInformation("Actualizada actividad {Id} del registro {RegistroId}", 
+                    actividadEdit.Id, registroSeleccionado.Id);
+                
+                successMessage = "Actividad actualizada exitosamente";
+            }
+            else
+            {
+                // Crear nueva actividad
+                var nuevaActividad = await RegistroDiarioRepository.AddDetalleAsync(
+                    registroSeleccionado.Id, 
+                    actividadEdit);
+                
+                Logger.LogInformation("Creada actividad {Id} para registro {RegistroId}", 
+                    nuevaActividad.Id, registroSeleccionado.Id);
+                
+                successMessage = "Actividad agregada exitosamente";
+            }
+            
+            // Recargar el registro con sus detalles actualizados
+            var registroActualizado = await RegistroDiarioRepository.GetByIdWithDetallesAsync(registroSeleccionado.Id);
+            if (registroActualizado != null)
+            {
+                // Actualizar en la lista
+                var index = registrosDia.FindIndex(r => r.Id == registroActualizado.Id);
+                if (index >= 0)
+                {
+                    registrosDia[index] = registroActualizado;
+                }
+                
+                registroSeleccionado = registroActualizado;
+            }
+            
+            await FiltrarRegistros();
+            CerrarModalActividad();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar actividad");
+            errorMessage = $"Error al guardar actividad: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+            
+            // Ocultar mensaje de éxito después de 3 segundos
+            if (successMessage != null)
+            {
+                await Task.Delay(3000);
+                successMessage = null;
+                StateHasChanged();
+            }
+        }
+    }
+    
+    private async Task EliminarActividad(DetalleActividad detalle)
+    {
+        actividadAEliminar = detalle;
+        confirmMessage = "¿Está seguro que desea eliminar esta actividad?";
+        confirmarAccionCallback = async () => await ConfirmarEliminarActividad();
+        showConfirmModal = true;
+        StateHasChanged();
+        
+        await Task.CompletedTask;
+    }
+    
+    private async Task ConfirmarEliminarActividad()
+    {
+        if (actividadAEliminar == null || registroSeleccionado == null)
+        {
+            return;
+        }
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            await RegistroDiarioRepository.DeleteDetalleAsync(
+                registroSeleccionado.Id, 
+                actividadAEliminar.Id);
+            
+            Logger.LogInformation("Eliminada actividad {Id} del registro {RegistroId}", 
+                actividadAEliminar.Id, registroSeleccionado.Id);
+            
+            // Recargar el registro
+            var registroActualizado = await RegistroDiarioRepository.GetByIdWithDetallesAsync(registroSeleccionado.Id);
+            if (registroActualizado != null)
+            {
+                var index = registrosDia.FindIndex(r => r.Id == registroActualizado.Id);
+                if (index >= 0)
+                {
+                    registrosDia[index] = registroActualizado;
+                }
+                
+                registroSeleccionado = registroActualizado;
+            }
+            
+            await FiltrarRegistros();
+            
+            successMessage = "Actividad eliminada exitosamente";
+            showConfirmModal = false;
+            actividadAEliminar = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al eliminar actividad");
+            errorMessage = $"Error al eliminar actividad: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+            
+            // Ocultar mensaje de éxito después de 3 segundos
+            if (successMessage != null)
+            {
+                await Task.Delay(3000);
+                successMessage = null;
+                StateHasChanged();
+            }
+        }
+    }
+    
+    // ============================================
+    // CAMBIO DE ESTADO
+    // ============================================
+    private async Task CompletarRegistro(RegistroDiario registro)
+    {
+        if (!registro.EstaCompleto)
+        {
+            errorMessage = "El registro debe tener hora de entrada, salida y al menos una actividad";
+            return;
+        }
+        
+        try
+        {
+            registro.Estado = EstadoRegistroDiario.Completado;
+            registro.FechaModificacion = DateTime.Now;
+            
+            await RegistroDiarioRepository.UpdateAsync(registro);
+            
+            Logger.LogInformation("Completado registro {Id}", registro.Id);
+            
+            successMessage = $"Registro completado para {registro.Empleado?.NombreCompleto}";
+            await FiltrarRegistros();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al completar registro {Id}", registro.Id);
+            errorMessage = $"Error al completar registro: {ex.Message}";
+        }
+        finally
+        {
+            StateHasChanged();
+            
+            // Ocultar mensaje de éxito después de 3 segundos
+            if (successMessage != null)
+            {
+                await Task.Delay(3000);
+                successMessage = null;
+                StateHasChanged();
+            }
+        }
+    }
+    
+    // ============================================
+    // EVENTOS DE FORMULARIO
+    // ============================================
+    private async Task OnActividadChanged()
+    {
+        if (actividadEdit != null && actividadEdit.ActividadId > 0)
+        {
+            actividadSeleccionadaObj = actividades.FirstOrDefault(a => a.Id == actividadEdit.ActividadId);
+            
+            // Si no requiere proyecto, limpiar el proyecto seleccionado
+            if (actividadSeleccionadaObj?.RequiereProyecto == false)
+            {
+                actividadEdit.ProyectoId = null;
+            }
+        }
+        else
+        {
+            actividadSeleccionadaObj = null;
+        }
+        
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+    
+    private async Task CalcularHorasFin()
+    {
+        if (actividadEdit?.HoraInicio != null && actividadEdit.Horas > 0)
+        {
+            var horaInicio = actividadEdit.HoraInicio.Value;
+            var horasTotales = actividadEdit.Horas;
+            var horas = (int)horasTotales;
+            var minutos = (int)((horasTotales - horas) * 60);
+            
+            actividadEdit.HoraFin = horaInicio.Add(new TimeSpan(horas, minutos, 0));
+            StateHasChanged();
+        }
+        
+        await Task.CompletedTask;
+    }
+    
+    private async Task CalcularHorasDesdeRango()
+    {
+        if (actividadEdit?.HoraInicio != null && actividadEdit.HoraFin != null)
+        {
+            var diferencia = actividadEdit.HoraFin.Value - actividadEdit.HoraInicio.Value;
+            if (diferencia.TotalHours > 0)
+            {
+                actividadEdit.Horas = (decimal)diferencia.TotalHours;
+                StateHasChanged();
+            }
+        }
+        
+        await Task.CompletedTask;
+    }
+    
+    // ============================================
+    // DETALLE Y MODALES
+    // ============================================
+    private async Task VerDetalleRegistro(RegistroDiario registro)
+    {
+        registroSeleccionado = registro;
+        mostrarDetalle = true;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+    
+    private async Task CerrarDetalle()
+    {
+        mostrarDetalle = false;
+        registroSeleccionado = null;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+    
+    private void CerrarModalActividad()
+    {
+        showModalActividad = false;
+        actividadEdit = null;
+        actividadSeleccionadaObj = null;
+        isEditingActividad = false;
+        StateHasChanged();
+    }
+    
+    private async Task CerrarModales()
+    {
+        if (showModalActividad)
+        {
+            CerrarModalActividad();
+        }
+        else if (showConfirmModal)
+        {
+            showConfirmModal = false;
+            StateHasChanged();
+        }
+        else if (mostrarDetalle)
+        {
+            await CerrarDetalle();
+        }
+    }
+    
+    private async Task ConfirmarAccion()
+    {
+        if (confirmarAccionCallback != null)
+        {
+            await confirmarAccionCallback.Invoke();
+        }
+    }
+    
+    // ============================================
+    // EXPORTACIÓN
+    // ============================================
+    private async Task ExportarReporte()
+    {
+        try
+        {
+            // TODO: Implementar exportación a PDF/Excel
+            await JSRuntime.InvokeVoidAsync("alert", 
+                $"Exportar reporte del {fechaSeleccionada:dd/MM/yyyy}\n" +
+                $"Total registros: {registrosDia.Count}\n" +
+                $"Esta funcionalidad estará disponible próximamente.");
+            
+            Logger.LogInformation("Solicitada exportación de reporte para fecha {Fecha}", 
+                fechaSeleccionada.ToString("yyyy-MM-dd"));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al exportar reporte");
+            errorMessage = $"Error al exportar: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+    
+    // ============================================
+    // WIZARD
+    // ============================================
+    private void AbrirWizard()
+    {
+        Navigation.NavigateTo("/control-diario-wizard");
+    }
+    
+    // ============================================
+    // MÉTODOS AUXILIARES
+    // ============================================
+    private string GetFotoUrl(Empleado? empleado)
+    {
+        if (empleado == null || string.IsNullOrEmpty(empleado.FotoPath))
+        {
+            return "/images/default-avatar.png";
+        }
+        
+        // Si la ruta ya es una URL completa, devolverla tal cual
+        if (empleado.FotoPath.StartsWith("http://") || empleado.FotoPath.StartsWith("https://"))
+        {
+            return empleado.FotoPath;
+        }
+        
+        // Si es una ruta relativa, agregarle el prefijo
+        return $"/uploads/fotos/{empleado.FotoPath}";
+    }
+    
+    // ============================================
+    // MÉTODOS PARA CONVERSIÓN DE TIEMPO
+    // ============================================
+    private string FormatTimeSpan(TimeSpan? time) => time?.ToString(@"hh\:mm") ?? "";
+    
+    private TimeSpan? ParseTimeSpan(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return null;
+        return TimeSpan.TryParse(value, out var time) ? time : null;
+    }
+}

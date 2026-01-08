@@ -7,6 +7,22 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
 ---
 
+## [1.1.15] - 2026-01-07
+
+### ✅ Calidad y Documentación
+- Nuevo proyecto de pruebas `SGRRHH.Local.Tests` con cobertura para repositorios (empleados, permisos, vacaciones, usuarios) y servicios (auth, backup) usando SQLite temporal.
+- Pruebas de workflow básicas para permisos y vacaciones.
+
+### 🚀 Optimización
+- Índices adicionales para búsquedas frecuentes y helper `PagedResult<T>` con logging de consultas lentas en `DapperContext`.
+
+### 📚 Documentación y Deploy
+- Manual de usuario en `SGRRHH.Local.Server/wwwroot/docs/manual-usuario.md`.
+- README actualizado para ejecutar, testear y publicar SGRRHH Local.
+- Script de instalación `scripts/Install.ps1` para copiar publish y crear acceso directo.
+
+---
+
 ## [1.1.14] - 2025-12-22
 
 ### 🐛 Corrección Crítica
@@ -17,8 +33,6 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
 - Nuevo helper centralizado `DataPaths.cs` para gestión de rutas de datos
 - Actualizado `App.xaml.cs`, `AsyncHelper.cs`, `ContratosViewModel.cs` y `PermisoFormViewModel.cs`
-
----
 
 ## [1.1.13] - 2025-12-22
 

@@ -1,0 +1,446 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Shared.Interfaces
+@inject ICargoRepository CargoRepository
+@inject IDepartamentoRepository DepartamentoRepository
+@inject ILogger<CargosTab> Logger
+
+<!-- Header con controles -->
+<div style="margin-bottom: 16px; display: flex: justify-content: space-between; align-items: center;">
+    <div style="display: flex; gap: 8px;">
+        <button @onclick="Nuevo">NUEVO (F3)</button>
+        <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+        @if (selectedItem != null)
+        {
+            <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
+        }
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="text" placeholder="Buscar..." 
+               @bind="searchTerm" @bind:event="oninput" />
+        <button @onclick="Buscar">BUSCAR</button>
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button @onclick="LimpiarBusqueda">LIMPIAR</button>
+        }
+        <select @bind="filtroDepartamento" @bind:after="Filtrar">
+            <option value="">Todos los departamentos</option>
+            @foreach (var dept in departamentos)
+            {
+                <option value="@dept.Id">@dept.Nombre</option>
+            }
+        </select>
+    </div>
+</div>
+
+<!-- Tabla -->
+<table>
+    <thead>
+        <tr>
+            <th style="width: 100px;">CÓDIGO</th>
+            <th>NOMBRE</th>
+            <th>DEPARTAMENTO</th>
+            <th style="width: 80px;">NIVEL</th>
+            <th style="width: 120px;">SALARIO BASE</th>
+            <th style="width: 100px;">EMPLEADOS</th>
+            <th style="width: 150px;">ACCIONES</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (isLoading)
+        {
+            <tr><td colspan="7" class="loading">Cargando cargos...</td></tr>
+        }
+        else if (!itemsFiltrados.Any())
+        {
+            <tr><td colspan="7" class="empty-state">No hay cargos para mostrar</td></tr>
+        }
+        else
+        {
+            @foreach (var item in itemsFiltrados)
+            {
+                <tr class="@(selectedItem?.Id == item.Id ? "selected" : "")"
+                    @onclick="() => SelectItem(item)">
+                    <td><strong>@item.Codigo</strong></td>
+                    <td>@item.Nombre</td>
+                    <td>@(item.Departamento?.Nombre ?? "-")</td>
+                    <td style="text-align: center;">@item.Nivel</td>
+                    <td style="text-align: right;">@(item.SalarioBase?.ToString("C") ?? "-")</td>
+                    <td style="text-align: center;">@(item.Empleados?.Count ?? 0)</td>
+                    <td class="actions-cell">
+                        <button @onclick="() => Editar(item)" @onclick:stopPropagation="true">
+                            EDITAR
+                        </button>
+                        <button @onclick="() => ConfirmarEliminar(item)" @onclick:stopPropagation="true"
+                                disabled="@((item.Empleados?.Count ?? 0) > 0)">
+                            ELIMINAR
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<!-- Modal de edición -->
+<FormModal @bind-IsVisible="showModal" 
+           Title="@(isEditing ? $"EDITAR CARGO - {editItem?.Codigo}" : "NUEVO CARGO")"
+           Width="700px"
+           OnSaveClicked="Guardar"
+           OnCancelClicked="CerrarModal"
+           IsSaving="isSaving">
+    
+    @if (editItem != null)
+    {
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+                <div class="form-group required">
+                    <label>Código:</label>
+                    <input type="text" @bind="editItem.Codigo" maxlength="20" 
+                           readonly="@isEditing" disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group required">
+                    <label>Nombre:</label>
+                    <input type="text" @bind="editItem.Nombre" maxlength="100" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Departamento:</label>
+                    <select @bind="editItem.DepartamentoId" disabled="@isSaving">
+                        <option value="">-- Sin asignar --</option>
+                        @foreach (var dept in departamentos)
+                        {
+                            <option value="@dept.Id">@dept.Nombre</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Nivel:</label>
+                    <input type="number" @bind="editItem.Nivel" min="1" max="10" 
+                           disabled="@isSaving" />
+                    <small>1 = Entrada, 10 = Ejecutivo</small>
+                </div>
+            </div>
+            
+            <div>
+                <div class="form-group">
+                    <label>Salario Base:</label>
+                    <input type="number" @bind="editItem.SalarioBase" step="0.01" min="0" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Número de Plazas:</label>
+                    <input type="number" @bind="editItem.NumeroPlazas" min="1" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Cargo Superior:</label>
+                    <select @bind="editItem.CargoSuperiorId" disabled="@isSaving">
+                        <option value="">-- Sin cargo superior --</option>
+                        @foreach (var cargo in items.Where(c => c.Id != editItem.Id))
+                        {
+                            <option value="@cargo.Id">@cargo.Nombre</option>
+                        }
+                    </select>
+                    <small>Para organigrama jerárquico</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Descripción:</label>
+            <textarea @bind="editItem.Descripcion" rows="2" 
+                     disabled="@isSaving" 
+                     maxlength="500"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label>Requisitos:</label>
+            <textarea @bind="editItem.Requisitos" rows="2" 
+                     disabled="@isSaving" 
+                     maxlength="1000"></textarea>
+            <small>Requisitos académicos, experiencia, etc.</small>
+        </div>
+        
+        <div class="form-group">
+            <label>Competencias:</label>
+            <textarea @bind="editItem.Competencias" rows="2" 
+                     disabled="@isSaving" 
+                     maxlength="1000"></textarea>
+            <small>Habilidades y competencias requeridas</small>
+        </div>
+    }
+</FormModal>
+
+<!-- Modal de confirmación de eliminación -->
+<FormModal @bind-IsVisible="showConfirmModal"
+           Title="CONFIRMAR ELIMINACIÓN"
+           Width="400px"
+           OnSaveClicked="EliminarConfirmado"
+           OnCancelClicked="() => showConfirmModal = false"
+           IsSaving="isSaving">
+    <p>¿Está seguro que desea eliminar el cargo <strong>@itemToDelete?.Nombre</strong>?</p>
+    <p style="color: #ff6b6b; margin-top: 12px;">
+        <strong>Advertencia:</strong> Esta acción no se puede deshacer.
+    </p>
+</FormModal>
+
+@code {
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback<string?> ErrorMessageChanged { get; set; }
+    [Parameter] public string? SuccessMessage { get; set; }
+    [Parameter] public EventCallback<string?> SuccessMessageChanged { get; set; }
+    
+    private List<Cargo> items = new();
+    private List<Cargo> itemsFiltrados = new();
+    private List<Departamento> departamentos = new();
+    private Cargo? selectedItem;
+    private Cargo? editItem;
+    private Cargo? itemToDelete;
+    
+    private bool isLoading;
+    private bool showModal;
+    private bool showConfirmModal;
+    private bool isSaving;
+    private bool isEditing;
+    private string searchTerm = "";
+    private string filtroDepartamento = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+    
+    private async Task CargarDatos()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            var cargos = await CargoRepository.GetAllAsync();
+            items = cargos.OrderBy(c => c.Nombre).ToList();
+            
+            var deps = await DepartamentoRepository.GetAllActiveAsync();
+            departamentos = deps.OrderBy(d => d.Nombre).ToList();
+            
+            Filtrar();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar cargos");
+            await SetError($"Error al cargar cargos: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void Filtrar()
+    {
+        itemsFiltrados = items;
+        
+        if (!string.IsNullOrWhiteSpace(filtroDepartamento))
+        {
+            if (int.TryParse(filtroDepartamento, out int deptId))
+            {
+                itemsFiltrados = itemsFiltrados.Where(c => c.DepartamentoId == deptId).ToList();
+            }
+        }
+        
+        Buscar();
+    }
+    
+    private void Buscar()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            itemsFiltrados = itemsFiltrados.Where(c => 
+                c.Codigo.ToLower().Contains(term) ||
+                c.Nombre.ToLower().Contains(term) ||
+                (c.Descripcion ?? "").ToLower().Contains(term)
+            ).ToList();
+        }
+        StateHasChanged();
+    }
+    
+    private void LimpiarBusqueda()
+    {
+        searchTerm = "";
+        Filtrar();
+    }
+    
+    private void SelectItem(Cargo item)
+    {
+        selectedItem = item;
+        StateHasChanged();
+    }
+    
+    private void Nuevo()
+    {
+        editItem = new Cargo
+        {
+            Activo = true,
+            Nivel = 1,
+            NumeroPlazas = 1,
+            FechaCreacion = DateTime.Now
+        };
+        isEditing = false;
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void Editar(Cargo item)
+    {
+        editItem = new Cargo
+        {
+            Id = item.Id,
+            Codigo = item.Codigo,
+            Nombre = item.Nombre,
+            Descripcion = item.Descripcion,
+            Nivel = item.Nivel,
+            DepartamentoId = item.DepartamentoId,
+            SalarioBase = item.SalarioBase,
+            Requisitos = item.Requisitos,
+            Competencias = item.Competencias,
+            CargoSuperiorId = item.CargoSuperiorId,
+            NumeroPlazas = item.NumeroPlazas,
+            Activo = item.Activo,
+            FechaCreacion = item.FechaCreacion,
+            FechaModificacion = DateTime.Now
+        };
+        isEditing = true;
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void EditarSeleccionado()
+    {
+        if (selectedItem != null)
+        {
+            Editar(selectedItem);
+        }
+    }
+    
+    private async Task Guardar()
+    {
+        if (editItem == null) return;
+        
+        // Validaciones
+        if (string.IsNullOrWhiteSpace(editItem.Codigo))
+        {
+            await SetError("El código es requerido");
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(editItem.Nombre))
+        {
+            await SetError("El nombre es requerido");
+            return;
+        }
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            if (isEditing)
+            {
+                await CargoRepository.UpdateAsync(editItem);
+                await SetSuccess($"Cargo '{editItem.Nombre}' actualizado correctamente");
+                Logger.LogInformation($"Cargo actualizado: {editItem.Codigo}");
+            }
+            else
+            {
+                await CargoRepository.AddAsync(editItem);
+                await SetSuccess($"Cargo '{editItem.Nombre}' creado correctamente");
+                Logger.LogInformation($"Cargo creado: {editItem.Codigo}");
+            }
+            
+            await CargarDatos();
+            CerrarModal();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar cargo");
+            await SetError($"Error al guardar: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ConfirmarEliminar(Cargo item)
+    {
+        if ((item.Empleados?.Count ?? 0) > 0)
+        {
+            SetError($"No se puede eliminar el cargo porque tiene {item.Empleados!.Count} empleado(s) asignado(s)");
+            return;
+        }
+        
+        itemToDelete = item;
+        showConfirmModal = true;
+        StateHasChanged();
+    }
+    
+    private async Task EliminarConfirmado()
+    {
+        if (itemToDelete == null) return;
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            await CargoRepository.DeleteAsync(itemToDelete.Id);
+            await SetSuccess($"Cargo '{itemToDelete.Nombre}' eliminado correctamente");
+            Logger.LogInformation($"Cargo eliminado: {itemToDelete.Codigo}");
+            
+            await CargarDatos();
+            showConfirmModal = false;
+            itemToDelete = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al eliminar cargo");
+            await SetError($"Error al eliminar: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void CerrarModal()
+    {
+        showModal = false;
+        editItem = null;
+        StateHasChanged();
+    }
+    
+    private async Task SetError(string message)
+    {
+        ErrorMessage = message;
+        await ErrorMessageChanged.InvokeAsync(message);
+    }
+    
+    private async Task SetSuccess(string message)
+    {
+        SuccessMessage = message;
+        await SuccessMessageChanged.InvokeAsync(message);
+        
+        await Task.Delay(3000);
+        SuccessMessage = null;
+        await SuccessMessageChanged.InvokeAsync(null);
+    }
+}

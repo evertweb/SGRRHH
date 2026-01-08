@@ -1,0 +1,313 @@
+@if (IsVisible)
+{
+    <div class="modal-backdrop" @onclick="OnBackdropClick">
+        <div class="confirm-dialog" @onclick:stopPropagation="true">
+            <div class="confirm-header">
+                <h3>@Titulo</h3>
+                @if (MostrarBotonCerrar)
+                {
+                    <button class="btn-close" @onclick="Cancelar">✕</button>
+                }
+            </div>
+            
+            <div class="confirm-body">
+                @if (!string.IsNullOrEmpty(Icono))
+                {
+                    <div class="confirm-icon @TipoClase">@Icono</div>
+                }
+                <div class="confirm-mensaje">
+                    @if (!string.IsNullOrEmpty(Mensaje))
+                    {
+                        <p>@Mensaje</p>
+                    }
+                    @if (ChildContent != null)
+                    {
+                        @ChildContent
+                    }
+                </div>
+            </div>
+            
+            <div class="confirm-footer">
+                @if (MostrarBotonCancelar)
+                {
+                    <button class="btn-secondary" @onclick="Cancelar" disabled="@IsProcessing">
+                        @TextoCancelar
+                    </button>
+                }
+                <button class="btn-primary @TipoClase" @onclick="Confirmar" disabled="@IsProcessing">
+                    @if (IsProcessing)
+                    {
+                        <span>Procesando...</span>
+                    }
+                    else
+                    {
+                        <span>@TextoConfirmar</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+    [Parameter] public string Titulo { get; set; } = "Confirmar Acción";
+    [Parameter] public string Mensaje { get; set; } = "¿Está seguro que desea realizar esta acción?";
+    [Parameter] public string TextoConfirmar { get; set; } = "CONFIRMAR";
+    [Parameter] public string TextoCancelar { get; set; } = "CANCELAR";
+    [Parameter] public string Tipo { get; set; } = "info"; // info, warning, danger, success
+    [Parameter] public string Icono { get; set; } = "?";
+    [Parameter] public bool MostrarBotonCancelar { get; set; } = true;
+    [Parameter] public bool MostrarBotonCerrar { get; set; } = true;
+    [Parameter] public bool CerrarAlClickFuera { get; set; } = true;
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    
+    private bool IsProcessing { get; set; }
+
+    private string TipoClase => Tipo.ToLower() switch
+    {
+        "warning" => "tipo-warning",
+        "danger" => "tipo-danger",
+        "success" => "tipo-success",
+        _ => "tipo-info"
+    };
+
+    protected override void OnParametersSet()
+    {
+        // Establecer icono por defecto según tipo
+        if (string.IsNullOrEmpty(Icono) || Icono == "?")
+        {
+            Icono = Tipo.ToLower() switch
+            {
+                "warning" => "⚠",
+                "danger" => "✕",
+                "success" => "✓",
+                _ => "?"
+            };
+        }
+    }
+
+    private async Task Confirmar()
+    {
+        if (IsProcessing) return;
+        
+        IsProcessing = true;
+        StateHasChanged();
+        
+        try
+        {
+            await OnConfirm.InvokeAsync();
+            await Cerrar();
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private async Task Cancelar()
+    {
+        if (IsProcessing) return;
+        
+        await OnCancel.InvokeAsync();
+        await Cerrar();
+    }
+
+    private async Task OnBackdropClick()
+    {
+        if (CerrarAlClickFuera && !IsProcessing)
+        {
+            await Cancelar();
+        }
+    }
+
+    private async Task Cerrar()
+    {
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(false);
+    }
+
+    // Métodos estáticos de ayuda para uso común
+    public static ConfirmDialog Create(string titulo, string mensaje, string tipo = "info")
+    {
+        var dialog = new ConfirmDialog
+        {
+            Titulo = titulo,
+            Mensaje = mensaje,
+            Tipo = tipo
+        };
+        return dialog;
+    }
+}
+
+<style>
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        animation: fadeIn 0.2s;
+    }
+
+    .confirm-dialog {
+        background: #1a1a1a;
+        border: 2px solid #00d4ff;
+        border-radius: 4px;
+        min-width: 400px;
+        max-width: 600px;
+        box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3);
+        animation: slideIn 0.3s;
+    }
+
+    .confirm-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #333;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .confirm-header h3 {
+        margin: 0;
+        font-size: 16px;
+        color: #00d4ff;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .btn-close {
+        background: none;
+        border: none;
+        color: #888;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        width: 24px;
+        height: 24px;
+    }
+
+    .btn-close:hover {
+        color: #00d4ff;
+    }
+
+    .confirm-body {
+        padding: 24px 20px;
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .confirm-icon {
+        font-size: 48px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .confirm-icon.tipo-info { color: #00d4ff; }
+    .confirm-icon.tipo-warning { color: #ffc107; }
+    .confirm-icon.tipo-danger { color: #ff453a; }
+    .confirm-icon.tipo-success { color: #00ff7f; }
+
+    .confirm-mensaje {
+        flex: 1;
+        color: #ddd;
+        line-height: 1.6;
+    }
+
+    .confirm-mensaje p {
+        margin: 0 0 12px 0;
+    }
+
+    .confirm-footer {
+        padding: 16px 20px;
+        border-top: 1px solid #333;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    .confirm-footer button {
+        padding: 10px 24px;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        border-radius: 3px;
+        cursor: pointer;
+        text-transform: uppercase;
+        min-width: 100px;
+    }
+
+    .confirm-footer button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: #0a0a0a;
+        border: 1px solid #333;
+        color: #888;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+        border-color: #666;
+        color: #aaa;
+    }
+
+    .btn-primary {
+        border: 1px solid;
+    }
+
+    .btn-primary.tipo-info {
+        background: rgba(0, 212, 255, 0.2);
+        border-color: #00d4ff;
+        color: #00d4ff;
+    }
+
+    .btn-primary.tipo-warning {
+        background: rgba(255, 193, 7, 0.2);
+        border-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .btn-primary.tipo-danger {
+        background: rgba(255, 69, 58, 0.2);
+        border-color: #ff453a;
+        color: #ff453a;
+    }
+
+    .btn-primary.tipo-success {
+        background: rgba(0, 255, 127, 0.2);
+        border-color: #00ff7f;
+        color: #00ff7f;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        filter: brightness(1.2);
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @@keyframes slideIn {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+</style>

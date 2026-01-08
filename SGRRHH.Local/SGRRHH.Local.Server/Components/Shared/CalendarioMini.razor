@@ -1,0 +1,296 @@
+@inject IJSRuntime JSRuntime
+
+<div class="calendario-mini">
+    <!-- Header del calendario -->
+    <div class="calendario-header">
+        <button class="btn-nav" @onclick="MesAnterior">◀</button>
+        <div class="calendario-titulo">
+            @fechaActual.ToString("MMMM yyyy").ToUpper()
+        </div>
+        <button class="btn-nav" @onclick="MesSiguiente">▶</button>
+    </div>
+
+    <!-- Días de la semana -->
+    <div class="calendario-dias-semana">
+        <div class="dia-semana">DOM</div>
+        <div class="dia-semana">LUN</div>
+        <div class="dia-semana">MAR</div>
+        <div class="dia-semana">MIÉ</div>
+        <div class="dia-semana">JUE</div>
+        <div class="dia-semana">VIE</div>
+        <div class="dia-semana">SÁB</div>
+    </div>
+
+    <!-- Días del mes -->
+    <div class="calendario-dias">
+        @foreach (var dia in GetDiasDelMes())
+        {
+            <div class="@GetClaseDia(dia)" @onclick="() => SeleccionarDia(dia)">
+                @if (dia.HasValue)
+                {
+                    <span>@dia.Value.Day</span>
+                    @if (TieneMarcador != null && TieneMarcador(dia.Value))
+                    {
+                        <span class="marcador">●</span>
+                    }
+                }
+            </div>
+        }
+    </div>
+
+    @if (MostrarBotones)
+    {
+        <div class="calendario-footer">
+            <button @onclick="SeleccionarHoy">HOY</button>
+            <button @onclick="Limpiar">LIMPIAR</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public DateTime? FechaSeleccionada { get; set; }
+    [Parameter] public EventCallback<DateTime?> FechaSeleccionadaChanged { get; set; }
+    [Parameter] public DateTime? FechaMinima { get; set; }
+    [Parameter] public DateTime? FechaMaxima { get; set; }
+    [Parameter] public bool MostrarBotones { get; set; } = true;
+    [Parameter] public Func<DateTime, bool>? TieneMarcador { get; set; }
+
+    private DateTime fechaActual = DateTime.Today;
+
+    protected override void OnInitialized()
+    {
+        if (FechaSeleccionada.HasValue)
+        {
+            fechaActual = new DateTime(FechaSeleccionada.Value.Year, FechaSeleccionada.Value.Month, 1);
+        }
+    }
+
+    private List<DateTime?> GetDiasDelMes()
+    {
+        var primerDia = new DateTime(fechaActual.Year, fechaActual.Month, 1);
+        var ultimoDia = primerDia.AddMonths(1).AddDays(-1);
+        var dias = new List<DateTime?>();
+
+        // Días en blanco al inicio
+        int diaInicio = (int)primerDia.DayOfWeek;
+        for (int i = 0; i < diaInicio; i++)
+        {
+            dias.Add(null);
+        }
+
+        // Días del mes
+        for (int dia = 1; dia <= ultimoDia.Day; dia++)
+        {
+            dias.Add(new DateTime(fechaActual.Year, fechaActual.Month, dia));
+        }
+
+        // Completar la última semana si es necesario
+        while (dias.Count % 7 != 0)
+        {
+            dias.Add(null);
+        }
+
+        return dias;
+    }
+
+    private string GetClaseDia(DateTime? dia)
+    {
+        if (!dia.HasValue)
+            return "dia vacio";
+
+        var clases = new List<string> { "dia" };
+
+        if (dia.Value.Date == DateTime.Today)
+            clases.Add("hoy");
+
+        if (FechaSeleccionada.HasValue && dia.Value.Date == FechaSeleccionada.Value.Date)
+            clases.Add("seleccionado");
+
+        if (FechaMinima.HasValue && dia.Value < FechaMinima.Value.Date)
+            clases.Add("deshabilitado");
+
+        if (FechaMaxima.HasValue && dia.Value > FechaMaxima.Value.Date)
+            clases.Add("deshabilitado");
+
+        if (dia.Value.DayOfWeek == DayOfWeek.Sunday || dia.Value.DayOfWeek == DayOfWeek.Saturday)
+            clases.Add("fin-semana");
+
+        return string.Join(" ", clases);
+    }
+
+    private async Task SeleccionarDia(DateTime? dia)
+    {
+        if (!dia.HasValue)
+            return;
+
+        if (FechaMinima.HasValue && dia.Value < FechaMinima.Value.Date)
+            return;
+
+        if (FechaMaxima.HasValue && dia.Value > FechaMaxima.Value.Date)
+            return;
+
+        FechaSeleccionada = dia.Value;
+        await FechaSeleccionadaChanged.InvokeAsync(dia.Value);
+    }
+
+    private void MesAnterior()
+    {
+        fechaActual = fechaActual.AddMonths(-1);
+    }
+
+    private void MesSiguiente()
+    {
+        fechaActual = fechaActual.AddMonths(1);
+    }
+
+    private async Task SeleccionarHoy()
+    {
+        fechaActual = DateTime.Today;
+        FechaSeleccionada = DateTime.Today;
+        await FechaSeleccionadaChanged.InvokeAsync(DateTime.Today);
+    }
+
+    private async Task Limpiar()
+    {
+        FechaSeleccionada = null;
+        await FechaSeleccionadaChanged.InvokeAsync(null);
+    }
+}
+
+<style>
+    .calendario-mini {
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 12px;
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .calendario-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .calendario-titulo {
+        font-weight: bold;
+        font-size: 13px;
+        color: #00d4ff;
+        flex: 1;
+        text-align: center;
+    }
+
+    .btn-nav {
+        background: none;
+        border: 1px solid #333;
+        color: #00d4ff;
+        padding: 4px 10px;
+        cursor: pointer;
+        border-radius: 3px;
+        font-size: 12px;
+    }
+
+    .btn-nav:hover {
+        background: #00d4ff22;
+        border-color: #00d4ff;
+    }
+
+    .calendario-dias-semana {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .dia-semana {
+        text-align: center;
+        font-size: 10px;
+        font-weight: bold;
+        color: #888;
+        padding: 4px 0;
+    }
+
+    .calendario-dias {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+
+    .dia {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        border: 1px solid #333;
+        border-radius: 3px;
+        cursor: pointer;
+        position: relative;
+        color: #fff;
+        background: #0a0a0a;
+    }
+
+    .dia:hover:not(.deshabilitado):not(.vacio) {
+        background: #00d4ff22;
+        border-color: #00d4ff;
+    }
+
+    .dia.vacio {
+        border: none;
+        cursor: default;
+    }
+
+    .dia.hoy {
+        border-color: #00d4ff;
+        color: #00d4ff;
+        font-weight: bold;
+    }
+
+    .dia.seleccionado {
+        background: #00d4ff;
+        color: #000;
+        font-weight: bold;
+    }
+
+    .dia.deshabilitado {
+        color: #444;
+        cursor: not-allowed;
+        background: #111;
+    }
+
+    .dia.fin-semana {
+        background: #151515;
+    }
+
+    .marcador {
+        position: absolute;
+        bottom: 2px;
+        font-size: 6px;
+        color: #00ff7f;
+    }
+
+    .calendario-footer {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        justify-content: center;
+    }
+
+    .calendario-footer button {
+        padding: 6px 12px;
+        font-size: 10px;
+        background: #0a0a0a;
+        border: 1px solid #333;
+        color: #00d4ff;
+        cursor: pointer;
+        border-radius: 3px;
+        font-weight: bold;
+    }
+
+    .calendario-footer button:hover {
+        background: #00d4ff22;
+        border-color: #00d4ff;
+    }
+</style>

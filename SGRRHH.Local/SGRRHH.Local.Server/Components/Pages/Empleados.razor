@@ -1,0 +1,1194 @@
+@page "/empleados"
+@page "/empleados/{EmpleadoIdParam:int?}"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@inject IAuthService AuthService
+@inject IEmpleadoRepository EmpleadoRepository
+@inject ICargoRepository CargoRepository
+@inject IDepartamentoRepository DepartamentoRepository
+@inject ILocalStorageService StorageService
+@inject IExportService ExportService
+@inject NavigationManager Navigation
+@inject ILogger<Empleados> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Empleados - SGRRHH</PageTitle>
+
+<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
+
+<h1 class="page-title">GESTIÓN DE EMPLEADOS</h1>
+
+@if (errorMessage != null)
+{
+    <div class="error-block">
+        <h3>ERROR</h3>
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="success-block">
+        <p>@successMessage</p>
+    </div>
+}
+
+<!-- Header con controles -->
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; gap: 8px;">
+        <button @onclick="NuevoEmpleado">NUEVO (F3)</button>
+        <button @onclick="CargarEmpleados">ACTUALIZAR (F5)</button>
+        @if (selectedEmpleado != null)
+        {
+            <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
+        }
+        <button @onclick="ExportarExcel" disabled="@isExporting" style="background-color: #28a745;">
+            @if (isExporting)
+            {
+                <span>EXPORTANDO...</span>
+            }
+            else
+            {
+                <span>EXPORTAR EXCEL (F10)</span>
+            }
+        </button>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <input type="text" id="searchInput" placeholder="Buscar... (F2)" 
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" 
+               style="min-width: 250px;" />
+        <button @onclick="Buscar">BUSCAR</button>
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button @onclick="LimpiarBusqueda">LIMPIAR</button>
+        }
+        <select @bind="filtroEstado" @bind:after="Filtrar">
+            <option value="">Todos los estados</option>
+            <option value="@((int)EstadoEmpleado.Activo)">Activos</option>
+            <option value="@((int)EstadoEmpleado.Retirado)">Retirados</option>
+            <option value="@((int)EstadoEmpleado.PendienteAprobacion)">Pendientes</option>
+            <option value="@((int)EstadoEmpleado.EnVacaciones)">En Vacaciones</option>
+            <option value="@((int)EstadoEmpleado.Suspendido)">Suspendidos</option>
+        </select>
+    </div>
+</div>
+
+<!-- Información de resultados -->
+<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+    Mostrando @empleados.Count() de @totalEmpleados empleado(s)
+</div>
+
+<!-- Tabla de empleados -->
+<div style="overflow-x: auto;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 60px;">FOTO</th>
+                <th style="width: 100px;">CÓDIGO</th>
+                <th style="width: 120px;">CÉDULA</th>
+                <th>NOMBRE COMPLETO</th>
+                <th>CARGO</th>
+                <th>DEPARTAMENTO</th>
+                <th style="width: 100px;">ESTADO</th>
+                <th style="width: 180px;">ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (isLoading)
+            {
+                <tr><td colspan="8" class="loading">Cargando empleados...</td></tr>
+            }
+            else if (!empleados.Any())
+            {
+                <tr><td colspan="8" class="empty-state">No hay empleados para mostrar</td></tr>
+            }
+            else
+            {
+                @foreach (var emp in empleados)
+                {
+                    <tr class="@(selectedEmpleado?.Id == emp.Id ? "selected" : "")"
+                        @onclick="() => SelectEmpleado(emp)">
+                        <td style="text-align: center;">
+                            @if (!string.IsNullOrEmpty(emp.FotoPath))
+                            {
+                                <img src="@GetFotoUrl(emp)" class="empleado-foto-mini" 
+                                     onerror="this.src='/images/default-avatar.png'" 
+                                     alt="Foto de @emp.NombreCompleto" />
+                            }
+                            else
+                            {
+                                <div class="empleado-foto-placeholder">
+                                    @GetInitials(emp.NombreCompleto)
+                                </div>
+                            }
+                        </td>
+                        <td><strong>@emp.Codigo</strong></td>
+                        <td>@emp.Cedula</td>
+                        <td><strong>@emp.NombreCompleto</strong></td>
+                        <td>@(emp.Cargo?.Nombre ?? "-")</td>
+                        <td>@(emp.Departamento?.Nombre ?? "-")</td>
+                        <td>
+                            <span class="badge badge-@emp.Estado.ToString().ToLower()">
+                                @emp.Estado
+                            </span>
+                        </td>
+                        <td class="actions-cell">
+                            <button @onclick="() => EditarEmpleado(emp)" @onclick:stopPropagation="true" title="Editar empleado">
+                                EDITAR
+                            </button>
+                            <button @onclick="() => VerExpediente(emp)" @onclick:stopPropagation="true" title="Ver expediente completo">
+                                EXPEDIENTE
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal de Empleado (Nuevo/Editar) -->
+<FormModal @bind-IsVisible="showModal" 
+           Title="@(isEditing ? $"EDITAR EMPLEADO - {empleadoEdit?.Codigo}" : "NUEVO EMPLEADO")"
+           Width="900px"
+           OnSaveClicked="Guardar"
+           OnCancelClicked="CerrarModal"
+           IsSaving="isSaving">
+    
+    @if (empleadoEdit != null)
+    {
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Columna izquierda: Datos básicos -->
+            <div class="form-column">
+                <h4 style="margin-top: 0; padding-bottom: 8px; border-bottom: 1px solid #808080;">DATOS BÁSICOS</h4>
+                
+                <div class="form-group required">
+                    <label>Código:</label>
+                    <input type="text" @bind="empleadoEdit.Codigo" maxlength="20" 
+                           readonly="@isEditing" disabled="@isSaving" />
+                    <small>Único e irrepetible</small>
+                </div>
+                
+                <div class="form-group required">
+                    <label>Cédula:</label>
+                    <input type="text" @bind="empleadoEdit.Cedula" maxlength="20" 
+                           disabled="@isSaving" />
+                    <small>Documento de identidad</small>
+                </div>
+                
+                <div class="form-group required">
+                    <label>Nombres:</label>
+                    <input type="text" @bind="empleadoEdit.Nombres" maxlength="100" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group required">
+                    <label>Apellidos:</label>
+                    <input type="text" @bind="empleadoEdit.Apellidos" maxlength="100" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Fecha Nacimiento:</label>
+                    <input type="date" @bind="empleadoEdit.FechaNacimiento" 
+                           disabled="@isSaving" />
+                    @if (empleadoEdit.FechaNacimiento.HasValue)
+                    {
+                        var edad = CalcularEdad(empleadoEdit.FechaNacimiento.Value);
+                        <small>Edad: @edad años</small>
+                    }
+                </div>
+                
+                <div class="form-group">
+                    <label>Género:</label>
+                    <select @bind="empleadoEdit.Genero" disabled="@isSaving">
+                        <option value="">-- Seleccione --</option>
+                        @foreach (var g in Enum.GetValues<Genero>())
+                        {
+                            <option value="@g">@g</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Estado Civil:</label>
+                    <select @bind="empleadoEdit.EstadoCivil" disabled="@isSaving">
+                        <option value="">-- Seleccione --</option>
+                        @foreach (var ec in Enum.GetValues<EstadoCivil>())
+                        {
+                            <option value="@ec">@ec</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Columna derecha: Contacto y laboral -->
+            <div class="form-column">
+                <h4 style="margin-top: 0; padding-bottom: 8px; border-bottom: 1px solid #808080;">CONTACTO Y LABORAL</h4>
+                
+                <div class="form-group">
+                    <label>Teléfono:</label>
+                    <input type="text" @bind="empleadoEdit.Telefono" maxlength="20" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" @bind="empleadoEdit.Email" maxlength="100" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Dirección:</label>
+                    <textarea @bind="empleadoEdit.Direccion" rows="2" maxlength="250" 
+                              disabled="@isSaving"></textarea>
+                </div>
+                
+                <div class="form-group required">
+                    <label>Fecha Ingreso:</label>
+                    <input type="date" @bind="empleadoEdit.FechaIngreso" 
+                           disabled="@isSaving" />
+                    @if (empleadoEdit.FechaIngreso != default)
+                    {
+                        var antiguedad = CalcularAntiguedad(empleadoEdit.FechaIngreso);
+                        <small>Antigüedad: @antiguedad</small>
+                    }
+                </div>
+                
+                <div class="form-group">
+                    <label>Departamento:</label>
+                    <select @bind="empleadoEdit.DepartamentoId" disabled="@isSaving">
+                        <option value="">-- Seleccione --</option>
+                        @foreach (var d in departamentos)
+                        {
+                            <option value="@d.Id">@d.Nombre</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Cargo:</label>
+                    <select @bind="empleadoEdit.CargoId" disabled="@isSaving">
+                        <option value="">-- Seleccione --</option>
+                        @foreach (var c in cargos)
+                        {
+                            <option value="@c.Id">@c.Nombre</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Estado:</label>
+                    <select @bind="empleadoEdit.Estado" disabled="@isSaving">
+                        @foreach (var estado in Enum.GetValues<EstadoEmpleado>())
+                        {
+                            <option value="@estado">@estado</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Foto:</label>
+                    <InputFile OnChange="OnFotoSelected" accept="image/*" 
+                               disabled="@isSaving" />
+                    <small>JPG, PNG. Max 2MB</small>
+                    @if (fotoPreviewUrl != null)
+                    {
+                        <div style="margin-top: 8px;">
+                            <img src="@fotoPreviewUrl" style="max-width: 150px; max-height: 150px; border: 2px solid #000;" alt="Vista previa" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sección adicional: Contacto de emergencia -->
+        <div style="margin-top: 20px; padding: 12px; background-color: #F5F5F5; border: 1px solid #808080;">
+            <h4 style="margin: 0 0 12px 0;">CONTACTO DE EMERGENCIA</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label>Nombre Contacto:</label>
+                    <input type="text" @bind="empleadoEdit.ContactoEmergencia" maxlength="100" 
+                           disabled="@isSaving" />
+                </div>
+                <div class="form-group">
+                    <label>Teléfono Emergencia:</label>
+                    <input type="text" @bind="empleadoEdit.TelefonoEmergencia" maxlength="20" 
+                           disabled="@isSaving" />
+                </div>
+            </div>
+        </div>
+        
+        <!-- Observaciones -->
+        <div style="margin-top: 16px;">
+            <div class="form-group">
+                <label>Observaciones:</label>
+                <textarea @bind="empleadoEdit.Observaciones" rows="3" maxlength="500" 
+                          disabled="@isSaving"></textarea>
+            </div>
+        </div>
+    }
+</FormModal>
+
+<!-- Modal de Confirmación para Eliminar/Desactivar -->
+@if (showConfirmModal)
+{
+    <div class="modal-overlay" @onclick:stopPropagation="true">
+        <div class="modal-box" style="min-width: 400px;">
+            <h3>CONFIRMAR ACCIÓN</h3>
+            <div class="modal-content">
+                <p>@confirmMessage</p>
+            </div>
+            <div class="modal-actions">
+                <button @onclick="() => showConfirmModal = false">CANCELAR</button>
+                <button class="btn-danger" @onclick="ConfirmarAccion">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? EmpleadoIdParam { get; set; }
+    
+    private KeyboardHandler? keyboardHandler;
+    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    
+    private List<Empleado> empleados = new();
+    private List<Cargo> cargos = new();
+    private List<Departamento> departamentos = new();
+    
+    private Empleado? selectedEmpleado;
+    private Empleado? empleadoEdit;
+    
+    private bool isLoading;
+    private bool showModal;
+    private bool isSaving;
+    private bool isEditing;
+    private bool isExporting;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    private string searchTerm = "";
+    private string filtroEstado = "";
+    private int totalEmpleados;
+    
+    private IBrowserFile? fotoFile;
+    private string? fotoPreviewUrl;
+    
+    private bool showConfirmModal;
+    private string confirmMessage = "";
+    private Action? confirmAction;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        // Configurar atajos de teclado
+        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        {
+            new() { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = FocusBusqueda },
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = NuevoEmpleado },
+            new() { Key = "F4", KeyDisplay = "F4", Description = "Editar", Action = EditarSeleccionado },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarEmpleados },
+            new() { Key = "F10", KeyDisplay = "F10", Description = "Exportar Excel", Action = ExportarExcel },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModal }
+        };
+        
+        await CargarCatalogos();
+        await CargarEmpleados();
+        
+        // Si viene con parámetro, abrir ese empleado
+        if (EmpleadoIdParam.HasValue && EmpleadoIdParam.Value > 0)
+        {
+            var empleado = await EmpleadoRepository.GetByIdWithRelationsAsync(EmpleadoIdParam.Value);
+            if (empleado != null)
+            {
+                await EditarEmpleado(empleado);
+            }
+        }
+    }
+    
+    private async Task CargarCatalogos()
+    {
+        try
+        {
+            var cargosTask = CargoRepository.GetAllAsync();
+            var departamentosTask = DepartamentoRepository.GetAllAsync();
+            
+            await Task.WhenAll(cargosTask, departamentosTask);
+            
+            cargos = (await cargosTask).ToList();
+            departamentos = (await departamentosTask).ToList();
+            
+            Logger.LogInformation("Catálogos cargados: {CargosCount} cargos, {DeptoCount} departamentos", 
+                cargos.Count, departamentos.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando catálogos");
+            errorMessage = "Error al cargar catálogos: " + ex.Message;
+        }
+    }
+    
+    private async Task CargarEmpleados()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            var todosEmpleados = await EmpleadoRepository.GetAllWithRelationsAsync();
+            totalEmpleados = todosEmpleados.Count();
+            
+            // Aplicar filtros
+            empleados = todosEmpleados
+                .Where(e => string.IsNullOrEmpty(filtroEstado) || e.Estado == (EstadoEmpleado)int.Parse(filtroEstado))
+                .Where(e => string.IsNullOrEmpty(searchTerm) || 
+                    e.Codigo.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    e.Cedula.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    e.NombreCompleto.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    (e.Cargo?.Nombre?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (e.Departamento?.Nombre?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false))
+                .OrderBy(e => e.Codigo)
+                .ToList();
+            
+            Logger.LogInformation("Empleados cargados: {Count} de {Total}", empleados.Count, totalEmpleados);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando empleados");
+            errorMessage = "Error al cargar empleados: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task NuevoEmpleado()
+    {
+        try
+        {
+            var nextCodigo = await EmpleadoRepository.GetNextCodigoAsync();
+            
+            empleadoEdit = new Empleado
+            {
+                Codigo = nextCodigo,
+                FechaIngreso = DateTime.Today,
+                Estado = EstadoEmpleado.Activo
+            };
+            
+            isEditing = false;
+            showModal = true;
+            fotoFile = null;
+            fotoPreviewUrl = null;
+            
+            Logger.LogInformation("Nuevo empleado iniciado con código: {Codigo}", nextCodigo);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al preparar nuevo empleado");
+            errorMessage = "Error al preparar nuevo empleado: " + ex.Message;
+        }
+    }
+    
+    private async Task EditarEmpleado(Empleado empleado)
+    {
+        try
+        {
+            // Cargar empleado con relaciones
+            var empleadoCompleto = await EmpleadoRepository.GetByIdWithRelationsAsync(empleado.Id);
+            if (empleadoCompleto == null)
+            {
+                errorMessage = "No se pudo cargar el empleado";
+                return;
+            }
+            
+            empleadoEdit = new Empleado
+            {
+                Id = empleadoCompleto.Id,
+                Codigo = empleadoCompleto.Codigo,
+                Cedula = empleadoCompleto.Cedula,
+                Nombres = empleadoCompleto.Nombres,
+                Apellidos = empleadoCompleto.Apellidos,
+                FechaNacimiento = empleadoCompleto.FechaNacimiento,
+                Genero = empleadoCompleto.Genero,
+                EstadoCivil = empleadoCompleto.EstadoCivil,
+                Direccion = empleadoCompleto.Direccion,
+                Telefono = empleadoCompleto.Telefono,
+                Email = empleadoCompleto.Email,
+                FechaIngreso = empleadoCompleto.FechaIngreso,
+                FechaRetiro = empleadoCompleto.FechaRetiro,
+                Estado = empleadoCompleto.Estado,
+                CargoId = empleadoCompleto.CargoId,
+                DepartamentoId = empleadoCompleto.DepartamentoId,
+                ContactoEmergencia = empleadoCompleto.ContactoEmergencia,
+                TelefonoEmergencia = empleadoCompleto.TelefonoEmergencia,
+                Observaciones = empleadoCompleto.Observaciones,
+                FotoPath = empleadoCompleto.FotoPath
+            };
+            
+            isEditing = true;
+            showModal = true;
+            fotoFile = null;
+            
+            // Cargar preview de foto existente
+            if (!string.IsNullOrEmpty(empleadoCompleto.FotoPath))
+            {
+                fotoPreviewUrl = GetFotoUrl(empleadoCompleto);
+            }
+            else
+            {
+                fotoPreviewUrl = null;
+            }
+            
+            Logger.LogInformation("Editando empleado: {Codigo} - {Nombre}", empleado.Codigo, empleado.NombreCompleto);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al preparar edición de empleado {Id}", empleado.Id);
+            errorMessage = "Error al cargar empleado: " + ex.Message;
+        }
+    }
+    
+    private async Task EditarSeleccionado()
+    {
+        if (selectedEmpleado != null)
+        {
+            await EditarEmpleado(selectedEmpleado);
+        }
+    }
+    
+    private async Task Guardar()
+    {
+        if (empleadoEdit == null) return;
+        
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+            StateHasChanged();
+            
+            // Validaciones
+            if (string.IsNullOrWhiteSpace(empleadoEdit.Codigo))
+            {
+                errorMessage = "El código es requerido";
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(empleadoEdit.Cedula))
+            {
+                errorMessage = "La cédula es requerida";
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(empleadoEdit.Nombres))
+            {
+                errorMessage = "Los nombres son requeridos";
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(empleadoEdit.Apellidos))
+            {
+                errorMessage = "Los apellidos son requeridos";
+                return;
+            }
+            
+            if (empleadoEdit.FechaIngreso == default)
+            {
+                errorMessage = "La fecha de ingreso es requerida";
+                return;
+            }
+            
+            // Validar código único
+            if (await EmpleadoRepository.ExistsCodigoAsync(empleadoEdit.Codigo, isEditing ? empleadoEdit.Id : null))
+            {
+                errorMessage = $"Ya existe un empleado con el código {empleadoEdit.Codigo}";
+                return;
+            }
+            
+            // Validar cédula única
+            if (await EmpleadoRepository.ExistsCedulaAsync(empleadoEdit.Cedula, isEditing ? empleadoEdit.Id : null))
+            {
+                errorMessage = $"Ya existe un empleado con la cédula {empleadoEdit.Cedula}";
+                return;
+            }
+            
+            // Validar email único (si se proporcionó)
+            if (!string.IsNullOrWhiteSpace(empleadoEdit.Email) && 
+                await EmpleadoRepository.ExistsEmailAsync(empleadoEdit.Email, isEditing ? empleadoEdit.Id : null))
+            {
+                errorMessage = $"Ya existe un empleado con el email {empleadoEdit.Email}";
+                return;
+            }
+            
+            // Procesar foto si se seleccionó una nueva
+            if (fotoFile != null)
+            {
+                try
+                {
+                    var maxFileSize = 2 * 1024 * 1024; // 2MB
+                    if (fotoFile.Size > maxFileSize)
+                    {
+                        errorMessage = "La foto no puede superar los 2MB";
+                        return;
+                    }
+                    
+                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+                    var extension = Path.GetExtension(fotoFile.Name).ToLowerInvariant();
+                    if (!allowedExtensions.Contains(extension))
+                    {
+                        errorMessage = "Solo se permiten archivos JPG, JPEG o PNG";
+                        return;
+                    }
+                    
+                    using var stream = fotoFile.OpenReadStream(maxFileSize);
+                    using var memoryStream = new MemoryStream();
+                    await stream.CopyToAsync(memoryStream);
+                    var result = await StorageService.SaveEmpleadoFotoAsync(empleadoEdit.Id, memoryStream.ToArray(), extension);
+                    
+                    if (result.IsSuccess)
+                    {
+                        empleadoEdit.FotoPath = result.Value;
+                        Logger.LogInformation("Foto guardada: {FilePath}", result.Value);
+                    }
+                    else
+                    {
+                        errorMessage = "Error al guardar la foto: " + (result.Error ?? result.Message);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error procesando foto");
+                    errorMessage = "Error al procesar la foto: " + ex.Message;
+                    return;
+                }
+            }
+            
+            // Guardar empleado
+            if (isEditing)
+            {
+                await EmpleadoRepository.UpdateAsync(empleadoEdit);
+                successMessage = $"Empleado {empleadoEdit.Codigo} actualizado correctamente";
+                Logger.LogInformation("Empleado actualizado: {Id} - {Codigo}", empleadoEdit.Id, empleadoEdit.Codigo);
+            }
+            else
+            {
+                var id = await EmpleadoRepository.AddAsync(empleadoEdit);
+                successMessage = $"Empleado {empleadoEdit.Codigo} creado correctamente (ID: {id})";
+                Logger.LogInformation("Empleado creado: {Id} - {Codigo}", id, empleadoEdit.Codigo);
+            }
+            
+            // Cerrar modal y recargar
+            showModal = false;
+            await CargarEmpleados();
+            
+            // Limpiar mensaje de éxito después de 3 segundos
+            _ = Task.Delay(3000).ContinueWith(_ => 
+            {
+                successMessage = null;
+                InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error guardando empleado");
+            errorMessage = "Error al guardar: " + ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private Task CerrarModal()
+    {
+        if (!isSaving)
+        {
+            showModal = false;
+            empleadoEdit = null;
+            fotoFile = null;
+            fotoPreviewUrl = null;
+            errorMessage = null;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+    
+    private void SelectEmpleado(Empleado empleado)
+    {
+        selectedEmpleado = selectedEmpleado?.Id == empleado.Id ? null : empleado;
+        StateHasChanged();
+    }
+    
+    private async Task Buscar()
+    {
+        await CargarEmpleados();
+    }
+    
+    private async Task LimpiarBusqueda()
+    {
+        searchTerm = "";
+        await CargarEmpleados();
+    }
+    
+    private async Task Filtrar()
+    {
+        await CargarEmpleados();
+    }
+    
+    private async Task FocusBusqueda()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("document.getElementById('searchInput')?.focus()");
+        }
+        catch { }
+    }
+    
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await Buscar();
+        }
+    }
+    
+    private async Task OnFotoSelected(InputFileChangeEventArgs e)
+    {
+        fotoFile = e.File;
+        
+        // Crear preview
+        if (fotoFile != null)
+        {
+            try
+            {
+                var maxFileSize = 2 * 1024 * 1024; // 2MB
+                using var stream = fotoFile.OpenReadStream(maxFileSize);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                var base64 = Convert.ToBase64String(ms.ToArray());
+                fotoPreviewUrl = $"data:{fotoFile.ContentType};base64,{base64}";
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error creando preview de foto");
+                errorMessage = "Error al cargar vista previa de foto";
+            }
+        }
+    }
+    
+    private void VerExpediente(Empleado empleado)
+    {
+        Navigation.NavigateTo($"/empleados/{empleado.Id}/expediente");
+    }
+    
+    private string GetFotoUrl(Empleado empleado)
+    {
+        if (string.IsNullOrEmpty(empleado.FotoPath))
+            return "/images/default-avatar.png";
+        
+        // Si ya es una URL completa, devolverla tal cual
+        if (empleado.FotoPath.StartsWith("http://") || empleado.FotoPath.StartsWith("https://"))
+            return empleado.FotoPath;
+        
+        // Si es una ruta local, construir la URL
+        return $"/files/{empleado.FotoPath}";
+    }
+    
+    private string GetInitials(string nombreCompleto)
+    {
+        if (string.IsNullOrWhiteSpace(nombreCompleto))
+            return "??";
+        
+        var parts = nombreCompleto.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        else if (parts.Length == 1)
+            return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
+        
+        return "??";
+    }
+    
+    private int CalcularEdad(DateTime fechaNacimiento)
+    {
+        var hoy = DateTime.Today;
+        var edad = hoy.Year - fechaNacimiento.Year;
+        if (fechaNacimiento.Date > hoy.AddYears(-edad))
+            edad--;
+        return edad;
+    }
+    
+    private async Task ExportarExcel()
+    {
+        try
+        {
+            isExporting = true;
+            errorMessage = null;
+            StateHasChanged();
+            
+            // Obtener empleados actuales (con filtros aplicados)
+            var empleadosExportar = empleados.ToList();
+            
+            if (!empleadosExportar.Any())
+            {
+                errorMessage = "No hay empleados para exportar";
+                return;
+            }
+            
+            // Construir opciones de exportación basadas en filtros actuales
+            var options = new SGRRHH.Local.Shared.Interfaces.ExportEmpleadosOptions
+            {
+                SoloActivos = !string.IsNullOrEmpty(filtroEstado) && filtroEstado == ((int)EstadoEmpleado.Activo).ToString()
+            };
+            
+            var result = await ExportService.ExportEmpleadosToExcelAsync(options);
+            
+            if (result.IsSuccess && result.Value != null)
+            {
+                var fileName = $"Empleados_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                var base64 = Convert.ToBase64String(result.Value);
+                
+                await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, base64);
+                
+                Logger.LogInformation("Empleados exportados a Excel: {Count} registros por {User}", 
+                    empleadosExportar.Count, AuthService.CurrentUser?.Username);
+                
+                successMessage = $"Se exportaron {empleadosExportar.Count} empleado(s) a Excel correctamente";
+                
+                // Limpiar mensaje después de 3 segundos
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+                    successMessage = null;
+                    await InvokeAsync(StateHasChanged);
+                });
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Error al exportar empleados";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error exportando empleados a Excel");
+            errorMessage = "Error al exportar: " + ex.Message;
+        }
+        finally
+        {
+            isExporting = false;
+            StateHasChanged();
+        }
+    }
+    
+    private string CalcularAntiguedad(DateTime fechaIngreso)
+    {
+        var hoy = DateTime.Today;
+        var años = hoy.Year - fechaIngreso.Year;
+        if (fechaIngreso.Date > hoy.AddYears(-años))
+            años--;
+        
+        var meses = hoy.Month - fechaIngreso.Month;
+        if (meses < 0)
+        {
+            años--;
+            meses += 12;
+        }
+        
+        if (años > 0 && meses > 0)
+            return $"{años} año(s) {meses} mes(es)";
+        else if (años > 0)
+            return $"{años} año(s)";
+        else
+            return $"{meses} mes(es)";
+    }
+    
+    private void ConfirmarAccion()
+    {
+        confirmAction?.Invoke();
+        showConfirmModal = false;
+    }
+}
+
+<style>
+.page-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 24px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #000000;
+}
+
+.error-block {
+    background-color: #FFCCCC;
+    border: 2px solid #CC0000;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.error-block h3 {
+    margin: 0 0 8px 0;
+    color: #CC0000;
+    font-size: 14px;
+}
+
+.error-block p {
+    margin: 0 0 12px 0;
+    font-size: 12px;
+}
+
+.success-block {
+    background-color: #CCFFCC;
+    border: 2px solid #00AA00;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+button {
+    background-color: #E0E0E0;
+    border: 2px solid #000000;
+    border-style: outset;
+    padding: 8px 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    background-color: #D0D0D0;
+}
+
+button:active:not(:disabled) {
+    border-style: inset;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+button.btn-primary {
+    background-color: #0066CC;
+    color: #FFFFFF;
+}
+
+button.btn-danger {
+    background-color: #CC0000;
+    color: #FFFFFF;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="date"],
+select,
+textarea {
+    width: 100%;
+    padding: 6px 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    border: 2px solid #808080;
+    border-style: inset;
+    background-color: #FFFFFF;
+    box-sizing: border-box;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid #0066CC;
+    outline-offset: 2px;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+    background-color: #E0E0E0;
+    color: #808080;
+}
+
+textarea {
+    resize: vertical;
+    font-family: 'Courier New', monospace;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid #000000;
+}
+
+table th,
+table td {
+    border: 1px solid #808080;
+    padding: 8px;
+    text-align: left;
+    font-size: 12px;
+}
+
+table th {
+    background-color: #E0E0E0;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+table tbody tr {
+    cursor: pointer;
+}
+
+table tbody tr:hover {
+    background-color: #F5F5F5;
+}
+
+table tbody tr.selected {
+    background-color: #CCE5FF !important;
+}
+
+.loading {
+    text-align: center;
+    padding: 24px;
+    color: #666666;
+    font-style: italic;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 32px;
+    color: #999999;
+    font-style: italic;
+}
+
+.actions-cell {
+    white-space: nowrap;
+}
+
+.actions-cell button {
+    padding: 4px 8px;
+    font-size: 11px;
+    margin-right: 4px;
+}
+
+.empleado-foto-mini {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    border: 2px solid #000000;
+    object-fit: cover;
+}
+
+.empleado-foto-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    border: 2px solid #000000;
+    background-color: #808080;
+    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    margin: 0 auto;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border: 1px solid #000000;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.badge-activo {
+    background-color: #CCFFCC;
+    color: #006600;
+}
+
+.badge-inactivo {
+    background-color: #FFCCCC;
+    color: #CC0000;
+}
+
+.badge-pendiente {
+    background-color: #FFFFCC;
+    color: #996600;
+}
+
+.form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.form-group.required label::after {
+    content: " *";
+    color: #CC0000;
+    font-weight: bold;
+}
+
+.form-group label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #000000;
+}
+
+.form-group small {
+    font-size: 10px;
+    color: #666666;
+    font-style: italic;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-box {
+    background-color: #C0C0C0;
+    border: 2px solid #000000;
+    border-style: outset;
+    padding: 16px;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content {
+    margin: 16px 0;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+</style>

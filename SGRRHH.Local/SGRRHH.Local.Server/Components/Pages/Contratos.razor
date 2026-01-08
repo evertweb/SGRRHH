@@ -1,0 +1,1030 @@
+@page "/contratos"
+@page "/contratos/{EmpleadoIdParam:int?}"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@inject IAuthService AuthService
+@inject IContratoRepository ContratoRepository
+@inject IEmpleadoRepository EmpleadoRepository
+@inject ICargoRepository CargoRepository
+@inject ILocalStorageService StorageService
+@inject NavigationManager Navigation
+@inject ILogger<Contratos> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Contratos - SGRRHH</PageTitle>
+
+<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
+
+<h1 class="page-title">GESTIÓN DE CONTRATOS</h1>
+
+@if (errorMessage != null)
+{
+    <div class="error-block">
+        <h3>ERROR</h3>
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="success-block">
+        <p>@successMessage</p>
+    </div>
+}
+
+<!-- Header con controles -->
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; gap: 8px;">
+        <button @onclick="NuevoContrato">NUEVO (F3)</button>
+        <button @onclick="CargarContratos">ACTUALIZAR (F5)</button>
+        @if (selectedContrato != null)
+        {
+            <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
+        }
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <input type="text" id="searchInput" placeholder="Buscar empleado... (F2)" 
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" 
+               style="min-width: 250px;" />
+        <button @onclick="Buscar">BUSCAR</button>
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button @onclick="LimpiarBusqueda">LIMPIAR</button>
+        }
+        <select @bind="filtroEstado" @bind:after="Filtrar">
+            <option value="">Todos los estados</option>
+            <option value="@((int)EstadoContrato.Activo)">Activos</option>
+            <option value="@((int)EstadoContrato.Finalizado)">Finalizados</option>
+            <option value="@((int)EstadoContrato.Renovado)">Renovados</option>
+            <option value="@((int)EstadoContrato.Cancelado)">Cancelados</option>
+        </select>
+        <select @bind="filtroTipo" @bind:after="Filtrar">
+            <option value="">Todos los tipos</option>
+            <option value="@((int)TipoContrato.Indefinido)">Indefinido</option>
+            <option value="@((int)TipoContrato.Fijo)">Fijo</option>
+            <option value="@((int)TipoContrato.ObraLabor)">Obra o Labor</option>
+            <option value="@((int)TipoContrato.PrestacionServicios)">Prestación Servicios</option>
+            <option value="@((int)TipoContrato.Aprendizaje)">Aprendizaje</option>
+        </select>
+    </div>
+</div>
+
+<!-- Información de resultados -->
+<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+    Mostrando @contratos.Count() de @totalContratos contrato(s)
+</div>
+
+<!-- Tabla de contratos -->
+<div style="overflow-x: auto;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 100px;">CÓDIGO EMP.</th>
+                <th>EMPLEADO</th>
+                <th>TIPO</th>
+                <th>CARGO</th>
+                <th>FECHA INICIO</th>
+                <th>FECHA FIN</th>
+                <th>SALARIO</th>
+                <th style="width: 100px;">ESTADO</th>
+                <th style="width: 200px;">ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (isLoading)
+            {
+                <tr><td colspan="9" class="loading">Cargando contratos...</td></tr>
+            }
+            else if (!contratos.Any())
+            {
+                <tr><td colspan="9" class="empty-state">No hay contratos para mostrar</td></tr>
+            }
+            else
+            {
+                @foreach (var contrato in contratos)
+                {
+                    var diasParaVencer = contrato.FechaFin.HasValue ? (contrato.FechaFin.Value - DateTime.Today).Days : 0;
+                    var porVencer = contrato.Estado == EstadoContrato.Activo && contrato.FechaFin.HasValue && diasParaVencer > 0 && diasParaVencer <= 30;
+                    
+                    <tr class="@(selectedContrato?.Id == contrato.Id ? "selected" : "") @(porVencer ? "contrato-por-vencer" : "")"
+                        @onclick="() => SelectContrato(contrato)">
+                        <td>@(contrato.Empleado?.Codigo ?? "-")</td>
+                        <td><strong>@(contrato.Empleado?.NombreCompleto ?? "Sin empleado")</strong></td>
+                        <td>@GetTipoContratoDisplay(contrato.TipoContrato)</td>
+                        <td>@(contrato.Cargo?.Nombre ?? "-")</td>
+                        <td>@contrato.FechaInicio.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            @if (contrato.FechaFin.HasValue)
+                            {
+                                <span>@contrato.FechaFin.Value.ToString("dd/MM/yyyy")</span>
+                                @if (porVencer)
+                                {
+                                    <span class="dias-vencer"> (@diasParaVencer días)</span>
+                                }
+                            }
+                            else
+                            {
+                                <span style="color: #666;">Indefinido</span>
+                            }
+                        </td>
+                        <td style="text-align: right;">@contrato.Salario.ToString("C0")</td>
+                        <td>
+                            <span class="badge-@contrato.Estado.ToString().ToLower()">
+                                @contrato.Estado
+                            </span>
+                        </td>
+                        <td class="actions-cell">
+                            <button @onclick="() => EditarContrato(contrato)" @onclick:stopPropagation="true">
+                                EDITAR
+                            </button>
+                            @if (!string.IsNullOrEmpty(contrato.ArchivoAdjuntoPath))
+                            {
+                                <button @onclick="() => DescargarAdjunto(contrato)" @onclick:stopPropagation="true">
+                                    ARCHIVO
+                                </button>
+                            }
+                            <button @onclick="() => VerHistorial(contrato)" @onclick:stopPropagation="true">
+                                HISTORIAL
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Panel de estadísticas de contratos por vencer -->
+@if (contratosPorVencer.Any())
+{
+    <div class="panel alerta" style="margin-top: 24px;">
+        <h3>⚠️ CONTRATOS POR VENCER (Próximos 30 días)</h3>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+            @foreach (var contrato in contratosPorVencer)
+            {
+                var dias = contrato.FechaFin.HasValue ? (contrato.FechaFin.Value - DateTime.Today).Days : 0;
+                <li>
+                    <strong>@(contrato.Empleado?.NombreCompleto ?? "Sin empleado")</strong> - 
+                    Vence @contrato.FechaFin?.ToString("dd/MM/yyyy") 
+                    <span class="dias-vencer">(@dias días)</span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+<!-- Modal de Contrato (Nuevo/Editar) -->
+<FormModal @bind-IsVisible="showModal" 
+           Title="@(isEditing ? "EDITAR CONTRATO" : "NUEVO CONTRATO")"
+           Width="800px"
+           OnSaveClicked="GuardarContrato"
+           OnCancelClicked="CerrarModal"
+           IsSaving="isSaving">
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Columna izquierda -->
+        <div>
+            <div class="form-group required">
+                <label>Empleado:</label>
+                <select @bind="contratoEdit.EmpleadoId" disabled="@isEditing">
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var emp in empleados)
+                    {
+                        <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+                    }
+                </select>
+                @if (isEditing)
+                {
+                    <small style="color: #666; font-size: 10px;">El empleado no puede ser modificado</small>
+                }
+            </div>
+            
+            <div class="form-group required">
+                <label>Tipo de Contrato:</label>
+                <select @bind="contratoEdit.TipoContrato">
+                    @foreach (var tipo in Enum.GetValues<TipoContrato>())
+                    {
+                        <option value="@tipo">@GetTipoContratoDisplay(tipo)</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="form-group required">
+                <label>Cargo:</label>
+                <select @bind="contratoEdit.CargoId">
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var cargo in cargos)
+                    {
+                        <option value="@cargo.Id">@cargo.Nombre</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="form-group required">
+                <label>Estado:</label>
+                <select @bind="contratoEdit.Estado">
+                    @foreach (var estado in Enum.GetValues<EstadoContrato>())
+                    {
+                        <option value="@estado">@estado</option>
+                    }
+                </select>
+            </div>
+        </div>
+        
+        <!-- Columna derecha -->
+        <div>
+            <div class="form-group required">
+                <label>Fecha Inicio:</label>
+                <input type="date" @bind="contratoEdit.FechaInicio" />
+            </div>
+            
+            <div class="form-group">
+                <label>Fecha Fin:</label>
+                <input type="date" @bind="contratoEdit.FechaFin" />
+                <small style="color: #666; font-size: 10px;">
+                    Dejar vacío para contratos indefinidos
+                </small>
+            </div>
+            
+            <div class="form-group required">
+                <label>Salario:</label>
+                <input type="number" step="0.01" @bind="contratoEdit.Salario" />
+            </div>
+            
+            <div class="form-group">
+                <label>Documento Adjunto:</label>
+                <InputFile OnChange="OnArchivoSelected" accept=".pdf,.doc,.docx" />
+                @if (!string.IsNullOrEmpty(contratoEdit.ArchivoAdjuntoPath))
+                {
+                    <small style="color: #0066CC; font-size: 10px;">
+                        📎 Archivo: @System.IO.Path.GetFileName(contratoEdit.ArchivoAdjuntoPath)
+                    </small>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <!-- Observaciones en ancho completo -->
+    <div class="form-group" style="margin-top: 16px;">
+        <label>Observaciones:</label>
+        <textarea @bind="contratoEdit.Observaciones" rows="3"></textarea>
+    </div>
+</FormModal>
+
+<!-- Modal de Historial de Contratos -->
+<FormModal @bind-IsVisible="showHistorialModal" 
+           Title="@($"HISTORIAL DE CONTRATOS - {empleadoSeleccionado?.NombreCompleto}")"
+           Width="900px"
+           ShowSaveButton="false"
+           OnCancelClicked="() => showHistorialModal = false">
+    
+    @if (historialContratos.Any())
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>TIPO</th>
+                    <th>CARGO</th>
+                    <th>FECHA INICIO</th>
+                    <th>FECHA FIN</th>
+                    <th>SALARIO</th>
+                    <th>ESTADO</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var contrato in historialContratos.OrderByDescending(c => c.FechaInicio))
+                {
+                    <tr>
+                        <td>@GetTipoContratoDisplay(contrato.TipoContrato)</td>
+                        <td>@(contrato.Cargo?.Nombre ?? "-")</td>
+                        <td>@contrato.FechaInicio.ToString("dd/MM/yyyy")</td>
+                        <td>@(contrato.FechaFin?.ToString("dd/MM/yyyy") ?? "Indefinido")</td>
+                        <td style="text-align: right;">@contrato.Salario.ToString("C0")</td>
+                        <td>
+                            <span class="badge-@contrato.Estado.ToString().ToLower()">
+                                @contrato.Estado
+                            </span>
+                        </td>
+                        <td class="actions-cell">
+                            <button @onclick="() => EditarContratoFromHistorial(contrato)">
+                                VER/EDITAR
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        
+        @if (!string.IsNullOrEmpty(historialContratos.FirstOrDefault()?.Observaciones))
+        {
+            <div style="margin-top: 16px; padding: 12px; background-color: #F5F5F5; border: 1px solid #CCC;">
+                <strong>Observaciones del último contrato:</strong>
+                <p style="margin: 8px 0 0 0; white-space: pre-wrap;">@historialContratos.OrderByDescending(c => c.FechaInicio).FirstOrDefault()?.Observaciones</p>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="empty-state">No hay historial de contratos para este empleado</p>
+    }
+</FormModal>
+
+<!-- Modal de confirmación -->
+<FormModal @bind-IsVisible="showConfirmModal"
+           Title="CONFIRMAR ACCIÓN"
+           Width="400px"
+           ShowSaveButton="false"
+           ShowCancelButton="false">
+    <p>@confirmMessage</p>
+    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
+        <button @onclick="() => showConfirmModal = false">CANCELAR</button>
+        <button class="btn-danger" @onclick="ConfirmarAccion">CONFIRMAR</button>
+    </div>
+</FormModal>
+
+@code {
+    [Parameter] public int? EmpleadoIdParam { get; set; }
+    
+    private KeyboardHandler? keyboardHandler;
+    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    
+    private List<Contrato> contratos = new();
+    private List<Contrato> todosContratos = new();
+    private List<Contrato> contratosPorVencer = new();
+    private List<Contrato> historialContratos = new();
+    private List<Empleado> empleados = new();
+    private List<Cargo> cargos = new();
+    
+    private Contrato? selectedContrato;
+    private Contrato contratoEdit = new();
+    private Empleado? empleadoSeleccionado;
+    
+    private bool isLoading;
+    private bool showModal;
+    private bool showHistorialModal;
+    private bool showConfirmModal;
+    private bool isSaving;
+    private bool isEditing;
+    
+    private string? errorMessage;
+    private string? successMessage;
+    private string searchTerm = "";
+    private string filtroEstado = "";
+    private string filtroTipo = "";
+    private string confirmMessage = "";
+    
+    private int totalContratos;
+    private Action? confirmAction;
+    
+    private IBrowserFile? archivoSeleccionado;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        ConfigurarAtajos();
+        await CargarDatos();
+        
+        // Si hay un ID de empleado en la URL, filtrar por ese empleado
+        if (EmpleadoIdParam.HasValue)
+        {
+            await FiltrarPorEmpleado(EmpleadoIdParam.Value);
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Mostrar mensaje de éxito si existe
+            if (successMessage != null)
+            {
+                await Task.Delay(3000);
+                successMessage = null;
+                StateHasChanged();
+            }
+        }
+    }
+    
+    private void ConfigurarAtajos()
+    {
+        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        {
+            new() { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = FocusBusqueda },
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = NuevoContrato },
+            new() { Key = "F4", KeyDisplay = "F4", Description = "Editar", Action = EditarSeleccionado },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarContratos },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModal }
+        };
+    }
+    
+    private async Task CargarDatos()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            // Cargar contratos con sus relaciones
+            var contratosTask = ContratoRepository.GetAllActiveAsync();
+            var empleadosTask = EmpleadoRepository.GetAllActiveAsync();
+            var cargosTask = CargoRepository.GetAllActiveAsync();
+            
+            await Task.WhenAll(contratosTask, empleadosTask, cargosTask);
+            
+            todosContratos = (await contratosTask).ToList();
+            empleados = (await empleadosTask).ToList();
+            cargos = (await cargosTask).ToList();
+            
+            // Cargar las relaciones manualmente
+            foreach (var contrato in todosContratos)
+            {
+                contrato.Empleado = empleados.FirstOrDefault(e => e.Id == contrato.EmpleadoId);
+                contrato.Cargo = cargos.FirstOrDefault(c => c.Id == contrato.CargoId);
+            }
+            
+            contratos = todosContratos;
+            totalContratos = contratos.Count;
+            
+            // Obtener contratos por vencer
+            contratosPorVencer = (await ContratoRepository.GetContratosProximosAVencerAsync(30)).ToList();
+            foreach (var contrato in contratosPorVencer)
+            {
+                contrato.Empleado = empleados.FirstOrDefault(e => e.Id == contrato.EmpleadoId);
+            }
+            
+            Logger.LogInformation($"Cargados {contratos.Count} contratos, {contratosPorVencer.Count} por vencer");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar datos de contratos");
+            errorMessage = $"Error al cargar contratos: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CargarContratos()
+    {
+        await CargarDatos();
+        successMessage = "Contratos actualizados correctamente";
+        await Task.Delay(3000);
+        successMessage = null;
+        StateHasChanged();
+    }
+    
+    private Task NuevoContrato()
+    {
+        contratoEdit = new Contrato
+        {
+            FechaInicio = DateTime.Today,
+            TipoContrato = TipoContrato.Indefinido,
+            Estado = EstadoContrato.Activo,
+            Salario = 0
+        };
+        
+        // Si hay un empleado seleccionado en el historial, pre-seleccionarlo
+        if (empleadoSeleccionado != null)
+        {
+            contratoEdit.EmpleadoId = empleadoSeleccionado.Id;
+        }
+        
+        archivoSeleccionado = null;
+        isEditing = false;
+        showModal = true;
+        return Task.CompletedTask;
+    }
+    
+    private void EditarContrato(Contrato contrato)
+    {
+        contratoEdit = new Contrato
+        {
+            Id = contrato.Id,
+            EmpleadoId = contrato.EmpleadoId,
+            TipoContrato = contrato.TipoContrato,
+            FechaInicio = contrato.FechaInicio,
+            FechaFin = contrato.FechaFin,
+            Salario = contrato.Salario,
+            CargoId = contrato.CargoId,
+            Estado = contrato.Estado,
+            ArchivoAdjuntoPath = contrato.ArchivoAdjuntoPath,
+            Observaciones = contrato.Observaciones
+        };
+        
+        archivoSeleccionado = null;
+        isEditing = true;
+        showModal = true;
+    }
+    
+    private Task EditarSeleccionado()
+    {
+        if (selectedContrato != null)
+        {
+            EditarContrato(selectedContrato);
+        }
+        return Task.CompletedTask;
+    }
+    
+    private void SelectContrato(Contrato contrato)
+    {
+        selectedContrato = contrato;
+    }
+    
+    private async Task GuardarContrato()
+    {
+        try
+        {
+            // Validaciones
+            if (contratoEdit.EmpleadoId <= 0)
+            {
+                errorMessage = "Debe seleccionar un empleado";
+                return;
+            }
+            
+            if (contratoEdit.CargoId <= 0)
+            {
+                errorMessage = "Debe seleccionar un cargo";
+                return;
+            }
+            
+            if (contratoEdit.Salario <= 0)
+            {
+                errorMessage = "El salario debe ser mayor a cero";
+                return;
+            }
+            
+            if (contratoEdit.FechaFin.HasValue && contratoEdit.FechaFin.Value < contratoEdit.FechaInicio)
+            {
+                errorMessage = "La fecha de fin debe ser posterior a la fecha de inicio";
+                return;
+            }
+            
+            isSaving = true;
+            StateHasChanged();
+            
+            // Guardar archivo adjunto si existe
+            if (archivoSeleccionado != null)
+            {
+                var buffer = new byte[archivoSeleccionado.Size];
+                await archivoSeleccionado.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).ReadAsync(buffer);
+                
+                var result = await StorageService.SaveContratoArchivoAsync(
+                    contratoEdit.Id > 0 ? contratoEdit.Id : (int)(DateTime.Now.Ticks % int.MaxValue),
+                    buffer,
+                    archivoSeleccionado.Name
+                );
+                
+                if (result.IsSuccess)
+                {
+                    contratoEdit.ArchivoAdjuntoPath = result.Value;
+                }
+            }
+            
+            if (isEditing)
+            {
+                await ContratoRepository.UpdateAsync(contratoEdit);
+                Logger.LogInformation($"Contrato {contratoEdit.Id} actualizado por usuario {AuthService.CurrentUser?.Username}");
+                successMessage = "Contrato actualizado correctamente";
+            }
+            else
+            {
+                await ContratoRepository.AddAsync(contratoEdit);
+                Logger.LogInformation($"Nuevo contrato creado para empleado {contratoEdit.EmpleadoId} por usuario {AuthService.CurrentUser?.Username}");
+                successMessage = "Contrato creado correctamente";
+            }
+            
+            await CargarDatos();
+            CerrarModal();
+            
+            await Task.Delay(3000);
+            successMessage = null;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar contrato");
+            errorMessage = $"Error al guardar: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private Task CerrarModal()
+    {
+        showModal = false;
+        contratoEdit = new();
+        archivoSeleccionado = null;
+        isEditing = false;
+        errorMessage = null;
+        return Task.CompletedTask;
+    }
+    
+    private async Task FocusBusqueda()
+    {
+        await JSRuntime.InvokeVoidAsync("focusElement", "searchInput");
+    }
+    
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await Buscar();
+        }
+    }
+    
+    private Task Buscar()
+    {
+        ApplyFilters();
+        return Task.CompletedTask;
+    }
+    
+    private Task LimpiarBusqueda()
+    {
+        searchTerm = "";
+        ApplyFilters();
+        return Task.CompletedTask;
+    }
+    
+    private Task Filtrar()
+    {
+        ApplyFilters();
+        return Task.CompletedTask;
+    }
+    
+    private void ApplyFilters()
+    {
+        contratos = todosContratos;
+        
+        // Filtro por búsqueda (empleado)
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var search = searchTerm.ToLower();
+            contratos = contratos.Where(c => 
+                (c.Empleado?.NombreCompleto?.ToLower().Contains(search) ?? false) ||
+                (c.Empleado?.Cedula?.Contains(search) ?? false) ||
+                (c.Empleado?.Codigo?.ToLower().Contains(search) ?? false)
+            ).ToList();
+        }
+        
+        // Filtro por estado
+        if (!string.IsNullOrEmpty(filtroEstado) && int.TryParse(filtroEstado, out int estadoId))
+        {
+            contratos = contratos.Where(c => (int)c.Estado == estadoId).ToList();
+        }
+        
+        // Filtro por tipo de contrato
+        if (!string.IsNullOrEmpty(filtroTipo) && int.TryParse(filtroTipo, out int tipoId))
+        {
+            contratos = contratos.Where(c => (int)c.TipoContrato == tipoId).ToList();
+        }
+        
+        totalContratos = contratos.Count;
+        StateHasChanged();
+    }
+    
+    private async Task FiltrarPorEmpleado(int empleadoId)
+    {
+        var empleado = empleados.FirstOrDefault(e => e.Id == empleadoId);
+        if (empleado != null)
+        {
+            searchTerm = empleado.NombreCompleto ?? "";
+            await Buscar();
+        }
+    }
+    
+    private async Task VerHistorial(Contrato contrato)
+    {
+        try
+        {
+            empleadoSeleccionado = contrato.Empleado;
+            historialContratos = (await ContratoRepository.GetByEmpleadoIdAsync(contrato.EmpleadoId)).ToList();
+            
+            // Cargar relaciones
+            foreach (var c in historialContratos)
+            {
+                c.Cargo = cargos.FirstOrDefault(cg => cg.Id == c.CargoId);
+            }
+            
+            showHistorialModal = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error al cargar historial de contratos para empleado {contrato.EmpleadoId}");
+            errorMessage = $"Error al cargar historial: {ex.Message}";
+        }
+    }
+    
+    private void EditarContratoFromHistorial(Contrato contrato)
+    {
+        showHistorialModal = false;
+        EditarContrato(contrato);
+    }
+    
+    private async Task DescargarAdjunto(Contrato contrato)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(contrato.ArchivoAdjuntoPath))
+                return;
+            
+            var result = await StorageService.GetContratoArchivoAsync(contrato.Id);
+            if (result.IsSuccess && result.Value != null)
+            {
+                var fileName = System.IO.Path.GetFileName(contrato.ArchivoAdjuntoPath);
+                await JSRuntime.InvokeVoidAsync("downloadFile", fileName, Convert.ToBase64String(result.Value));
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error al descargar archivo adjunto del contrato {contrato.Id}");
+            errorMessage = $"Error al descargar archivo: {ex.Message}";
+        }
+    }
+    
+    private void OnArchivoSelected(InputFileChangeEventArgs e)
+    {
+        archivoSeleccionado = e.File;
+    }
+    
+    private string GetTipoContratoDisplay(TipoContrato tipo)
+    {
+        return tipo switch
+        {
+            TipoContrato.Indefinido => "Indefinido",
+            TipoContrato.Fijo => "Fijo",
+            TipoContrato.ObraLabor => "Obra o Labor",
+            TipoContrato.PrestacionServicios => "Prestación de Servicios",
+            TipoContrato.Aprendizaje => "Aprendizaje",
+            _ => tipo.ToString()
+        };
+    }
+    
+    private void ConfirmarAccion()
+    {
+        confirmAction?.Invoke();
+        showConfirmModal = false;
+    }
+}
+
+<style>
+.page-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 24px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #000000;
+}
+
+.error-block {
+    background-color: #FFCCCC;
+    border: 2px solid #CC0000;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.error-block h3 {
+    margin: 0 0 8px 0;
+    color: #CC0000;
+    font-size: 14px;
+}
+
+.error-block p {
+    margin: 0 0 12px 0;
+    font-size: 12px;
+}
+
+.success-block {
+    background-color: #CCFFCC;
+    border: 2px solid #00AA00;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+button {
+    background-color: #E0E0E0;
+    border: 2px solid #000000;
+    border-style: outset;
+    padding: 8px 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    background-color: #D0D0D0;
+}
+
+button:active:not(:disabled) {
+    border-style: inset;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+button.btn-primary {
+    background-color: #0066CC;
+    color: #FFFFFF;
+}
+
+button.btn-danger {
+    background-color: #CC0000;
+    color: #FFFFFF;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    padding: 6px 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    border: 2px solid #808080;
+    border-style: inset;
+    background-color: #FFFFFF;
+    box-sizing: border-box;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid #0066CC;
+    outline-offset: 2px;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+    background-color: #E0E0E0;
+    color: #808080;
+}
+
+textarea {
+    resize: vertical;
+    font-family: 'Courier New', monospace;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid #000000;
+}
+
+table th,
+table td {
+    border: 1px solid #808080;
+    padding: 8px;
+    text-align: left;
+    font-size: 12px;
+}
+
+table th {
+    background-color: #E0E0E0;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+table tbody tr {
+    cursor: pointer;
+}
+
+table tbody tr:hover {
+    background-color: #F5F5F5;
+}
+
+table tbody tr.selected {
+    background-color: #CCE5FF !important;
+}
+
+table tbody tr.contrato-por-vencer {
+    background-color: #FFF9CC;
+}
+
+table tbody tr.contrato-por-vencer:hover {
+    background-color: #FFF3AA;
+}
+
+.loading {
+    text-align: center;
+    padding: 24px;
+    color: #666666;
+    font-style: italic;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 32px;
+    color: #999999;
+    font-style: italic;
+}
+
+.actions-cell {
+    white-space: nowrap;
+}
+
+.actions-cell button {
+    margin-right: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+.form-group.required label::after {
+    content: " *";
+    color: #CC0000;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 4px;
+}
+
+.badge-activo {
+    background-color: #00AA00;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.badge-finalizado {
+    background-color: #808080;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.badge-renovado {
+    background-color: #0066CC;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.badge-cancelado {
+    background-color: #CC0000;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.panel {
+    border: 2px solid #000000;
+    padding: 16px;
+    background-color: #F5F5F5;
+}
+
+.panel h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+}
+
+.panel.alerta {
+    background-color: #FFF9CC;
+    border-color: #FFB800;
+}
+
+.dias-vencer {
+    color: #CC6600;
+    font-weight: bold;
+    font-size: 11px;
+}
+</style>

@@ -1,0 +1,141 @@
+﻿@using SGRRHH.Local.Shared.Interfaces
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">SGRRHH Local</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        @if (AuthService.IsAuthenticated && AuthService.CurrentUser != null)
+        {
+            <div class="user-info">
+                <p class="user-name">👤 @AuthService.CurrentUser.NombreCompleto</p>
+                <p class="user-role">@AuthService.CurrentUser.Rol</p>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="dashboard" Match="NavLinkMatch.All">
+                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="empleados">
+                    <span class="bi bi-people-fill" aria-hidden="true"></span> Empleados
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="permisos">
+                    <span class="bi bi-calendar-check-fill" aria-hidden="true"></span> Permisos
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="vacaciones">
+                    <span class="bi bi-calendar-event-fill" aria-hidden="true"></span> Vacaciones
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="control-diario">
+                    <span class="bi bi-clipboard-check-fill" aria-hidden="true"></span> Control Diario
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="control-diario-wizard">
+                    <span class="bi bi-magic" aria-hidden="true"></span> Control Diario Wizard
+                </NavLink>
+            </div>
+            
+            @if (AuthService.IsAdmin)
+            {
+                <hr />
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="usuarios">
+                        <span class="bi bi-person-badge-fill" aria-hidden="true"></span> Usuarios
+                    </NavLink>
+                </div>
+                
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="configuracion">
+                        <span class="bi bi-gear-fill" aria-hidden="true"></span> Configuración
+                    </NavLink>
+                </div>
+            }
+            
+            <hr />
+            <div class="nav-item px-3">
+                <button class="btn-logout" @onclick="HandleLogout">
+                    <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Cerrar Sesión
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="login" Match="NavLinkMatch.All">
+                    <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Iniciar Sesión
+                </NavLink>
+            </div>
+        }
+    </nav>
+</div>
+
+@code {
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}
+
+<style>
+.user-info {
+    padding: 16px;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin-bottom: 8px;
+}
+
+.user-name {
+    margin: 0;
+    font-weight: bold;
+    font-size: 14px;
+    color: #FFFFFF;
+}
+
+.user-role {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    color: #CCCCCC;
+}
+
+.btn-logout {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: #FFFFFF;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-logout:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+hr {
+    border-color: rgba(255, 255, 255, 0.2);
+    margin: 8px 0;
+}
+</style>
+
+

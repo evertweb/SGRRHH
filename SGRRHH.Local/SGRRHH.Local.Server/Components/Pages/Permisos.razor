@@ -1,0 +1,967 @@
+@page "/permisos"
+@page "/permisos/{PermisoIdParam:int?}"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@inject IAuthService AuthService
+@inject IPermisoRepository PermisoRepository
+@inject IEmpleadoRepository EmpleadoRepository
+@inject ITipoPermisoRepository TipoPermisoRepository
+@inject ILocalStorageService StorageService
+@inject NavigationManager Navigation
+@inject ILogger<Permisos> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Permisos - SGRRHH</PageTitle>
+
+<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
+
+<h1 class="page-title">GESTIÓN DE PERMISOS</h1>
+
+@if (errorMessage != null)
+{
+    <div class="error-block">
+        <h3>ERROR</h3>
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="success-block">
+        <p>@successMessage</p>
+    </div>
+}
+
+<!-- Header con controles -->
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; gap: 8px;">
+        <button @onclick="NuevoPermiso">NUEVO (F3)</button>
+        <button @onclick="CargarPermisos">ACTUALIZAR (F5)</button>
+        @if (selectedPermiso != null)
+        {
+            <button @onclick="EditarSeleccionado">VER DETALLE (F4)</button>
+            
+            @if (selectedPermiso.Estado == EstadoPermiso.Pendiente && AuthService.IsAprobador)
+            {
+                <button @onclick="AprobarSeleccionado" style="background-color: #4CAF50; color: white;">APROBAR (F6)</button>
+                <button @onclick="RechazarSeleccionado" style="background-color: #F44336; color: white;">RECHAZAR (F7)</button>
+            }
+            
+            @if (selectedPermiso.Estado == EstadoPermiso.Aprobado)
+            {
+                <button @onclick="GenerarActaPDF">GENERAR ACTA PDF (F12)</button>
+            }
+        }
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <input type="text" id="searchInput" placeholder="Buscar... (F2)" 
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" 
+               style="min-width: 200px;" />
+        <button @onclick="Buscar">BUSCAR</button>
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button @onclick="LimpiarBusqueda">LIMPIAR</button>
+        }
+        <select @bind="filtroEstado" @bind:after="Filtrar">
+            <option value="">Todos los estados</option>
+            <option value="@((int)EstadoPermiso.Pendiente)">Pendientes</option>
+            <option value="@((int)EstadoPermiso.Aprobado)">Aprobados</option>
+            <option value="@((int)EstadoPermiso.Rechazado)">Rechazados</option>
+            <option value="@((int)EstadoPermiso.Cancelado)">Cancelados</option>
+        </select>
+        <select @bind="filtroEmpleadoId" @bind:after="Filtrar">
+            <option value="">Todos los empleados</option>
+            @foreach (var emp in todosEmpleados)
+            {
+                <option value="@emp.Id">@emp.NombreCompleto</option>
+            }
+        </select>
+    </div>
+</div>
+
+<!-- Información de resultados -->
+<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+    Mostrando @permisos.Count() de @totalPermisos permiso(s)
+    @if (AuthService.IsAprobador && permisosPendientes > 0)
+    {
+        <span style="color: #FF9800; font-weight: bold;"> | @permisosPendientes pendientes de aprobación</span>
+    }
+</div>
+
+<!-- Tabla de permisos -->
+<div style="overflow-x: auto;">
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 120px;">N° ACTA</th>
+                <th>EMPLEADO</th>
+                <th>TIPO PERMISO</th>
+                <th style="width: 100px;">FECHA INICIO</th>
+                <th style="width: 100px;">FECHA FIN</th>
+                <th style="width: 60px;">DÍAS</th>
+                <th style="width: 100px;">ESTADO</th>
+                <th style="width: 100px;">SOLICITADO</th>
+                <th style="width: 150px;">ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (isLoading)
+            {
+                <tr><td colspan="9" class="loading">Cargando permisos...</td></tr>
+            }
+            else if (!permisos.Any())
+            {
+                <tr><td colspan="9" class="empty-state">No hay permisos para mostrar</td></tr>
+            }
+            else
+            {
+                @foreach (var permiso in permisos)
+                {
+                    <tr class="@(selectedPermiso?.Id == permiso.Id ? "selected" : "")"
+                        @onclick="() => SelectPermiso(permiso)">
+                        <td><strong>@permiso.NumeroActa</strong></td>
+                        <td>@(permiso.Empleado?.NombreCompleto ?? "N/A")</td>
+                        <td>
+                            <span style="background-color: @(permiso.TipoPermiso?.Color ?? "#808080"); 
+                                         color: white; padding: 2px 6px; font-size: 11px; white-space: nowrap;">
+                                @(permiso.TipoPermiso?.Nombre ?? "N/A")
+                            </span>
+                        </td>
+                        <td>@permiso.FechaInicio.ToString("dd/MM/yyyy")</td>
+                        <td>@permiso.FechaFin.ToString("dd/MM/yyyy")</td>
+                        <td style="text-align: center;">@permiso.TotalDias</td>
+                        <td>
+                            <span class="badge-@permiso.Estado.ToString().ToLower()">
+                                @GetEstadoTexto(permiso.Estado)
+                            </span>
+                        </td>
+                        <td style="font-size: 11px;">@permiso.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                        <td class="actions-cell">
+                            <button @onclick="() => VerDetalle(permiso)" @onclick:stopPropagation="true">
+                                VER
+                            </button>
+                            @if (permiso.Estado == EstadoPermiso.Aprobado)
+                            {
+                                <button @onclick="() => GenerarActa(permiso.Id)" @onclick:stopPropagation="true" 
+                                        style="font-size: 11px; padding: 2px 6px;">
+                                    PDF
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal de Permiso (Nuevo/Editar) -->
+<FormModal @bind-IsVisible="showModal" 
+           Title="@(isEditing ? $"DETALLE DE PERMISO - {permisoEdit.NumeroActa}" : "NUEVA SOLICITUD DE PERMISO")"
+           Width="800px"
+           OnSaveClicked="Guardar"
+           OnCancelClicked="CerrarModal"
+           IsSaving="isSaving"
+           ShowSaveButton="@(!isEditing || selectedPermiso?.Estado == EstadoPermiso.Pendiente)"
+           CloseOnBackdropClick="false">
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Columna izquierda -->
+        <div>
+            <div class="form-group required">
+                <label>Empleado:</label>
+                @if (isEditing)
+                {
+                    <input type="text" value="@(permisoEdit.Empleado?.NombreCompleto ?? "")" disabled />
+                }
+                else
+                {
+                    <select @bind="permisoEdit.EmpleadoId" required>
+                        <option value="0">-- Seleccione empleado --</option>
+                        @foreach (var emp in empleadosActivos)
+                        {
+                            <option value="@emp.Id">@emp.NombreCompleto - @emp.Cedula</option>
+                        }
+                    </select>
+                }
+            </div>
+            
+            <div class="form-group required">
+                <label>Tipo de Permiso:</label>
+                @if (isEditing)
+                {
+                    <input type="text" value="@(permisoEdit.TipoPermiso?.Nombre ?? "")" disabled />
+                }
+                else
+                {
+                    <select @bind="permisoEdit.TipoPermisoId" required>
+                        <option value="0">-- Seleccione tipo --</option>
+                        @foreach (var tipo in tiposPermiso)
+                        {
+                            <option value="@tipo.Id">@tipo.Nombre (@tipo.DiasPorDefecto día(s))</option>
+                        }
+                    </select>
+                }
+            </div>
+            
+            <div class="form-group required">
+                <label>Fecha Inicio:</label>
+                <input type="date" @bind="permisoEdit.FechaInicio" 
+                       @bind:after="CalcularDias"
+                       disabled="@isEditing" required />
+            </div>
+            
+            <div class="form-group required">
+                <label>Fecha Fin:</label>
+                <input type="date" @bind="permisoEdit.FechaFin" 
+                       @bind:after="CalcularDias"
+                       disabled="@isEditing" required />
+            </div>
+            
+            <div class="form-group">
+                <label>Total de Días:</label>
+                <input type="number" @bind="permisoEdit.TotalDias" disabled 
+                       style="background-color: #F5F5F5; font-weight: bold;" />
+            </div>
+        </div>
+        
+        <!-- Columna derecha -->
+        <div>
+            <div class="form-group required">
+                <label>Motivo:</label>
+                <textarea @bind="permisoEdit.Motivo" rows="4" 
+                          disabled="@isEditing" required
+                          placeholder="Describa el motivo del permiso..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Observaciones:</label>
+                <textarea @bind="permisoEdit.Observaciones" rows="3"
+                          disabled="@isEditing"
+                          placeholder="Información adicional (opcional)"></textarea>
+            </div>
+            
+            @if (!isEditing)
+            {
+                <div class="form-group">
+                    <label>Documento Soporte (opcional):</label>
+                    <InputFile OnChange="OnDocumentoSelected" accept=".pdf,.jpg,.jpeg,.png" />
+                    <small style="color: #666;">PDF, JPG o PNG - Máx. 5MB</small>
+                </div>
+            }
+            
+            @if (isEditing)
+            {
+                <div class="form-group">
+                    <label>Estado:</label>
+                    <div style="padding: 8px; background-color: #F5F5F5; border: 1px solid #808080;">
+                        <span class="badge-@permisoEdit.Estado.ToString().ToLower()" style="font-size: 14px;">
+                            @GetEstadoTexto(permisoEdit.Estado)
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Fecha de Solicitud:</label>
+                    <input type="text" value="@permisoEdit.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")" disabled />
+                </div>
+                
+                <div class="form-group">
+                    <label>Solicitado por:</label>
+                    <input type="text" value="@(permisoEdit.SolicitadoPor?.NombreCompleto ?? "")" disabled />
+                </div>
+                
+                @if (permisoEdit.AprobadoPor != null)
+                {
+                    <div class="form-group">
+                        <label>@(permisoEdit.Estado == EstadoPermiso.Aprobado ? "Aprobado" : "Rechazado") por:</label>
+                        <input type="text" value="@permisoEdit.AprobadoPor.NombreCompleto" disabled />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Fecha de @(permisoEdit.Estado == EstadoPermiso.Aprobado ? "Aprobación" : "Rechazo"):</label>
+                        <input type="text" value="@permisoEdit.FechaAprobacion?.ToString("dd/MM/yyyy HH:mm")" disabled />
+                    </div>
+                }
+                
+                @if (!string.IsNullOrEmpty(permisoEdit.MotivoRechazo))
+                {
+                    <div class="form-group">
+                        <label>Motivo del Rechazo:</label>
+                        <textarea value="@permisoEdit.MotivoRechazo" rows="3" disabled></textarea>
+                    </div>
+                }
+                
+                @if (!string.IsNullOrEmpty(permisoEdit.DocumentoSoportePath))
+                {
+                    <div class="form-group">
+                        <label>Documento Soporte:</label>
+                        <button @onclick="DescargarDocumentoSoporte" type="button">
+                            DESCARGAR SOPORTE
+                        </button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+    
+    @if (isEditing && selectedPermiso?.Estado == EstadoPermiso.Pendiente && AuthService.IsAprobador)
+    {
+        <div style="margin-top: 16px; padding: 16px; background-color: #FFF9C4; border: 1px solid #FBC02D;">
+            <strong>ACCIONES DE APROBACIÓN:</strong>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button @onclick="AprobarPermiso" style="background-color: #4CAF50; color: white; flex: 1;">
+                    ✓ APROBAR PERMISO
+                </button>
+                <button @onclick="() => showRechazarDialog = true" style="background-color: #F44336; color: white; flex: 1;">
+                    ✗ RECHAZAR PERMISO
+                </button>
+            </div>
+        </div>
+    }
+</FormModal>
+
+<!-- Dialog de Rechazo -->
+@if (showRechazarDialog)
+{
+    <div class="modal-overlay" @onclick="() => showRechazarDialog = false">
+        <div class="modal-box" @onclick:stopPropagation="true" style="max-width: 500px;">
+            <h3>RECHAZAR PERMISO</h3>
+            
+            <div class="form-group required">
+                <label>Motivo del rechazo:</label>
+                <textarea @bind="motivoRechazo" rows="4" 
+                          placeholder="Explique por qué se rechaza este permiso..."
+                          required></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
+                <button @onclick="() => showRechazarDialog = false">CANCELAR</button>
+                <button @onclick="ConfirmarRechazo" 
+                        disabled="@(string.IsNullOrWhiteSpace(motivoRechazo))"
+                        style="background-color: #F44336; color: white;">
+                    CONFIRMAR RECHAZO
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? PermisoIdParam { get; set; }
+    
+    // Referencias
+    private KeyboardHandler? keyboardHandler;
+    
+    // Atajos de teclado
+    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    
+    // Estado de UI
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isSaving = false;
+    private bool isEditing = false;
+    private bool showRechazarDialog = false;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    // Datos
+    private List<Permiso> permisos = new();
+    private List<Permiso> todosLosPermisos = new();
+    private List<Empleado> todosEmpleados = new();
+    private List<Empleado> empleadosActivos = new();
+    private List<TipoPermiso> tiposPermiso = new();
+    
+    // Selección y edición
+    private Permiso? selectedPermiso;
+    private Permiso permisoEdit = new();
+    private IBrowserFile? documentoSoporte;
+    
+    // Filtros
+    private string searchTerm = "";
+    private string filtroEstado = "";
+    private string filtroEmpleadoId = "";
+    
+    // Estadísticas
+    private int totalPermisos;
+    private int permisosPendientes;
+    
+    // Rechazo
+    private string motivoRechazo = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        ConfigurarAtajos();
+        await CargarDatosIniciales();
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        if (PermisoIdParam.HasValue && PermisoIdParam.Value > 0)
+        {
+            await CargarPermisoParam();
+        }
+    }
+    
+    private void ConfigurarAtajos()
+    {
+        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        {
+            new() { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = FocusBusqueda },
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = NuevoPermiso },
+            new() { Key = "F4", KeyDisplay = "F4", Description = "Ver Detalle", Action = EditarSeleccionado },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarPermisos },
+            new() { Key = "F6", KeyDisplay = "F6", Description = "Aprobar", Action = AprobarSeleccionado, ShowInBar = AuthService.IsAprobador },
+            new() { Key = "F7", KeyDisplay = "F7", Description = "Rechazar", Action = RechazarSeleccionado, ShowInBar = AuthService.IsAprobador },
+            new() { Key = "F12", KeyDisplay = "F12", Description = "Generar PDF", Action = GenerarActaPDF },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModal }
+        };
+    }
+    
+    private async Task CargarDatosIniciales()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            // Cargar empleados
+            var empleados = await EmpleadoRepository.GetAllAsync();
+            todosEmpleados = empleados.OrderBy(e => e.NombreCompleto).ToList();
+            empleadosActivos = todosEmpleados
+                .Where(e => e.Estado == EstadoEmpleado.Activo)
+                .ToList();
+            
+            // Cargar tipos de permiso
+            var tipos = await TipoPermisoRepository.GetAllAsync();
+            tiposPermiso = tipos.Where(t => t.Activo).OrderBy(t => t.Nombre).ToList();
+            
+            // Cargar permisos
+            await CargarPermisos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando datos iniciales");
+            errorMessage = $"Error cargando datos: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CargarPermisos()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            var permisosData = await PermisoRepository.GetAllAsync();
+            todosLosPermisos = permisosData.OrderByDescending(p => p.FechaSolicitud).ToList();
+            AplicarFiltros();
+            
+            // Calcular estadísticas
+            permisosPendientes = todosLosPermisos.Count(p => p.Estado == EstadoPermiso.Pendiente);
+            
+            if (successMessage == null)
+            {
+                successMessage = $"Permisos cargados: {totalPermisos} encontrado(s)";
+                _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando permisos");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CargarPermisoParam()
+    {
+        try
+        {
+            var permiso = await PermisoRepository.GetByIdAsync(PermisoIdParam!.Value);
+            if (permiso != null)
+            {
+                selectedPermiso = permiso;
+                await VerDetalle(selectedPermiso);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando permiso {Id}", PermisoIdParam);
+        }
+    }
+    
+    private void AplicarFiltros()
+    {
+        permisos = todosLosPermisos;
+        
+        // Filtro por búsqueda
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var termino = searchTerm.ToLower();
+            permisos = permisos.Where(p =>
+                p.NumeroActa.ToLower().Contains(termino) ||
+                (p.Empleado?.NombreCompleto ?? "").ToLower().Contains(termino) ||
+                (p.TipoPermiso?.Nombre ?? "").ToLower().Contains(termino) ||
+                p.Motivo.ToLower().Contains(termino)
+            ).ToList();
+        }
+        
+        // Filtro por estado
+        if (!string.IsNullOrEmpty(filtroEstado) && int.TryParse(filtroEstado, out int estadoInt))
+        {
+            permisos = permisos.Where(p => (int)p.Estado == estadoInt).ToList();
+        }
+        
+        // Filtro por empleado
+        if (!string.IsNullOrEmpty(filtroEmpleadoId) && int.TryParse(filtroEmpleadoId, out int empId))
+        {
+            permisos = permisos.Where(p => p.EmpleadoId == empId).ToList();
+        }
+        
+        totalPermisos = permisos.Count;
+    }
+    
+    private async Task Buscar()
+    {
+        AplicarFiltros();
+        await Task.CompletedTask;
+    }
+    
+    private async Task Filtrar()
+    {
+        AplicarFiltros();
+        await Task.CompletedTask;
+    }
+    
+    private async Task LimpiarBusqueda()
+    {
+        searchTerm = "";
+        AplicarFiltros();
+        await Task.CompletedTask;
+    }
+    
+    private async Task FocusBusqueda()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('searchInput')?.focus()");
+    }
+    
+    private Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            Buscar();
+        }
+        return Task.CompletedTask;
+    }
+    
+    private void SelectPermiso(Permiso permiso)
+    {
+        selectedPermiso = permiso;
+        StateHasChanged();
+    }
+    
+    // ===== NUEVO PERMISO =====
+    
+    private async Task NuevoPermiso()
+    {
+        permisoEdit = new Permiso
+        {
+            FechaSolicitud = DateTime.Now,
+            FechaInicio = DateTime.Today.AddDays(1),
+            FechaFin = DateTime.Today.AddDays(1),
+            TotalDias = 1,
+            Estado = EstadoPermiso.Pendiente
+        };
+        
+        isEditing = false;
+        documentoSoporte = null;
+        showModal = true;
+        
+        await Task.CompletedTask;
+    }
+    
+    // ===== VER DETALLE =====
+    
+    private async Task VerDetalle(Permiso permiso)
+    {
+        try
+        {
+            // Cargar permiso completo con relaciones
+            var permisoCompleto = await PermisoRepository.GetByIdAsync(permiso.Id);
+            if (permisoCompleto != null)
+            {
+                permisoEdit = permisoCompleto;
+                selectedPermiso = permisoCompleto;
+                isEditing = true;
+                showModal = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando detalle del permiso");
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+    
+    private async Task EditarSeleccionado()
+    {
+        if (selectedPermiso != null)
+        {
+            await VerDetalle(selectedPermiso);
+        }
+    }
+    
+    // ===== GUARDAR =====
+    
+    private async Task Guardar()
+    {
+        if (isSaving) return;
+        
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+            StateHasChanged();
+            
+            // Validaciones
+            if (permisoEdit.EmpleadoId <= 0)
+            {
+                errorMessage = "Debe seleccionar un empleado";
+                return;
+            }
+            
+            if (permisoEdit.TipoPermisoId <= 0)
+            {
+                errorMessage = "Debe seleccionar un tipo de permiso";
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(permisoEdit.Motivo))
+            {
+                errorMessage = "Debe ingresar el motivo del permiso";
+                return;
+            }
+            
+            if (permisoEdit.FechaInicio < DateTime.Today)
+            {
+                errorMessage = "La fecha de inicio no puede ser anterior a hoy";
+                return;
+            }
+            
+            if (permisoEdit.FechaFin < permisoEdit.FechaInicio)
+            {
+                errorMessage = "La fecha fin no puede ser anterior a la fecha inicio";
+                return;
+            }
+            
+            if (permisoEdit.TotalDias <= 0)
+            {
+                errorMessage = "El total de días debe ser mayor a cero";
+                return;
+            }
+            
+            // Verificar solapamiento
+            var solapa = await PermisoRepository.ExisteSolapamientoAsync(
+                permisoEdit.EmpleadoId, 
+                permisoEdit.FechaInicio, 
+                permisoEdit.FechaFin, 
+                permisoEdit.Id > 0 ? permisoEdit.Id : null
+            );
+            
+            if (solapa)
+            {
+                errorMessage = "Ya existe un permiso aprobado o pendiente para este empleado en las fechas seleccionadas";
+                return;
+            }
+            
+            // Generar número de acta
+            if (string.IsNullOrEmpty(permisoEdit.NumeroActa))
+            {
+                permisoEdit.NumeroActa = await PermisoRepository.GetProximoNumeroActaAsync();
+            }
+            
+            // Establecer usuario que solicita
+            permisoEdit.SolicitadoPorId = AuthService.CurrentUser!.Id;
+            
+            // Subir documento soporte si existe
+            if (documentoSoporte != null)
+            {
+                await SubirDocumentoSoporte();
+            }
+            
+            // Guardar
+            var permisoCreado = await PermisoRepository.AddAsync(permisoEdit);
+            
+            if (permisoCreado != null)
+            {
+                successMessage = $"Permiso {permisoEdit.NumeroActa} creado exitosamente";
+                showModal = false;
+                await CargarPermisos();
+                
+                // Limpiar mensaje después de 3 segundos
+                _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
+            }
+            else
+            {
+                errorMessage = "Error al crear el permiso";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error guardando permiso");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task SubirDocumentoSoporte()
+    {
+        if (documentoSoporte == null) return;
+        
+        try
+        {
+            using var stream = documentoSoporte.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB max
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var fileBytes = memoryStream.ToArray();
+            
+            var result = await StorageService.SavePermisoDocumentoAsync(permisoEdit.Id, fileBytes, documentoSoporte.Name);
+            
+            if (result.IsSuccess && result.Value != null)
+            {
+                permisoEdit.DocumentoSoportePath = result.Value;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error subiendo documento soporte");
+            throw;
+        }
+    }
+    
+    private void OnDocumentoSelected(InputFileChangeEventArgs e)
+    {
+        documentoSoporte = e.File;
+    }
+    
+    private async Task DescargarDocumentoSoporte()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(permisoEdit.DocumentoSoportePath)) return;
+            
+            var result = await StorageService.GetPermisoDocumentoAsync(permisoEdit.Id);
+            
+            if (result.IsSuccess && result.Value != null && result.Value.Length > 0)
+            {
+                var base64 = Convert.ToBase64String(result.Value);
+                await JSRuntime.InvokeVoidAsync("downloadFile", 
+                    $"Permiso-{permisoEdit.NumeroActa}-Soporte.pdf", 
+                    "application/pdf", 
+                    base64);
+            }
+            else
+            {
+                errorMessage = "No se pudo descargar el documento";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error descargando documento");
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+    
+    // ===== APROBAR =====
+    
+    private async Task AprobarSeleccionado()
+    {
+        if (selectedPermiso?.Estado == EstadoPermiso.Pendiente && AuthService.IsAprobador)
+        {
+            await AprobarPermiso();
+        }
+    }
+    
+    private async Task AprobarPermiso()
+    {
+        if (!AuthService.IsAprobador)
+        {
+            errorMessage = "No tiene permisos para aprobar permisos";
+            return;
+        }
+        
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+            
+            permisoEdit.Estado = EstadoPermiso.Aprobado;
+            permisoEdit.AprobadoPorId = AuthService.CurrentUser!.Id;
+            permisoEdit.FechaAprobacion = DateTime.Now;
+            
+            await PermisoRepository.UpdateAsync(permisoEdit);
+            
+            successMessage = $"Permiso {permisoEdit.NumeroActa} aprobado exitosamente";
+            showModal = false;
+            await CargarPermisos();
+            
+            _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error aprobando permiso");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    // ===== RECHAZAR =====
+    
+    private async Task RechazarSeleccionado()
+    {
+        if (selectedPermiso?.Estado == EstadoPermiso.Pendiente && AuthService.IsAprobador)
+        {
+            motivoRechazo = "";
+            showRechazarDialog = true;
+        }
+    }
+    
+    private async Task ConfirmarRechazo()
+    {
+        if (string.IsNullOrWhiteSpace(motivoRechazo))
+        {
+            errorMessage = "Debe ingresar el motivo del rechazo";
+            return;
+        }
+        
+        try
+        {
+            isSaving = true;
+            showRechazarDialog = false;
+            StateHasChanged();
+            
+            permisoEdit.Estado = EstadoPermiso.Rechazado;
+            permisoEdit.AprobadoPorId = AuthService.CurrentUser!.Id;
+            permisoEdit.FechaAprobacion = DateTime.Now;
+            permisoEdit.MotivoRechazo = motivoRechazo;
+            
+            await PermisoRepository.UpdateAsync(permisoEdit);
+            
+            successMessage = $"Permiso {permisoEdit.NumeroActa} rechazado";
+            showModal = false;
+            await CargarPermisos();
+            
+            _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error rechazando permiso");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    // ===== PDF =====
+    
+    private async Task GenerarActaPDF()
+    {
+        if (selectedPermiso?.Estado == EstadoPermiso.Aprobado)
+        {
+            await GenerarActa(selectedPermiso.Id);
+        }
+    }
+    
+    private async Task GenerarActa(int permisoId)
+    {
+        try
+        {
+            // TODO: Implementar con ReportService cuando esté disponible
+            successMessage = "Funcionalidad de PDF en desarrollo (Fase 7)";
+            _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
+            
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error generando acta PDF");
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+    
+    // ===== UTILIDADES =====
+    
+    private void CalcularDias()
+    {
+        if (permisoEdit.FechaFin >= permisoEdit.FechaInicio)
+        {
+            // Calcular días laborables (excluyendo fines de semana)
+            var dias = 0;
+            var fecha = permisoEdit.FechaInicio;
+            
+            while (fecha <= permisoEdit.FechaFin)
+            {
+                if (fecha.DayOfWeek != DayOfWeek.Saturday && fecha.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    dias++;
+                }
+                fecha = fecha.AddDays(1);
+            }
+            
+            permisoEdit.TotalDias = dias;
+        }
+    }
+    
+    private string GetEstadoTexto(EstadoPermiso estado)
+    {
+        return estado switch
+        {
+            EstadoPermiso.Pendiente => "PENDIENTE",
+            EstadoPermiso.Aprobado => "APROBADO",
+            EstadoPermiso.Rechazado => "RECHAZADO",
+            EstadoPermiso.Cancelado => "CANCELADO",
+            _ => estado.ToString().ToUpper()
+        };
+    }
+    
+    private async Task CerrarModal()
+    {
+        showModal = false;
+        selectedPermiso = null;
+        permisoEdit = new();
+        documentoSoporte = null;
+        errorMessage = null;
+        
+        await Task.CompletedTask;
+    }
+}

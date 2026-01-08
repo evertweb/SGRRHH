@@ -1,0 +1,38 @@
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@inject IAuthService AuthService
+
+@if (IsAuthorized)
+{
+    @Authorized
+}
+else
+{
+    @NotAuthorized
+}
+
+@code {
+    [Parameter] public RenderFragment? Authorized { get; set; }
+    [Parameter] public RenderFragment? NotAuthorized { get; set; }
+    [Parameter] public RolUsuario? RequiredRole { get; set; }
+    
+    private bool IsAuthorized
+    {
+        get
+        {
+            if (!AuthService.IsAuthenticated)
+                return false;
+            
+            if (RequiredRole == null)
+                return true;
+            
+            return RequiredRole switch
+            {
+                RolUsuario.Administrador => AuthService.IsAdmin,
+                RolUsuario.Aprobador => AuthService.IsAprobador,
+                RolUsuario.Operador => AuthService.IsOperador,
+                _ => false
+            };
+        }
+    }
+}

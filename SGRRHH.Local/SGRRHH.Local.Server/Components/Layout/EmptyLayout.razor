@@ -1,0 +1,106 @@
+@inherits LayoutComponentBase
+
+<div class="empty-layout">
+    @Body
+</div>
+
+<style>
+.empty-layout {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #E0E0E0;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 16px;
+}
+
+.login-box {
+    background-color: #FFFFFF;
+    border: 2px solid #000000;
+    padding: 32px;
+}
+
+.login-box h2 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.login-box h3 {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    font-weight: normal;
+    text-align: center;
+    color: #666666;
+}
+
+.error-block {
+    background-color: #FFE5E5;
+    border: 1px solid #FF0000;
+    padding: 12px;
+    margin-bottom: 16px;
+    color: #CC0000;
+}
+
+.error-block p {
+    margin: 0;
+    font-size: 14px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #CCCCCC;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #000000;
+}
+
+.login-box button {
+    width: 100%;
+    padding: 12px;
+    background-color: #000000;
+    color: #FFFFFF;
+    border: none;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.login-box button:hover:not(:disabled) {
+    background-color: #333333;
+}
+
+.login-box button:disabled {
+    background-color: #CCCCCC;
+    cursor: not-allowed;
+}
+
+.login-footer {
+    margin-top: 24px;
+    text-align: center;
+    color: #808080;
+    font-size: 12px;
+}
+</style>

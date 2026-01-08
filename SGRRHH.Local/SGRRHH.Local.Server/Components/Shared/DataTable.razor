@@ -1,0 +1,137 @@
+@typeparam TItem
+
+<table>
+    <thead>
+        <tr>
+            @HeaderTemplate
+        </tr>
+    </thead>
+    <tbody>
+        @if (Items == null || !Items.Any())
+        {
+            <tr>
+                <td colspan="100" class="empty-state">
+                    @(EmptyMessage ?? "No hay registros para mostrar")
+                </td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in Items)
+            {
+                <tr class="@(IsSelected(item) ? "selected" : "")"
+                    @onclick="() => SelectItem(item)"
+                    @ondblclick="() => OnDoubleClick.InvokeAsync(item)">
+                    @RowTemplate?.Invoke(item)
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@if (ShowPagination && TotalPages > 1)
+{
+    <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <span>Mostrando @(Items?.Count() ?? 0) de @TotalItems registros</span>
+        <div>
+            <button @onclick="PreviousPage" disabled="@(CurrentPage <= 1)">← ANTERIOR</button>
+            <span style="margin: 0 8px;">Página @CurrentPage de @TotalPages</span>
+            <button @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">SIGUIENTE →</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter] public RenderFragment? HeaderTemplate { get; set; }
+    [Parameter] public RenderFragment<TItem>? RowTemplate { get; set; }
+    [Parameter] public string? EmptyMessage { get; set; }
+    
+    [Parameter] public TItem? SelectedItem { get; set; }
+    [Parameter] public EventCallback<TItem?> SelectedItemChanged { get; set; }
+    [Parameter] public EventCallback<TItem> OnDoubleClick { get; set; }
+    
+    [Parameter] public bool ShowPagination { get; set; }
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public EventCallback<int> CurrentPageChanged { get; set; }
+    [Parameter] public int PageSize { get; set; } = 20;
+    [Parameter] public int TotalItems { get; set; }
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+
+    private int TotalPages => TotalItems > 0 ? (int)Math.Ceiling((double)TotalItems / PageSize) : 1;
+
+    private bool IsSelected(TItem item)
+    {
+        if (SelectedItem == null || item == null) return false;
+        return EqualityComparer<TItem>.Default.Equals(item, SelectedItem);
+    }
+
+    private async Task SelectItem(TItem item)
+    {
+        SelectedItem = item;
+        await SelectedItemChanged.InvokeAsync(item);
+    }
+
+    private async Task PreviousPage()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await CurrentPageChanged.InvokeAsync(CurrentPage);
+            await OnPageChanged.InvokeAsync(CurrentPage);
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            await CurrentPageChanged.InvokeAsync(CurrentPage);
+            await OnPageChanged.InvokeAsync(CurrentPage);
+        }
+    }
+
+    /// <summary>
+    /// Selecciona el siguiente item en la lista
+    /// </summary>
+    public async Task SelectNextAsync()
+    {
+        if (Items == null || !Items.Any()) return;
+        
+        var itemList = Items.ToList();
+        var currentIndex = SelectedItem != null ? itemList.IndexOf(SelectedItem) : -1;
+        
+        if (currentIndex < itemList.Count - 1)
+        {
+            await SelectItem(itemList[currentIndex + 1]);
+        }
+    }
+
+    /// <summary>
+    /// Selecciona el item anterior en la lista
+    /// </summary>
+    public async Task SelectPreviousAsync()
+    {
+        if (Items == null || !Items.Any()) return;
+        
+        var itemList = Items.ToList();
+        var currentIndex = SelectedItem != null ? itemList.IndexOf(SelectedItem) : -1;
+        
+        if (currentIndex > 0)
+        {
+            await SelectItem(itemList[currentIndex - 1]);
+        }
+    }
+
+    /// <summary>
+    /// Selecciona el primer item
+    /// </summary>
+    public async Task SelectFirstAsync()
+    {
+        if (Items != null && Items.Any())
+        {
+            await SelectItem(Items.First());
+        }
+    }
+}

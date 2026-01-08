@@ -1,0 +1,132 @@
+﻿@inherits LayoutComponentBase
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@if (!AuthService.IsAuthenticated)
+{
+    <RedirectToLogin />
+}
+else
+{
+    <!-- MARCA DE AGUA -->
+    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                width: 400px; height: 400px; 
+                background-image: url('/images/logo-watermark.svg'); 
+                background-size: contain; background-repeat: no-repeat; 
+                background-position: center; opacity: 0.08; 
+                z-index: 9999; pointer-events: none;"></div>
+
+    <div class="main-container">
+        <!-- Header del Sistema -->
+        <header class="system-header">
+            <span class="title">SGRRHH LOCAL v1.0</span>
+            <span class="info">
+                Usuario: @AuthService.CurrentUser?.NombreCompleto 
+                (@GetRolDisplay()) | 
+                @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+            </span>
+        </header>
+
+        <!-- Menú de Navegación Textual -->
+        <nav class="nav-menu">
+            <NavLink href="/dashboard" Match="NavLinkMatch.All">INICIO</NavLink>
+            <NavLink href="/empleados">EMPLEADOS</NavLink>
+            <NavLink href="/documentos">DOCUMENTOS</NavLink>
+            <NavLink href="/permisos">PERMISOS</NavLink>
+            <NavLink href="/vacaciones">VACACIONES</NavLink>
+            <NavLink href="/contratos">CONTRATOS</NavLink>
+            <NavLink href="/control-diario">CONTROL DIARIO</NavLink>
+            
+            @if (AuthService.IsAdmin)
+            {
+                <span style="margin-left: 16px; border-left: 1px solid #808080; padding-left: 16px;">
+                    <NavLink href="/catalogos">CATÁLOGOS</NavLink>
+                    <NavLink href="/usuarios">USUARIOS</NavLink>
+                    <NavLink href="/reportes">REPORTES</NavLink>
+                    <NavLink href="/configuracion">CONFIG</NavLink>
+                </span>
+            }
+            
+            <span style="margin-left: auto;">
+                <button class="btn" @onclick="Logout" style="padding: 4px 12px;">
+                    SALIR
+                </button>
+            </span>
+        </nav>
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+            Ruta: @GetBreadcrumb()
+        </div>
+
+        <!-- Área de Trabajo -->
+        <main class="work-area">
+            @Body
+        </main>
+    </div>
+
+    <!-- Espacio para la barra de atajos (fija abajo) -->
+    <div style="height: 50px;"></div>
+}
+
+<div id="blazor-error-ui">
+    Error no controlado.
+    <a href="" class="reload">Recargar</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        AuthService.OnAuthStateChanged += OnAuthChanged;
+    }
+
+    private void OnAuthChanged(object? sender, Usuario? user)
+    {
+        if (user == null)
+        {
+            Navigation.NavigateTo("/login");
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetRolDisplay()
+    {
+        if (AuthService.CurrentUser == null) return "";
+        
+        return AuthService.CurrentUser.Rol switch
+        {
+            RolUsuario.Administrador => "Admin",
+            RolUsuario.Aprobador => "Aprobador",
+            RolUsuario.Operador => "Operador",
+            _ => "Usuario"
+        };
+    }
+
+    private string GetBreadcrumb()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var path = uri.AbsolutePath.Trim('/');
+
+        if (string.IsNullOrEmpty(path) || path == "dashboard") 
+            return "INICIO";
+
+        var segments = path.Split('/');
+        var breadcrumb = "INICIO > " + string.Join(" > ", segments.Select(s => s.ToUpper()));
+        
+        return breadcrumb;
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+
+    public void Dispose()
+    {
+        AuthService.OnAuthStateChanged -= OnAuthChanged;
+    }
+}
+

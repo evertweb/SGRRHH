@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Excluir interfaces que dependen de Shared (se definen allí) -->
+  <ItemGroup>
+    <Compile Remove="Interfaces\IBackupService.cs" />
+    <Compile Remove="Interfaces\IExportService.cs" />
+    <Compile Remove="Interfaces\IAuditService.cs" />
+    <Compile Remove="Interfaces\IConfiguracionService.cs" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,427 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Shared.Interfaces
+@inject IActividadRepository ActividadRepository
+@inject ILogger<ActividadesTab> Logger
+
+<!-- Header con controles -->
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; gap: 8px;">
+        <button @onclick="Nuevo">NUEVO (F3)</button>
+        <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+        @if (selectedItem != null)
+        {
+            <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
+        }
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="text" placeholder="Buscar..." 
+               @bind="searchTerm" @bind:event="oninput" />
+        <button @onclick="Buscar">BUSCAR</button>
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button @onclick="LimpiarBusqueda">LIMPIAR</button>
+        }
+        <select @bind="filtroCategoria" @bind:after="Filtrar">
+            <option value="">Todas las categorías</option>
+            @foreach (var cat in categorias.Distinct().OrderBy(c => c))
+            {
+                <option value="@cat">@cat</option>
+            }
+        </select>
+    </div>
+</div>
+
+<!-- Tabla -->
+<table>
+    <thead>
+        <tr>
+            <th style="width: 100px;">CÓDIGO</th>
+            <th>NOMBRE</th>
+            <th>CATEGORÍA</th>
+            <th style="width: 120px;">REQ. PROYECTO</th>
+            <th style="width: 80px;">ORDEN</th>
+            <th style="width: 150px;">ACCIONES</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (isLoading)
+        {
+            <tr><td colspan="6" class="loading">Cargando actividades...</td></tr>
+        }
+        else if (!itemsFiltrados.Any())
+        {
+            <tr><td colspan="6" class="empty-state">No hay actividades para mostrar</td></tr>
+        }
+        else
+        {
+            @foreach (var item in itemsFiltrados)
+            {
+                <tr class="@(selectedItem?.Id == item.Id ? "selected" : "")"
+                    @onclick="() => SelectItem(item)">
+                    <td><strong>@item.Codigo</strong></td>
+                    <td>@item.Nombre</td>
+                    <td>@(item.Categoria ?? "-")</td>
+                    <td style="text-align: center;">
+                        @if (item.RequiereProyecto)
+                        {
+                            <span class="badge badge-activo">SÍ</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-inactivo">NO</span>
+                        }
+                    </td>
+                    <td style="text-align: center;">@item.Orden</td>
+                    <td class="actions-cell">
+                        <button @onclick="() => Editar(item)" @onclick:stopPropagation="true">
+                            EDITAR
+                        </button>
+                        <button @onclick="() => ConfirmarEliminar(item)" @onclick:stopPropagation="true">
+                            ELIMINAR
+                        </button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<!-- Modal de edición -->
+<FormModal @bind-IsVisible="showModal" 
+           Title="@(isEditing ? $"EDITAR ACTIVIDAD - {editItem?.Codigo}" : "NUEVA ACTIVIDAD")"
+           Width="600px"
+           OnSaveClicked="Guardar"
+           OnCancelClicked="CerrarModal"
+           IsSaving="isSaving">
+    
+    @if (editItem != null)
+    {
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+                <div class="form-group required">
+                    <label>Código:</label>
+                    <input type="text" @bind="editItem.Codigo" maxlength="20" 
+                           readonly="@isEditing" disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group required">
+                    <label>Nombre:</label>
+                    <input type="text" @bind="editItem.Nombre" maxlength="200" 
+                           disabled="@isSaving" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Categoría:</label>
+                    <input type="text" @bind="editItem.Categoria" maxlength="100" 
+                           disabled="@isSaving" 
+                           list="categoriasList" />
+                    <datalist id="categoriasList">
+                        @foreach (var cat in categorias.Distinct().OrderBy(c => c))
+                        {
+                            <option value="@cat">@cat</option>
+                        }
+                    </datalist>
+                    <small>Agrupa actividades relacionadas</small>
+                </div>
+            </div>
+            
+            <div>
+                <div class="form-group">
+                    <label>Orden:</label>
+                    <input type="number" @bind="editItem.Orden" min="0" 
+                           disabled="@isSaving" />
+                    <small>Para ordenar en listas</small>
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" @bind="editItem.RequiereProyecto" 
+                               disabled="@isSaving" />
+                        Requiere Proyecto
+                    </label>
+                    <small>Si está marcado, debe asignarse a un proyecto</small>
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" @bind="editItem.Activo" 
+                               disabled="@isSaving" />
+                        Activo
+                    </label>
+                    <small>Solo las actividades activas pueden usarse</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>Descripción:</label>
+            <textarea @bind="editItem.Descripcion" rows="3" 
+                     disabled="@isSaving" 
+                     maxlength="500"></textarea>
+        </div>
+    }
+</FormModal>
+
+<!-- Modal de confirmación de eliminación -->
+<FormModal @bind-IsVisible="showConfirmModal"
+           Title="CONFIRMAR ELIMINACIÓN"
+           Width="400px"
+           OnSaveClicked="EliminarConfirmado"
+           OnCancelClicked="() => showConfirmModal = false"
+           IsSaving="isSaving">
+    <p>¿Está seguro que desea eliminar la actividad <strong>@itemToDelete?.Nombre</strong>?</p>
+    <p style="color: #ff6b6b; margin-top: 12px;">
+        <strong>Advertencia:</strong> Esta acción no se puede deshacer.
+    </p>
+</FormModal>
+
+@code {
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback<string?> ErrorMessageChanged { get; set; }
+    [Parameter] public string? SuccessMessage { get; set; }
+    [Parameter] public EventCallback<string?> SuccessMessageChanged { get; set; }
+    
+    private List<Actividad> items = new();
+    private List<Actividad> itemsFiltrados = new();
+    private List<string> categorias = new();
+    private Actividad? selectedItem;
+    private Actividad? editItem;
+    private Actividad? itemToDelete;
+    
+    private bool isLoading;
+    private bool showModal;
+    private bool showConfirmModal;
+    private bool isSaving;
+    private bool isEditing;
+    private string searchTerm = "";
+    private string filtroCategoria = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatos();
+    }
+    
+    private async Task CargarDatos()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            var actividades = await ActividadRepository.GetAllAsync();
+            items = actividades.OrderBy(a => a.Orden).ThenBy(a => a.Nombre).ToList();
+            
+            // Extraer categorías únicas
+            categorias = items
+                .Where(a => !string.IsNullOrWhiteSpace(a.Categoria))
+                .Select(a => a.Categoria!)
+                .Distinct()
+                .ToList();
+            
+            Filtrar();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar actividades");
+            await SetError($"Error al cargar actividades: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void Filtrar()
+    {
+        itemsFiltrados = items;
+        
+        if (!string.IsNullOrWhiteSpace(filtroCategoria))
+        {
+            itemsFiltrados = itemsFiltrados.Where(a => a.Categoria == filtroCategoria).ToList();
+        }
+        
+        Buscar();
+    }
+    
+    private void Buscar()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            itemsFiltrados = itemsFiltrados.Where(a => 
+                a.Codigo.ToLower().Contains(term) ||
+                a.Nombre.ToLower().Contains(term) ||
+                (a.Descripcion ?? "").ToLower().Contains(term) ||
+                (a.Categoria ?? "").ToLower().Contains(term)
+            ).ToList();
+        }
+        StateHasChanged();
+    }
+    
+    private void LimpiarBusqueda()
+    {
+        searchTerm = "";
+        Filtrar();
+    }
+    
+    private void SelectItem(Actividad item)
+    {
+        selectedItem = item;
+        StateHasChanged();
+    }
+    
+    private void Nuevo()
+    {
+        // Calcular próximo orden
+        int siguienteOrden = items.Any() ? items.Max(a => a.Orden) + 1 : 1;
+        
+        editItem = new Actividad
+        {
+            Activo = true,
+            RequiereProyecto = false,
+            Orden = siguienteOrden,
+            FechaCreacion = DateTime.Now
+        };
+        isEditing = false;
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void Editar(Actividad item)
+    {
+        editItem = new Actividad
+        {
+            Id = item.Id,
+            Codigo = item.Codigo,
+            Nombre = item.Nombre,
+            Descripcion = item.Descripcion,
+            Categoria = item.Categoria,
+            RequiereProyecto = item.RequiereProyecto,
+            Orden = item.Orden,
+            Activo = item.Activo,
+            FechaCreacion = item.FechaCreacion,
+            FechaModificacion = DateTime.Now
+        };
+        isEditing = true;
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void EditarSeleccionado()
+    {
+        if (selectedItem != null)
+        {
+            Editar(selectedItem);
+        }
+    }
+    
+    private async Task Guardar()
+    {
+        if (editItem == null) return;
+        
+        // Validaciones
+        if (string.IsNullOrWhiteSpace(editItem.Codigo))
+        {
+            await SetError("El código es requerido");
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(editItem.Nombre))
+        {
+            await SetError("El nombre es requerido");
+            return;
+        }
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            if (isEditing)
+            {
+                await ActividadRepository.UpdateAsync(editItem);
+                await SetSuccess($"Actividad '{editItem.Nombre}' actualizada correctamente");
+                Logger.LogInformation($"Actividad actualizada: {editItem.Codigo}");
+            }
+            else
+            {
+                await ActividadRepository.AddAsync(editItem);
+                await SetSuccess($"Actividad '{editItem.Nombre}' creada correctamente");
+                Logger.LogInformation($"Actividad creada: {editItem.Codigo}");
+            }
+            
+            await CargarDatos();
+            CerrarModal();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar actividad");
+            await SetError($"Error al guardar: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ConfirmarEliminar(Actividad item)
+    {
+        itemToDelete = item;
+        showConfirmModal = true;
+        StateHasChanged();
+    }
+    
+    private async Task EliminarConfirmado()
+    {
+        if (itemToDelete == null) return;
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            await ActividadRepository.DeleteAsync(itemToDelete.Id);
+            await SetSuccess($"Actividad '{itemToDelete.Nombre}' eliminada correctamente");
+            Logger.LogInformation($"Actividad eliminada: {itemToDelete.Codigo}");
+            
+            await CargarDatos();
+            showConfirmModal = false;
+            itemToDelete = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al eliminar actividad");
+            await SetError($"Error al eliminar: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void CerrarModal()
+    {
+        showModal = false;
+        editItem = null;
+        StateHasChanged();
+    }
+    
+    private async Task SetError(string message)
+    {
+        ErrorMessage = message;
+        await ErrorMessageChanged.InvokeAsync(message);
+    }
+    
+    private async Task SetSuccess(string message)
+    {
+        SuccessMessage = message;
+        await SuccessMessageChanged.InvokeAsync(message);
+        
+        await Task.Delay(3000);
+        SuccessMessage = null;
+        await SuccessMessageChanged.InvokeAsync(null);
+    }
+}

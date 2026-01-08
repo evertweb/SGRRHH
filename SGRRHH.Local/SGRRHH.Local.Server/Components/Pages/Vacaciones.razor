@@ -1,0 +1,1049 @@
+@page "/vacaciones"
+@page "/vacaciones/{VacacionIdParam:int?}"
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@inject IAuthService AuthService
+@inject IVacacionRepository VacacionRepository
+@inject IEmpleadoRepository EmpleadoRepository
+@inject NavigationManager Navigation
+@inject ILogger<Vacaciones> Logger
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Vacaciones - SGRRHH</PageTitle>
+
+<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
+
+<h1 class="page-title">GESTIÓN DE VACACIONES</h1>
+
+@if (errorMessage != null)
+{
+    <div class="error-block">
+        <h3>ERROR</h3>
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="success-block">
+        <p>@successMessage</p>
+    </div>
+}
+
+<!-- Panel de Resumen de Vacaciones (cuando hay empleado seleccionado) -->
+@if (!string.IsNullOrEmpty(filtroEmpleadoId) && int.TryParse(filtroEmpleadoId, out int empId) && empId > 0 && resumenVacaciones != null)
+{
+    <ResumenVacacionesPanel Resumen="@resumenVacaciones" />
+}
+
+<!-- Header con controles -->
+<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+    <div style="display: flex; gap: 8px;">
+        <button @onclick="NuevaVacacion">NUEVA (F3)</button>
+        <button @onclick="CargarVacaciones">ACTUALIZAR (F5)</button>
+        @if (selectedVacacion != null)
+        {
+            <button @onclick="EditarSeleccionado">VER DETALLE (F4)</button>
+            
+            @if (selectedVacacion.Estado == EstadoVacacion.Pendiente && AuthService.IsAprobador)
+            {
+                <button @onclick="AprobarSeleccionado" style="background-color: #4CAF50; color: white;">APROBAR (F6)</button>
+                <button @onclick="RechazarSeleccionado" style="background-color: #F44336; color: white;">RECHAZAR (F7)</button>
+            }
+        }
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <input type="text" id="searchInput" placeholder="Buscar... (F2)" 
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" 
+               style="min-width: 200px;" />
+        <button @onclick="Buscar">BUSCAR</button>
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button @onclick="LimpiarBusqueda">LIMPIAR</button>
+        }
+        <select @bind="filtroEstado" @bind:after="Filtrar">
+            <option value="">Todos los estados</option>
+            <option value="@((int)EstadoVacacion.Pendiente)">Pendientes</option>
+            <option value="@((int)EstadoVacacion.Aprobada)">Aprobadas</option>
+            <option value="@((int)EstadoVacacion.Rechazada)">Rechazadas</option>
+            <option value="@((int)EstadoVacacion.Programada)">Programadas</option>
+            <option value="@((int)EstadoVacacion.Disfrutada)">Disfrutadas</option>
+            <option value="@((int)EstadoVacacion.Cancelada)">Canceladas</option>
+        </select>
+        <select @bind="filtroEmpleadoId" @bind:after="Filtrar">
+            <option value="">Todos los empleados</option>
+            @foreach (var emp in todosEmpleados)
+            {
+                <option value="@emp.Id">@emp.NombreCompleto</option>
+            }
+        </select>
+        <select @bind="filtroPeriodo" @bind:after="Filtrar">
+            <option value="">Todos los períodos</option>
+            @for (int year = DateTime.Now.Year; year >= DateTime.Now.Year - 5; year--)
+            {
+                <option value="@year">@year</option>
+            }
+        </select>
+    </div>
+</div>
+
+<!-- Información de resultados -->
+<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+    Mostrando @vacaciones.Count() de @totalVacaciones vacación(es)
+    @if (AuthService.IsAprobador && vacacionesPendientes > 0)
+    {
+        <span style="color: #FF9800; font-weight: bold;"> | @vacacionesPendientes pendientes de aprobación</span>
+    }
+</div>
+
+<!-- Tabla de vacaciones -->
+<div style="overflow-x: auto;">
+    <table>
+        <thead>
+            <tr>
+                <th>EMPLEADO</th>
+                <th style="width: 80px;">PERÍODO</th>
+                <th style="width: 100px;">FECHA INICIO</th>
+                <th style="width: 100px;">FECHA FIN</th>
+                <th style="width: 60px;">DÍAS</th>
+                <th style="width: 120px;">ESTADO</th>
+                <th style="width: 100px;">SOLICITADO</th>
+                <th style="width: 150px;">ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (isLoading)
+            {
+                <tr><td colspan="8" class="loading">Cargando vacaciones...</td></tr>
+            }
+            else if (!vacaciones.Any())
+            {
+                <tr><td colspan="8" class="empty-state">No hay vacaciones para mostrar</td></tr>
+            }
+            else
+            {
+                @foreach (var vac in vacaciones)
+                {
+                    <tr class="@(selectedVacacion?.Id == vac.Id ? "selected" : "")"
+                        @onclick="() => SelectVacacion(vac)">
+                        <td><strong>@(vac.Empleado?.NombreCompleto ?? "N/A")</strong></td>
+                        <td style="text-align: center;">@vac.PeriodoCorrespondiente</td>
+                        <td>@vac.FechaInicio.ToString("dd/MM/yyyy")</td>
+                        <td>@vac.FechaFin.ToString("dd/MM/yyyy")</td>
+                        <td style="text-align: center;">@vac.DiasTomados</td>
+                        <td>
+                            <span class="badge-@vac.Estado.ToString().ToLower()">
+                                @GetEstadoTexto(vac.Estado)
+                            </span>
+                        </td>
+                        <td style="font-size: 11px;">@vac.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                        <td class="actions-cell">
+                            <button @onclick="() => VerDetalle(vac)" @onclick:stopPropagation="true">
+                                VER
+                            </button>
+                            @if (vac.Estado == EstadoVacacion.Pendiente || vac.Estado == EstadoVacacion.Aprobada)
+                            {
+                                <button @onclick="() => EditarVacacion(vac)" @onclick:stopPropagation="true"
+                                        style="font-size: 11px; padding: 2px 6px;">
+                                    EDITAR
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal de Vacación (Nuevo/Editar) -->
+<FormModal @bind-IsVisible="showModal" 
+           Title="@(isEditing ? $"DETALLE DE VACACIÓN - {vacacionEdit.Empleado?.NombreCompleto ?? ""}" : "NUEVA SOLICITUD DE VACACIÓN")"
+           Width="800px"
+           OnSaveClicked="Guardar"
+           OnCancelClicked="CerrarModal"
+           IsSaving="isSaving"
+           ShowSaveButton="@(!isViewing)"
+           CloseOnBackdropClick="false">
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Columna izquierda -->
+        <div>
+            <div class="form-group required">
+                <label>Empleado:</label>
+                @if (isEditing || isViewing)
+                {
+                    <input type="text" value="@(vacacionEdit.Empleado?.NombreCompleto ?? "")" disabled />
+                }
+                else
+                {
+                    <select @bind="vacacionEdit.EmpleadoId" @bind:after="OnEmpleadoChanged" required>
+                        <option value="0">-- Seleccione empleado --</option>
+                        @foreach (var emp in empleadosActivos)
+                        {
+                            <option value="@emp.Id">@emp.NombreCompleto - @emp.Cedula</option>
+                        }
+                    </select>
+                }
+            </div>
+            
+            @if (vacacionEdit.EmpleadoId > 0 && diasDisponibles.HasValue)
+            {
+                <div style="padding: 12px; background-color: @(diasDisponibles.Value > 0 ? "#E8F5E9" : "#FFEBEE"); 
+                            border: 1px solid @(diasDisponibles.Value > 0 ? "#4CAF50" : "#F44336"); 
+                            border-radius: 4px; margin-bottom: 12px;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">DÍAS DISPONIBLES EN @DateTime.Now.Year</div>
+                    <div style="font-size: 24px; font-weight: bold; color: @(diasDisponibles.Value > 0 ? "#2E7D32" : "#C62828");">
+                        @diasDisponibles.Value días
+                    </div>
+                    @if (diasDisponibles.Value <= 0)
+                    {
+                        <div style="font-size: 11px; color: #C62828; margin-top: 4px;">
+                            No hay días de vacaciones disponibles para este año
+                        </div>
+                    }
+                </div>
+            }
+            
+            <div class="form-group required">
+                <label>Período Correspondiente:</label>
+                <input type="number" @bind="vacacionEdit.PeriodoCorrespondiente" 
+                       disabled="@isViewing" required 
+                       min="@(DateTime.Now.Year - 10)" 
+                       max="@DateTime.Now.Year" />
+                <small style="color: #666;">Año al que corresponden estas vacaciones</small>
+            </div>
+            
+            <div class="form-group required">
+                <label>Fecha Inicio:</label>
+                <input type="date" @bind="vacacionEdit.FechaInicio" 
+                       @bind:after="CalcularDias"
+                       disabled="@isViewing" required />
+            </div>
+            
+            <div class="form-group required">
+                <label>Fecha Fin:</label>
+                <input type="date" @bind="vacacionEdit.FechaFin" 
+                       @bind:after="CalcularDias"
+                       disabled="@isViewing" required />
+            </div>
+            
+            <div class="form-group">
+                <label>Días a Tomar:</label>
+                <input type="number" @bind="vacacionEdit.DiasTomados" 
+                       disabled 
+                       style="background-color: #F5F5F5; font-weight: bold; font-size: 18px;" />
+            </div>
+        </div>
+        
+        <!-- Columna derecha -->
+        <div>
+            <div class="form-group">
+                <label>Observaciones:</label>
+                <textarea @bind="vacacionEdit.Observaciones" rows="4"
+                          disabled="@isViewing"
+                          placeholder="Información adicional o comentarios (opcional)"></textarea>
+            </div>
+            
+            @if (isEditing || isViewing)
+            {
+                <div class="form-group">
+                    <label>Estado:</label>
+                    <div style="padding: 8px; background-color: #F5F5F5; border: 1px solid #808080;">
+                        <span class="badge-@vacacionEdit.Estado.ToString().ToLower()" style="font-size: 14px;">
+                            @GetEstadoTexto(vacacionEdit.Estado)
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Fecha de Solicitud:</label>
+                    <input type="text" value="@vacacionEdit.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")" disabled />
+                </div>
+                
+                <div class="form-group">
+                    <label>Solicitado por:</label>
+                    <input type="text" value="@(vacacionEdit.SolicitadoPor?.NombreCompleto ?? "")" disabled />
+                </div>
+                
+                @if (vacacionEdit.AprobadoPor != null)
+                {
+                    <div class="form-group">
+                        <label>@(vacacionEdit.Estado == EstadoVacacion.Aprobada ? "Aprobado" : "Rechazado") por:</label>
+                        <input type="text" value="@vacacionEdit.AprobadoPor.NombreCompleto" disabled />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Fecha de @(vacacionEdit.Estado == EstadoVacacion.Aprobada ? "Aprobación" : "Rechazo"):</label>
+                        <input type="text" value="@vacacionEdit.FechaAprobacion?.ToString("dd/MM/yyyy HH:mm")" disabled />
+                    </div>
+                }
+                
+                @if (!string.IsNullOrEmpty(vacacionEdit.MotivoRechazo))
+                {
+                    <div class="form-group">
+                        <label>Motivo del Rechazo:</label>
+                        <textarea value="@vacacionEdit.MotivoRechazo" rows="3" disabled></textarea>
+                    </div>
+                }
+            }
+            
+            <!-- Historial de vacaciones del empleado -->
+            @if (isEditing || isViewing)
+            {
+                @if (historialVacaciones.Any())
+                {
+                    <div style="margin-top: 16px; padding: 12px; background-color: #F5F5F5; border: 1px solid #CCC; border-radius: 4px;">
+                        <strong style="font-size: 12px; color: #333;">HISTORIAL DE VACACIONES</strong>
+                        <div style="max-height: 200px; overflow-y: auto; margin-top: 8px;">
+                            @foreach (var hist in historialVacaciones.OrderByDescending(v => v.FechaInicio))
+                            {
+                                <div style="padding: 6px; background-color: white; margin-bottom: 4px; font-size: 11px; border-left: 3px solid @GetEstadoColor(hist.Estado);">
+                                    <strong>@hist.PeriodoCorrespondiente:</strong> 
+                                    @hist.FechaInicio.ToString("dd/MM/yyyy") - @hist.FechaFin.ToString("dd/MM/yyyy")
+                                    (@hist.DiasTomados días) - 
+                                    <span style="color: @GetEstadoColor(hist.Estado);">@hist.Estado</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+    
+    @if ((isEditing || isViewing) && selectedVacacion?.Estado == EstadoVacacion.Pendiente && AuthService.IsAprobador)
+    {
+        <div style="margin-top: 16px; padding: 16px; background-color: #FFF9C4; border: 1px solid #FBC02D;">
+            <strong>ACCIONES DE APROBACIÓN:</strong>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <button @onclick="AprobarVacacion" style="background-color: #4CAF50; color: white; flex: 1;">
+                    ✓ APROBAR VACACIÓN
+                </button>
+                <button @onclick="() => showRechazarDialog = true" style="background-color: #F44336; color: white; flex: 1;">
+                    ✗ RECHAZAR VACACIÓN
+                </button>
+            </div>
+        </div>
+    }
+</FormModal>
+
+<!-- Dialog de Rechazo -->
+@if (showRechazarDialog)
+{
+    <div class="modal-overlay" @onclick="() => showRechazarDialog = false">
+        <div class="modal-box" @onclick:stopPropagation="true" style="max-width: 500px;">
+            <h3>RECHAZAR VACACIÓN</h3>
+            
+            <div class="form-group required">
+                <label>Motivo del rechazo:</label>
+                <textarea @bind="motivoRechazo" rows="4" 
+                          placeholder="Explique por qué se rechaza esta solicitud de vacación..."
+                          required></textarea>
+            </div>
+            
+            <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
+                <button @onclick="() => showRechazarDialog = false">CANCELAR</button>
+                <button @onclick="ConfirmarRechazo" 
+                        disabled="@(string.IsNullOrWhiteSpace(motivoRechazo))"
+                        style="background-color: #F44336; color: white;">
+                    CONFIRMAR RECHAZO
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int? VacacionIdParam { get; set; }
+    
+    // Referencias
+    private KeyboardHandler? keyboardHandler;
+    
+    // Atajos de teclado
+    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    
+    // Estado de UI
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isSaving = false;
+    private bool isEditing = false;
+    private bool isViewing = false;
+    private bool showRechazarDialog = false;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    // Datos
+    private List<Vacacion> vacaciones = new();
+    private List<Vacacion> todasLasVacaciones = new();
+    private List<Empleado> todosEmpleados = new();
+    private List<Empleado> empleadosActivos = new();
+    private List<Vacacion> historialVacaciones = new();
+    private ResumenVacaciones? resumenVacaciones;
+    
+    // Selección y edición
+    private Vacacion? selectedVacacion;
+    private Vacacion vacacionEdit = new();
+    private int? diasDisponibles;
+    
+    // Filtros
+    private string searchTerm = "";
+    private string filtroEstado = "";
+    private string filtroEmpleadoId = "";
+    private string filtroPeriodo = "";
+    
+    // Estadísticas
+    private int totalVacaciones;
+    private int vacacionesPendientes;
+    
+    // Rechazo
+    private string motivoRechazo = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        ConfigurarAtajos();
+        await CargarDatosIniciales();
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        if (VacacionIdParam.HasValue && VacacionIdParam.Value > 0)
+        {
+            await CargarVacacionParam();
+        }
+    }
+    
+    private void ConfigurarAtajos()
+    {
+        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        {
+            new() { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = FocusBusqueda },
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nueva", Action = NuevaVacacion },
+            new() { Key = "F4", KeyDisplay = "F4", Description = "Ver Detalle", Action = EditarSeleccionado },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarVacaciones },
+            new() { Key = "F6", KeyDisplay = "F6", Description = "Aprobar", Action = AprobarSeleccionado, ShowInBar = AuthService.IsAprobador },
+            new() { Key = "F7", KeyDisplay = "F7", Description = "Rechazar", Action = RechazarSeleccionado, ShowInBar = AuthService.IsAprobador },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModal }
+        };
+    }
+    
+    private async Task CargarDatosIniciales()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            // Cargar empleados
+            var empleados = await EmpleadoRepository.GetAllAsync();
+            todosEmpleados = empleados.OrderBy(e => e.NombreCompleto).ToList();
+            empleadosActivos = todosEmpleados
+                .Where(e => e.Estado == EstadoEmpleado.Activo)
+                .ToList();
+            
+            // Cargar vacaciones
+            await CargarVacaciones();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar datos iniciales");
+            errorMessage = $"Error al cargar datos: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CargarVacaciones()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            var todasVacaciones = await VacacionRepository.GetAllAsync();
+            todasLasVacaciones = todasVacaciones.OrderByDescending(v => v.FechaSolicitud).ToList();
+            
+            // Aplicar filtros
+            await AplicarFiltros();
+            
+            // Calcular estadísticas
+            totalVacaciones = todasLasVacaciones.Count;
+            vacacionesPendientes = todasLasVacaciones.Count(v => v.Estado == EstadoVacacion.Pendiente);
+            
+            Logger.LogInformation($"Cargadas {totalVacaciones} vacaciones ({vacacionesPendientes} pendientes)");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar vacaciones");
+            errorMessage = $"Error al cargar vacaciones: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CargarVacacionParam()
+    {
+        try
+        {
+            var vacacion = await VacacionRepository.GetByIdAsync(VacacionIdParam!.Value);
+            if (vacacion != null)
+            {
+                await VerDetalle(vacacion);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error al cargar vacación {VacacionIdParam}");
+            errorMessage = $"Error al cargar vacación: {ex.Message}";
+        }
+    }
+    
+    private async Task AplicarFiltros()
+    {
+        var resultado = todasLasVacaciones.AsEnumerable();
+        
+        // Filtro por búsqueda
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var searchLower = searchTerm.ToLower();
+            resultado = resultado.Where(v =>
+                (v.Empleado?.NombreCompleto?.ToLower().Contains(searchLower) ?? false) ||
+                (v.Empleado?.Cedula?.Contains(searchTerm) ?? false) ||
+                v.PeriodoCorrespondiente.ToString().Contains(searchTerm) ||
+                (v.Observaciones?.ToLower().Contains(searchLower) ?? false)
+            );
+        }
+        
+        // Filtro por estado
+        if (!string.IsNullOrEmpty(filtroEstado) && int.TryParse(filtroEstado, out int estadoId))
+        {
+            resultado = resultado.Where(v => (int)v.Estado == estadoId);
+        }
+        
+        // Filtro por empleado
+        if (!string.IsNullOrEmpty(filtroEmpleadoId) && int.TryParse(filtroEmpleadoId, out int empleadoId))
+        {
+            resultado = resultado.Where(v => v.EmpleadoId == empleadoId);
+        }
+        
+        // Filtro por período
+        if (!string.IsNullOrEmpty(filtroPeriodo) && int.TryParse(filtroPeriodo, out int periodo))
+        {
+            resultado = resultado.Where(v => v.PeriodoCorrespondiente == periodo);
+        }
+        
+        vacaciones = resultado.ToList();
+    }
+    
+    private async Task Buscar()
+    {
+        await AplicarFiltros();
+    }
+    
+    private async Task Filtrar()
+    {
+        await AplicarFiltros();
+        
+        // Cargar resumen de vacaciones si hay empleado seleccionado
+        if (!string.IsNullOrEmpty(filtroEmpleadoId) && int.TryParse(filtroEmpleadoId, out int empleadoId) && empleadoId > 0)
+        {
+            await CargarResumenVacaciones(empleadoId);
+        }
+        else
+        {
+            resumenVacaciones = null;
+        }
+    }
+    
+    private async Task LimpiarBusqueda()
+    {
+        searchTerm = "";
+        await AplicarFiltros();
+        await Task.Delay(100);
+        await JSRuntime.InvokeVoidAsync("focusElement", "searchInput");
+    }
+    
+    private async Task FocusBusqueda()
+    {
+        await JSRuntime.InvokeVoidAsync("focusElement", "searchInput");
+    }
+    
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await Buscar();
+        }
+    }
+    
+    // ===== CRUD Operations =====
+    
+    private Task NuevaVacacion()
+    {
+        vacacionEdit = new Vacacion
+        {
+            FechaSolicitud = DateTime.Now,
+            PeriodoCorrespondiente = DateTime.Now.Year,
+            Estado = EstadoVacacion.Pendiente,
+            FechaInicio = DateTime.Today,
+            FechaFin = DateTime.Today.AddDays(14)
+        };
+        isEditing = false;
+        isViewing = false;
+        showModal = true;
+        diasDisponibles = null;
+        historialVacaciones.Clear();
+        return Task.CompletedTask;
+    }
+    
+    private async Task VerDetalle(Vacacion vacacion)
+    {
+        selectedVacacion = vacacion;
+        vacacionEdit = new Vacacion
+        {
+            Id = vacacion.Id,
+            EmpleadoId = vacacion.EmpleadoId,
+            Empleado = vacacion.Empleado,
+            FechaInicio = vacacion.FechaInicio,
+            FechaFin = vacacion.FechaFin,
+            DiasTomados = vacacion.DiasTomados,
+            PeriodoCorrespondiente = vacacion.PeriodoCorrespondiente,
+            Estado = vacacion.Estado,
+            Observaciones = vacacion.Observaciones,
+            FechaSolicitud = vacacion.FechaSolicitud,
+            SolicitadoPorId = vacacion.SolicitadoPorId,
+            SolicitadoPor = vacacion.SolicitadoPor,
+            AprobadoPorId = vacacion.AprobadoPorId,
+            AprobadoPor = vacacion.AprobadoPor,
+            FechaAprobacion = vacacion.FechaAprobacion,
+            MotivoRechazo = vacacion.MotivoRechazo
+        };
+        
+        isEditing = true;
+        isViewing = true;
+        showModal = true;
+        
+        // Cargar historial
+        await CargarHistorialVacaciones(vacacion.EmpleadoId);
+        
+        // Calcular días disponibles
+        await CalcularDiasDisponibles(vacacion.EmpleadoId, vacacion.PeriodoCorrespondiente);
+    }
+    
+    private async Task EditarVacacion(Vacacion vacacion)
+    {
+        selectedVacacion = vacacion;
+        vacacionEdit = new Vacacion
+        {
+            Id = vacacion.Id,
+            EmpleadoId = vacacion.EmpleadoId,
+            Empleado = vacacion.Empleado,
+            FechaInicio = vacacion.FechaInicio,
+            FechaFin = vacacion.FechaFin,
+            DiasTomados = vacacion.DiasTomados,
+            PeriodoCorrespondiente = vacacion.PeriodoCorrespondiente,
+            Estado = vacacion.Estado,
+            Observaciones = vacacion.Observaciones,
+            FechaSolicitud = vacacion.FechaSolicitud,
+            SolicitadoPorId = vacacion.SolicitadoPorId,
+            SolicitadoPor = vacacion.SolicitadoPor,
+            AprobadoPorId = vacacion.AprobadoPorId,
+            AprobadoPor = vacacion.AprobadoPor,
+            FechaAprobacion = vacacion.FechaAprobacion,
+            MotivoRechazo = vacacion.MotivoRechazo
+        };
+        
+        isEditing = true;
+        isViewing = false;
+        showModal = true;
+        
+        // Cargar historial
+        await CargarHistorialVacaciones(vacacion.EmpleadoId);
+        
+        // Calcular días disponibles
+        await CalcularDiasDisponibles(vacacion.EmpleadoId, vacacion.PeriodoCorrespondiente);
+    }
+    
+    private void SelectVacacion(Vacacion vacacion)
+    {
+        selectedVacacion = vacacion;
+        StateHasChanged();
+    }
+    
+    private async Task EditarSeleccionado()
+    {
+        if (selectedVacacion != null)
+        {
+            await VerDetalle(selectedVacacion);
+        }
+    }
+    
+    private async Task Guardar()
+    {
+        try
+        {
+            // Validaciones
+            if (vacacionEdit.EmpleadoId <= 0)
+            {
+                errorMessage = "Debe seleccionar un empleado";
+                return;
+            }
+            
+            if (vacacionEdit.FechaFin < vacacionEdit.FechaInicio)
+            {
+                errorMessage = "La fecha fin no puede ser anterior a la fecha inicio";
+                return;
+            }
+            
+            if (vacacionEdit.DiasTomados <= 0)
+            {
+                errorMessage = "Debe especificar al menos 1 día de vacaciones";
+                return;
+            }
+            
+            // Verificar días disponibles
+            await CalcularDiasDisponibles(vacacionEdit.EmpleadoId, vacacionEdit.PeriodoCorrespondiente);
+            if (diasDisponibles.HasValue && diasDisponibles.Value < vacacionEdit.DiasTomados)
+            {
+                errorMessage = $"El empleado solo tiene {diasDisponibles.Value} días disponibles. No se pueden solicitar {vacacionEdit.DiasTomados} días.";
+                return;
+            }
+            
+            // Verificar traslape de fechas
+            var existeTraslape = await VacacionRepository.ExisteTraslapeAsync(
+                vacacionEdit.EmpleadoId,
+                vacacionEdit.FechaInicio,
+                vacacionEdit.FechaFin,
+                vacacionEdit.Id > 0 ? vacacionEdit.Id : null
+            );
+            
+            if (existeTraslape)
+            {
+                errorMessage = "Ya existe otra solicitud de vacación con fechas traslapadas para este empleado";
+                return;
+            }
+            
+            isSaving = true;
+            StateHasChanged();
+            
+            // Asignar usuario que solicita
+            if (vacacionEdit.Id == 0)
+            {
+                vacacionEdit.SolicitadoPorId = AuthService.CurrentUser!.Id;
+                vacacionEdit.FechaSolicitud = DateTime.Now;
+            }
+            
+            if (vacacionEdit.Id == 0)
+            {
+                // Crear nueva
+                await VacacionRepository.AddAsync(vacacionEdit);
+                successMessage = "Solicitud de vacación creada exitosamente";
+                Logger.LogInformation($"Nueva vacación creada: Empleado {vacacionEdit.EmpleadoId}, Período {vacacionEdit.PeriodoCorrespondiente}");
+            }
+            else
+            {
+                // Actualizar existente
+                await VacacionRepository.UpdateAsync(vacacionEdit);
+                successMessage = "Vacación actualizada exitosamente";
+                Logger.LogInformation($"Vacación actualizada: ID {vacacionEdit.Id}");
+            }
+            
+            await CargarVacaciones();
+            CerrarModal();
+            
+            // Limpiar mensaje después de 3 segundos
+            await Task.Delay(3000);
+            successMessage = null;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar vacación");
+            errorMessage = $"Error al guardar: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private Task CerrarModal()
+    {
+        showModal = false;
+        vacacionEdit = new Vacacion();
+        selectedVacacion = null;
+        isEditing = false;
+        isViewing = false;
+        diasDisponibles = null;
+        historialVacaciones.Clear();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+    
+    // ===== Aprobación/Rechazo =====
+    
+    private async Task AprobarSeleccionado()
+    {
+        if (selectedVacacion?.Estado == EstadoVacacion.Pendiente && AuthService.IsAprobador)
+        {
+            await AprobarVacacion();
+        }
+    }
+    
+    private Task RechazarSeleccionado()
+    {
+        if (selectedVacacion?.Estado == EstadoVacacion.Pendiente && AuthService.IsAprobador)
+        {
+            showRechazarDialog = true;
+        }
+        return Task.CompletedTask;
+    }
+    
+    private async Task AprobarVacacion()
+    {
+        if (selectedVacacion == null || !AuthService.IsAprobador) return;
+        
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+            
+            selectedVacacion.Estado = EstadoVacacion.Aprobada;
+            selectedVacacion.AprobadoPorId = AuthService.CurrentUser!.Id;
+            selectedVacacion.FechaAprobacion = DateTime.Now;
+            
+            await VacacionRepository.UpdateAsync(selectedVacacion);
+            
+            successMessage = $"Vacación aprobada exitosamente";
+            Logger.LogInformation($"Vacación {selectedVacacion.Id} aprobada por {AuthService.CurrentUser.NombreCompleto}");
+            
+            await CargarVacaciones();
+            CerrarModal();
+            
+            await Task.Delay(3000);
+            successMessage = null;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al aprobar vacación");
+            errorMessage = $"Error al aprobar: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task ConfirmarRechazo()
+    {
+        if (selectedVacacion == null || string.IsNullOrWhiteSpace(motivoRechazo)) return;
+        
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+            
+            selectedVacacion.Estado = EstadoVacacion.Rechazada;
+            selectedVacacion.AprobadoPorId = AuthService.CurrentUser!.Id;
+            selectedVacacion.FechaAprobacion = DateTime.Now;
+            selectedVacacion.MotivoRechazo = motivoRechazo;
+            
+            await VacacionRepository.UpdateAsync(selectedVacacion);
+            
+            successMessage = $"Vacación rechazada";
+            Logger.LogInformation($"Vacación {selectedVacacion.Id} rechazada por {AuthService.CurrentUser.NombreCompleto}");
+            
+            showRechazarDialog = false;
+            motivoRechazo = "";
+            
+            await CargarVacaciones();
+            CerrarModal();
+            
+            await Task.Delay(3000);
+            successMessage = null;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al rechazar vacación");
+            errorMessage = $"Error al rechazar: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    // ===== Cálculos =====
+    
+    private async Task OnEmpleadoChanged()
+    {
+        if (vacacionEdit.EmpleadoId > 0)
+        {
+            await CargarHistorialVacaciones(vacacionEdit.EmpleadoId);
+            await CalcularDiasDisponibles(vacacionEdit.EmpleadoId, vacacionEdit.PeriodoCorrespondiente);
+        }
+        else
+        {
+            diasDisponibles = null;
+            historialVacaciones.Clear();
+        }
+    }
+    
+    private void CalcularDias()
+    {
+        if (vacacionEdit.FechaInicio != default && vacacionEdit.FechaFin != default)
+        {
+            if (vacacionEdit.FechaFin >= vacacionEdit.FechaInicio)
+            {
+                // Calcular días hábiles (excluyendo fines de semana)
+                int dias = 0;
+                var fecha = vacacionEdit.FechaInicio;
+                
+                while (fecha <= vacacionEdit.FechaFin)
+                {
+                    // Solo contar días de lunes a viernes
+                    if (fecha.DayOfWeek != DayOfWeek.Saturday && fecha.DayOfWeek != DayOfWeek.Sunday)
+                    {
+                        dias++;
+                    }
+                    fecha = fecha.AddDays(1);
+                }
+                
+                vacacionEdit.DiasTomados = dias;
+            }
+            else
+            {
+                vacacionEdit.DiasTomados = 0;
+            }
+        }
+    }
+    
+    private async Task CalcularDiasDisponibles(int empleadoId, int periodo)
+    {
+        try
+        {
+            // Obtener empleado
+            var empleado = await EmpleadoRepository.GetByIdAsync(empleadoId);
+            if (empleado == null)
+            {
+                diasDisponibles = null;
+                return;
+            }
+            
+            // Calcular años de antigüedad
+            var antiguedad = DateTime.Now.Year - empleado.FechaIngreso.Year;
+            
+            // Días base por año (típicamente 15 días, puede variar según legislación)
+            int diasBase = 15;
+            
+            // Días adicionales por antigüedad (1 día adicional cada 5 años, hasta un máximo)
+            int diasAdicionales = Math.Min((antiguedad / 5), 5); // Máximo 5 días adicionales (20 días total)
+            
+            int diasTotales = diasBase + diasAdicionales;
+            
+            // Obtener vacaciones ya tomadas o pendientes para el período
+            var vacacionesPeriodo = await VacacionRepository.GetByEmpleadoYPeriodoAsync(empleadoId, periodo);
+            
+            int diasUsados = vacacionesPeriodo
+                .Where(v => v.Estado != EstadoVacacion.Rechazada && 
+                           v.Estado != EstadoVacacion.Cancelada &&
+                           v.Id != vacacionEdit.Id) // Excluir la vacación actual si está editando
+                .Sum(v => v.DiasTomados);
+            
+            diasDisponibles = diasTotales - diasUsados;
+            
+            Logger.LogInformation($"Empleado {empleadoId}: {diasTotales} días totales, {diasUsados} días usados, {diasDisponibles} días disponibles para período {periodo}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error al calcular días disponibles para empleado {empleadoId}");
+            diasDisponibles = null;
+        }
+    }
+    
+    private async Task CargarHistorialVacaciones(int empleadoId)
+    {
+        try
+        {
+            var historial = await VacacionRepository.GetByEmpleadoIdAsync(empleadoId);
+            historialVacaciones = historial
+                .Where(v => v.Id != vacacionEdit.Id) // Excluir la vacación actual
+                .OrderByDescending(v => v.FechaInicio)
+                .Take(10) // Últimas 10 vacaciones
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error al cargar historial de vacaciones para empleado {empleadoId}");
+            historialVacaciones.Clear();
+        }
+    }
+    
+    private async Task CargarResumenVacaciones(int empleadoId)
+    {
+        try
+        {
+            resumenVacaciones = await VacacionRepository.GetResumenVacacionesAsync(empleadoId);
+            if (resumenVacaciones != null)
+            {
+                Logger.LogInformation($"Resumen de vacaciones cargado para empleado {empleadoId}: {resumenVacaciones.TotalDiasDisponibles} días disponibles");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error al cargar resumen de vacaciones para empleado {empleadoId}");
+            resumenVacaciones = null;
+        }
+    }
+    
+    // ===== Helpers =====
+    
+    private string GetEstadoTexto(EstadoVacacion estado)
+    {
+        return estado switch
+        {
+            EstadoVacacion.Pendiente => "PENDIENTE",
+            EstadoVacacion.Aprobada => "APROBADA",
+            EstadoVacacion.Rechazada => "RECHAZADA",
+            EstadoVacacion.Programada => "PROGRAMADA",
+            EstadoVacacion.Disfrutada => "DISFRUTADA",
+            EstadoVacacion.Cancelada => "CANCELADA",
+            _ => estado.ToString().ToUpper()
+        };
+    }
+    
+    private string GetEstadoColor(EstadoVacacion estado)
+    {
+        return estado switch
+        {
+            EstadoVacacion.Pendiente => "#FF9800",
+            EstadoVacacion.Aprobada => "#4CAF50",
+            EstadoVacacion.Rechazada => "#F44336",
+            EstadoVacacion.Programada => "#2196F3",
+            EstadoVacacion.Disfrutada => "#9E9E9E",
+            EstadoVacacion.Cancelada => "#607D8B",
+            _ => "#808080"
+        };
+    }
+}

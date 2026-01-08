@@ -1,0 +1,697 @@
+@page "/documentos"
+@page "/documentos/{EmpleadoIdParam:int}"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject IDocumentoEmpleadoRepository DocumentoRepo
+@inject IEmpleadoRepository EmpleadoRepo
+@inject ILocalStorageService StorageService
+@inject IAuthService AuthService
+@inject IJSRuntime JS
+@inject ILogger<Documentos> Logger
+
+<PageTitle>Documentos - SGRRHH</PageTitle>
+
+<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
+
+<div class="page-title">📄 GESTIÓN DE DOCUMENTOS</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="error-block">
+        <h3>⚠️ ERROR</h3>
+        <p>@errorMessage</p>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="success-block">
+        ✓ @successMessage
+    </div>
+}
+
+<div style="background-color: #F0F0F0; border: 2px solid #000000; padding: 16px; margin-bottom: 16px;">
+    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+        <label style="font-weight: bold; font-size: 12px;">EMPLEADO:</label>
+        <select @bind="selectedEmpleadoId" @bind:after="LoadDocumentos" 
+                style="flex: 1; max-width: 400px; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;">
+            <option value="0">-- Seleccionar Empleado --</option>
+            @foreach (var emp in empleados)
+            {
+                <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+            }
+        </select>
+        
+        <button @onclick="LoadDocumentos" disabled="@isLoading">
+            @(isLoading ? "CARGANDO..." : "ACTUALIZAR [F5]")
+        </button>
+
+        @if (selectedEmpleadoId > 0 && AuthService.IsAdmin)
+        {
+            <button @onclick="ShowUploadModal" style="background-color: #00AA00; color: white;">
+                + SUBIR DOCUMENTO
+            </button>
+        }
+    </div>
+</div>
+
+@* Contenido principal *@
+@if (selectedEmpleadoId == 0)
+{
+    <div style="text-align: center; padding: 80px 20px; background-color: #F8F8F8; border: 2px solid #C0C0C0;">
+        <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
+        <h3 style="margin-bottom: 8px;">Gestión de Documentos</h3>
+        <p style="color: #666;">Seleccione un empleado para ver sus documentos.</p>
+    </div>
+}
+else if (isLoading)
+{
+    <div style="text-align: center; padding: 40px;">
+        <p>⏳ Cargando documentos...</p>
+    </div>
+}
+else if (!documentos.Any())
+{
+    <div style="text-align: center; padding: 60px 20px; background-color: #FFFFCC; border: 2px solid #CCCC00;">
+        <p style="font-size: 14px; font-weight: bold; margin-bottom: 16px;">
+            No hay documentos registrados para este empleado.
+        </p>
+        @if (AuthService.IsAdmin)
+        {
+            <button @onclick="ShowUploadModal" style="background-color: #00AA00; color: white;">
+                + SUBIR PRIMER DOCUMENTO
+            </button>
+        }
+    </div>
+}
+else
+{
+    <div style="border: 2px solid #000000; background-color: white;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead>
+                <tr style="background-color: #C0C0C0; border-bottom: 2px solid #000000;">
+                    <th style="padding: 8px; text-align: left; border-right: 1px solid #808080;">TIPO</th>
+                    <th style="padding: 8px; text-align: left; border-right: 1px solid #808080;">NOMBRE</th>
+                    <th style="padding: 8px; text-align: center; border-right: 1px solid #808080; width: 100px;">EMISIÓN</th>
+                    <th style="padding: 8px; text-align: center; border-right: 1px solid #808080; width: 100px;">VENCIMIENTO</th>
+                    <th style="padding: 8px; text-align: center; border-right: 1px solid #808080; width: 80px;">ESTADO</th>
+                    <th style="padding: 8px; text-align: center; width: 150px;">ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var doc in documentos)
+                {
+                    <tr style="@(doc.EstaVigente ? "" : "background-color: #FFCCCC;") border-bottom: 1px solid #C0C0C0; cursor: pointer;"
+                        @onclick="() => SelectDocumento(doc)"
+                        class="@(selectedDocumento?.Id == doc.Id ? "selected-row" : "")">
+                        <td style="padding: 8px; border-right: 1px solid #E0E0E0;">
+                            <span style="font-weight: bold;">@GetTipoNombre(doc.TipoDocumento)</span>
+                        </td>
+                        <td style="padding: 8px; border-right: 1px solid #E0E0E0;">
+                            <strong>@doc.Nombre</strong><br/>
+                            <small style="color: #666;">@doc.NombreArchivoOriginal</small>
+                        </td>
+                        <td style="padding: 8px; text-align: center; border-right: 1px solid #E0E0E0;">
+                            @(doc.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")
+                        </td>
+                        <td style="padding: 8px; text-align: center; border-right: 1px solid #E0E0E0;">
+                            @(doc.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")
+                        </td>
+                        <td style="padding: 8px; text-align: center; border-right: 1px solid #E0E0E0;">
+                            @if (doc.EstaVigente)
+                            {
+                                <span style="background-color: #00AA00; color: white; padding: 2px 8px; font-size: 10px; font-weight: bold;">VIGENTE</span>
+                            }
+                            else
+                            {
+                                <span style="background-color: #CC0000; color: white; padding: 2px 8px; font-size: 10px; font-weight: bold;">VENCIDO</span>
+                            }
+                        </td>
+                        <td style="padding: 8px; text-align: center;">
+                            @if (!string.IsNullOrEmpty(doc.ArchivoPath))
+                            {
+                                <button @onclick="() => DescargarDocumento(doc)" @onclick:stopPropagation="true"
+                                        style="padding: 4px 8px; margin-right: 4px;">
+                                    VER
+                                </button>
+                            }
+                            @if (AuthService.IsAdmin)
+                            {
+                                <button @onclick="() => ConfirmarEliminar(doc)" @onclick:stopPropagation="true"
+                                        style="padding: 4px 8px; background-color: #CC0000; color: white;">
+                                    ELIMINAR
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div style="background-color: #F0F0F0; border: 2px solid #000000; border-top: 0; padding: 8px; font-size: 12px;">
+        <strong>Total: @documentos.Count()</strong> documentos
+        @if (selectedDocumento != null)
+        {
+            <span style="margin-left: 16px; color: #0000AA;">
+                | Seleccionado: @selectedDocumento.Nombre
+            </span>
+        }
+    </div>
+}
+
+@* Modal de Subir Documento *@
+@if (showUploadModal)
+{
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+        <div style="background-color: #C0C0C0; border: 4px solid #000000; border-style: outset; width: 600px; max-height: 90vh; overflow-y: auto;">
+            <!-- Header -->
+            <div style="background-color: #000080; color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: bold; font-size: 14px;">📄 SUBIR DOCUMENTO</span>
+                <button @onclick="CloseUploadModal" 
+                        style="background-color: #C0C0C0; border: 2px solid #FFFFFF; padding: 2px 8px; font-weight: bold;">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 16px; background-color: #F0F0F0;">
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
+                        TIPO DE DOCUMENTO:
+                    </label>
+                    <select @bind="uploadTipo" 
+                            style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;">
+                        @foreach (TipoDocumentoEmpleado tipo in Enum.GetValues<TipoDocumentoEmpleado>())
+                        {
+                            <option value="@tipo">@GetTipoNombre(tipo)</option>
+                        }
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
+                        NOMBRE DEL DOCUMENTO:
+                    </label>
+                    <input type="text" @bind="uploadNombre" 
+                           style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;"
+                           placeholder="Nombre descriptivo del documento" />
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
+                        DESCRIPCIÓN (Opcional):
+                    </label>
+                    <input type="text" @bind="uploadDescripcion" 
+                           style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;"
+                           placeholder="Descripción adicional" />
+                </div>
+
+                <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
+                            FECHA DE EMISIÓN:
+                        </label>
+                        <input type="date" @bind="uploadFechaEmision" 
+                               style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;" />
+                    </div>
+
+                    <div style="flex: 1;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
+                            FECHA DE VENCIMIENTO:
+                        </label>
+                        <input type="date" @bind="uploadFechaVencimiento" 
+                               style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;" />
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
+                        ARCHIVO (PDF, Word, Imágenes - Máx. 10MB):
+                    </label>
+                    <InputFile OnChange="OnFileSelected" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" 
+                               style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;" />
+                    @if (!string.IsNullOrEmpty(selectedFileName))
+                    {
+                        <small style="color: #006600; display: block; margin-top: 4px;">
+                            ✓ Archivo seleccionado: @selectedFileName (@FormatFileSize(selectedFileBytes?.Length ?? 0))
+                        </small>
+                    }
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background-color: #C0C0C0; padding: 12px; border-top: 2px solid #808080; display: flex; justify-content: flex-end; gap: 8px;">
+                <button @onclick="CloseUploadModal" style="padding: 6px 16px;">
+                    CANCELAR [ESC]
+                </button>
+                <button @onclick="UploadDocument" disabled="@isUploading"
+                        style="padding: 6px 16px; background-color: #00AA00; color: white;">
+                    @(isUploading ? "SUBIENDO..." : "SUBIR DOCUMENTO")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal de Confirmación de Eliminación *@
+@if (showConfirmModal)
+{
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1001; display: flex; align-items: center; justify-content: center;">
+        <div style="background-color: #C0C0C0; border: 4px solid #000000; border-style: outset; width: 400px;">
+            <div style="background-color: #CC0000; color: white; padding: 8px 12px;">
+                <span style="font-weight: bold; font-size: 14px;">⚠️ CONFIRMAR ELIMINACIÓN</span>
+            </div>
+            <div style="padding: 20px; background-color: #F0F0F0; text-align: center;">
+                <p style="margin-bottom: 16px; font-size: 12px;">
+                    ¿Está seguro que desea eliminar el documento<br/>
+                    <strong>@documentoAEliminar?.Nombre</strong>?
+                </p>
+                <p style="color: #CC0000; font-size: 11px; margin-bottom: 20px;">
+                    Esta acción no se puede deshacer.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 12px;">
+                    <button @onclick="CancelarEliminar" style="padding: 6px 16px;">
+                        CANCELAR
+                    </button>
+                    <button @onclick="EliminarDocumento" 
+                            style="padding: 6px 16px; background-color: #CC0000; color: white;">
+                        SÍ, ELIMINAR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int EmpleadoIdParam { get; set; }
+
+    private KeyboardHandler? keyboardHandler;
+    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+
+    private List<Empleado> empleados = new();
+    private List<DocumentoEmpleado> documentos = new();
+    private int selectedEmpleadoId = 0;
+    private DocumentoEmpleado? selectedDocumento;
+    private bool isLoading = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    // Upload Modal State
+    private bool showUploadModal = false;
+    private bool isUploading = false;
+    private TipoDocumentoEmpleado uploadTipo = TipoDocumentoEmpleado.Otro;
+    private string uploadNombre = "";
+    private string uploadDescripcion = "";
+    private DateTime? uploadFechaEmision;
+    private DateTime? uploadFechaVencimiento;
+    private string selectedFileName = "";
+    private byte[]? selectedFileBytes;
+    private string? selectedFileMime;
+
+    // Confirmación de eliminación
+    private bool showConfirmModal = false;
+    private DocumentoEmpleado? documentoAEliminar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Configurar atajos de teclado
+        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        {
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Subir Documento", Action = () => { if (selectedEmpleadoId > 0 && AuthService.IsAdmin) ShowUploadModal(); return Task.CompletedTask; } },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = LoadDocumentos },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = () => { if (showUploadModal) CloseUploadModal(); else if (showConfirmModal) CancelarEliminar(); return Task.CompletedTask; } }
+        };
+
+        try
+        {
+            empleados = (await EmpleadoRepo.GetAllActiveAsync()).ToList();
+            if (EmpleadoIdParam > 0)
+            {
+                selectedEmpleadoId = EmpleadoIdParam;
+                await LoadDocumentos();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando empleados");
+            errorMessage = $"Error cargando empleados: {ex.Message}";
+        }
+    }
+
+    private async Task LoadDocumentos()
+    {
+        if (selectedEmpleadoId == 0)
+        {
+            documentos.Clear();
+            selectedDocumento = null;
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            documentos = (await DocumentoRepo.GetByEmpleadoIdAsync(selectedEmpleadoId))
+                .OrderByDescending(d => d.FechaCreacion)
+                .ToList();
+            selectedDocumento = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando documentos del empleado {EmpleadoId}", selectedEmpleadoId);
+            errorMessage = $"Error cargando documentos: {ex.Message}";
+            documentos.Clear();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectDocumento(DocumentoEmpleado doc)
+    {
+        selectedDocumento = doc;
+    }
+
+    private string GetTipoNombre(TipoDocumentoEmpleado tipo) => tipo switch
+    {
+        TipoDocumentoEmpleado.Cedula => "Cédula",
+        TipoDocumentoEmpleado.HojaVida => "Hoja de Vida",
+        TipoDocumentoEmpleado.CertificadoEstudios => "Certificado Estudios",
+        TipoDocumentoEmpleado.CertificadoLaboral => "Certificado Laboral",
+        TipoDocumentoEmpleado.ExamenMedicoIngreso => "Examen Médico Ingreso",
+        TipoDocumentoEmpleado.ExamenMedicoPeriodico => "Examen Médico Periódico",
+        TipoDocumentoEmpleado.ExamenMedicoEgreso => "Examen Médico Egreso",
+        TipoDocumentoEmpleado.AfiliacionEPS => "Afiliación EPS",
+        TipoDocumentoEmpleado.AfiliacionAFP => "Afiliación AFP",
+        TipoDocumentoEmpleado.AfiliacionARL => "Afiliación ARL",
+        TipoDocumentoEmpleado.AfiliacionCajaCompensacion => "Caja Compensación",
+        TipoDocumentoEmpleado.ReferenciasPersonales => "Referencias Personales",
+        TipoDocumentoEmpleado.ReferenciasLaborales => "Referencias Laborales",
+        TipoDocumentoEmpleado.Antecedentes => "Antecedentes",
+        TipoDocumentoEmpleado.LicenciaConduccion => "Licencia Conducción",
+        TipoDocumentoEmpleado.LibretaMilitar => "Libreta Militar",
+        TipoDocumentoEmpleado.RUT => "RUT",
+        TipoDocumentoEmpleado.CertificadoBancario => "Certificado Bancario",
+        TipoDocumentoEmpleado.ActaEntregaDotacion => "Entrega Dotación",
+        TipoDocumentoEmpleado.Capacitacion => "Capacitación",
+        TipoDocumentoEmpleado.ContratoFirmado => "Contrato Firmado",
+        TipoDocumentoEmpleado.Foto => "Foto",
+        _ => "Otro"
+    };
+
+    private void ShowUploadModal()
+    {
+        uploadTipo = TipoDocumentoEmpleado.Otro;
+        uploadNombre = "";
+        uploadDescripcion = "";
+        uploadFechaEmision = DateTime.Today;
+        uploadFechaVencimiento = null;
+        selectedFileName = "";
+        selectedFileBytes = null;
+        selectedFileMime = null;
+        showUploadModal = true;
+    }
+
+    private void CloseUploadModal()
+    {
+        showUploadModal = false;
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try
+            {
+                selectedFileName = file.Name;
+                selectedFileMime = file.ContentType;
+
+                // Read file bytes (limit to 10MB)
+                using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                selectedFileBytes = ms.ToArray();
+
+                // Auto-fill name if empty
+                if (string.IsNullOrEmpty(uploadNombre))
+                {
+                    uploadNombre = Path.GetFileNameWithoutExtension(file.Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error seleccionando archivo");
+                errorMessage = $"Error al seleccionar archivo: {ex.Message}";
+                selectedFileName = "";
+                selectedFileBytes = null;
+            }
+        }
+    }
+
+    private async Task UploadDocument()
+    {
+        if (string.IsNullOrWhiteSpace(uploadNombre))
+        {
+            errorMessage = "Debe ingresar un nombre para el documento";
+            return;
+        }
+        
+        if (selectedFileBytes == null || selectedFileBytes.Length == 0)
+        {
+            errorMessage = "Debe seleccionar un archivo";
+            return;
+        }
+
+        isUploading = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            // Guardar archivo en almacenamiento local
+            var tipoDocumentoStr = GetTipoNombre(uploadTipo);
+            var storageResult = await StorageService.SaveDocumentoEmpleadoAsync(
+                selectedEmpleadoId,
+                tipoDocumentoStr,
+                selectedFileBytes,
+                selectedFileName
+            );
+
+            if (!storageResult.IsSuccess)
+            {
+                errorMessage = $"Error al guardar archivo: {storageResult.ErrorMessage}";
+                return;
+            }
+
+            // Crear registro en base de datos
+            var documento = new DocumentoEmpleado
+            {
+                EmpleadoId = selectedEmpleadoId,
+                TipoDocumento = uploadTipo,
+                Nombre = uploadNombre,
+                Descripcion = uploadDescripcion,
+                NombreArchivoOriginal = selectedFileName,
+                TipoMime = selectedFileMime ?? "application/octet-stream",
+                TamanoArchivo = selectedFileBytes.Length,
+                FechaEmision = uploadFechaEmision,
+                FechaVencimiento = uploadFechaVencimiento,
+                SubidoPorNombre = AuthService.CurrentUser?.NombreCompleto,
+                SubidoPorUsuarioId = AuthService.CurrentUser?.Id,
+                ArchivoPath = storageResult.Value,
+                Activo = true,
+                FechaCreacion = DateTime.Now
+            };
+
+            await DocumentoRepo.AddAsync(documento);
+            
+            Logger.LogInformation("Documento subido: {Nombre} para empleado {EmpleadoId}", uploadNombre, selectedEmpleadoId);
+            
+            successMessage = $"Documento '{uploadNombre}' subido exitosamente";
+            showUploadModal = false;
+            await LoadDocumentos();
+            await ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error subiendo documento");
+            errorMessage = $"Error al subir documento: {ex.Message}";
+        }
+        finally
+        {
+            isUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DescargarDocumento(DocumentoEmpleado doc)
+    {
+        if (string.IsNullOrEmpty(doc.ArchivoPath))
+        {
+            errorMessage = "El documento no tiene un archivo asociado";
+            return;
+        }
+
+        try
+        {
+            var bytes = await StorageService.GetFileAsync(doc.ArchivoPath);
+            if (bytes == null || bytes.Length == 0)
+            {
+                errorMessage = "No se pudo leer el archivo del documento";
+                return;
+            }
+
+            // Descargar archivo usando JavaScript
+            var fileName = doc.NombreArchivoOriginal;
+            var mimeType = doc.TipoMime;
+            
+            await JS.InvokeVoidAsync("downloadFile", fileName, mimeType, bytes);
+            
+            Logger.LogInformation("Documento descargado: {Nombre} (ID: {Id})", doc.Nombre, doc.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error descargando documento {Id}", doc.Id);
+            errorMessage = $"Error al descargar documento: {ex.Message}";
+        }
+    }
+
+    private void ConfirmarEliminar(DocumentoEmpleado doc)
+    {
+        documentoAEliminar = doc;
+        showConfirmModal = true;
+    }
+
+    private void CancelarEliminar()
+    {
+        documentoAEliminar = null;
+        showConfirmModal = false;
+    }
+
+    private async Task EliminarDocumento()
+    {
+        if (documentoAEliminar == null) return;
+
+        try
+        {
+            // Eliminar archivo físico
+            if (!string.IsNullOrEmpty(documentoAEliminar.ArchivoPath))
+            {
+                await StorageService.DeleteDocumentoEmpleadoAsync(documentoAEliminar.Id);
+            }
+
+            // Eliminar registro de base de datos
+            await DocumentoRepo.DeleteAsync(documentoAEliminar.Id);
+            
+            Logger.LogInformation("Documento eliminado: {Nombre} (ID: {Id})", documentoAEliminar.Nombre, documentoAEliminar.Id);
+            
+            successMessage = $"Documento '{documentoAEliminar.Nombre}' eliminado correctamente";
+            showConfirmModal = false;
+            documentoAEliminar = null;
+            
+            await LoadDocumentos();
+            await ClearSuccessMessage();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error eliminando documento {Id}", documentoAEliminar.Id);
+            errorMessage = $"Error al eliminar documento: {ex.Message}";
+            showConfirmModal = false;
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private async Task ClearSuccessMessage()
+    {
+        await Task.Delay(4000);
+        successMessage = null;
+        StateHasChanged();
+    }
+}
+
+<style>
+    .page-title {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 24px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #000000;
+    }
+
+    .error-block {
+        background-color: #FFCCCC;
+        border: 2px solid #CC0000;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .error-block h3 {
+        margin: 0 0 8px 0;
+        color: #CC0000;
+        font-size: 14px;
+    }
+
+    .error-block p {
+        margin: 0;
+        font-size: 12px;
+    }
+
+    .success-block {
+        background-color: #CCFFCC;
+        border: 2px solid #00AA00;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    button {
+        background-color: #E0E0E0;
+        border: 2px solid #000000;
+        border-style: outset;
+        padding: 8px 16px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:hover:not(:disabled) {
+        background-color: #C0C0C0;
+        border-style: inset;
+    }
+
+    button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .selected-row {
+        background-color: #FFFFAA !important;
+        outline: 2px solid #0000AA;
+    }
+
+    table tbody tr:hover {
+        background-color: #E8E8E8;
+    }
+</style>

@@ -1,0 +1,254 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Shared.Interfaces
+@inject IEmpleadoRepository EmpleadoRepository
+@inject ILogger<EmpleadoSelector> Logger
+
+<div class="empleado-selector">
+    <div class="selector-search">
+        <input type="text" 
+               @ref="searchInput"
+               placeholder="@Placeholder" 
+               @bind="searchTerm" 
+               @bind:event="oninput"
+               @onfocus="OnFocus"
+               @onblur="OnBlur" />
+        @if (!string.IsNullOrEmpty(searchTerm))
+        {
+            <button class="btn-clear" @onclick="Clear">✕</button>
+        }
+    </div>
+
+    @if (showDropdown && empleados.Any())
+    {
+        <div class="selector-dropdown">
+            @foreach (var emp in empleados.Take(MaxResults))
+            {
+                <div class="selector-item" @onclick="() => SelectEmpleado(emp)">
+                    <img src="@GetFotoUrl(emp)" alt="@emp.NombreCompleto" 
+                         onerror="this.src='/images/default-avatar.png'" />
+                    <div class="selector-item-info">
+                        <div class="selector-item-nombre">@emp.NombreCompleto</div>
+                        <div class="selector-item-cargo">
+                            @(emp.Cargo?.Nombre ?? "Sin cargo") - @(emp.Departamento?.Nombre ?? "Sin depto")
+                        </div>
+                    </div>
+                    <div class="selector-item-badge">
+                        <EstadoBadge Estado="@emp.Estado.ToString()" Size="small" />
+                    </div>
+                </div>
+            }
+            @if (empleados.Count > MaxResults)
+            {
+                <div class="selector-more">
+                    +@(empleados.Count - MaxResults) más... Refina tu búsqueda
+                </div>
+            }
+        </div>
+    }
+
+    @if (SelectedEmpleado != null)
+    {
+        <div class="selector-selected">
+            <strong>Seleccionado:</strong> @SelectedEmpleado.NombreCompleto
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Empleado? SelectedEmpleado { get; set; }
+    [Parameter] public EventCallback<Empleado?> SelectedEmpleadoChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Buscar empleado...";
+    [Parameter] public int MaxResults { get; set; } = 10;
+    [Parameter] public bool SoloActivos { get; set; } = true;
+
+    private ElementReference searchInput;
+    private string searchTerm = string.Empty;
+    private List<Empleado> empleados = new();
+    private bool showDropdown;
+    private bool isBlurring;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (SelectedEmpleado != null)
+        {
+            searchTerm = SelectedEmpleado.NombreCompleto;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await BuscarEmpleados();
+    }
+
+    private async Task BuscarEmpleados()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+        {
+            empleados.Clear();
+            return;
+        }
+
+        try
+        {
+            var todos = await EmpleadoRepository.GetAllAsync();
+            
+            empleados = todos
+                .Where(e => 
+                    (!SoloActivos || e.Estado == Domain.Enums.EstadoEmpleado.Activo) &&
+                    (e.NombreCompleto.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                     e.Cedula.Contains(searchTerm) ||
+                     e.Codigo.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                )
+                .OrderBy(e => e.NombreCompleto)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error buscando empleados");
+            empleados.Clear();
+        }
+    }
+
+    private void OnFocus()
+    {
+        showDropdown = true;
+    }
+
+    private async Task OnBlur()
+    {
+        isBlurring = true;
+        await Task.Delay(200); // Dar tiempo para que el click en el dropdown se registre
+        if (isBlurring)
+        {
+            showDropdown = false;
+        }
+    }
+
+    private async Task SelectEmpleado(Empleado empleado)
+    {
+        isBlurring = false;
+        SelectedEmpleado = empleado;
+        searchTerm = empleado.NombreCompleto;
+        showDropdown = false;
+        await SelectedEmpleadoChanged.InvokeAsync(empleado);
+    }
+
+    private async Task Clear()
+    {
+        searchTerm = string.Empty;
+        SelectedEmpleado = null;
+        empleados.Clear();
+        showDropdown = false;
+        await SelectedEmpleadoChanged.InvokeAsync(null);
+    }
+
+    private string GetFotoUrl(Empleado empleado)
+    {
+        if (!string.IsNullOrEmpty(empleado.FotoPath))
+        {
+            return $"/files/empleados/{empleado.Id}/foto/{empleado.FotoPath}";
+        }
+        return "/images/default-avatar.png";
+    }
+}
+
+<style>
+    .empleado-selector {
+        position: relative;
+        width: 100%;
+    }
+
+    .selector-search {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .selector-search input {
+        flex: 1;
+        padding-right: 32px;
+    }
+
+    .btn-clear {
+        position: absolute;
+        right: 8px;
+        background: none;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px 8px;
+        line-height: 1;
+    }
+
+    .btn-clear:hover {
+        color: #00d4ff;
+    }
+
+    .selector-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #1a1a1a;
+        border: 1px solid #00d4ff;
+        border-top: none;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .selector-item {
+        display: flex;
+        gap: 12px;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #333;
+        align-items: center;
+    }
+
+    .selector-item:hover {
+        background: #00d4ff22;
+    }
+
+    .selector-item img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid #333;
+    }
+
+    .selector-item-info {
+        flex: 1;
+    }
+
+    .selector-item-nombre {
+        font-weight: bold;
+        font-size: 13px;
+        color: #fff;
+    }
+
+    .selector-item-cargo {
+        font-size: 11px;
+        color: #888;
+    }
+
+    .selector-more {
+        padding: 8px 12px;
+        text-align: center;
+        font-size: 11px;
+        color: #888;
+        font-style: italic;
+    }
+
+    .selector-selected {
+        margin-top: 8px;
+        padding: 8px;
+        background: #00d4ff22;
+        border: 1px solid #00d4ff;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+</style>
