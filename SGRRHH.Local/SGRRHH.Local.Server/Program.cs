@@ -92,7 +92,20 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseStaticFiles();
+// Configuración de archivos estáticos SIN caché para desarrollo (CSS siempre actualizado)
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        // Deshabilitar caché para CSS y JS durante desarrollo
+        if (ctx.File.Name.EndsWith(".css") || ctx.File.Name.EndsWith(".js"))
+        {
+            ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
+            ctx.Context.Response.Headers.Append("Pragma", "no-cache");
+            ctx.Context.Response.Headers.Append("Expires", "0");
+        }
+    }
+});
 var storagePath = app.Services.GetRequiredService<DatabasePathResolver>().GetStoragePath();
 app.UseStaticFiles(new StaticFileOptions
 {

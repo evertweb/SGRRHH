@@ -25,12 +25,10 @@
 
 <h1 class="page-title">GESTIÓN DE EMPLEADOS</h1>
 
-@* Messages are now handled by MessageToast component *@
-
-<!-- Header con controles -->
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <div style="display: flex; gap: 8px;">
-        <button @onclick="NuevoEmpleadoOnboarding" style="background-color: #00AA00; color: white;">
+<!-- Toolbar -->
+<div class="toolbar">
+    <div class="toolbar-group">
+        <button class="btn-success" @onclick="NuevoEmpleadoOnboarding">
             🧑‍💼 NUEVO EMPLEADO (F3)
         </button>
         <button @onclick="CargarEmpleados">ACTUALIZAR (F5)</button>
@@ -38,7 +36,7 @@
         {
             <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
         }
-        <button @onclick="ExportarExcel" disabled="@isExporting" style="background-color: #28a745;">
+        <button class="btn-success" @onclick="ExportarExcel" disabled="@isExporting">
             @if (isExporting)
             {
                 <span>EXPORTANDO...</span>
@@ -49,10 +47,12 @@
             }
         </button>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+    
+    <div class="toolbar-separator"></div>
+    
+    <div class="search-box">
         <input type="text" id="searchInput" placeholder="Buscar... (F2)" 
-               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" 
-               style="min-width: 250px;" />
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         <button @onclick="Buscar">BUSCAR</button>
         @if (!string.IsNullOrEmpty(searchTerm))
         {
@@ -70,94 +70,92 @@
 </div>
 
 <!-- Información de resultados -->
-<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+<div class="results-info">
     Mostrando @empleados.Count() de @totalEmpleados empleado(s)
 </div>
 
 <!-- Tabla de empleados -->
-<div style="overflow-x: auto;">
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 60px;">FOTO</th>
-                <th style="width: 100px;">CÓDIGO</th>
-                <th style="width: 120px;">CÉDULA</th>
-                <th>NOMBRE COMPLETO</th>
-                <th>CARGO</th>
-                <th>DEPARTAMENTO</th>
-                <th style="width: 100px;">ESTADO</th>
-                <th style="width: 180px;">ACCIONES</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (isLoading)
+<table>
+    <thead>
+        <tr>
+            <th style="width: 60px;">FOTO</th>
+            <th style="width: 100px;">CÓDIGO</th>
+            <th style="width: 120px;">CÉDULA</th>
+            <th>NOMBRE COMPLETO</th>
+            <th>CARGO</th>
+            <th>DEPARTAMENTO</th>
+            <th style="width: 100px;">ESTADO</th>
+            <th style="width: 180px;">ACCIONES</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (isLoading)
+        {
+            <tr><td colspan="8" class="loading">Cargando empleados...</td></tr>
+        }
+        else if (!empleados.Any())
+        {
+            <tr><td colspan="8" class="empty-state">No hay empleados para mostrar</td></tr>
+        }
+        else
+        {
+            @foreach (var emp in empleados)
             {
-                <tr><td colspan="8" class="loading">Cargando empleados...</td></tr>
+                <tr class="@(selectedEmpleado?.Id == emp.Id ? "selected" : "")"
+                    @onclick="() => SelectEmpleado(emp)">
+                    <td class="text-center">
+                        @if (!string.IsNullOrEmpty(emp.FotoPath))
+                        {
+                            <img src="@GetFotoUrl(emp)" class="empleado-foto-mini" 
+                                 onerror="this.src='/images/default-avatar.png'" 
+                                 alt="Foto de @emp.NombreCompleto" />
+                        }
+                        else
+                        {
+                            <div class="empleado-foto-placeholder">
+                                @GetInitials(emp.NombreCompleto)
+                            </div>
+                        }
+                    </td>
+                    <td><strong>@emp.Codigo</strong></td>
+                    <td>@emp.Cedula</td>
+                    <td><strong>@emp.NombreCompleto</strong></td>
+                    <td>@(emp.Cargo?.Nombre ?? "-")</td>
+                    <td>@(emp.Departamento?.Nombre ?? "-")</td>
+                    <td>
+                        <span class="badge badge-@emp.Estado.ToString().ToLower()">
+                            @emp.Estado
+                        </span>
+                    </td>
+                    <td class="table-actions">
+                        <button @onclick="() => EditarEmpleado(emp)" @onclick:stopPropagation="true" title="Editar empleado">
+                            EDITAR
+                        </button>
+                        <button @onclick="() => VerExpediente(emp)" @onclick:stopPropagation="true" title="Ver expediente completo">
+                            EXPEDIENTE
+                        </button>
+                    </td>
+                </tr>
             }
-            else if (!empleados.Any())
-            {
-                <tr><td colspan="8" class="empty-state">No hay empleados para mostrar</td></tr>
-            }
-            else
-            {
-                @foreach (var emp in empleados)
-                {
-                    <tr class="@(selectedEmpleado?.Id == emp.Id ? "selected" : "")"
-                        @onclick="() => SelectEmpleado(emp)">
-                        <td style="text-align: center;">
-                            @if (!string.IsNullOrEmpty(emp.FotoPath))
-                            {
-                                <img src="@GetFotoUrl(emp)" class="empleado-foto-mini" 
-                                     onerror="this.src='/images/default-avatar.png'" 
-                                     alt="Foto de @emp.NombreCompleto" />
-                            }
-                            else
-                            {
-                                <div class="empleado-foto-placeholder">
-                                    @GetInitials(emp.NombreCompleto)
-                                </div>
-                            }
-                        </td>
-                        <td><strong>@emp.Codigo</strong></td>
-                        <td>@emp.Cedula</td>
-                        <td><strong>@emp.NombreCompleto</strong></td>
-                        <td>@(emp.Cargo?.Nombre ?? "-")</td>
-                        <td>@(emp.Departamento?.Nombre ?? "-")</td>
-                        <td>
-                            <span class="badge badge-@emp.Estado.ToString().ToLower()">
-                                @emp.Estado
-                            </span>
-                        </td>
-                        <td class="actions-cell">
-                            <button @onclick="() => EditarEmpleado(emp)" @onclick:stopPropagation="true" title="Editar empleado">
-                                EDITAR
-                            </button>
-                            <button @onclick="() => VerExpediente(emp)" @onclick:stopPropagation="true" title="Ver expediente completo">
-                                EXPEDIENTE
-                            </button>
-                        </td>
-                    </tr>
-                }
-            }
-        </tbody>
-    </table>
-</div>
+        }
+    </tbody>
+</table>
 
 <!-- Paginación -->
 @if (totalEmpleados > pageSize)
 {
-    <div class="pagination-controls" style="margin-top: 12px; padding: 8px 12px; background-color: #F0F0F0; border: 1px solid #808080; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 12px; color: #666;">
+    <div class="pagination-controls">
+        <span class="pagination-info">
             Mostrando @(((currentPage - 1) * pageSize) + 1) - @(Math.Min(currentPage * pageSize, totalEmpleados)) de @totalEmpleados
         </span>
-        <div style="display: flex; align-items: center; gap: 4px;">
-            <button @onclick="() => CambiarPagina(1)" disabled="@(currentPage <= 1)" style="padding: 4px 8px; font-size: 11px;">⏮</button>
-            <button @onclick="() => CambiarPagina(currentPage - 1)" disabled="@(currentPage <= 1)" style="padding: 4px 8px; font-size: 11px;">←</button>
-            <span style="margin: 0 8px; font-size: 12px;">Página @currentPage de @((int)Math.Ceiling((double)totalEmpleados / pageSize))</span>
-            <button @onclick="() => CambiarPagina(currentPage + 1)" disabled="@(currentPage >= Math.Ceiling((double)totalEmpleados / pageSize))" style="padding: 4px 8px; font-size: 11px;">→</button>
-            <button @onclick="() => CambiarPagina((int)Math.Ceiling((double)totalEmpleados / pageSize))" disabled="@(currentPage >= Math.Ceiling((double)totalEmpleados / pageSize))" style="padding: 4px 8px; font-size: 11px;">⏭</button>
+        <div class="pagination-buttons">
+            <button @onclick="() => CambiarPagina(1)" disabled="@(currentPage <= 1)">⏮</button>
+            <button @onclick="() => CambiarPagina(currentPage - 1)" disabled="@(currentPage <= 1)">←</button>
+            <span class="pagination-current">Página @currentPage de @((int)Math.Ceiling((double)totalEmpleados / pageSize))</span>
+            <button @onclick="() => CambiarPagina(currentPage + 1)" disabled="@(currentPage >= Math.Ceiling((double)totalEmpleados / pageSize))">→</button>
+            <button @onclick="() => CambiarPagina((int)Math.Ceiling((double)totalEmpleados / pageSize))" disabled="@(currentPage >= Math.Ceiling((double)totalEmpleados / pageSize))">⏭</button>
         </div>
-        <select @bind="pageSize" @bind:after="OnPageSizeChanged" style="font-size: 11px; padding: 4px;">
+        <select @bind="pageSize" @bind:after="OnPageSizeChanged" class="pagination-size">
             <option value="10">10 por pág.</option>
             <option value="20">20 por pág.</option>
             <option value="50">50 por pág.</option>
@@ -170,7 +168,7 @@
 @if (showConfirmModal)
 {
     <div class="modal-overlay" @onclick:stopPropagation="true">
-        <div class="modal-box" style="min-width: 400px;">
+        <div class="modal-box">
             <h3>CONFIRMAR ACCIÓN</h3>
             <div class="modal-content">
                 <p>@confirmMessage</p>
@@ -752,275 +750,3 @@
         showConfirmModal = false;
     }
 }
-
-<style>
-.page-title {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 24px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #000000;
-}
-
-.error-block {
-    background-color: #FFCCCC;
-    border: 2px solid #CC0000;
-    padding: 16px;
-    margin-bottom: 16px;
-}
-
-.error-block h3 {
-    margin: 0 0 8px 0;
-    color: #CC0000;
-    font-size: 14px;
-}
-
-.error-block p {
-    margin: 0 0 12px 0;
-    font-size: 12px;
-}
-
-.success-block {
-    background-color: #CCFFCC;
-    border: 2px solid #00AA00;
-    padding: 12px 16px;
-    margin-bottom: 16px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-button {
-    background-color: #E0E0E0;
-    border: 2px solid #000000;
-    border-style: outset;
-    padding: 8px 16px;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-button:hover:not(:disabled) {
-    background-color: #D0D0D0;
-}
-
-button:active:not(:disabled) {
-    border-style: inset;
-}
-
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-button.btn-primary {
-    background-color: #0066CC;
-    color: #FFFFFF;
-}
-
-button.btn-danger {
-    background-color: #CC0000;
-    color: #FFFFFF;
-}
-
-input[type="text"],
-input[type="email"],
-input[type="date"],
-select,
-textarea {
-    width: 100%;
-    padding: 6px 8px;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    border: 2px solid #808080;
-    border-style: inset;
-    background-color: #FFFFFF;
-    box-sizing: border-box;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-    outline: 2px solid #0066CC;
-    outline-offset: 2px;
-}
-
-input:disabled,
-select:disabled,
-textarea:disabled {
-    background-color: #E0E0E0;
-    color: #808080;
-}
-
-textarea {
-    resize: vertical;
-    font-family: 'Courier New', monospace;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    border: 2px solid #000000;
-}
-
-table th,
-table td {
-    border: 1px solid #808080;
-    padding: 8px;
-    text-align: left;
-    font-size: 12px;
-}
-
-table th {
-    background-color: #E0E0E0;
-    font-weight: bold;
-    white-space: nowrap;
-}
-
-table tbody tr {
-    cursor: pointer;
-}
-
-table tbody tr:hover {
-    background-color: #F5F5F5;
-}
-
-table tbody tr.selected {
-    background-color: #CCE5FF !important;
-}
-
-.loading {
-    text-align: center;
-    padding: 24px;
-    color: #666666;
-    font-style: italic;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 32px;
-    color: #999999;
-    font-style: italic;
-}
-
-.actions-cell {
-    white-space: nowrap;
-}
-
-.actions-cell button {
-    padding: 4px 8px;
-    font-size: 11px;
-    margin-right: 4px;
-}
-
-.empleado-foto-mini {
-    width: 40px;
-    height: 40px;
-    border-radius: 4px;
-    border: 2px solid #000000;
-    object-fit: cover;
-}
-
-.empleado-foto-placeholder {
-    width: 40px;
-    height: 40px;
-    border-radius: 4px;
-    border: 2px solid #000000;
-    background-color: #808080;
-    color: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-    margin: 0 auto;
-}
-
-.badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border: 1px solid #000000;
-    font-size: 10px;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-.badge-activo {
-    background-color: #CCFFCC;
-    color: #006600;
-}
-
-.badge-inactivo {
-    background-color: #FFCCCC;
-    color: #CC0000;
-}
-
-.badge-pendiente {
-    background-color: #FFFFCC;
-    color: #996600;
-}
-
-.form-column {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.form-group.required label::after {
-    content: " *";
-    color: #CC0000;
-    font-weight: bold;
-}
-
-.form-group label {
-    font-size: 12px;
-    font-weight: bold;
-    color: #000000;
-}
-
-.form-group small {
-    font-size: 10px;
-    color: #666666;
-    font-style: italic;
-}
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.modal-box {
-    background-color: #C0C0C0;
-    border: 2px solid #000000;
-    border-style: outset;
-    padding: 16px;
-    max-width: 90vw;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
-.modal-content {
-    margin: 16px 0;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 16px;
-}
-</style>

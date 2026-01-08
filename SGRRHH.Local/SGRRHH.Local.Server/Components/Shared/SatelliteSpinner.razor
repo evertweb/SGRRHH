@@ -1,0 +1,86 @@
+@if (IsVisible)
+{
+    <div class="loading-overlay">
+        <div class="loading-content">
+            <div class="satellite-spinner">@GetSatelliteFrame()</div>
+            <div class="loading-message">@Message</div>
+            <div class="loading-dots">@dots</div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+    
+    [Parameter]
+    public string Message { get; set; } = "PROCESANDO";
+    
+    private int frameIndex = 0;
+    private string dots = ".";
+    private Timer? animationTimer;
+    
+    private readonly string[] satelliteFrames = new[]
+    {
+        @"    ___
+   /   \
+  | ◯ ◯ |
+  |  ▼  |
+   \___/
+    |█|
+   /| |\
+  █ | | █",
+        @"    ___
+   /   \
+  | ◯ ◯ |
+  |  ▼  |
+   \___/
+    |█|
+   /|█|\
+  █ |█| █",
+        @"    ___
+   /   \
+  | ◯ ◯ |
+  |  ▼  |
+   \___/
+    |█|
+  /|█|█\
+  █|█|█ █",
+        @"    ___
+   /   \
+  | ◯ ◯ |
+  |  ▼  |
+   \___/
+    |█|
+   /|█|\
+  █ |█| █"
+    };
+    
+    protected override void OnInitialized()
+    {
+        animationTimer = new Timer(_ =>
+        {
+            frameIndex = (frameIndex + 1) % satelliteFrames.Length;
+            
+            // Animate dots
+            switch (dots.Length)
+            {
+                case 1: dots = ".."; break;
+                case 2: dots = "..."; break;
+                default: dots = "."; break;
+            }
+            
+            InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(300));
+    }
+    
+    private string GetSatelliteFrame()
+    {
+        return satelliteFrames[frameIndex];
+    }
+    
+    public void Dispose()
+    {
+        animationTimer?.Dispose();
+    }
+}

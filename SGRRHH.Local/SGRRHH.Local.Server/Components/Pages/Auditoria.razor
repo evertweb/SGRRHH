@@ -33,149 +33,154 @@
 }
 
 <!-- Panel de Filtros -->
-<div class="panel" style="margin-bottom: 24px;">
-    <h3>FILTROS DE BÚSQUEDA</h3>
-    
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
-        <div class="form-group">
-            <label>Fecha Inicio:</label>
-            <input type="date" @bind="fechaInicio" />
+<div class="panel">
+    <div class="panel-header">FILTROS DE BÚSQUEDA</div>
+    <div class="panel-body">
+        <div class="grid-4">
+            <div class="form-group">
+                <label>FECHA INICIO</label>
+                <input type="date" @bind="fechaInicio" />
+            </div>
+
+            <div class="form-group">
+                <label>FECHA FIN</label>
+                <input type="date" @bind="fechaFin" />
+            </div>
+
+            <div class="form-group">
+                <label>ENTIDAD</label>
+                <select @bind="entidadFiltro">
+                    <option value="">Todas</option>
+                    <option value="Empleado">Empleado</option>
+                    <option value="Usuario">Usuario</option>
+                    <option value="Permiso">Permiso</option>
+                    <option value="Vacacion">Vacación</option>
+                    <option value="Contrato">Contrato</option>
+                    <option value="Configuracion">Configuración</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>ACCIÓN</label>
+                <select @bind="accionFiltro">
+                    <option value="">Todas</option>
+                    <option value="Crear">Crear</option>
+                    <option value="Actualizar">Actualizar</option>
+                    <option value="Eliminar">Eliminar</option>
+                    <option value="Login">Login</option>
+                    <option value="Logout">Logout</option>
+                    <option value="Backup">Backup</option>
+                    <option value="Restore">Restore</option>
+                </select>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Fecha Fin:</label>
-            <input type="date" @bind="fechaFin" />
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="btn-primary" @onclick="BuscarLogs" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span>BUSCANDO...</span>
+                    }
+                    else
+                    {
+                        <span>BUSCAR (F4)</span>
+                    }
+                </button>
+
+                <button @onclick="LimpiarFiltros" disabled="@isLoading">
+                    LIMPIAR FILTROS
+                </button>
+
+                <button @onclick="CargarRecientes" disabled="@isLoading">
+                    VER ÚLTIMOS 100
+                </button>
+            </div>
         </div>
-
-        <div class="form-group">
-            <label>Entidad:</label>
-            <select @bind="entidadFiltro">
-                <option value="">Todas</option>
-                <option value="Empleado">Empleado</option>
-                <option value="Usuario">Usuario</option>
-                <option value="Permiso">Permiso</option>
-                <option value="Vacacion">Vacación</option>
-                <option value="Contrato">Contrato</option>
-                <option value="Configuracion">Configuración</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Acción:</label>
-            <select @bind="accionFiltro">
-                <option value="">Todas</option>
-                <option value="Crear">Crear</option>
-                <option value="Actualizar">Actualizar</option>
-                <option value="Eliminar">Eliminar</option>
-                <option value="Login">Login</option>
-                <option value="Logout">Logout</option>
-                <option value="Backup">Backup</option>
-                <option value="Restore">Restore</option>
-            </select>
-        </div>
-    </div>
-
-    <div style="display: flex; gap: 8px; margin-top: 16px;">
-        <button @onclick="BuscarLogs" disabled="@isLoading">
-            @if (isLoading)
-            {
-                <span>BUSCANDO...</span>
-            }
-            else
-            {
-                <span>BUSCAR (F4)</span>
-            }
-        </button>
-
-        <button @onclick="LimpiarFiltros" disabled="@isLoading">
-            LIMPIAR FILTROS
-        </button>
-
-        <button @onclick="CargarRecientes" disabled="@isLoading">
-            VER ÚLTIMOS 100
-        </button>
     </div>
 </div>
 
 <!-- Panel de Resultados -->
 <div class="panel">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3>REGISTROS DE AUDITORÍA</h3>
-        <div style="color: #666;">
-            Total: @logs.Count registros
-        </div>
+    <div class="panel-header">
+        REGISTROS DE AUDITORÍA
+        <span class="results-info">Total: @logs.Count registros</span>
     </div>
-
-    @if (isLoading)
-    {
-        <p class="loading">Cargando logs de auditoría...</p>
-    }
-    else if (!logs.Any())
-    {
-        <p class="empty-state">No hay registros de auditoría para mostrar</p>
-    }
-    else
-    {
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 150px;">FECHA/HORA</th>
-                    <th style="width: 150px;">USUARIO</th>
-                    <th style="width: 120px;">ACCIÓN</th>
-                    <th style="width: 120px;">ENTIDAD</th>
-                    <th style="width: 80px;">ID</th>
-                    <th>DESCRIPCIÓN</th>
-                    <th style="width: 100px;">DETALLES</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var log in logs)
-                {
-                    <tr class="@(selectedLog?.Id == log.Id ? "selected" : "")"
-                        @onclick="() => selectedLog = log">
-                        <td>
-                            <div>@log.FechaHora.ToString("dd/MM/yyyy")</div>
-                            <div style="font-size: 11px; color: #666;">@log.FechaHora.ToString("HH:mm:ss")</div>
-                        </td>
-                        <td>
-                            <strong>@log.UsuarioNombre</strong>
-                        </td>
-                        <td>
-                            <span class="badge-@GetAccionBadge(log.Accion)">
-                                @log.Accion.ToUpper()
-                            </span>
-                        </td>
-                        <td>@log.Entidad</td>
-                        <td>
-                            @if (log.EntidadId.HasValue)
-                            {
-                                <span>#@log.EntidadId</span>
-                            }
-                            else
-                            {
-                                <span style="color: #666;">-</span>
-                            }
-                        </td>
-                        <td>
-                            @if (log.Descripcion.Length > 80)
-                            {
-                                <span title="@log.Descripcion">@(log.Descripcion.Substring(0, 80))...</span>
-                            }
-                            else
-                            {
-                                <span>@log.Descripcion</span>
-                            }
-                        </td>
-                        <td class="actions-cell">
-                            <button @onclick="() => VerDetalles(log)" @onclick:stopPropagation="true">
-                                VER
-                            </button>
-                        </td>
+    <div class="panel-body">
+        @if (isLoading)
+        {
+            <div class="loading">Cargando logs de auditoría...</div>
+        }
+        else if (!logs.Any())
+        {
+            <div class="empty-state">
+                <div class="icon">📋</div>
+                <div class="message">No hay registros de auditoría para mostrar</div>
+            </div>
+        }
+        else
+        {
+            <table>
+                <thead>
+                    <tr>
+                        <th>FECHA/HORA</th>
+                        <th>USUARIO</th>
+                        <th>ACCIÓN</th>
+                        <th>ENTIDAD</th>
+                        <th>ID</th>
+                        <th>DESCRIPCIÓN</th>
+                        <th>ACCIONES</th>
                     </tr>
-                }
-            </tbody>
-        </table>
-    }
+                </thead>
+                <tbody>
+                    @foreach (var log in logs)
+                    {
+                        <tr class="@(selectedLog?.Id == log.Id ? "selected" : "")"
+                            @onclick="() => selectedLog = log">
+                            <td>
+                                <div>@log.FechaHora.ToString("dd/MM/yyyy")</div>
+                                <small>@log.FechaHora.ToString("HH:mm:ss")</small>
+                            </td>
+                            <td>
+                                <strong>@log.UsuarioNombre</strong>
+                            </td>
+                            <td>
+                                <span class="badge badge-@GetAccionBadge(log.Accion)">
+                                    @log.Accion.ToUpper()
+                                </span>
+                            </td>
+                            <td>@log.Entidad</td>
+                            <td>
+                                @if (log.EntidadId.HasValue)
+                                {
+                                    <span>#@log.EntidadId</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                            <td>
+                                @if (log.Descripcion.Length > 80)
+                                {
+                                    <span title="@log.Descripcion">@(log.Descripcion.Substring(0, 80))...</span>
+                                }
+                                else
+                                {
+                                    <span>@log.Descripcion</span>
+                                }
+                            </td>
+                            <td class="table-actions">
+                                <button @onclick="() => VerDetalles(log)" @onclick:stopPropagation="true">
+                                    VER
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
 </div>
 
 <!-- Modal de Detalles -->
@@ -183,63 +188,62 @@
            Title="DETALLES DE AUDITORÍA"
            Width="700px"
            OnCancelClicked="CerrarDetalles"
-           HideSaveButton="true"
-           CancelButtonText="CERRAR">
+           ShowSaveButton="false">
     
     @if (selectedLog != null)
     {
-        <div style="display: grid; gap: 16px;">
+        <div class="audit-details">
             <!-- Información básica -->
-            <div style="background-color: #1a1a1a; padding: 16px; border-left: 4px solid #4CAF50;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div>
-                        <p style="margin: 0; font-size: 11px; color: #666; text-transform: uppercase;">Fecha/Hora</p>
-                        <p style="margin: 4px 0 0 0; font-weight: bold;">
+            <div class="detail-section">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>FECHA/HORA</label>
+                        <div class="detail-value">
                             @selectedLog.FechaHora.ToString("dd/MM/yyyy HH:mm:ss")
-                        </p>
+                        </div>
                     </div>
 
-                    <div>
-                        <p style="margin: 0; font-size: 11px; color: #666; text-transform: uppercase;">Usuario</p>
-                        <p style="margin: 4px 0 0 0; font-weight: bold;">@selectedLog.UsuarioNombre</p>
+                    <div class="form-group">
+                        <label>USUARIO</label>
+                        <div class="detail-value">@selectedLog.UsuarioNombre</div>
                     </div>
 
-                    <div>
-                        <p style="margin: 0; font-size: 11px; color: #666; text-transform: uppercase;">Acción</p>
-                        <p style="margin: 4px 0 0 0;">
-                            <span class="badge-@GetAccionBadge(selectedLog.Accion)">
+                    <div class="form-group">
+                        <label>ACCIÓN</label>
+                        <div class="detail-value">
+                            <span class="badge badge-@GetAccionBadge(selectedLog.Accion)">
                                 @selectedLog.Accion.ToUpper()
                             </span>
-                        </p>
+                        </div>
                     </div>
 
-                    <div>
-                        <p style="margin: 0; font-size: 11px; color: #666; text-transform: uppercase;">Entidad</p>
-                        <p style="margin: 4px 0 0 0; font-weight: bold;">
+                    <div class="form-group">
+                        <label>ENTIDAD</label>
+                        <div class="detail-value">
                             @selectedLog.Entidad
                             @if (selectedLog.EntidadId.HasValue)
                             {
-                                <span style="color: #4CAF50;"> #@selectedLog.EntidadId</span>
+                                <span class="text-success"> #@selectedLog.EntidadId</span>
                             }
-                        </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Descripción -->
-            <div>
-                <p style="margin: 0; font-size: 11px; color: #666; text-transform: uppercase;">Descripción</p>
-                <p style="margin: 8px 0 0 0; padding: 12px; background-color: #1a1a1a; border-radius: 4px;">
+            <div class="form-group">
+                <label>DESCRIPCIÓN</label>
+                <div class="detail-value detail-box">
                     @selectedLog.Descripcion
-                </p>
+                </div>
             </div>
 
             <!-- Datos adicionales -->
             @if (!string.IsNullOrEmpty(selectedLog.DatosAdicionales))
             {
-                <div>
-                    <p style="margin: 0; font-size: 11px; color: #666; text-transform: uppercase;">Datos Adicionales (JSON)</p>
-                    <pre style="margin: 8px 0 0 0; padding: 12px; background-color: #1a1a1a; border-radius: 4px; overflow-x: auto; font-size: 11px; line-height: 1.5;">@FormatJson(selectedLog.DatosAdicionales)</pre>
+                <div class="form-group">
+                    <label>DATOS ADICIONALES (JSON)</label>
+                    <pre class="code-block">@FormatJson(selectedLog.DatosAdicionales)</pre>
                 </div>
             }
         </div>

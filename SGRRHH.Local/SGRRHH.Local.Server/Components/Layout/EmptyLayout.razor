@@ -4,103 +4,106 @@
     @Body
 </div>
 
+<!-- Barra de atajos de teclado en login -->
+<div class="keyboard-shortcut-bar">
+    <span class="shortcut-item"><kbd>TAB</kbd> Siguiente campo</span>
+    <span class="shortcut-item"><kbd>ENTER</kbd> Iniciar sesión</span>
+    <span class="shortcut-item"><kbd>ESC</kbd> Limpiar</span>
+</div>
+
 <style>
 .empty-layout {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #E0E0E0;
+    background-color: var(--color-header);
+    padding-bottom: 60px; /* Espacio para la barra de atajos */
 }
 
 .login-container {
     width: 100%;
-    max-width: 400px;
-    padding: 16px;
+    max-width: 480px;
+    padding: var(--spacing-lg);
 }
 
 .login-box {
-    background-color: #FFFFFF;
-    border: 2px solid #000000;
-    padding: 32px;
+    background-color: var(--color-bg);
+    border: 2px solid var(--color-text);
+    padding: var(--spacing-xxl);
 }
 
 .login-box h2 {
-    margin: 0 0 8px 0;
-    font-size: 24px;
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: var(--font-size-xxl);
     text-align: center;
     font-weight: bold;
+    font-family: var(--font-family);
 }
 
 .login-box h3 {
-    margin: 0 0 24px 0;
-    font-size: 14px;
+    margin: 0 0 var(--spacing-xl) 0;
+    font-size: var(--font-size-base);
     font-weight: normal;
     text-align: center;
     color: #666666;
+    font-family: var(--font-family);
 }
 
-.error-block {
-    background-color: #FFE5E5;
-    border: 1px solid #FF0000;
-    padding: 12px;
-    margin-bottom: 16px;
-    color: #CC0000;
+.login-box .form-group {
+    margin-bottom: var(--spacing-lg);
 }
 
-.error-block p {
-    margin: 0;
-    font-size: 14px;
-}
-
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group label {
+.login-box .form-group label {
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: var(--spacing-xs);
     font-weight: bold;
-    font-size: 14px;
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
 }
 
-.form-group input {
+.login-box .form-group input {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #CCCCCC;
-    font-size: 14px;
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-border);
+    font-size: var(--font-size-base);
+    font-family: var(--font-family);
     box-sizing: border-box;
 }
 
-.form-group input:focus {
+.login-box .form-group input:focus {
     outline: none;
-    border-color: #000000;
+    border: 2px solid var(--color-text);
+    box-shadow: none;
 }
 
 .login-box button {
     width: 100%;
-    padding: 12px;
-    background-color: #000000;
-    color: #FFFFFF;
-    border: none;
-    font-size: 14px;
+    padding: var(--spacing-md);
+    background-color: var(--color-btn-primary);
+    color: var(--color-bg);
+    border: 1px solid var(--color-text);
+    font-size: var(--font-size-base);
     font-weight: bold;
+    font-family: var(--font-family);
     cursor: pointer;
 }
 
 .login-box button:hover:not(:disabled) {
-    background-color: #333333;
+    background-color: var(--color-btn-primary-hover);
 }
 
 .login-box button:disabled {
-    background-color: #CCCCCC;
+    background-color: var(--color-btn-disabled);
+    color: #A0A0A0;
     cursor: not-allowed;
 }
 
 .login-footer {
-    margin-top: 24px;
+    margin-top: var(--spacing-xl);
     text-align: center;
     color: #808080;
-    font-size: 12px;
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
 }
 </style>

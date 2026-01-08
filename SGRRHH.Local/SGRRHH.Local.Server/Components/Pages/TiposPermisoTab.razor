@@ -4,8 +4,8 @@
 @inject ILogger<TiposPermisoTab> Logger
 
 <!-- Header con controles -->
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-    <div style="display: flex; gap: 8px;">
+<div class="toolbar">
+    <div class="toolbar-group">
         <button @onclick="Nuevo">NUEVO (F3)</button>
         <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
         @if (selectedItem != null)
@@ -13,7 +13,7 @@
             <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
         }
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
+    <div class="toolbar-group">
         <input type="text" placeholder="Buscar..." 
                @bind="searchTerm" @bind:event="oninput" />
         <button @onclick="Buscar">BUSCAR</button>
@@ -52,13 +52,13 @@
             {
                 <tr class="@(selectedItem?.Id == item.Id ? "selected" : "")"
                     @onclick="() => SelectItem(item)">
-                    <td style="text-align: center;">
-                        <div style="width: 30px; height: 30px; background-color: @item.Color; border-radius: 4px; margin: 0 auto;"></div>
+                    <td class="text-center">
+                        <div class="color-swatch" style="background-color: @item.Color;"></div>
                     </td>
                     <td><strong>@item.Nombre</strong></td>
                     <td>@(item.Descripcion ?? "-")</td>
-                    <td style="text-align: center;">@item.DiasPorDefecto</td>
-                    <td style="text-align: center;">@(item.DiasMaximos == 0 ? "Sin límite" : item.DiasMaximos.ToString())</td>
+                    <td class="text-center">@item.DiasPorDefecto</td>
+                    <td class="text-center">@(item.DiasMaximos == 0 ? "Sin límite" : item.DiasMaximos.ToString())</td>
                     <td style="text-align: center;">
                         @if (item.RequiereAprobacion)
                         {
@@ -69,7 +69,7 @@
                             <span class="badge badge-inactivo">NO</span>
                         }
                     </td>
-                    <td class="actions-cell">
+                    <td class="table-actions">
                         <button @onclick="() => Editar(item)" @onclick:stopPropagation="true">
                             EDITAR
                         </button>
@@ -93,31 +93,30 @@
     
     @if (editItem != null)
     {
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="grid-2">
             <div>
                 <div class="form-group required">
-                    <label>Nombre:</label>
+                    <label>NOMBRE</label>
                     <input type="text" @bind="editItem.Nombre" maxlength="100" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Color:</label>
+                    <label>COLOR</label>
                     <input type="color" @bind="editItem.Color" 
-                           disabled="@isSaving" 
-                           style="width: 100px; height: 40px;" />
+                           disabled="@isSaving" />
                     <small>Color para identificación visual</small>
                 </div>
                 
                 <div class="form-group">
-                    <label>Días por Defecto:</label>
+                    <label>DÍAS POR DEFECTO</label>
                     <input type="number" @bind="editItem.DiasPorDefecto" min="1" 
                            disabled="@isSaving" />
                     <small>Días sugeridos al crear permiso</small>
                 </div>
                 
                 <div class="form-group">
-                    <label>Días Máximos:</label>
+                    <label>DÍAS MÁXIMOS</label>
                     <input type="number" @bind="editItem.DiasMaximos" min="0" 
                            disabled="@isSaving" />
                     <small>0 = Sin límite</small>
@@ -126,45 +125,45 @@
             
             <div>
                 <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" @bind="editItem.RequiereAprobacion" 
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="reqAprobacion" @bind="editItem.RequiereAprobacion" 
                                disabled="@isSaving" />
-                        Requiere Aprobación
-                    </label>
+                        <label for="reqAprobacion">REQUIERE APROBACIÓN</label>
+                    </div>
                     <small>Si está marcado, el permiso debe ser aprobado</small>
                 </div>
                 
                 <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" @bind="editItem.RequiereDocumento" 
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="reqDocumento" @bind="editItem.RequiereDocumento" 
                                disabled="@isSaving" />
-                        Requiere Documento
-                    </label>
+                        <label for="reqDocumento">REQUIERE DOCUMENTO</label>
+                    </div>
                     <small>Si está marcado, se debe adjuntar un documento</small>
                 </div>
                 
                 <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" @bind="editItem.EsCompensable" 
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="esCompensable" @bind="editItem.EsCompensable" 
                                disabled="@isSaving" />
-                        Es Compensable
-                    </label>
+                        <label for="esCompensable">ES COMPENSABLE</label>
+                    </div>
                     <small>Si está marcado, los días pueden compensarse</small>
                 </div>
                 
                 <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" @bind="editItem.Activo" 
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="activoTipo" @bind="editItem.Activo" 
                                disabled="@isSaving" />
-                        Activo
-                    </label>
+                        <label for="activoTipo">ACTIVO</label>
+                    </div>
                     <small>Solo los tipos activos pueden usarse</small>
                 </div>
             </div>
         </div>
         
         <div class="form-group">
-            <label>Descripción:</label>
+            <label>DESCRIPCIÓN</label>
             <textarea @bind="editItem.Descripcion" rows="3" 
                      disabled="@isSaving" 
                      maxlength="500"></textarea>
@@ -180,7 +179,7 @@
            OnCancelClicked="() => showConfirmModal = false"
            IsSaving="isSaving">
     <p>¿Está seguro que desea eliminar el tipo de permiso <strong>@itemToDelete?.Nombre</strong>?</p>
-    <p style="color: #ff6b6b; margin-top: 12px;">
+    <p class="text-danger">
         <strong>Advertencia:</strong> Esta acción no se puede deshacer.
     </p>
 </FormModal>

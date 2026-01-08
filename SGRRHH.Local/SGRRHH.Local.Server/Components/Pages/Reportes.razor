@@ -39,318 +39,345 @@
 }
 
 <!-- Selector de tipo de reporte -->
-<div class="panel" style="margin-bottom: 24px;">
-    <h3>SELECCIONE EL TIPO DE REPORTE</h3>
-    <div style="display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
-        <button class="@(tipoReporteSeleccionado == TipoReporte.ListadoEmpleados ? "active" : "")"
-                @onclick="() => SeleccionarTipoReporte(TipoReporte.ListadoEmpleados)">
-            LISTADO DE EMPLEADOS
-        </button>
-        <button class="@(tipoReporteSeleccionado == TipoReporte.Permisos ? "active" : "")"
-                @onclick="() => SeleccionarTipoReporte(TipoReporte.Permisos)">
-            REPORTE DE PERMISOS
-        </button>
-        <button class="@(tipoReporteSeleccionado == TipoReporte.Vacaciones ? "active" : "")"
-                @onclick="() => SeleccionarTipoReporte(TipoReporte.Vacaciones)">
-            REPORTE DE VACACIONES
-        </button>
-        <button class="@(tipoReporteSeleccionado == TipoReporte.Asistencia ? "active" : "")"
-                @onclick="() => SeleccionarTipoReporte(TipoReporte.Asistencia)">
-            REPORTE DE ASISTENCIA
-        </button>
-        <button class="@(tipoReporteSeleccionado == TipoReporte.CertificadoLaboral ? "active" : "")"
-                @onclick="() => SeleccionarTipoReporte(TipoReporte.CertificadoLaboral)">
-            CERTIFICADO LABORAL
-        </button>
+<div class="panel">
+    <div class="panel-header">SELECCIONE EL TIPO DE REPORTE</div>
+    <div class="panel-body">
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="@(tipoReporteSeleccionado == TipoReporte.ListadoEmpleados ? "btn-primary" : "")"
+                        @onclick="() => SeleccionarTipoReporte(TipoReporte.ListadoEmpleados)">
+                    LISTADO DE EMPLEADOS
+                </button>
+                <button class="@(tipoReporteSeleccionado == TipoReporte.Permisos ? "btn-primary" : "")"
+                        @onclick="() => SeleccionarTipoReporte(TipoReporte.Permisos)">
+                    REPORTE DE PERMISOS
+                </button>
+                <button class="@(tipoReporteSeleccionado == TipoReporte.Vacaciones ? "btn-primary" : "")"
+                        @onclick="() => SeleccionarTipoReporte(TipoReporte.Vacaciones)">
+                    REPORTE DE VACACIONES
+                </button>
+                <button class="@(tipoReporteSeleccionado == TipoReporte.Asistencia ? "btn-primary" : "")"
+                        @onclick="() => SeleccionarTipoReporte(TipoReporte.Asistencia)">
+                    REPORTE DE ASISTENCIA
+                </button>
+                <button class="@(tipoReporteSeleccionado == TipoReporte.CertificadoLaboral ? "btn-primary" : "")"
+                        @onclick="() => SeleccionarTipoReporte(TipoReporte.CertificadoLaboral)">
+                    CERTIFICADO LABORAL
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Panel de Filtros y Generación según tipo de reporte -->
 @if (tipoReporteSeleccionado != TipoReporte.Ninguno)
 {
-    <div class="panel" style="margin-bottom: 24px;">
+    <div class="panel">
         <!-- Filtros para Listado de Empleados -->
         @if (tipoReporteSeleccionado == TipoReporte.ListadoEmpleados)
         {
-            <h3>FILTROS - LISTADO DE EMPLEADOS</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
-                <div class="form-group">
-                    <label>Estado:</label>
-                    <select @bind="filtroEstadoEmpleado">
-                        <option value="">Todos</option>
-                        @foreach (var estado in Enum.GetValues<EstadoEmpleado>())
-                        {
-                            <option value="@estado">@estado</option>
-                        }
-                    </select>
+            <div class="panel-header">FILTROS - LISTADO DE EMPLEADOS</div>
+            <div class="panel-body">
+                <div class="grid-4">
+                    <div class="form-group">
+                        <label>ESTADO</label>
+                        <select @bind="filtroEstadoEmpleado">
+                            <option value="">Todos</option>
+                            @foreach (var estado in Enum.GetValues<EstadoEmpleado>())
+                            {
+                                <option value="@estado">@estado</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>DEPARTAMENTO</label>
+                        <select @bind="filtroDepartamento">
+                            <option value="">Todos</option>
+                            @foreach (var dept in departamentos)
+                            {
+                                <option value="@dept.Id">@dept.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>CARGO</label>
+                        <select @bind="filtroCargo">
+                            <option value="">Todos</option>
+                            @foreach (var cargo in cargos)
+                            {
+                                <option value="@cargo.Id">@cargo.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>ORDENAR POR</label>
+                        <select @bind="ordenEmpleados">
+                            <option value="nombre">Nombre</option>
+                            <option value="cedula">Cédula</option>
+                            <option value="codigo">Código</option>
+                            <option value="fechaIngreso">Fecha Ingreso</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Departamento:</label>
-                    <select @bind="filtroDepartamento">
-                        <option value="">Todos</option>
-                        @foreach (var dept in departamentos)
-                        {
-                            <option value="@dept.Id">@dept.Nombre</option>
-                        }
-                    </select>
+                <div class="toolbar">
+                    <div class="toolbar-group">
+                        <button class="btn-primary" @onclick="GenerarReporteEmpleados" disabled="@isGenerating">
+                            @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                        </button>
+                        <button @onclick="VistaPrevia" disabled="@isGenerating">
+                            VISTA PREVIA
+                        </button>
+                        <button class="btn-success" @onclick="ExportarExcel" disabled="@isGenerating">
+                            EXPORTAR A EXCEL
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Cargo:</label>
-                    <select @bind="filtroCargo">
-                        <option value="">Todos</option>
-                        @foreach (var cargo in cargos)
-                        {
-                            <option value="@cargo.Id">@cargo.Nombre</option>
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Ordenar por:</label>
-                    <select @bind="ordenEmpleados">
-                        <option value="nombre">Nombre</option>
-                        <option value="cedula">Cédula</option>
-                        <option value="codigo">Código</option>
-                        <option value="fechaIngreso">Fecha Ingreso</option>
-                    </select>
-                </div>
-            </div>
-            <div style="display: flex; gap: 8px; margin-top: 16px;">
-                <button @onclick="GenerarReporteEmpleados" disabled="@isGenerating">
-                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
-                </button>
-                <button @onclick="VistaPrevia" disabled="@isGenerating">
-                    VISTA PREVIA
-                </button>
-                <button @onclick="ExportarExcel" disabled="@isGenerating">
-                    EXPORTAR A EXCEL
-                </button>
             </div>
         }
 
         <!-- Filtros para Reporte de Permisos -->
         @if (tipoReporteSeleccionado == TipoReporte.Permisos)
         {
-            <h3>FILTROS - REPORTE DE PERMISOS</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
-                <div class="form-group required">
-                    <label>Fecha Inicio:</label>
-                    <input type="date" @bind="filtroFechaInicio" />
+            <div class="panel-header">FILTROS - REPORTE DE PERMISOS</div>
+            <div class="panel-body">
+                <div class="grid-3">
+                    <div class="form-group required">
+                        <label>FECHA INICIO</label>
+                        <input type="date" @bind="filtroFechaInicio" />
+                    </div>
+                    <div class="form-group required">
+                        <label>FECHA FIN</label>
+                        <input type="date" @bind="filtroFechaFin" />
+                    </div>
+                    <div class="form-group">
+                        <label>EMPLEADO</label>
+                        <select @bind="filtroEmpleadoId">
+                            <option value="">Todos</option>
+                            @foreach (var emp in empleados)
+                            {
+                                <option value="@emp.Id">@emp.NombreCompleto</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>TIPO DE PERMISO</label>
+                        <select @bind="filtroTipoPermisoId">
+                            <option value="">Todos</option>
+                            @foreach (var tipo in tiposPermiso)
+                            {
+                                <option value="@tipo.Id">@tipo.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>ESTADO</label>
+                        <select @bind="filtroEstadoPermiso">
+                            <option value="">Todos</option>
+                            @foreach (var estado in Enum.GetValues<EstadoPermiso>())
+                            {
+                                <option value="@estado">@estado</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>DEPARTAMENTO</label>
+                        <select @bind="filtroDepartamentoPermisos">
+                            <option value="">Todos</option>
+                            @foreach (var dept in departamentos)
+                            {
+                                <option value="@dept.Id">@dept.Nombre</option>
+                            }
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group required">
-                    <label>Fecha Fin:</label>
-                    <input type="date" @bind="filtroFechaFin" />
+                <div class="toolbar">
+                    <div class="toolbar-group">
+                        <button class="btn-primary" @onclick="GenerarReportePermisos" disabled="@isGenerating || !ValidarFechasPermisos()">
+                            @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                        </button>
+                        <button @onclick="VistaPreviaPermisos" disabled="@isGenerating || !ValidarFechasPermisos()">
+                            VISTA PREVIA
+                        </button>
+                        <button class="btn-success" @onclick="ExportarPermisosExcel" disabled="@isGenerating || !ValidarFechasPermisos()">
+                            EXPORTAR A EXCEL
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Empleado:</label>
-                    <select @bind="filtroEmpleadoId">
-                        <option value="">Todos</option>
-                        @foreach (var emp in empleados)
-                        {
-                            <option value="@emp.Id">@emp.NombreCompleto</option>
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Tipo de Permiso:</label>
-                    <select @bind="filtroTipoPermisoId">
-                        <option value="">Todos</option>
-                        @foreach (var tipo in tiposPermiso)
-                        {
-                            <option value="@tipo.Id">@tipo.Nombre</option>
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Estado:</label>
-                    <select @bind="filtroEstadoPermiso">
-                        <option value="">Todos</option>
-                        @foreach (var estado in Enum.GetValues<EstadoPermiso>())
-                        {
-                            <option value="@estado">@estado</option>
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Departamento:</label>
-                    <select @bind="filtroDepartamentoPermisos">
-                        <option value="">Todos</option>
-                        @foreach (var dept in departamentos)
-                        {
-                            <option value="@dept.Id">@dept.Nombre</option>
-                        }
-                    </select>
-                </div>
+                @if (!ValidarFechasPermisos())
+                {
+                    <div class="validation-message">
+                        * Debe seleccionar un rango de fechas válido
+                    </div>
+                }
             </div>
-            <div style="display: flex; gap: 8px; margin-top: 16px;">
-                <button @onclick="GenerarReportePermisos" disabled="@isGenerating || !ValidarFechasPermisos()">
-                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
-                </button>
-                <button @onclick="VistaPreviaPermisos" disabled="@isGenerating || !ValidarFechasPermisos()">
-                    VISTA PREVIA
-                </button>
-                <button @onclick="ExportarPermisosExcel" disabled="@isGenerating || !ValidarFechasPermisos()">
-                    EXPORTAR A EXCEL
-                </button>
-            </div>
-            @if (!ValidarFechasPermisos())
-            {
-                <p style="color: var(--error-color); margin-top: 8px;">
-                    * Debe seleccionar un rango de fechas válido
-                </p>
-            }
         }
 
         <!-- Filtros para Reporte de Vacaciones -->
         @if (tipoReporteSeleccionado == TipoReporte.Vacaciones)
         {
-            <h3>FILTROS - REPORTE DE VACACIONES</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
-                <div class="form-group">
-                    <label>Año:</label>
-                    <select @bind="filtroAnioVacaciones">
-                        @for (int year = DateTime.Now.Year - 5; year <= DateTime.Now.Year + 1; year++)
-                        {
-                            <option value="@year">@year</option>
-                        }
-                    </select>
+            <div class="panel-header">FILTROS - REPORTE DE VACACIONES</div>
+            <div class="panel-body">
+                <div class="grid-4">
+                    <div class="form-group">
+                        <label>AÑO</label>
+                        <select @bind="filtroAnioVacaciones">
+                            @for (int year = DateTime.Now.Year - 5; year <= DateTime.Now.Year + 1; year++)
+                            {
+                                <option value="@year">@year</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>EMPLEADO</label>
+                        <select @bind="filtroEmpleadoVacacionesId">
+                            <option value="">Todos</option>
+                            @foreach (var emp in empleados)
+                            {
+                                <option value="@emp.Id">@emp.NombreCompleto</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>ESTADO</label>
+                        <select @bind="filtroEstadoVacaciones">
+                            <option value="">Todos</option>
+                            @foreach (var estado in Enum.GetValues<EstadoVacacion>())
+                            {
+                                <option value="@estado">@estado</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>DEPARTAMENTO</label>
+                        <select @bind="filtroDepartamentoVacaciones">
+                            <option value="">Todos</option>
+                            @foreach (var dept in departamentos)
+                            {
+                                <option value="@dept.Id">@dept.Nombre</option>
+                            }
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Empleado:</label>
-                    <select @bind="filtroEmpleadoVacacionesId">
-                        <option value="">Todos</option>
-                        @foreach (var emp in empleados)
-                        {
-                            <option value="@emp.Id">@emp.NombreCompleto</option>
-                        }
-                    </select>
+                <div class="toolbar">
+                    <div class="toolbar-group">
+                        <button class="btn-primary" @onclick="GenerarReporteVacaciones" disabled="@isGenerating">
+                            @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                        </button>
+                        <button @onclick="VistaPreviaVacaciones" disabled="@isGenerating">
+                            VISTA PREVIA
+                        </button>
+                        <button class="btn-success" @onclick="ExportarVacacionesExcel" disabled="@isGenerating">
+                            EXPORTAR A EXCEL
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Estado:</label>
-                    <select @bind="filtroEstadoVacaciones">
-                        <option value="">Todos</option>
-                        @foreach (var estado in Enum.GetValues<EstadoVacacion>())
-                        {
-                            <option value="@estado">@estado</option>
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Departamento:</label>
-                    <select @bind="filtroDepartamentoVacaciones">
-                        <option value="">Todos</option>
-                        @foreach (var dept in departamentos)
-                        {
-                            <option value="@dept.Id">@dept.Nombre</option>
-                        }
-                    </select>
-                </div>
-            </div>
-            <div style="display: flex; gap: 8px; margin-top: 16px;">
-                <button @onclick="GenerarReporteVacaciones" disabled="@isGenerating">
-                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
-                </button>
-                <button @onclick="VistaPreviaVacaciones" disabled="@isGenerating">
-                    VISTA PREVIA
-                </button>
-                <button @onclick="ExportarVacacionesExcel" disabled="@isGenerating">
-                    EXPORTAR A EXCEL
-                </button>
             </div>
         }
 
         <!-- Filtros para Reporte de Asistencia -->
         @if (tipoReporteSeleccionado == TipoReporte.Asistencia)
         {
-            <h3>FILTROS - REPORTE DE ASISTENCIA</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
-                <div class="form-group required">
-                    <label>Fecha Inicio:</label>
-                    <input type="date" @bind="filtroFechaInicioAsistencia" />
+            <div class="panel-header">FILTROS - REPORTE DE ASISTENCIA</div>
+            <div class="panel-body">
+                <div class="grid-4">
+                    <div class="form-group required">
+                        <label>FECHA INICIO</label>
+                        <input type="date" @bind="filtroFechaInicioAsistencia" />
+                    </div>
+                    <div class="form-group required">
+                        <label>FECHA FIN</label>
+                        <input type="date" @bind="filtroFechaFinAsistencia" />
+                    </div>
+                    <div class="form-group">
+                        <label>EMPLEADO</label>
+                        <select @bind="filtroEmpleadoAsistenciaId">
+                            <option value="">Todos</option>
+                            @foreach (var emp in empleados)
+                            {
+                                <option value="@emp.Id">@emp.NombreCompleto</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>DEPARTAMENTO</label>
+                        <select @bind="filtroDepartamentoAsistencia">
+                            <option value="">Todos</option>
+                            @foreach (var dept in departamentos)
+                            {
+                                <option value="@dept.Id">@dept.Nombre</option>
+                            }
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group required">
-                    <label>Fecha Fin:</label>
-                    <input type="date" @bind="filtroFechaFinAsistencia" />
+                <div class="toolbar">
+                    <div class="toolbar-group">
+                        <button class="btn-primary" @onclick="GenerarReporteAsistencia" disabled="@isGenerating || !ValidarFechasAsistencia()">
+                            @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                        </button>
+                        <button @onclick="VistaPreviaAsistencia" disabled="@isGenerating || !ValidarFechasAsistencia()">
+                            VISTA PREVIA
+                        </button>
+                        <button class="btn-success" @onclick="ExportarAsistenciaExcel" disabled="@(isGenerating || !ValidarFechasAsistencia())">
+                            EXPORTAR A EXCEL
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Empleado:</label>
-                    <select @bind="filtroEmpleadoAsistenciaId">
-                        <option value="">Todos</option>
-                        @foreach (var emp in empleados)
-                        {
-                            <option value="@emp.Id">@emp.NombreCompleto</option>
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Departamento:</label>
-                    <select @bind="filtroDepartamentoAsistencia">
-                        <option value="">Todos</option>
-                        @foreach (var dept in departamentos)
-                        {
-                            <option value="@dept.Id">@dept.Nombre</option>
-                        }
-                    </select>
-                </div>
+                @if (!ValidarFechasAsistencia())
+                {
+                    <div class="validation-message">
+                        * Debe seleccionar un rango de fechas válido
+                    </div>
+                }
             </div>
-            <div style="display: flex; gap: 8px; margin-top: 16px;">
-                <button @onclick="GenerarReporteAsistencia" disabled="@isGenerating || !ValidarFechasAsistencia()">
-                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
-                </button>
-                <button @onclick="VistaPreviaAsistencia" disabled="@isGenerating || !ValidarFechasAsistencia()">
-                    VISTA PREVIA
-                </button>
-                <button @onclick="ExportarAsistenciaExcel" disabled="@(isGenerating || !ValidarFechasAsistencia())">
-                    EXPORTAR A EXCEL
-                </button>
-            </div>
-            @if (!ValidarFechasAsistencia())
-            {
-                <p style="color: var(--error-color); margin-top: 8px;">
-                    * Debe seleccionar un rango de fechas válido
-                </p>
-            }
         }
 
         <!-- Filtros para Certificado Laboral -->
         @if (tipoReporteSeleccionado == TipoReporte.CertificadoLaboral)
         {
-            <h3>GENERAR CERTIFICADO LABORAL</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 12px;">
-                <div class="form-group required">
-                    <label>Empleado:</label>
-                    <select @bind="empleadoCertificadoId">
-                        <option value="">-- Seleccione --</option>
-                        @foreach (var emp in empleados.Where(e => e.Estado == EstadoEmpleado.Activo))
-                        {
-                            <option value="@emp.Id">@emp.NombreCompleto - @emp.Cedula</option>
-                        }
-                    </select>
+            <div class="panel-header">GENERAR CERTIFICADO LABORAL</div>
+            <div class="panel-body">
+                <div class="grid-3">
+                    <div class="form-group required">
+                        <label>EMPLEADO</label>
+                        <select @bind="empleadoCertificadoId">
+                            <option value="">-- Seleccione --</option>
+                            @foreach (var emp in empleados.Where(e => e.Estado == EstadoEmpleado.Activo))
+                            {
+                                <option value="@emp.Id">@emp.NombreCompleto - @emp.Cedula</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>PROPÓSITO</label>
+                        <select @bind="propositoCertificado">
+                            <option value="Tramites Personales">Trámites Personales</option>
+                            <option value="Tramites Bancarios">Trámites Bancarios</option>
+                            <option value="Visa">Visa</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>INCLUIR SALARIO</label>
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="chkSalario" @bind="incluirSalarioCertificado" />
+                            <label for="chkSalario">Incluir información salarial</label>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Propósito:</label>
-                    <select @bind="propositoCertificado">
-                        <option value="Tramites Personales">Trámites Personales</option>
-                        <option value="Tramites Bancarios">Trámites Bancarios</option>
-                        <option value="Visa">Visa</option>
-                        <option value="Otros">Otros</option>
-                    </select>
+                <div class="toolbar">
+                    <div class="toolbar-group">
+                        <button class="btn-primary" @onclick="GenerarCertificado" disabled="@(isGenerating || string.IsNullOrEmpty(empleadoCertificadoId))">
+                            @(isGenerating ? "GENERANDO..." : "GENERAR CERTIFICADO")
+                        </button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Incluir Salario:</label>
-                    <input type="checkbox" @bind="incluirSalarioCertificado" />
-                </div>
+                @if (string.IsNullOrEmpty(empleadoCertificadoId))
+                {
+                    <div class="validation-message">
+                        * Debe seleccionar un empleado
+                    </div>
+                }
             </div>
-            <div style="display: flex; gap: 8px; margin-top: 16px;">
-                <button @onclick="GenerarCertificado" disabled="@(isGenerating || string.IsNullOrEmpty(empleadoCertificadoId))">
-                    @(isGenerating ? "GENERANDO..." : "GENERAR CERTIFICADO")
-                </button>
-            </div>
-            @if (string.IsNullOrEmpty(empleadoCertificadoId))
-            {
-                <p style="color: var(--error-color); margin-top: 8px;">
-                    * Debe seleccionar un empleado
-                </p>
-            }
         }
     </div>
 
@@ -358,10 +385,11 @@
     @if (mostrarVistaPrevia)
     {
         <div class="panel">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3>VISTA PREVIA DEL REPORTE</h3>
+            <div class="panel-header">
+                VISTA PREVIA DEL REPORTE
                 <button @onclick="CerrarVistaPrevia">CERRAR</button>
             </div>
+            <div class="panel-body">
 
             @if (tipoReporteSeleccionado == TipoReporte.ListadoEmpleados && empleadosReporte.Any())
             {
@@ -388,7 +416,7 @@
                                 <td>@(emp.Departamento?.Nombre ?? "-")</td>
                                 <td>@emp.FechaIngreso.ToString("dd/MM/yyyy")</td>
                                 <td>
-                                    <span class="badge-@emp.Estado.ToString().ToLower()">
+                                    <span class="badge badge-@emp.Estado.ToString().ToLower()">
                                         @emp.Estado
                                     </span>
                                 </td>
@@ -396,9 +424,9 @@
                         }
                     </tbody>
                 </table>
-                <p style="margin-top: 12px; font-weight: bold;">
-                    Total de empleados: @empleadosReporte.Count
-                </p>
+                <div class="results-info">
+                    <strong>Total de empleados:</strong> @empleadosReporte.Count
+                </div>
             }
 
             @if (tipoReporteSeleccionado == TipoReporte.Permisos && permisosReporte.Any())
@@ -428,7 +456,7 @@
                                 <td>@permiso.FechaFin.ToString("dd/MM/yyyy")</td>
                                 <td>@permiso.TotalDias</td>
                                 <td>
-                                    <span class="badge-@permiso.Estado.ToString().ToLower()">
+                                    <span class="badge badge-@permiso.Estado.ToString().ToLower()">
                                         @permiso.Estado
                                     </span>
                                 </td>
@@ -436,21 +464,26 @@
                         }
                     </tbody>
                 </table>
-                <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-                    <div>
-                        <strong>Total de permisos:</strong> @permisosReporte.Count
+                <div class="stats-grid">
+                    <div class="stats-card">
+                        <h3>TOTAL PERMISOS</h3>
+                        <div class="value">@permisosReporte.Count</div>
                     </div>
-                    <div>
-                        <strong>Días totales:</strong> @permisosReporte.Sum(p => p.TotalDias)
+                    <div class="stats-card">
+                        <h3>DÍAS TOTALES</h3>
+                        <div class="value">@permisosReporte.Sum(p => p.TotalDias)</div>
                     </div>
-                    <div>
-                        <strong>Aprobados:</strong> @permisosReporte.Count(p => p.Estado == EstadoPermiso.Aprobado)
+                    <div class="stats-card">
+                        <h3>APROBADOS</h3>
+                        <div class="value">@permisosReporte.Count(p => p.Estado == EstadoPermiso.Aprobado)</div>
                     </div>
-                    <div>
-                        <strong>Rechazados:</strong> @permisosReporte.Count(p => p.Estado == EstadoPermiso.Rechazado)
+                    <div class="stats-card">
+                        <h3>RECHAZADOS</h3>
+                        <div class="value">@permisosReporte.Count(p => p.Estado == EstadoPermiso.Rechazado)</div>
                     </div>
-                    <div>
-                        <strong>Pendientes:</strong> @permisosReporte.Count(p => p.Estado == EstadoPermiso.Pendiente)
+                    <div class="stats-card">
+                        <h3>PENDIENTES</h3>
+                        <div class="value">@permisosReporte.Count(p => p.Estado == EstadoPermiso.Pendiente)</div>
                     </div>
                 </div>
             }
@@ -482,7 +515,7 @@
                                 <td>@vacacion.DiasTomados</td>
                                 <td>@vacacion.DiasDisponibles</td>
                                 <td>
-                                    <span class="badge-@vacacion.Estado.ToString().ToLower()">
+                                    <span class="badge badge-@vacacion.Estado.ToString().ToLower()">
                                         @vacacion.Estado
                                     </span>
                                 </td>
@@ -490,26 +523,34 @@
                         }
                     </tbody>
                 </table>
-                <div style="margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
-                    <div>
-                        <strong>Total de solicitudes:</strong> @vacacionesReporte.Count
+                <div class="stats-grid">
+                    <div class="stats-card">
+                        <h3>TOTAL SOLICITUDES</h3>
+                        <div class="value">@vacacionesReporte.Count</div>
                     </div>
-                    <div>
-                        <strong>Días totales:</strong> @vacacionesReporte.Sum(v => v.DiasTomados)
+                    <div class="stats-card">
+                        <h3>DÍAS TOTALES</h3>
+                        <div class="value">@vacacionesReporte.Sum(v => v.DiasTomados)</div>
                     </div>
-                    <div>
-                        <strong>Aprobadas:</strong> @vacacionesReporte.Count(v => v.Estado == EstadoVacacion.Aprobada)
+                    <div class="stats-card">
+                        <h3>APROBADAS</h3>
+                        <div class="value">@vacacionesReporte.Count(v => v.Estado == EstadoVacacion.Aprobada)</div>
                     </div>
-                    <div>
-                        <strong>Pendientes:</strong> @vacacionesReporte.Count(v => v.Estado == EstadoVacacion.Pendiente)
+                    <div class="stats-card">
+                        <h3>PENDIENTES</h3>
+                        <div class="value">@vacacionesReporte.Count(v => v.Estado == EstadoVacacion.Pendiente)</div>
                     </div>
                 </div>
             }
 
             @if (!empleadosReporte.Any() && !permisosReporte.Any() && !vacacionesReporte.Any())
             {
-                <p class="empty-state">No hay datos para mostrar con los filtros seleccionados</p>
+                <div class="empty-state">
+                    <div class="icon">📋</div>
+                    <div class="message">No hay datos para mostrar con los filtros seleccionados</div>
+                </div>
             }
+            </div>
         </div>
     }
 }

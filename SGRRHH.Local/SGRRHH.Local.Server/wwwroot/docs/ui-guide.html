@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía UI - SGRRHH Hospital Style</title>
+    <link rel="stylesheet" href="../css/hospital.css">
+    <style>
+        body {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #E0E0E0;
+        }
+        .demo-section h2 {
+            margin-top: 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #000;
+        }
+        .demo-row {
+            margin: 16px 0;
+        }
+        .code-sample {
+            background-color: #F5F5F5;
+            border: 1px solid #CCC;
+            padding: 12px;
+            margin-top: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>GUÍA DE DISEÑO UI - SGRRHH Hospital Style</h1>
+    <p>Esta guía muestra los componentes principales del sistema de diseño basado en ForestechOil.</p>
+
+    <!-- SECCIÓN: VARIABLES CSS -->
+    <div class="demo-section">
+        <h2>VARIABLES CSS</h2>
+        <p>Todas las variables están definidas en hospital.css y deben usarse en lugar de valores fijos:</p>
+        <div class="code-sample">
+/* Colores principales */
+--color-bg: #FFFFFF;
+--color-text: #000000;
+--color-border: #808080;
+--color-header: #E0E0E0;
+--color-nav: #F0F0F0;
+
+/* Espaciado */
+--spacing-xs: 4px;
+--spacing-sm: 8px;
+--spacing-md: 12px;
+--spacing-lg: 16px;
+--spacing-xl: 24px;
+
+/* Tipografía */
+--font-family: 'Courier New', Courier, monospace;
+--font-size-base: 14px;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: BOTONES -->
+    <div class="demo-section">
+        <h2>BOTONES</h2>
+        
+        <div class="demo-row">
+            <h4>Botón Normal</h4>
+            <button class="btn">BOTÓN NORMAL</button>
+            <div class="code-sample">&lt;button class="btn"&gt;BOTÓN NORMAL&lt;/button&gt;</div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Botón Primario</h4>
+            <button class="btn-primary">GUARDAR</button>
+            <div class="code-sample">&lt;button class="btn-primary"&gt;GUARDAR&lt;/button&gt;</div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Botón Peligro</h4>
+            <button class="btn-danger">ELIMINAR</button>
+            <div class="code-sample">&lt;button class="btn-danger"&gt;ELIMINAR&lt;/button&gt;</div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Botón Éxito</h4>
+            <button class="btn-success">APROBAR</button>
+            <div class="code-sample">&lt;button class="btn-success"&gt;APROBAR&lt;/button&gt;</div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Botón Deshabilitado</h4>
+            <button class="btn" disabled>DESHABILITADO</button>
+            <div class="code-sample">&lt;button class="btn" disabled&gt;DESHABILITADO&lt;/button&gt;</div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN: FORMULARIOS -->
+    <div class="demo-section">
+        <h2>FORMULARIOS</h2>
+        
+        <div class="demo-row">
+            <h4>Form Group (Layout Vertical)</h4>
+            <div class="form-group">
+                <label class="required">Nombre Completo</label>
+                <input type="text" placeholder="Ingrese el nombre completo" />
+            </div>
+            <div class="code-sample">
+&lt;div class="form-group"&gt;
+    &lt;label class="required"&gt;Nombre Completo&lt;/label&gt;
+    &lt;input type="text" placeholder="Ingrese el nombre completo" /&gt;
+&lt;/div&gt;
+            </div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Form Row (2 columnas)</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Código</label>
+                    <input type="text" placeholder="EMP-001" />
+                </div>
+                <div class="form-group">
+                    <label>Cédula</label>
+                    <input type="text" placeholder="001-0000000-0" />
+                </div>
+            </div>
+            <div class="code-sample">
+&lt;div class="form-row"&gt;
+    &lt;div class="form-group"&gt;
+        &lt;label&gt;Código&lt;/label&gt;
+        &lt;input type="text" /&gt;
+    &lt;/div&gt;
+    &lt;div class="form-group"&gt;
+        &lt;label&gt;Cédula&lt;/label&gt;
+        &lt;input type="text" /&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+            </div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Campo con Error</h4>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="input-error" value="email invalido" />
+                <div class="validation-message">El formato del email no es válido</div>
+            </div>
+            <div class="code-sample">
+&lt;input type="email" class="input-error" /&gt;
+&lt;div class="validation-message"&gt;El formato del email no es válido&lt;/div&gt;
+            </div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Select</h4>
+            <div class="form-group">
+                <label>Estado</label>
+                <select>
+                    <option value="">Seleccione...</option>
+                    <option value="1">Activo</option>
+                    <option value="2">Inactivo</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN: TABLAS -->
+    <div class="demo-section">
+        <h2>TABLAS</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>CÓDIGO</th>
+                    <th>NOMBRE</th>
+                    <th>ESTADO</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>EMP-001</td>
+                    <td>Juan Pérez</td>
+                    <td><span class="badge badge-activo">ACTIVO</span></td>
+                    <td class="table-actions">
+                        <button>VER</button>
+                        <button>EDITAR</button>
+                    </td>
+                </tr>
+                <tr class="selected">
+                    <td>EMP-002</td>
+                    <td>María García</td>
+                    <td><span class="badge badge-activo">ACTIVO</span></td>
+                    <td class="table-actions">
+                        <button>VER</button>
+                        <button>EDITAR</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>EMP-003</td>
+                    <td>Pedro Rodríguez</td>
+                    <td><span class="badge badge-retirado">RETIRADO</span></td>
+                    <td class="table-actions">
+                        <button>VER</button>
+                        <button>EDITAR</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="code-sample">
+&lt;table&gt;
+    &lt;thead&gt;
+        &lt;tr&gt;
+            &lt;th&gt;CÓDIGO&lt;/th&gt;
+            &lt;th&gt;NOMBRE&lt;/th&gt;
+        &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+        &lt;tr class="selected"&gt;
+            &lt;td&gt;EMP-001&lt;/td&gt;
+            &lt;td&gt;Juan Pérez&lt;/td&gt;
+        &lt;/tr&gt;
+    &lt;/tbody&gt;
+&lt;/table&gt;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: ALERTAS -->
+    <div class="demo-section">
+        <h2>ALERTAS Y MENSAJES</h2>
+        
+        <div class="demo-row">
+            <h4>Alerta de Éxito</h4>
+            <div class="alert alert-success">
+                ✓ La operación se completó exitosamente
+            </div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Alerta de Error</h4>
+            <div class="alert alert-error">
+                ✗ Ocurrió un error al procesar la solicitud
+            </div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Alerta de Advertencia</h4>
+            <div class="alert alert-warning">
+                ⚠ Esta acción no se puede deshacer
+            </div>
+        </div>
+
+        <div class="demo-row">
+            <h4>Alerta de Información</h4>
+            <div class="alert alert-info">
+                ℹ Recuerde completar todos los campos requeridos
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN: BADGES -->
+    <div class="demo-section">
+        <h2>BADGES (ESTADOS)</h2>
+        <div class="demo-row">
+            <span class="badge badge-activo">ACTIVO</span>
+            <span class="badge badge-inactivo">INACTIVO</span>
+            <span class="badge badge-pendiente">PENDIENTE</span>
+            <span class="badge badge-aprobado">APROBADO</span>
+            <span class="badge badge-rechazado">RECHAZADO</span>
+            <span class="badge badge-suspendido">SUSPENDIDO</span>
+        </div>
+        <div class="code-sample">
+&lt;span class="badge badge-activo"&gt;ACTIVO&lt;/span&gt;
+&lt;span class="badge badge-pendiente"&gt;PENDIENTE&lt;/span&gt;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: PANELS -->
+    <div class="demo-section">
+        <h2>PANELES</h2>
+        <div class="panel">
+            <div class="panel-header">INFORMACIÓN PERSONAL</div>
+            <div class="panel-body">
+                <p>Contenido del panel con información relevante...</p>
+            </div>
+        </div>
+        <div class="code-sample">
+&lt;div class="panel"&gt;
+    &lt;div class="panel-header"&gt;TÍTULO&lt;/div&gt;
+    &lt;div class="panel-body"&gt;Contenido...&lt;/div&gt;
+&lt;/div&gt;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: STATS CARDS -->
+    <div class="demo-section">
+        <h2>STATS CARDS</h2>
+        <div class="stats-grid">
+            <div class="stats-card">
+                <h3>Total Empleados</h3>
+                <div class="value">125</div>
+                <div class="label">Activos en el sistema</div>
+            </div>
+            <div class="stats-card">
+                <h3>Nuevos Este Mes</h3>
+                <div class="value">8</div>
+                <div class="label">Ingresos recientes</div>
+            </div>
+            <div class="stats-card">
+                <h3>Permisos Pendientes</h3>
+                <div class="value">3</div>
+                <div class="label">Requieren aprobación</div>
+            </div>
+        </div>
+        <div class="code-sample">
+&lt;div class="stats-grid"&gt;
+    &lt;div class="stats-card"&gt;
+        &lt;h3&gt;Total Empleados&lt;/h3&gt;
+        &lt;div class="value"&gt;125&lt;/div&gt;
+        &lt;div class="label"&gt;Activos en el sistema&lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: EMPTY STATE -->
+    <div class="demo-section">
+        <h2>EMPTY STATE</h2>
+        <div class="empty-state">
+            <div class="icon">📋</div>
+            <div class="message">No hay registros para mostrar</div>
+            <div class="hint">Utilice el botón "NUEVO" para crear el primer registro</div>
+        </div>
+        <div class="code-sample">
+&lt;div class="empty-state"&gt;
+    &lt;div class="icon"&gt;📋&lt;/div&gt;
+    &lt;div class="message"&gt;No hay registros para mostrar&lt;/div&gt;
+    &lt;div class="hint"&gt;Utilice el botón "NUEVO" para crear el primer registro&lt;/div&gt;
+&lt;/div&gt;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: TOOLBAR -->
+    <div class="demo-section">
+        <h2>TOOLBAR</h2>
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="btn-primary">NUEVO</button>
+                <button>EDITAR</button>
+                <button class="btn-danger">ELIMINAR</button>
+            </div>
+            <div class="toolbar-separator"></div>
+            <div class="toolbar-group">
+                <button>EXPORTAR</button>
+                <button>IMPRIMIR</button>
+            </div>
+            <div class="search-box">
+                <input type="text" placeholder="Buscar..." />
+                <button>BUSCAR</button>
+            </div>
+        </div>
+        <div class="code-sample">
+&lt;div class="toolbar"&gt;
+    &lt;div class="toolbar-group"&gt;
+        &lt;button class="btn-primary"&gt;NUEVO&lt;/button&gt;
+        &lt;button&gt;EDITAR&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class="toolbar-separator"&gt;&lt;/div&gt;
+    &lt;div class="search-box"&gt;
+        &lt;input type="text" placeholder="Buscar..." /&gt;
+        &lt;button&gt;BUSCAR&lt;/button&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: MODAL -->
+    <div class="demo-section">
+        <h2>MODAL (Ejemplo de estructura)</h2>
+        <div class="code-sample">
+&lt;div class="modal-overlay"&gt;
+    &lt;div class="modal-box"&gt;
+        &lt;h3&gt;TÍTULO DEL MODAL&lt;/h3&gt;
+        
+        &lt;div class="keyboard-hint-bar"&gt;
+            &lt;span&gt;&lt;kbd&gt;F9&lt;/kbd&gt; Guardar&lt;/span&gt;
+            &lt;span&gt;&lt;kbd&gt;ESC&lt;/kbd&gt; Cancelar&lt;/span&gt;
+        &lt;/div&gt;
+        
+        &lt;div class="modal-content"&gt;
+            &lt;!-- Contenido del formulario --&gt;
+        &lt;/div&gt;
+        
+        &lt;div class="modal-actions"&gt;
+            &lt;button&gt;CANCELAR&lt;/button&gt;
+            &lt;button class="btn-primary"&gt;GUARDAR&lt;/button&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: KEYBOARD SHORTCUTS -->
+    <div class="demo-section">
+        <h2>BARRA DE ATAJOS DE TECLADO</h2>
+        <div class="keyboard-shortcut-bar">
+            <span class="shortcut-item"><kbd>F2</kbd> Buscar</span>
+            <span class="shortcut-item"><kbd>F3</kbd> Nuevo</span>
+            <span class="shortcut-item"><kbd>F4</kbd> Editar</span>
+            <span class="shortcut-item"><kbd>F5</kbd> Actualizar</span>
+            <span class="shortcut-item"><kbd>F9</kbd> Guardar</span>
+            <span class="shortcut-item"><kbd>ESC</kbd> Cancelar</span>
+            <span class="keyboard-mode-indicator">MODO: NAVEGACIÓN</span>
+        </div>
+        <div class="code-sample">
+&lt;div class="keyboard-shortcut-bar"&gt;
+    &lt;span class="shortcut-item"&gt;&lt;kbd&gt;F3&lt;/kbd&gt; Nuevo&lt;/span&gt;
+    &lt;span class="keyboard-mode-indicator"&gt;MODO: NAVEGACIÓN&lt;/span&gt;
+&lt;/div&gt;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: GRIDS -->
+    <div class="demo-section">
+        <h2>GRID LAYOUTS</h2>
+        
+        <h4>Grid 2 Columnas</h4>
+        <div class="grid-2">
+            <div class="panel">
+                <div class="panel-header">COLUMNA 1</div>
+                <div class="panel-body">Contenido...</div>
+            </div>
+            <div class="panel">
+                <div class="panel-header">COLUMNA 2</div>
+                <div class="panel-body">Contenido...</div>
+            </div>
+        </div>
+        
+        <h4 style="margin-top: 20px;">Grid 3 Columnas</h4>
+        <div class="grid-3">
+            <div style="background: #F0F0F0; padding: 12px; border: 1px solid #808080;">Col 1</div>
+            <div style="background: #F0F0F0; padding: 12px; border: 1px solid #808080;">Col 2</div>
+            <div style="background: #F0F0F0; padding: 12px; border: 1px solid #808080;">Col 3</div>
+        </div>
+        
+        <div class="code-sample">
+&lt;div class="grid-2"&gt;
+    &lt;div&gt;...&lt;/div&gt;
+    &lt;div&gt;...&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="grid-3"&gt;
+    &lt;div&gt;...&lt;/div&gt;
+    &lt;div&gt;...&lt;/div&gt;
+    &lt;div&gt;...&lt;/div&gt;
+&lt;/div&gt;
+        </div>
+    </div>
+
+    <!-- SECCIÓN: UTILIDADES -->
+    <div class="demo-section">
+        <h2>CLASES DE UTILIDAD</h2>
+        <div class="code-sample">
+/* Texto */
+.text-center    /* Centrar texto */
+.text-right     /* Alinear derecha */
+.text-left      /* Alinear izquierda */
+
+/* Márgenes */
+.mt-1, .mt-2, .mt-3, .mt-4  /* Margin top */
+.mb-1, .mb-2, .mb-3, .mb-4  /* Margin bottom */
+.mr-1, .mr-2                /* Margin right */
+.ml-auto                    /* Margin left auto */
+
+/* Flexbox */
+.d-flex            /* Display flex */
+.align-center      /* Align items center */
+.justify-between   /* Justify space-between */
+.gap-1, .gap-2, .gap-3  /* Gap entre elementos */
+
+/* Visibilidad */
+.hidden    /* Display none */
+.visible   /* Display block */
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #000; text-align: center; color: #666;">
+        <p>SGRRHH Local - Sistema de Gestión de Recursos Humanos</p>
+        <p style="font-size: 12px;">Diseño basado en ForestechOil Hospital Style</p>
+    </div>
+
+</body>
+</html>

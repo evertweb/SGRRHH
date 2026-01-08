@@ -5,8 +5,8 @@
 @inject ILogger<ProyectosTab> Logger
 
 <!-- Header con controles -->
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-    <div style="display: flex; gap: 8px;">
+<div class="toolbar">
+    <div class="toolbar-group">
         <button @onclick="Nuevo">NUEVO (F3)</button>
         <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
         @if (selectedItem != null)
@@ -14,7 +14,7 @@
             <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
         }
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
+    <div class="toolbar-group">
         <input type="text" placeholder="Buscar..." 
                @bind="searchTerm" @bind:event="oninput" />
         <button @onclick="Buscar">BUSCAR</button>
@@ -64,20 +64,18 @@
                     <td>@item.Nombre</td>
                     <td>@(item.Cliente ?? "-")</td>
                     <td>@(item.Responsable?.NombreCompleto ?? "-")</td>
-                    <td style="text-align: center;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="flex: 1; height: 20px; background-color: #e0e0e0; border-radius: 4px; overflow: hidden;">
-                                <div style="width: @item.Progreso%; height: 100%; background-color: #4caf50;"></div>
-                            </div>
-                            <span>@item.Progreso%</span>
+                    <td class="text-center">
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill" style="width: @item.Progreso%;"></div>
+                            <span class="progress-bar-text">@item.Progreso%</span>
                         </div>
                     </td>
-                    <td style="text-align: center;">
+                    <td class="text-center">
                         <span class="badge badge-@item.Estado.ToString().ToLower()">
                             @item.Estado
                         </span>
                     </td>
-                    <td class="actions-cell">
+                    <td class="table-actions">
                         <button @onclick="() => Editar(item)" @onclick:stopPropagation="true">
                             EDITAR
                         </button>
@@ -101,34 +99,34 @@
     
     @if (editItem != null)
     {
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="grid-2">
             <div>
                 <div class="form-group required">
-                    <label>Código:</label>
+                    <label>CÓDIGO</label>
                     <input type="text" @bind="editItem.Codigo" maxlength="20" 
                            readonly="@isEditing" disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group required">
-                    <label>Nombre:</label>
+                    <label>NOMBRE</label>
                     <input type="text" @bind="editItem.Nombre" maxlength="200" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Cliente:</label>
+                    <label>CLIENTE</label>
                     <input type="text" @bind="editItem.Cliente" maxlength="200" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Ubicación:</label>
+                    <label>UBICACIÓN</label>
                     <input type="text" @bind="editItem.Ubicacion" maxlength="200" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Presupuesto:</label>
+                    <label>PRESUPUESTO</label>
                     <input type="number" @bind="editItem.Presupuesto" step="0.01" min="0" 
                            disabled="@isSaving" />
                 </div>
@@ -136,7 +134,7 @@
             
             <div>
                 <div class="form-group">
-                    <label>Responsable:</label>
+                    <label>RESPONSABLE</label>
                     <select @bind="editItem.ResponsableId" disabled="@isSaving">
                         <option value="">-- Sin asignar --</option>
                         @foreach (var emp in empleadosActivos)
@@ -147,25 +145,25 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>Fecha Inicio:</label>
+                    <label>FECHA INICIO</label>
                     <input type="date" @bind="editItem.FechaInicio" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Fecha Fin:</label>
+                    <label>FECHA FIN</label>
                     <input type="date" @bind="editItem.FechaFin" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Progreso (%):</label>
+                    <label>PROGRESO (%)</label>
                     <input type="number" @bind="editItem.Progreso" min="0" max="100" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Estado:</label>
+                    <label>ESTADO</label>
                     <select @bind="editItem.Estado" disabled="@isSaving">
                         @foreach (var estado in Enum.GetValues<EstadoProyecto>())
                         {
@@ -177,7 +175,7 @@
         </div>
         
         <div class="form-group">
-            <label>Descripción:</label>
+            <label>DESCRIPCIÓN</label>
             <textarea @bind="editItem.Descripcion" rows="3" 
                      disabled="@isSaving" 
                      maxlength="1000"></textarea>
@@ -193,7 +191,7 @@
            OnCancelClicked="() => showConfirmModal = false"
            IsSaving="isSaving">
     <p>¿Está seguro que desea eliminar el proyecto <strong>@itemToDelete?.Nombre</strong>?</p>
-    <p style="color: #ff6b6b; margin-top: 12px;">
+    <p class="text-danger">
         <strong>Advertencia:</strong> Esta acción no se puede deshacer.
     </p>
 </FormModal>

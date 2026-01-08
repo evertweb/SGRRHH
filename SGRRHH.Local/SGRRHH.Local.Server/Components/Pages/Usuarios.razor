@@ -42,10 +42,10 @@
     </div>
 }
 
-<!-- Header con controles -->
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <div style="display: flex; gap: 8px;">
-        <button @onclick="NuevoUsuario">NUEVO (F3)</button>
+<!-- Toolbar -->
+<div class="toolbar">
+    <div class="toolbar-group">
+        <button class="btn-primary" @onclick="NuevoUsuario">NUEVO (F3)</button>
         <button @onclick="CargarUsuarios">ACTUALIZAR (F5)</button>
         @if (selectedUsuario != null)
         {
@@ -53,18 +53,20 @@
             <button @onclick="ResetPassword">RESET PASSWORD</button>
             @if (selectedUsuario.Activo)
             {
-                <button @onclick="ToggleEstado" style="background-color: #dc3545;">DESHABILITAR</button>
+                <button class="btn-danger" @onclick="ToggleEstado">DESHABILITAR</button>
             }
             else
             {
-                <button @onclick="ToggleEstado" style="background-color: #28a745;">HABILITAR</button>
+                <button class="btn-success" @onclick="ToggleEstado">HABILITAR</button>
             }
         }
     </div>
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+    
+    <div class="toolbar-separator"></div>
+    
+    <div class="search-box">
         <input type="text" id="searchInput" placeholder="Buscar... (F2)" 
-               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" 
-               style="min-width: 250px;" />
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         <button @onclick="Buscar">BUSCAR</button>
         @if (!string.IsNullOrEmpty(searchTerm))
         {
@@ -307,8 +309,8 @@
                    placeholder="Repita la contraseña" />
         </div>
         
-        <div style="background-color: #1a1a1a; padding: 12px; border-left: 3px solid #ffc107; margin-top: 16px;">
-            <p style="margin: 0; color: #ffc107;">
+        <div class="alert alert-warning">
+            <p style="margin: 0;">
                 ⚠️ El usuario deberá usar esta nueva contraseña para iniciar sesión.
             </p>
         </div>
@@ -327,8 +329,8 @@
     
     @if (confirmModalType == "deshabilitar")
     {
-        <div style="background-color: #1a1a1a; padding: 12px; border-left: 3px solid #dc3545; margin-top: 16px;">
-            <p style="margin: 0; color: #dc3545;">
+        <div class="alert alert-error">
+            <p style="margin: 0;">
                 ⚠️ El usuario no podrá iniciar sesión hasta que sea habilitado nuevamente.
             </p>
         </div>

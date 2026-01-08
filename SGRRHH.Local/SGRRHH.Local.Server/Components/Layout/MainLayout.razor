@@ -52,29 +52,66 @@ else
 
         <!-- Menú de Navegación Textual -->
         <nav class="nav-menu">
-            <NavLink href="/empleados">EMPLEADOS</NavLink>
-            <NavLink href="/documentos">DOCUMENTOS</NavLink>
-            <NavLink href="/permisos">PERMISOS</NavLink>
-            <NavLink href="/vacaciones">VACACIONES</NavLink>
-            <NavLink href="/contratos">CONTRATOS</NavLink>
-            <NavLink href="/control-diario">CONTROL DIARIO</NavLink>
+            <!-- PERSONAL -->
+            <span class="nav-group">
+                <span class="nav-group-label">PERSONAL</span>
+                <NavLink href="/empleados">EMPLEADOS</NavLink>
+                <NavLink href="/contratos">CONTRATOS</NavLink>
+                <NavLink href="/documentos">DOCUMENTOS</NavLink>
+            </span>
+            
+            <span class="nav-separator"></span>
+            
+            <!-- SOLICITUDES -->
+            <span class="nav-group">
+                <span class="nav-group-label">SOLICITUDES</span>
+                <NavLink href="/permisos">PERMISOS</NavLink>
+                <NavLink href="/vacaciones">VACACIONES</NavLink>
+            </span>
+            
+            <span class="nav-separator"></span>
+            
+            <!-- CONTROL DIARIO -->
+            <span class="nav-group">
+                <span class="nav-group-label">ASISTENCIA</span>
+                <NavLink href="/control-diario">CONTROL</NavLink>
+                <NavLink href="/control-diario-wizard">WIZARD</NavLink>
+            </span>
+            
+            <span class="nav-separator"></span>
+            
+            <!-- REPORTES (visible para todos) -->
+            <span class="nav-group">
+                <span class="nav-group-label">INFORMES</span>
+                <NavLink href="/reportes">REPORTES</NavLink>
+            </span>
+            
+            @if (AuthService.IsAdmin || AuthService.IsAprobador)
+            {
+                <span class="nav-separator"></span>
+                <span class="nav-group">
+                    <span class="nav-group-label">SUPERVISIÓN</span>
+                    <NavLink href="/auditoria">AUDITORÍA</NavLink>
+                </span>
+            }
             
             @if (AuthService.IsAdmin)
             {
-                <span style="margin-left: 16px; border-left: 1px solid #808080; padding-left: 16px;">
+                <span class="nav-separator admin-separator"></span>
+                
+                <!-- ADMINISTRACIÓN -->
+                <span class="nav-group admin-group">
+                    <span class="nav-group-label">ADMIN</span>
                     <NavLink href="/catalogos">CATÁLOGOS</NavLink>
                     <NavLink href="/usuarios">USUARIOS</NavLink>
-                    <NavLink href="/reportes">REPORTES</NavLink>
-                    <NavLink href="/auditoria">AUDITORÍA</NavLink>
                     <NavLink href="/configuracion">CONFIG</NavLink>
                 </span>
             }
             
-            <span style="margin-left: auto;">
-                <button class="btn" @onclick="Logout" style="padding: 4px 12px;">
-                    SALIR
-                </button>
-            </span>
+            <span class="nav-spacer"></span>
+            <button class="btn btn-logout" @onclick="Logout">
+                SALIR
+            </button>
         </nav>
 
         <!-- Breadcrumb -->

@@ -159,9 +159,8 @@
 
 <style>
     .calendario-mini {
-        background: #1a1a1a;
-        border: 1px solid #333;
-        border-radius: 4px;
+        background: #FFFFFF;
+        border: 2px solid #000000;
         padding: 12px;
         width: 100%;
         max-width: 320px;
@@ -177,24 +176,23 @@
     .calendario-titulo {
         font-weight: bold;
         font-size: 13px;
-        color: #00d4ff;
+        color: #000000;
         flex: 1;
         text-align: center;
     }
 
     .btn-nav {
-        background: none;
-        border: 1px solid #333;
-        color: #00d4ff;
+        background: #E0E0E0;
+        border: 1px solid #808080;
+        color: #000000;
         padding: 4px 10px;
         cursor: pointer;
-        border-radius: 3px;
         font-size: 12px;
     }
 
     .btn-nav:hover {
-        background: #00d4ff22;
-        border-color: #00d4ff;
+        background: #D0D0D0;
+        border-color: #000000;
     }
 
     .calendario-dias-semana {
@@ -208,7 +206,7 @@
         text-align: center;
         font-size: 10px;
         font-weight: bold;
-        color: #888;
+        color: #666666;
         padding: 4px 0;
     }
 
@@ -224,17 +222,16 @@
         align-items: center;
         justify-content: center;
         font-size: 12px;
-        border: 1px solid #333;
-        border-radius: 3px;
+        border: 1px solid #CCCCCC;
         cursor: pointer;
         position: relative;
-        color: #fff;
-        background: #0a0a0a;
+        color: #000000;
+        background: #FFFFFF;
     }
 
     .dia:hover:not(.deshabilitado):not(.vacio) {
-        background: #00d4ff22;
-        border-color: #00d4ff;
+        background: #D0D0FF;
+        border-color: #000000;
     }
 
     .dia.vacio {
@@ -243,32 +240,32 @@
     }
 
     .dia.hoy {
-        border-color: #00d4ff;
-        color: #00d4ff;
+        border-color: #000000;
+        border-width: 2px;
         font-weight: bold;
     }
 
     .dia.seleccionado {
-        background: #00d4ff;
-        color: #000;
+        background: #000000;
+        color: #FFFFFF;
         font-weight: bold;
     }
 
     .dia.deshabilitado {
-        color: #444;
+        color: #CCCCCC;
         cursor: not-allowed;
-        background: #111;
+        background: #F5F5F5;
     }
 
     .dia.fin-semana {
-        background: #151515;
+        background: #F0F0F0;
     }
 
     .marcador {
         position: absolute;
         bottom: 2px;
         font-size: 6px;
-        color: #00ff7f;
+        color: #006600;
     }
 
     .calendario-footer {
@@ -281,16 +278,15 @@
     .calendario-footer button {
         padding: 6px 12px;
         font-size: 10px;
-        background: #0a0a0a;
-        border: 1px solid #333;
-        color: #00d4ff;
+        background: #E0E0E0;
+        border: 1px solid #808080;
+        color: #000000;
         cursor: pointer;
-        border-radius: 3px;
         font-weight: bold;
     }
 
     .calendario-footer button:hover {
-        background: #00d4ff22;
-        border-color: #00d4ff;
+        background: #D0D0D0;
+        border-color: #000000;
     }
 </style>

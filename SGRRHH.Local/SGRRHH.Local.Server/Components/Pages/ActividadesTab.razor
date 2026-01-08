@@ -4,8 +4,8 @@
 @inject ILogger<ActividadesTab> Logger
 
 <!-- Header con controles -->
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-    <div style="display: flex; gap: 8px;">
+<div class="toolbar">
+    <div class="toolbar-group">
         <button @onclick="Nuevo">NUEVO (F3)</button>
         <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
         @if (selectedItem != null)
@@ -13,7 +13,7 @@
             <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
         }
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
+    <div class="toolbar-group">
         <input type="text" placeholder="Buscar..." 
                @bind="searchTerm" @bind:event="oninput" />
         <button @onclick="Buscar">BUSCAR</button>
@@ -61,7 +61,7 @@
                     <td><strong>@item.Codigo</strong></td>
                     <td>@item.Nombre</td>
                     <td>@(item.Categoria ?? "-")</td>
-                    <td style="text-align: center;">
+                    <td class="text-center">
                         @if (item.RequiereProyecto)
                         {
                             <span class="badge badge-activo">SÍ</span>
@@ -71,8 +71,8 @@
                             <span class="badge badge-inactivo">NO</span>
                         }
                     </td>
-                    <td style="text-align: center;">@item.Orden</td>
-                    <td class="actions-cell">
+                    <td class="text-center">@item.Orden</td>
+                    <td class="table-actions">
                         <button @onclick="() => Editar(item)" @onclick:stopPropagation="true">
                             EDITAR
                         </button>
@@ -96,22 +96,22 @@
     
     @if (editItem != null)
     {
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="grid-2">
             <div>
                 <div class="form-group required">
-                    <label>Código:</label>
+                    <label>CÓDIGO</label>
                     <input type="text" @bind="editItem.Codigo" maxlength="20" 
                            readonly="@isEditing" disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group required">
-                    <label>Nombre:</label>
+                    <label>NOMBRE</label>
                     <input type="text" @bind="editItem.Nombre" maxlength="200" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Categoría:</label>
+                    <label>CATEGORÍA</label>
                     <input type="text" @bind="editItem.Categoria" maxlength="100" 
                            disabled="@isSaving" 
                            list="categoriasList" />
@@ -127,34 +127,34 @@
             
             <div>
                 <div class="form-group">
-                    <label>Orden:</label>
+                    <label>ORDEN</label>
                     <input type="number" @bind="editItem.Orden" min="0" 
                            disabled="@isSaving" />
                     <small>Para ordenar en listas</small>
                 </div>
                 
                 <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" @bind="editItem.RequiereProyecto" 
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="reqProyecto" @bind="editItem.RequiereProyecto" 
                                disabled="@isSaving" />
-                        Requiere Proyecto
-                    </label>
+                        <label for="reqProyecto">REQUIERE PROYECTO</label>
+                    </div>
                     <small>Si está marcado, debe asignarse a un proyecto</small>
                 </div>
                 
                 <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" @bind="editItem.Activo" 
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="activoAct" @bind="editItem.Activo" 
                                disabled="@isSaving" />
-                        Activo
-                    </label>
+                        <label for="activoAct">ACTIVO</label>
+                    </div>
                     <small>Solo las actividades activas pueden usarse</small>
                 </div>
             </div>
         </div>
         
         <div class="form-group">
-            <label>Descripción:</label>
+            <label>DESCRIPCIÓN</label>
             <textarea @bind="editItem.Descripcion" rows="3" 
                      disabled="@isSaving" 
                      maxlength="500"></textarea>
@@ -170,7 +170,7 @@
            OnCancelClicked="() => showConfirmModal = false"
            IsSaving="isSaving">
     <p>¿Está seguro que desea eliminar la actividad <strong>@itemToDelete?.Nombre</strong>?</p>
-    <p style="color: #ff6b6b; margin-top: 12px;">
+    <p class="text-danger">
         <strong>Advertencia:</strong> Esta acción no se puede deshacer.
     </p>
 </FormModal>

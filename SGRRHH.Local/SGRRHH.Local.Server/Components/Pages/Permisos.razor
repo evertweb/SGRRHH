@@ -35,10 +35,10 @@
     </div>
 }
 
-<!-- Header con controles -->
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <div style="display: flex; gap: 8px;">
-        <button @onclick="NuevoPermiso">NUEVO (F3)</button>
+<!-- Toolbar -->
+<div class="toolbar">
+    <div class="toolbar-group">
+        <button class="btn-primary" @onclick="NuevoPermiso">NUEVO (F3)</button>
         <button @onclick="CargarPermisos">ACTUALIZAR (F5)</button>
         @if (selectedPermiso != null)
         {
@@ -46,8 +46,8 @@
             
             @if (selectedPermiso.Estado == EstadoPermiso.Pendiente && AuthService.IsAprobador)
             {
-                <button @onclick="AprobarSeleccionado" style="background-color: #4CAF50; color: white;">APROBAR (F6)</button>
-                <button @onclick="RechazarSeleccionado" style="background-color: #F44336; color: white;">RECHAZAR (F7)</button>
+                <button class="btn-success" @onclick="AprobarSeleccionado">APROBAR (F6)</button>
+                <button class="btn-danger" @onclick="RechazarSeleccionado">RECHAZAR (F7)</button>
             }
             
             @if (selectedPermiso.Estado == EstadoPermiso.Aprobado)
@@ -56,10 +56,12 @@
             }
         }
     </div>
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+    
+    <div class="toolbar-separator"></div>
+    
+    <div class="search-box">
         <input type="text" id="searchInput" placeholder="Buscar... (F2)" 
-               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" 
-               style="min-width: 200px;" />
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         <button @onclick="Buscar">BUSCAR</button>
         @if (!string.IsNullOrEmpty(searchTerm))
         {
@@ -83,17 +85,16 @@
 </div>
 
 <!-- Información de resultados -->
-<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+<div class="results-info">
     Mostrando @permisos.Count() de @totalPermisos permiso(s)
     @if (AuthService.IsAprobador && permisosPendientes > 0)
     {
-        <span style="color: #FF9800; font-weight: bold;"> | @permisosPendientes pendientes de aprobación</span>
+        <span class="text-warning" style="font-weight: bold;"> | @permisosPendientes pendientes de aprobación</span>
     }
 </div>
 
 <!-- Tabla de permisos -->
-<div style="overflow-x: auto;">
-    <table>
+<table>
         <thead>
             <tr>
                 <th style="width: 120px;">N° ACTA</th>
@@ -125,28 +126,26 @@
                         <td><strong>@permiso.NumeroActa</strong></td>
                         <td>@(permiso.Empleado?.NombreCompleto ?? "N/A")</td>
                         <td>
-                            <span style="background-color: @(permiso.TipoPermiso?.Color ?? "#808080"); 
-                                         color: white; padding: 2px 6px; font-size: 11px; white-space: nowrap;">
+                            <span class="badge" style="background-color: @(permiso.TipoPermiso?.Color ?? "#808080"); color: white;">
                                 @(permiso.TipoPermiso?.Nombre ?? "N/A")
                             </span>
                         </td>
                         <td>@permiso.FechaInicio.ToString("dd/MM/yyyy")</td>
                         <td>@permiso.FechaFin.ToString("dd/MM/yyyy")</td>
-                        <td style="text-align: center;">@permiso.TotalDias</td>
+                        <td class="text-center">@permiso.TotalDias</td>
                         <td>
-                            <span class="badge-@permiso.Estado.ToString().ToLower()">
+                            <span class="badge badge-@permiso.Estado.ToString().ToLower()">
                                 @GetEstadoTexto(permiso.Estado)
                             </span>
                         </td>
                         <td style="font-size: 11px;">@permiso.FechaSolicitud.ToString("dd/MM/yyyy")</td>
-                        <td class="actions-cell">
+                        <td class="table-actions">
                             <button @onclick="() => VerDetalle(permiso)" @onclick:stopPropagation="true">
                                 VER
                             </button>
                             @if (permiso.Estado == EstadoPermiso.Aprobado)
                             {
-                                <button @onclick="() => GenerarActa(permiso.Id)" @onclick:stopPropagation="true" 
-                                        style="font-size: 11px; padding: 2px 6px;">
+                                <button @onclick="() => GenerarActa(permiso.Id)" @onclick:stopPropagation="true">
                                     PDF
                                 </button>
                             }
@@ -156,7 +155,6 @@
             }
         </tbody>
     </table>
-</div>
 
 <!-- Modal de Permiso (Nuevo/Editar) -->
 <FormModal @bind-IsVisible="showModal" 
@@ -168,11 +166,11 @@
            ShowSaveButton="@(!isEditing || selectedPermiso?.Estado == EstadoPermiso.Pendiente)"
            CloseOnBackdropClick="false">
     
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div class="grid-2">
         <!-- Columna izquierda -->
         <div>
             <div class="form-group required">
-                <label>Empleado:</label>
+                <label>EMPLEADO</label>
                 @if (isEditing)
                 {
                     <input type="text" value="@(permisoEdit.Empleado?.NombreCompleto ?? "")" disabled />
@@ -190,7 +188,7 @@
             </div>
             
             <div class="form-group required">
-                <label>Tipo de Permiso:</label>
+                <label>TIPO DE PERMISO</label>
                 @if (isEditing)
                 {
                     <input type="text" value="@(permisoEdit.TipoPermiso?.Nombre ?? "")" disabled />
@@ -208,21 +206,21 @@
             </div>
             
             <div class="form-group required">
-                <label>Fecha Inicio:</label>
+                <label>FECHA INICIO</label>
                 <input type="date" @bind="permisoEdit.FechaInicio" 
                        @bind:after="CalcularDias"
                        disabled="@isEditing" required />
             </div>
             
             <div class="form-group required">
-                <label>Fecha Fin:</label>
+                <label>FECHA FIN</label>
                 <input type="date" @bind="permisoEdit.FechaFin" 
                        @bind:after="CalcularDias"
                        disabled="@isEditing" required />
             </div>
             
             <div class="form-group">
-                <label>Total de Días:</label>
+                <label>TOTAL DE DÍAS</label>
                 <input type="number" @bind="permisoEdit.TotalDias" disabled 
                        style="background-color: #F5F5F5; font-weight: bold;" />
             </div>
@@ -231,14 +229,14 @@
         <!-- Columna derecha -->
         <div>
             <div class="form-group required">
-                <label>Motivo:</label>
+                <label>MOTIVO</label>
                 <textarea @bind="permisoEdit.Motivo" rows="4" 
                           disabled="@isEditing" required
                           placeholder="Describa el motivo del permiso..."></textarea>
             </div>
             
             <div class="form-group">
-                <label>Observaciones:</label>
+                <label>OBSERVACIONES</label>
                 <textarea @bind="permisoEdit.Observaciones" rows="3"
                           disabled="@isEditing"
                           placeholder="Información adicional (opcional)"></textarea>
@@ -247,7 +245,7 @@
             @if (!isEditing)
             {
                 <div class="form-group">
-                    <label>Documento Soporte (opcional):</label>
+                    <label>DOCUMENTO SOPORTE (OPCIONAL)</label>
                     <InputFile OnChange="OnDocumentoSelected" accept=".pdf,.jpg,.jpeg,.png" />
                     <small style="color: #666;">PDF, JPG o PNG - Máx. 5MB</small>
                 </div>
@@ -256,9 +254,9 @@
             @if (isEditing)
             {
                 <div class="form-group">
-                    <label>Estado:</label>
+                    <label>ESTADO</label>
                     <div style="padding: 8px; background-color: #F5F5F5; border: 1px solid #808080;">
-                        <span class="badge-@permisoEdit.Estado.ToString().ToLower()" style="font-size: 14px;">
+                        <span class="badge badge-@permisoEdit.Estado.ToString().ToLower()" style="font-size: 14px;">
                             @GetEstadoTexto(permisoEdit.Estado)
                         </span>
                     </div>

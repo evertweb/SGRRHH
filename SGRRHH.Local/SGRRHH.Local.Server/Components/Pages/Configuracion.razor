@@ -42,7 +42,7 @@
 }
 
 <!-- Tabs de configuración -->
-<div class="tabs-container" style="margin-bottom: 24px;">
+<div class="tabs-container">
     <div class="tabs-header">
         <button class="tab-button @(tabActivo == "empresa" ? "active" : "")" 
                 @onclick='() => CambiarTab("empresa")'>
@@ -63,9 +63,9 @@
 @if (tabActivo == "empresa")
 {
     <div class="panel">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3>INFORMACIÓN DE LA EMPRESA</h3>
-            <button @onclick="GuardarEmpresa" disabled="@isSaving">
+        <div class="panel-header">
+            INFORMACIÓN DE LA EMPRESA
+            <button class="btn-primary" @onclick="GuardarEmpresa" disabled="@isSaving">
                 @if (isSaving)
                 {
                     <span>GUARDANDO...</span>
@@ -76,82 +76,78 @@
                 }
             </button>
         </div>
-
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 32px;">
-            <!-- Datos de la empresa -->
-            <div>
-                <div class="form-group required">
-                    <label>Nombre de la Empresa:</label>
-                    <input type="text" @bind="empresaNombre" 
-                           placeholder="Ej: FORESTECH S.A." />
-                </div>
-
-                <div class="form-group">
-                    <label>RUC:</label>
-                    <input type="text" @bind="empresaRuc" 
-                           placeholder="Ej: 1234567890001" />
-                </div>
-
-                <div class="form-group">
-                    <label>Dirección:</label>
-                    <textarea @bind="empresaDireccion" 
-                              rows="3"
-                              placeholder="Dirección completa de la empresa"></textarea>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div class="form-group">
-                        <label>Teléfono:</label>
-                        <input type="tel" @bind="empresaTelefono" 
-                               placeholder="Ej: 02-1234567" />
+        <div class="panel-body">
+            <div class="grid-2">
+                <!-- Datos de la empresa -->
+                <div>
+                    <div class="form-group required">
+                        <label>NOMBRE DE LA EMPRESA</label>
+                        <input type="text" @bind="empresaNombre" 
+                               placeholder="Ej: FORESTECH S.A." />
                     </div>
 
                     <div class="form-group">
-                        <label>Email:</label>
-                        <input type="email" @bind="empresaEmail" 
-                               placeholder="info@empresa.com" />
+                        <label>RUC</label>
+                        <input type="text" @bind="empresaRuc" 
+                               placeholder="Ej: 1234567890001" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>DIRECCIÓN</label>
+                        <textarea @bind="empresaDireccion" 
+                                  rows="3"
+                                  placeholder="Dirección completa de la empresa"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>TELÉFONO</label>
+                            <input type="tel" @bind="empresaTelefono" 
+                                   placeholder="Ej: 02-1234567" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>EMAIL</label>
+                            <input type="email" @bind="empresaEmail" 
+                                   placeholder="info@empresa.com" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>SITIO WEB</label>
+                        <input type="url" @bind="empresaWeb" 
+                               placeholder="https://www.empresa.com" />
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Sitio Web:</label>
-                    <input type="url" @bind="empresaWeb" 
-                           placeholder="https://www.empresa.com" />
-                </div>
-            </div>
+                <!-- Logo de la empresa -->
+                <div>
+                    <div class="form-group">
+                        <label>LOGO DE LA EMPRESA</label>
+                        
+                        @if (!string.IsNullOrEmpty(empresaLogo))
+                        {
+                            <div class="logo-preview">
+                                <img src="@empresaLogo" alt="Logo empresa" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="logo-placeholder">
+                                <span>Sin logo</span>
+                            </div>
+                        }
 
-            <!-- Logo de la empresa -->
-            <div>
-                <div class="form-group">
-                    <label>Logo de la Empresa:</label>
-                    
-                    @if (!string.IsNullOrEmpty(empresaLogo))
-                    {
-                        <div style="margin-bottom: 12px; text-align: center;">
-                            <img src="@empresaLogo" 
-                                 alt="Logo empresa" 
-                                 style="max-width: 200px; max-height: 200px; border: 1px solid #333; padding: 8px; background: white;" />
-                        </div>
-                    }
-                    else
-                    {
-                        <div style="margin-bottom: 12px; text-align: center; padding: 40px; border: 2px dashed #333; background: #1a1a1a;">
-                            <p style="margin: 0; color: #666;">Sin logo</p>
-                        </div>
-                    }
+                        <InputFile OnChange="OnLogoSelected" accept="image/*" />
+                        <small>Tamaño recomendado: 300x300px. Formatos: PNG, JPG</small>
 
-                    <InputFile OnChange="OnLogoSelected" accept="image/*" />
-                    <small style="display: block; margin-top: 4px; color: #666;">
-                        Tamaño recomendado: 300x300px. Formatos: PNG, JPG
-                    </small>
-
-                    @if (!string.IsNullOrEmpty(empresaLogo))
-                    {
-                        <button @onclick="EliminarLogo" 
-                                style="margin-top: 8px; width: 100%; background-color: #dc3545;">
-                            ELIMINAR LOGO
-                        </button>
-                    }
+                        @if (!string.IsNullOrEmpty(empresaLogo))
+                        {
+                            <button class="btn-danger" @onclick="EliminarLogo">
+                                ELIMINAR LOGO
+                            </button>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -162,207 +158,207 @@
 @if (tabActivo == "sistema")
 {
     <div class="panel">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3>CONFIGURACIONES DEL SISTEMA</h3>
-            <div style="display: flex; gap: 8px;">
+        <div class="panel-header">
+            CONFIGURACIONES DEL SISTEMA
+            <div class="toolbar-group">
                 <button @onclick="NuevaConfiguracion">NUEVA CONFIGURACIÓN</button>
                 <button @onclick="CargarConfiguraciones">ACTUALIZAR</button>
             </div>
         </div>
+        <div class="panel-body">
+            <!-- Filtro por categoría -->
+            <div class="toolbar">
+                <div class="form-group">
+                    <label>FILTRAR POR CATEGORÍA</label>
+                    <select @bind="categoriaFiltro" @bind:after="FiltrarConfiguraciones">
+                        <option value="">Todas las categorías</option>
+                        <option value="General">General</option>
+                        <option value="Permisos">Permisos</option>
+                        <option value="Vacaciones">Vacaciones</option>
+                        <option value="Contratos">Contratos</option>
+                        <option value="Reportes">Reportes</option>
+                        <option value="Email">Email</option>
+                        <option value="Sistema">Sistema</option>
+                    </select>
+                </div>
+            </div>
 
-        <!-- Filtro por categoría -->
-        <div style="margin-bottom: 16px;">
-            <label>Filtrar por categoría:</label>
-            <select @bind="categoriaFiltro" @bind:after="FiltrarConfiguraciones" 
-                    style="margin-left: 8px;">
-                <option value="">Todas las categorías</option>
-                <option value="General">General</option>
-                <option value="Permisos">Permisos</option>
-                <option value="Vacaciones">Vacaciones</option>
-                <option value="Contratos">Contratos</option>
-                <option value="Reportes">Reportes</option>
-                <option value="Email">Email</option>
-                <option value="Sistema">Sistema</option>
-            </select>
-        </div>
-
-        @if (isLoading)
-        {
-            <p class="loading">Cargando configuraciones...</p>
-        }
-        else if (!configuracionesFiltradas.Any())
-        {
-            <p class="empty-state">No hay configuraciones para mostrar</p>
-        }
-        else
-        {
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 200px;">CATEGORÍA</th>
-                        <th style="width: 250px;">CLAVE</th>
-                        <th>VALOR</th>
-                        <th>DESCRIPCIÓN</th>
-                        <th style="width: 150px;">ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var config in configuracionesFiltradas)
-                    {
-                        <tr class="@(selectedConfiguracion?.Id == config.Id ? "selected" : "")"
-                            @onclick="() => selectedConfiguracion = config">
-                            <td>
-                                <span class="badge-@GetCategoriaBadge(config.Categoria)">
-                                    @config.Categoria
-                                </span>
-                            </td>
-                            <td><strong>@config.Clave</strong></td>
-                            <td>
-                                @if (config.Valor.Length > 50)
-                                {
-                                    <span title="@config.Valor">@(config.Valor.Substring(0, 50))...</span>
-                                }
-                                else
-                                {
-                                    <span>@config.Valor</span>
-                                }
-                            </td>
-                            <td>@(config.Descripcion ?? "-")</td>
-                            <td class="actions-cell">
-                                <button @onclick="() => EditarConfiguracion(config)" @onclick:stopPropagation="true">
-                                    EDITAR
-                                </button>
-                                <button @onclick="() => EliminarConfiguracion(config)" @onclick:stopPropagation="true"
-                                        style="background-color: #dc3545;">
-                                    ELIMINAR
-                                </button>
-                            </td>
+            @if (isLoading)
+            {
+                <div class="loading">Cargando configuraciones...</div>
+            }
+            else if (!configuracionesFiltradas.Any())
+            {
+                <div class="empty-state">
+                    <div class="icon">⚙️</div>
+                    <div class="message">No hay configuraciones para mostrar</div>
+                </div>
+            }
+            else
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th>CATEGORÍA</th>
+                            <th>CLAVE</th>
+                            <th>VALOR</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>ACCIONES</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
-        }
+                    </thead>
+                    <tbody>
+                        @foreach (var config in configuracionesFiltradas)
+                        {
+                            <tr class="@(selectedConfiguracion?.Id == config.Id ? "selected" : "")"
+                                @onclick="() => selectedConfiguracion = config">
+                                <td>
+                                    <span class="badge badge-@GetCategoriaBadge(config.Categoria)">
+                                        @config.Categoria.ToUpper()
+                                    </span>
+                                </td>
+                                <td><strong>@config.Clave</strong></td>
+                                <td>
+                                    @if (config.Valor.Length > 50)
+                                    {
+                                        <span title="@config.Valor">@(config.Valor.Substring(0, 50))...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@config.Valor</span>
+                                    }
+                                </td>
+                                <td>@(config.Descripcion ?? "-")</td>
+                                <td class="table-actions">
+                                    <button @onclick="() => EditarConfiguracion(config)" @onclick:stopPropagation="true">
+                                        EDITAR
+                                    </button>
+                                    <button class="btn-danger" @onclick="() => EliminarConfiguracion(config)" @onclick:stopPropagation="true">
+                                        ELIMINAR
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
     </div>
 }
 
 <!-- TAB: BACKUP/RESTORE -->
 @if (tabActivo == "backup")
 {
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <div class="grid-2">
         <!-- Panel de Backup -->
         <div class="panel">
-            <h3>CREAR BACKUP</h3>
-            <p style="margin-bottom: 16px; color: #ccc;">
-                Genere una copia de seguridad completa de la base de datos. 
-                El archivo se descargará automáticamente.
-            </p>
+            <div class="panel-header">CREAR BACKUP</div>
+            <div class="panel-body">
+                <p class="help-text">
+                    Genere una copia de seguridad completa de la base de datos. 
+                    El archivo se descargará automáticamente.
+                </p>
 
-            <div class="form-group">
-                <label>Nombre del Backup:</label>
-                <input type="text" @bind="backupNombre" 
-                       placeholder="backup_@DateTime.Now.ToString("yyyyMMdd_HHmmss")" />
-                <small style="display: block; margin-top: 4px; color: #666;">
-                    Si no especifica, se usará: backup_YYYYMMDD_HHMMSS.db
-                </small>
-            </div>
-
-            <div class="form-group">
-                <label style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" @bind="incluirLogs" />
-                    Incluir logs de auditoría
-                </label>
-            </div>
-
-            <button @onclick="CrearBackup" disabled="@isBackingUp" 
-                    style="width: 100%; padding: 12px; background-color: #28a745;">
-                @if (isBackingUp)
-                {
-                    <span>CREANDO BACKUP...</span>
-                }
-                else
-                {
-                    <span>CREAR BACKUP</span>
-                }
-            </button>
-
-            @if (ultimoBackup != null)
-            {
-                <div style="margin-top: 16px; padding: 12px; background-color: #1a1a1a; border-left: 3px solid #28a745;">
-                    <p style="margin: 0; font-size: 12px; color: #666;">ÚLTIMO BACKUP:</p>
-                    <p style="margin: 4px 0 0 0;">@ultimoBackup.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                <div class="form-group">
+                    <label>NOMBRE DEL BACKUP</label>
+                    <input type="text" @bind="backupNombre" 
+                           placeholder="backup_@DateTime.Now.ToString("yyyyMMdd_HHmmss")" />
+                    <small>Si no especifica, se usará: backup_YYYYMMDD_HHMMSS.db</small>
                 </div>
-            }
+
+                <div class="form-group">
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="chkLogs" @bind="incluirLogs" />
+                        <label for="chkLogs">Incluir logs de auditoría</label>
+                    </div>
+                </div>
+
+                <button class="btn-success btn-block" @onclick="CrearBackup" disabled="@isBackingUp">
+                    @if (isBackingUp)
+                    {
+                        <span>CREANDO BACKUP...</span>
+                    }
+                    else
+                    {
+                        <span>CREAR BACKUP</span>
+                    }
+                </button>
+
+                @if (ultimoBackup != null)
+                {
+                    <div class="info-box success">
+                        <label>ÚLTIMO BACKUP:</label>
+                        <div>@ultimoBackup.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                }
+            </div>
         </div>
 
         <!-- Panel de Restore -->
         <div class="panel">
-            <h3>RESTAURAR BACKUP</h3>
-            <p style="margin-bottom: 16px; color: #ccc;">
-                Restaure la base de datos desde un archivo de backup. 
-                <strong style="color: #dc3545;">¡ADVERTENCIA!</strong> Esto reemplazará todos los datos actuales.
-            </p>
-
-            <div class="form-group">
-                <label>Archivo de Backup:</label>
-                <InputFile OnChange="OnBackupFileSelected" accept=".db,.sqlite" />
-                <small style="display: block; margin-top: 4px; color: #666;">
-                    Seleccione un archivo .db o .sqlite
-                </small>
-            </div>
-
-            @if (backupFileSelected != null)
-            {
-                <div style="margin: 16px 0; padding: 12px; background-color: #1a1a1a;">
-                    <p style="margin: 0;"><strong>Archivo seleccionado:</strong></p>
-                    <p style="margin: 4px 0 0 0; color: #4CAF50;">@backupFileSelected.Name</p>
-                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">
-                        Tamaño: @(backupFileSelected.Size / 1024) KB
-                    </p>
-                </div>
-            }
-
-            <button @onclick="MostrarConfirmacionRestore" 
-                    disabled="@(isRestoring || backupFileSelected == null)"
-                    style="width: 100%; padding: 12px; background-color: #dc3545;">
-                @if (isRestoring)
-                {
-                    <span>RESTAURANDO...</span>
-                }
-                else
-                {
-                    <span>RESTAURAR BACKUP</span>
-                }
-            </button>
-
-            <div style="margin-top: 16px; padding: 12px; background-color: #1a1a1a; border-left: 3px solid #dc3545;">
-                <p style="margin: 0; color: #dc3545; font-weight: bold;">⚠️ PRECAUCIÓN</p>
-                <p style="margin: 8px 0 0 0; font-size: 12px; color: #ccc;">
-                    La restauración reemplazará TODOS los datos actuales. 
-                    Se recomienda crear un backup antes de restaurar.
+            <div class="panel-header modal-header-danger">RESTAURAR BACKUP</div>
+            <div class="panel-body">
+                <p class="help-text">
+                    Restaure la base de datos desde un archivo de backup. 
+                    <strong class="text-danger">¡ADVERTENCIA!</strong> Esto reemplazará todos los datos actuales.
                 </p>
+
+                <div class="form-group">
+                    <label>ARCHIVO DE BACKUP</label>
+                    <InputFile OnChange="OnBackupFileSelected" accept=".db,.sqlite" />
+                    <small>Seleccione un archivo .db o .sqlite</small>
+                </div>
+
+                @if (backupFileSelected != null)
+                {
+                    <div class="info-box">
+                        <strong>Archivo seleccionado:</strong>
+                        <div class="text-success">@backupFileSelected.Name</div>
+                        <small>Tamaño: @(backupFileSelected.Size / 1024) KB</small>
+                    </div>
+                }
+
+                <button class="btn-danger btn-block" @onclick="MostrarConfirmacionRestore" 
+                        disabled="@(isRestoring || backupFileSelected == null)">
+                    @if (isRestoring)
+                    {
+                        <span>RESTAURANDO...</span>
+                    }
+                    else
+                    {
+                        <span>RESTAURAR BACKUP</span>
+                    }
+                </button>
+
+                <div class="alert alert-warning">
+                    <strong>⚠️ PRECAUCIÓN</strong>
+                    <p>La restauración reemplazará TODOS los datos actuales. 
+                    Se recomienda crear un backup antes de restaurar.</p>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Información del sistema -->
-    <div class="panel" style="margin-top: 24px;">
-        <h3>INFORMACIÓN DEL SISTEMA</h3>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
-            <div>
-                <p style="margin: 0; font-size: 12px; color: #666;">VERSIÓN DEL SISTEMA</p>
-                <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold;">@versionSistema</p>
-            </div>
-            <div>
-                <p style="margin: 0; font-size: 12px; color: #666;">BASE DE DATOS</p>
-                <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: bold;">SQLite</p>
-                @if (tamanoDb > 0)
-                {
-                    <p style="margin: 4px 0 0 0; font-size: 12px; color: #ccc;">@(tamanoDb / 1024 / 1024) MB</p>
-                }
-            </div>
-            <div>
-                <p style="margin: 0; font-size: 12px; color: #666;">RUTA DE DATOS</p>
-                <p style="margin: 4px 0 0 0; font-size: 12px; word-break: break-all;">@rutaDatos</p>
+    <div class="panel">
+        <div class="panel-header">INFORMACIÓN DEL SISTEMA</div>
+        <div class="panel-body">
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <h3>VERSIÓN DEL SISTEMA</h3>
+                    <div class="value">@versionSistema</div>
+                </div>
+                <div class="stats-card">
+                    <h3>BASE DE DATOS</h3>
+                    <div class="value">SQLite</div>
+                    @if (tamanoDb > 0)
+                    {
+                        <div class="label">@(tamanoDb / 1024 / 1024) MB</div>
+                    }
+                </div>
+                <div class="stats-card">
+                    <h3>RUTA DE DATOS</h3>
+                    <div class="label" title="@rutaDatos">@rutaDatos</div>
+                </div>
             </div>
         </div>
     </div>
@@ -376,9 +372,9 @@
            OnCancelClicked="CerrarModal"
            IsSaving="isSaving">
     
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div class="form-row">
         <div class="form-group required">
-            <label>Categoría:</label>
+            <label>CATEGORÍA</label>
             <select @bind="configuracionEdit.Categoria">
                 <option value="General">General</option>
                 <option value="Permisos">Permisos</option>
@@ -391,26 +387,26 @@
         </div>
 
         <div class="form-group required">
-            <label>Clave:</label>
+            <label>CLAVE</label>
             <input type="text" @bind="configuracionEdit.Clave" 
                    disabled="@isEditing"
                    placeholder="ej: dias_vacaciones_anual" />
             @if (isEditing)
             {
-                <small style="color: #666;">La clave no se puede modificar</small>
+                <small>La clave no se puede modificar</small>
             }
         </div>
     </div>
 
     <div class="form-group required">
-        <label>Valor:</label>
+        <label>VALOR</label>
         <textarea @bind="configuracionEdit.Valor" 
                   rows="3"
                   placeholder="Valor de la configuración"></textarea>
     </div>
 
     <div class="form-group">
-        <label>Descripción:</label>
+        <label>DESCRIPCIÓN</label>
         <textarea @bind="configuracionEdit.Descripcion" 
                   rows="2"
                   placeholder="Descripción de para qué sirve esta configuración"></textarea>
@@ -425,43 +421,41 @@
            OnCancelClicked="() => showRestoreConfirmModal = false"
            IsSaving="isRestoring">
     
-    <div style="background-color: #1a1a1a; padding: 16px; border-left: 4px solid #dc3545; margin-bottom: 16px;">
-        <p style="margin: 0; color: #dc3545; font-weight: bold; font-size: 16px;">
-            ⚠️ ADVERTENCIA CRÍTICA
-        </p>
+    <div class="alert alert-error">
+        <strong>⚠️ ADVERTENCIA CRÍTICA</strong>
     </div>
 
-    <p style="margin-bottom: 12px;">
+    <p>
         Está a punto de restaurar la base de datos desde el archivo:
     </p>
     
     @if (backupFileSelected != null)
     {
-        <p style="margin-bottom: 16px; padding: 12px; background-color: #1a1a1a; font-weight: bold;">
-            @backupFileSelected.Name
-        </p>
+        <div class="info-box">
+            <strong>@backupFileSelected.Name</strong>
+        </div>
     }
 
-    <p style="margin-bottom: 16px; color: #dc3545;">
+    <p class="text-danger">
         Esta acción reemplazará <strong>TODOS</strong> los datos actuales del sistema, incluyendo:
     </p>
 
-    <ul style="margin-bottom: 16px; color: #ccc;">
+    <ul>
         <li>Todos los empleados y sus datos</li>
         <li>Permisos y vacaciones</li>
         <li>Usuarios y configuraciones</li>
         <li>Registros de actividad</li>
     </ul>
 
-    <p style="margin-bottom: 16px; font-weight: bold;">
-        ¿Está completamente seguro que desea continuar?
+    <p>
+        <strong>¿Está completamente seguro que desea continuar?</strong>
     </p>
 
     <div class="form-group">
-        <label style="display: flex; align-items: center; gap: 8px; color: #dc3545;">
-            <input type="checkbox" @bind="confirmarRestore" />
-            SÍ, entiendo que esta acción no se puede deshacer
-        </label>
+        <div class="checkbox-wrapper">
+            <input type="checkbox" id="chkConfirm" @bind="confirmarRestore" />
+            <label for="chkConfirm" class="text-danger">SÍ, entiendo que esta acción no se puede deshacer</label>
+        </div>
     </div>
 </FormModal>
 

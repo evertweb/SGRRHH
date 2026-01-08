@@ -150,36 +150,33 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.85);
+        background: rgba(0, 0, 0, 0.7);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 2000;
-        animation: fadeIn 0.2s;
     }
 
     .confirm-dialog {
-        background: #1a1a1a;
-        border: 2px solid #00d4ff;
-        border-radius: 4px;
+        background: #FFFFFF;
+        border: 2px solid #000000;
         min-width: 400px;
         max-width: 600px;
-        box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3);
-        animation: slideIn 0.3s;
     }
 
     .confirm-header {
         padding: 16px 20px;
-        border-bottom: 1px solid #333;
+        border-bottom: 2px solid #000000;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        background: #E0E0E0;
     }
 
     .confirm-header h3 {
         margin: 0;
         font-size: 16px;
-        color: #00d4ff;
+        color: #000000;
         text-transform: uppercase;
         letter-spacing: 1px;
     }
@@ -187,7 +184,7 @@
     .btn-close {
         background: none;
         border: none;
-        color: #888;
+        color: #666666;
         font-size: 20px;
         cursor: pointer;
         padding: 0;
@@ -197,7 +194,7 @@
     }
 
     .btn-close:hover {
-        color: #00d4ff;
+        color: #000000;
     }
 
     .confirm-body {
@@ -213,14 +210,14 @@
         flex-shrink: 0;
     }
 
-    .confirm-icon.tipo-info { color: #00d4ff; }
-    .confirm-icon.tipo-warning { color: #ffc107; }
-    .confirm-icon.tipo-danger { color: #ff453a; }
-    .confirm-icon.tipo-success { color: #00ff7f; }
+    .confirm-icon.tipo-info { color: #0066CC; }
+    .confirm-icon.tipo-warning { color: #CC9900; }
+    .confirm-icon.tipo-danger { color: #CC0000; }
+    .confirm-icon.tipo-success { color: #006600; }
 
     .confirm-mensaje {
         flex: 1;
-        color: #ddd;
+        color: #333333;
         line-height: 1.6;
     }
 
@@ -230,10 +227,11 @@
 
     .confirm-footer {
         padding: 16px 20px;
-        border-top: 1px solid #333;
+        border-top: 1px solid #CCCCCC;
         display: flex;
         gap: 12px;
         justify-content: flex-end;
+        background: #F0F0F0;
     }
 
     .confirm-footer button {
@@ -241,10 +239,10 @@
         font-size: 12px;
         font-weight: bold;
         letter-spacing: 1px;
-        border-radius: 3px;
         cursor: pointer;
         text-transform: uppercase;
         min-width: 100px;
+        border: 2px solid;
     }
 
     .confirm-footer button:disabled {
@@ -253,61 +251,45 @@
     }
 
     .btn-secondary {
-        background: #0a0a0a;
-        border: 1px solid #333;
-        color: #888;
+        background: #E0E0E0;
+        border-color: #808080;
+        color: #333333;
     }
 
     .btn-secondary:hover:not(:disabled) {
-        border-color: #666;
-        color: #aaa;
+        border-color: #000000;
+        background: #D0D0D0;
     }
 
     .btn-primary {
-        border: 1px solid;
+        border: 2px solid;
     }
 
     .btn-primary.tipo-info {
-        background: rgba(0, 212, 255, 0.2);
-        border-color: #00d4ff;
-        color: #00d4ff;
+        background: #CCE5FF;
+        border-color: #0066CC;
+        color: #0066CC;
     }
 
     .btn-primary.tipo-warning {
-        background: rgba(255, 193, 7, 0.2);
-        border-color: #ffc107;
-        color: #ffc107;
+        background: #FFFFCC;
+        border-color: #CC9900;
+        color: #996600;
     }
 
     .btn-primary.tipo-danger {
-        background: rgba(255, 69, 58, 0.2);
-        border-color: #ff453a;
-        color: #ff453a;
+        background: #FFCCCC;
+        border-color: #CC0000;
+        color: #CC0000;
     }
 
     .btn-primary.tipo-success {
-        background: rgba(0, 255, 127, 0.2);
-        border-color: #00ff7f;
-        color: #00ff7f;
+        background: #CCFFCC;
+        border-color: #006600;
+        color: #006600;
     }
 
     .btn-primary:hover:not(:disabled) {
-        filter: brightness(1.2);
-    }
-
-    @@keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    @@keyframes slideIn {
-        from {
-            transform: translateY(-50px);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
+        opacity: 0.9;
     }
 </style>

@@ -40,10 +40,10 @@
     <ResumenVacacionesPanel Resumen="@resumenVacaciones" />
 }
 
-<!-- Header con controles -->
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <div style="display: flex; gap: 8px;">
-        <button @onclick="NuevaVacacion">NUEVA (F3)</button>
+<!-- Toolbar -->
+<div class="toolbar">
+    <div class="toolbar-group">
+        <button class="btn-primary" @onclick="NuevaVacacion">NUEVA (F3)</button>
         <button @onclick="CargarVacaciones">ACTUALIZAR (F5)</button>
         @if (selectedVacacion != null)
         {
@@ -51,15 +51,17 @@
             
             @if (selectedVacacion.Estado == EstadoVacacion.Pendiente && AuthService.IsAprobador)
             {
-                <button @onclick="AprobarSeleccionado" style="background-color: #4CAF50; color: white;">APROBAR (F6)</button>
-                <button @onclick="RechazarSeleccionado" style="background-color: #F44336; color: white;">RECHAZAR (F7)</button>
+                <button class="btn-success" @onclick="AprobarSeleccionado">APROBAR (F6)</button>
+                <button class="btn-danger" @onclick="RechazarSeleccionado">RECHAZAR (F7)</button>
             }
         }
     </div>
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+    
+    <div class="toolbar-separator"></div>
+    
+    <div class="search-box">
         <input type="text" id="searchInput" placeholder="Buscar... (F2)" 
-               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" 
-               style="min-width: 200px;" />
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         <button @onclick="Buscar">BUSCAR</button>
         @if (!string.IsNullOrEmpty(searchTerm))
         {
@@ -92,11 +94,11 @@
 </div>
 
 <!-- Información de resultados -->
-<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+<div class="results-info">
     Mostrando @vacaciones.Count() de @totalVacaciones vacación(es)
     @if (AuthService.IsAprobador && vacacionesPendientes > 0)
     {
-        <span style="color: #FF9800; font-weight: bold;"> | @vacacionesPendientes pendientes de aprobación</span>
+        <span class="text-warning" style="font-weight: bold;"> | @vacacionesPendientes pendientes de aprobación</span>
     }
 </div>
 
@@ -136,19 +138,18 @@
                         <td>@vac.FechaFin.ToString("dd/MM/yyyy")</td>
                         <td style="text-align: center;">@vac.DiasTomados</td>
                         <td>
-                            <span class="badge-@vac.Estado.ToString().ToLower()">
+                            <span class="badge badge-@vac.Estado.ToString().ToLower()">
                                 @GetEstadoTexto(vac.Estado)
                             </span>
                         </td>
                         <td style="font-size: 11px;">@vac.FechaSolicitud.ToString("dd/MM/yyyy")</td>
-                        <td class="actions-cell">
+                        <td class="table-actions">
                             <button @onclick="() => VerDetalle(vac)" @onclick:stopPropagation="true">
                                 VER
                             </button>
                             @if (vac.Estado == EstadoVacacion.Pendiente || vac.Estado == EstadoVacacion.Aprobada)
                             {
-                                <button @onclick="() => EditarVacacion(vac)" @onclick:stopPropagation="true"
-                                        style="font-size: 11px; padding: 2px 6px;">
+                                <button @onclick="() => EditarVacacion(vac)" @onclick:stopPropagation="true">
                                     EDITAR
                                 </button>
                             }
@@ -193,16 +194,14 @@
             
             @if (vacacionEdit.EmpleadoId > 0 && diasDisponibles.HasValue)
             {
-                <div style="padding: 12px; background-color: @(diasDisponibles.Value > 0 ? "#E8F5E9" : "#FFEBEE"); 
-                            border: 1px solid @(diasDisponibles.Value > 0 ? "#4CAF50" : "#F44336"); 
-                            border-radius: 4px; margin-bottom: 12px;">
-                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">DÍAS DISPONIBLES EN @DateTime.Now.Year</div>
-                    <div style="font-size: 24px; font-weight: bold; color: @(diasDisponibles.Value > 0 ? "#2E7D32" : "#C62828");">
+                <div class="@(diasDisponibles.Value > 0 ? "alert alert-success" : "alert alert-error")">
+                    <div style="font-size: 12px; margin-bottom: 4px;">DÍAS DISPONIBLES EN @DateTime.Now.Year</div>
+                    <div style="font-size: 24px; font-weight: bold;">
                         @diasDisponibles.Value días
                     </div>
                     @if (diasDisponibles.Value <= 0)
                     {
-                        <div style="font-size: 11px; color: #C62828; margin-top: 4px;">
+                        <div style="font-size: 11px; margin-top: 4px;">
                             No hay días de vacaciones disponibles para este año
                         </div>
                     }
@@ -252,9 +251,9 @@
             @if (isEditing || isViewing)
             {
                 <div class="form-group">
-                    <label>Estado:</label>
+                    <label>ESTADO</label>
                     <div style="padding: 8px; background-color: #F5F5F5; border: 1px solid #808080;">
-                        <span class="badge-@vacacionEdit.Estado.ToString().ToLower()" style="font-size: 14px;">
+                        <span class="badge badge-@vacacionEdit.Estado.ToString().ToLower()">
                             @GetEstadoTexto(vacacionEdit.Estado)
                         </span>
                     </div>
@@ -297,8 +296,8 @@
             {
                 @if (historialVacaciones.Any())
                 {
-                    <div style="margin-top: 16px; padding: 12px; background-color: #F5F5F5; border: 1px solid #CCC; border-radius: 4px;">
-                        <strong style="font-size: 12px; color: #333;">HISTORIAL DE VACACIONES</strong>
+                    <div class="info-box" style="margin-top: 16px;">
+                        <strong style="font-size: 12px;">HISTORIAL DE VACACIONES</strong>
                         <div style="max-height: 200px; overflow-y: auto; margin-top: 8px;">
                             @foreach (var hist in historialVacaciones.OrderByDescending(v => v.FechaInicio))
                             {

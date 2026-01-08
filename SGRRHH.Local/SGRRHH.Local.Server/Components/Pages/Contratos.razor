@@ -35,20 +35,22 @@
     </div>
 }
 
-<!-- Header con controles -->
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <div style="display: flex; gap: 8px;">
-        <button @onclick="NuevoContrato">NUEVO (F3)</button>
+<!-- Toolbar -->
+<div class="toolbar">
+    <div class="toolbar-group">
+        <button class="btn-primary" @onclick="NuevoContrato">NUEVO (F3)</button>
         <button @onclick="CargarContratos">ACTUALIZAR (F5)</button>
         @if (selectedContrato != null)
         {
             <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
         }
     </div>
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+    
+    <div class="toolbar-separator"></div>
+    
+    <div class="search-box">
         <input type="text" id="searchInput" placeholder="Buscar empleado... (F2)" 
-               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" 
-               style="min-width: 250px;" />
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         <button @onclick="Buscar">BUSCAR</button>
         @if (!string.IsNullOrEmpty(searchTerm))
         {
@@ -73,103 +75,101 @@
 </div>
 
 <!-- Información de resultados -->
-<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
+<div class="results-info">
     Mostrando @contratos.Count() de @totalContratos contrato(s)
 </div>
 
 <!-- Tabla de contratos -->
-<div style="overflow-x: auto;">
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 100px;">CÓDIGO EMP.</th>
-                <th>EMPLEADO</th>
-                <th>TIPO</th>
-                <th>CARGO</th>
-                <th>FECHA INICIO</th>
-                <th>FECHA FIN</th>
-                <th>SALARIO</th>
-                <th style="width: 100px;">ESTADO</th>
-                <th style="width: 200px;">ACCIONES</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (isLoading)
+<table>
+    <thead>
+        <tr>
+            <th style="width: 100px;">CÓDIGO EMP.</th>
+            <th>EMPLEADO</th>
+            <th>TIPO</th>
+            <th>CARGO</th>
+            <th>FECHA INICIO</th>
+            <th>FECHA FIN</th>
+            <th>SALARIO</th>
+            <th style="width: 100px;">ESTADO</th>
+            <th style="width: 200px;">ACCIONES</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (isLoading)
+        {
+            <tr><td colspan="9" class="loading">Cargando contratos...</td></tr>
+        }
+        else if (!contratos.Any())
+        {
+            <tr><td colspan="9" class="empty-state">No hay contratos para mostrar</td></tr>
+        }
+        else
+        {
+            @foreach (var contrato in contratos)
             {
-                <tr><td colspan="9" class="loading">Cargando contratos...</td></tr>
-            }
-            else if (!contratos.Any())
-            {
-                <tr><td colspan="9" class="empty-state">No hay contratos para mostrar</td></tr>
-            }
-            else
-            {
-                @foreach (var contrato in contratos)
-                {
-                    var diasParaVencer = contrato.FechaFin.HasValue ? (contrato.FechaFin.Value - DateTime.Today).Days : 0;
-                    var porVencer = contrato.Estado == EstadoContrato.Activo && contrato.FechaFin.HasValue && diasParaVencer > 0 && diasParaVencer <= 30;
-                    
-                    <tr class="@(selectedContrato?.Id == contrato.Id ? "selected" : "") @(porVencer ? "contrato-por-vencer" : "")"
-                        @onclick="() => SelectContrato(contrato)">
-                        <td>@(contrato.Empleado?.Codigo ?? "-")</td>
-                        <td><strong>@(contrato.Empleado?.NombreCompleto ?? "Sin empleado")</strong></td>
-                        <td>@GetTipoContratoDisplay(contrato.TipoContrato)</td>
-                        <td>@(contrato.Cargo?.Nombre ?? "-")</td>
-                        <td>@contrato.FechaInicio.ToString("dd/MM/yyyy")</td>
-                        <td>
-                            @if (contrato.FechaFin.HasValue)
+                var diasParaVencer = contrato.FechaFin.HasValue ? (contrato.FechaFin.Value - DateTime.Today).Days : 0;
+                var porVencer = contrato.Estado == EstadoContrato.Activo && contrato.FechaFin.HasValue && diasParaVencer > 0 && diasParaVencer <= 30;
+                
+                <tr class="@(selectedContrato?.Id == contrato.Id ? "selected" : "") @(porVencer ? "row-warning" : "")"
+                    @onclick="() => SelectContrato(contrato)">
+                    <td>@(contrato.Empleado?.Codigo ?? "-")</td>
+                    <td><strong>@(contrato.Empleado?.NombreCompleto ?? "Sin empleado")</strong></td>
+                    <td>@GetTipoContratoDisplay(contrato.TipoContrato)</td>
+                    <td>@(contrato.Cargo?.Nombre ?? "-")</td>
+                    <td>@contrato.FechaInicio.ToString("dd/MM/yyyy")</td>
+                    <td>
+                        @if (contrato.FechaFin.HasValue)
+                        {
+                            <span>@contrato.FechaFin.Value.ToString("dd/MM/yyyy")</span>
+                            @if (porVencer)
                             {
-                                <span>@contrato.FechaFin.Value.ToString("dd/MM/yyyy")</span>
-                                @if (porVencer)
-                                {
-                                    <span class="dias-vencer"> (@diasParaVencer días)</span>
-                                }
+                                <span class="text-warning"> (@diasParaVencer días)</span>
                             }
-                            else
-                            {
-                                <span style="color: #666;">Indefinido</span>
-                            }
-                        </td>
-                        <td style="text-align: right;">@contrato.Salario.ToString("C0")</td>
-                        <td>
-                            <span class="badge-@contrato.Estado.ToString().ToLower()">
-                                @contrato.Estado
-                            </span>
-                        </td>
-                        <td class="actions-cell">
-                            <button @onclick="() => EditarContrato(contrato)" @onclick:stopPropagation="true">
-                                EDITAR
+                        }
+                        else
+                        {
+                            <span class="text-muted">Indefinido</span>
+                        }
+                    </td>
+                    <td class="text-right">@contrato.Salario.ToString("C0")</td>
+                    <td>
+                        <span class="badge badge-@contrato.Estado.ToString().ToLower()">
+                            @contrato.Estado
+                        </span>
+                    </td>
+                    <td class="table-actions">
+                        <button @onclick="() => EditarContrato(contrato)" @onclick:stopPropagation="true">
+                            EDITAR
+                        </button>
+                        @if (!string.IsNullOrEmpty(contrato.ArchivoAdjuntoPath))
+                        {
+                            <button @onclick="() => DescargarAdjunto(contrato)" @onclick:stopPropagation="true">
+                                ARCHIVO
                             </button>
-                            @if (!string.IsNullOrEmpty(contrato.ArchivoAdjuntoPath))
-                            {
-                                <button @onclick="() => DescargarAdjunto(contrato)" @onclick:stopPropagation="true">
-                                    ARCHIVO
-                                </button>
-                            }
-                            <button @onclick="() => VerHistorial(contrato)" @onclick:stopPropagation="true">
-                                HISTORIAL
-                            </button>
-                        </td>
-                    </tr>
-                }
+                        }
+                        <button @onclick="() => VerHistorial(contrato)" @onclick:stopPropagation="true">
+                            HISTORIAL
+                        </button>
+                    </td>
+                </tr>
             }
-        </tbody>
-    </table>
-</div>
+        }
+    </tbody>
+</table>
 
 <!-- Panel de estadísticas de contratos por vencer -->
 @if (contratosPorVencer.Any())
 {
-    <div class="panel alerta" style="margin-top: 24px;">
-        <h3>⚠️ CONTRATOS POR VENCER (Próximos 30 días)</h3>
-        <ul style="margin: 8px 0; padding-left: 20px;">
+    <div class="alert alert-warning" style="margin-top: 24px;">
+        <h4>⚠ CONTRATOS POR VENCER (PRÓXIMOS 30 DÍAS)</h4>
+        <ul>
             @foreach (var contrato in contratosPorVencer)
             {
                 var dias = contrato.FechaFin.HasValue ? (contrato.FechaFin.Value - DateTime.Today).Days : 0;
                 <li>
                     <strong>@(contrato.Empleado?.NombreCompleto ?? "Sin empleado")</strong> - 
                     Vence @contrato.FechaFin?.ToString("dd/MM/yyyy") 
-                    <span class="dias-vencer">(@dias días)</span>
+                    <span class="text-warning">(@dias días)</span>
                 </li>
             }
         </ul>
@@ -303,13 +303,13 @@
                         <td>@(contrato.Cargo?.Nombre ?? "-")</td>
                         <td>@contrato.FechaInicio.ToString("dd/MM/yyyy")</td>
                         <td>@(contrato.FechaFin?.ToString("dd/MM/yyyy") ?? "Indefinido")</td>
-                        <td style="text-align: right;">@contrato.Salario.ToString("C0")</td>
+                        <td class="text-right">@contrato.Salario.ToString("C0")</td>
                         <td>
-                            <span class="badge-@contrato.Estado.ToString().ToLower()">
+                            <span class="badge badge-@contrato.Estado.ToString().ToLower()">
                                 @contrato.Estado
                             </span>
                         </td>
-                        <td class="actions-cell">
+                        <td class="table-actions">
                             <button @onclick="() => EditarContratoFromHistorial(contrato)">
                                 VER/EDITAR
                             </button>
@@ -321,15 +321,17 @@
         
         @if (!string.IsNullOrEmpty(historialContratos.FirstOrDefault()?.Observaciones))
         {
-            <div style="margin-top: 16px; padding: 12px; background-color: #F5F5F5; border: 1px solid #CCC;">
-                <strong>Observaciones del último contrato:</strong>
+            <div class="info-box" style="margin-top: 16px;">
+                <strong>OBSERVACIONES DEL ÚLTIMO CONTRATO:</strong>
                 <p style="margin: 8px 0 0 0; white-space: pre-wrap;">@historialContratos.OrderByDescending(c => c.FechaInicio).FirstOrDefault()?.Observaciones</p>
             </div>
         }
     }
     else
     {
-        <p class="empty-state">No hay historial de contratos para este empleado</p>
+        <div class="empty-state">
+            <div class="message">No hay historial de contratos para este empleado</div>
+        </div>
     }
 </FormModal>
 
@@ -340,7 +342,7 @@
            ShowSaveButton="false"
            ShowCancelButton="false">
     <p>@confirmMessage</p>
-    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
+    <div class="modal-actions">
         <button @onclick="() => showConfirmModal = false">CANCELAR</button>
         <button class="btn-danger" @onclick="ConfirmarAccion">CONFIRMAR</button>
     </div>
@@ -779,252 +781,3 @@
         showConfirmModal = false;
     }
 }
-
-<style>
-.page-title {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 24px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #000000;
-}
-
-.error-block {
-    background-color: #FFCCCC;
-    border: 2px solid #CC0000;
-    padding: 16px;
-    margin-bottom: 16px;
-}
-
-.error-block h3 {
-    margin: 0 0 8px 0;
-    color: #CC0000;
-    font-size: 14px;
-}
-
-.error-block p {
-    margin: 0 0 12px 0;
-    font-size: 12px;
-}
-
-.success-block {
-    background-color: #CCFFCC;
-    border: 2px solid #00AA00;
-    padding: 12px 16px;
-    margin-bottom: 16px;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-button {
-    background-color: #E0E0E0;
-    border: 2px solid #000000;
-    border-style: outset;
-    padding: 8px 16px;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-button:hover:not(:disabled) {
-    background-color: #D0D0D0;
-}
-
-button:active:not(:disabled) {
-    border-style: inset;
-}
-
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-button.btn-primary {
-    background-color: #0066CC;
-    color: #FFFFFF;
-}
-
-button.btn-danger {
-    background-color: #CC0000;
-    color: #FFFFFF;
-}
-
-input[type="text"],
-input[type="email"],
-input[type="date"],
-input[type="number"],
-select,
-textarea {
-    width: 100%;
-    padding: 6px 8px;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    border: 2px solid #808080;
-    border-style: inset;
-    background-color: #FFFFFF;
-    box-sizing: border-box;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-    outline: 2px solid #0066CC;
-    outline-offset: 2px;
-}
-
-input:disabled,
-select:disabled,
-textarea:disabled {
-    background-color: #E0E0E0;
-    color: #808080;
-}
-
-textarea {
-    resize: vertical;
-    font-family: 'Courier New', monospace;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    border: 2px solid #000000;
-}
-
-table th,
-table td {
-    border: 1px solid #808080;
-    padding: 8px;
-    text-align: left;
-    font-size: 12px;
-}
-
-table th {
-    background-color: #E0E0E0;
-    font-weight: bold;
-    white-space: nowrap;
-}
-
-table tbody tr {
-    cursor: pointer;
-}
-
-table tbody tr:hover {
-    background-color: #F5F5F5;
-}
-
-table tbody tr.selected {
-    background-color: #CCE5FF !important;
-}
-
-table tbody tr.contrato-por-vencer {
-    background-color: #FFF9CC;
-}
-
-table tbody tr.contrato-por-vencer:hover {
-    background-color: #FFF3AA;
-}
-
-.loading {
-    text-align: center;
-    padding: 24px;
-    color: #666666;
-    font-style: italic;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 32px;
-    color: #999999;
-    font-style: italic;
-}
-
-.actions-cell {
-    white-space: nowrap;
-}
-
-.actions-cell button {
-    margin-right: 4px;
-    padding: 4px 8px;
-    font-size: 11px;
-}
-
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 4px;
-    font-size: 12px;
-}
-
-.form-group.required label::after {
-    content: " *";
-    color: #CC0000;
-}
-
-.form-group small {
-    display: block;
-    margin-top: 4px;
-}
-
-.badge-activo {
-    background-color: #00AA00;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-.badge-finalizado {
-    background-color: #808080;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-.badge-renovado {
-    background-color: #0066CC;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-.badge-cancelado {
-    background-color: #CC0000;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 3px;
-    font-size: 11px;
-    font-weight: bold;
-}
-
-.panel {
-    border: 2px solid #000000;
-    padding: 16px;
-    background-color: #F5F5F5;
-}
-
-.panel h3 {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-}
-
-.panel.alerta {
-    background-color: #FFF9CC;
-    border-color: #FFB800;
-}
-
-.dias-vencer {
-    color: #CC6600;
-    font-weight: bold;
-    font-size: 11px;
-}
-</style>

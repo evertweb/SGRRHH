@@ -5,8 +5,8 @@
 @inject ILogger<CargosTab> Logger
 
 <!-- Header con controles -->
-<div style="margin-bottom: 16px; display: flex: justify-content: space-between; align-items: center;">
-    <div style="display: flex; gap: 8px;">
+<div class="toolbar">
+    <div class="toolbar-group">
         <button @onclick="Nuevo">NUEVO (F3)</button>
         <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
         @if (selectedItem != null)
@@ -14,7 +14,7 @@
             <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
         }
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
+    <div class="toolbar-group">
         <input type="text" placeholder="Buscar..." 
                @bind="searchTerm" @bind:event="oninput" />
         <button @onclick="Buscar">BUSCAR</button>
@@ -63,10 +63,10 @@
                     <td><strong>@item.Codigo</strong></td>
                     <td>@item.Nombre</td>
                     <td>@(item.Departamento?.Nombre ?? "-")</td>
-                    <td style="text-align: center;">@item.Nivel</td>
-                    <td style="text-align: right;">@(item.SalarioBase?.ToString("C") ?? "-")</td>
-                    <td style="text-align: center;">@(item.Empleados?.Count ?? 0)</td>
-                    <td class="actions-cell">
+                    <td class="text-center">@item.Nivel</td>
+                    <td class="text-right">@(item.SalarioBase?.ToString("C") ?? "-")</td>
+                    <td class="text-center">@(item.Empleados?.Count ?? 0)</td>
+                    <td class="table-actions">
                         <button @onclick="() => Editar(item)" @onclick:stopPropagation="true">
                             EDITAR
                         </button>
@@ -91,22 +91,22 @@
     
     @if (editItem != null)
     {
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="grid-2">
             <div>
                 <div class="form-group required">
-                    <label>Código:</label>
+                    <label>CÓDIGO</label>
                     <input type="text" @bind="editItem.Codigo" maxlength="20" 
                            readonly="@isEditing" disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group required">
-                    <label>Nombre:</label>
+                    <label>NOMBRE</label>
                     <input type="text" @bind="editItem.Nombre" maxlength="100" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Departamento:</label>
+                    <label>DEPARTAMENTO</label>
                     <select @bind="editItem.DepartamentoId" disabled="@isSaving">
                         <option value="">-- Sin asignar --</option>
                         @foreach (var dept in departamentos)
@@ -117,7 +117,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label>Nivel:</label>
+                    <label>NIVEL</label>
                     <input type="number" @bind="editItem.Nivel" min="1" max="10" 
                            disabled="@isSaving" />
                     <small>1 = Entrada, 10 = Ejecutivo</small>
@@ -126,19 +126,19 @@
             
             <div>
                 <div class="form-group">
-                    <label>Salario Base:</label>
+                    <label>SALARIO BASE</label>
                     <input type="number" @bind="editItem.SalarioBase" step="0.01" min="0" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Número de Plazas:</label>
+                    <label>NÚMERO DE PLAZAS</label>
                     <input type="number" @bind="editItem.NumeroPlazas" min="1" 
                            disabled="@isSaving" />
                 </div>
                 
                 <div class="form-group">
-                    <label>Cargo Superior:</label>
+                    <label>CARGO SUPERIOR</label>
                     <select @bind="editItem.CargoSuperiorId" disabled="@isSaving">
                         <option value="">-- Sin cargo superior --</option>
                         @foreach (var cargo in items.Where(c => c.Id != editItem.Id))
@@ -152,14 +152,14 @@
         </div>
         
         <div class="form-group">
-            <label>Descripción:</label>
+            <label>DESCRIPCIÓN</label>
             <textarea @bind="editItem.Descripcion" rows="2" 
                      disabled="@isSaving" 
                      maxlength="500"></textarea>
         </div>
         
         <div class="form-group">
-            <label>Requisitos:</label>
+            <label>REQUISITOS</label>
             <textarea @bind="editItem.Requisitos" rows="2" 
                      disabled="@isSaving" 
                      maxlength="1000"></textarea>
@@ -167,7 +167,7 @@
         </div>
         
         <div class="form-group">
-            <label>Competencias:</label>
+            <label>COMPETENCIAS</label>
             <textarea @bind="editItem.Competencias" rows="2" 
                      disabled="@isSaving" 
                      maxlength="1000"></textarea>
@@ -184,7 +184,7 @@
            OnCancelClicked="() => showConfirmModal = false"
            IsSaving="isSaving">
     <p>¿Está seguro que desea eliminar el cargo <strong>@itemToDelete?.Nombre</strong>?</p>
-    <p style="color: #ff6b6b; margin-top: 12px;">
+    <p class="text-danger">
         <strong>Advertencia:</strong> Esta acción no se puede deshacer.
     </p>
 </FormModal>

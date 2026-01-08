@@ -33,15 +33,14 @@
     </div>
 }
 
-<div style="background-color: #F0F0F0; border: 2px solid #000000; padding: 16px; margin-bottom: 16px;">
-    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-        <label style="font-weight: bold; font-size: 12px;">EMPLEADO:</label>
-        <select @bind="selectedEmpleadoId" @bind:after="LoadDocumentos" 
-                style="flex: 1; max-width: 400px; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;">
+<div class="toolbar">
+    <div class="toolbar-group">
+        <label>EMPLEADO:</label>
+        <select @bind="selectedEmpleadoId" @bind:after="LoadDocumentos">
             <option value="0">-- Seleccionar Empleado --</option>
             @foreach (var emp in empleados)
             {
-                <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+                <option value="@emp.Codigo - @emp.NombreCompleto">@emp.Codigo - @emp.NombreCompleto</option>
             }
         </select>
         
@@ -51,7 +50,7 @@
 
         @if (selectedEmpleadoId > 0 && AuthService.IsAdmin)
         {
-            <button @onclick="ShowUploadModal" style="background-color: #00AA00; color: white;">
+            <button class="btn-success" @onclick="ShowUploadModal">
                 + SUBIR DOCUMENTO
             </button>
         }
@@ -61,27 +60,24 @@
 @* Contenido principal *@
 @if (selectedEmpleadoId == 0)
 {
-    <div style="text-align: center; padding: 80px 20px; background-color: #F8F8F8; border: 2px solid #C0C0C0;">
-        <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
-        <h3 style="margin-bottom: 8px;">Gestión de Documentos</h3>
-        <p style="color: #666;">Seleccione un empleado para ver sus documentos.</p>
+    <div class="empty-state">
+        <div class="icon">📄</div>
+        <div class="message">GESTIÓN DE DOCUMENTOS</div>
+        <div class="hint">Seleccione un empleado para ver sus documentos</div>
     </div>
 }
 else if (isLoading)
 {
-    <div style="text-align: center; padding: 40px;">
-        <p>⏳ Cargando documentos...</p>
-    </div>
+    <div class="loading">⏳ Cargando documentos...</div>
 }
 else if (!documentos.Any())
 {
-    <div style="text-align: center; padding: 60px 20px; background-color: #FFFFCC; border: 2px solid #CCCC00;">
-        <p style="font-size: 14px; font-weight: bold; margin-bottom: 16px;">
-            No hay documentos registrados para este empleado.
-        </p>
+    <div class="empty-state">
+        <div class="icon">📄</div>
+        <div class="message">No hay documentos registrados para este empleado</div>
         @if (AuthService.IsAdmin)
         {
-            <button @onclick="ShowUploadModal" style="background-color: #00AA00; color: white;">
+            <button class="btn-success" @onclick="ShowUploadModal">
                 + SUBIR PRIMER DOCUMENTO
             </button>
         }
@@ -89,69 +85,64 @@ else if (!documentos.Any())
 }
 else
 {
-    <div style="border: 2px solid #000000; background-color: white;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-            <thead>
-                <tr style="background-color: #C0C0C0; border-bottom: 2px solid #000000;">
-                    <th style="padding: 8px; text-align: left; border-right: 1px solid #808080;">TIPO</th>
-                    <th style="padding: 8px; text-align: left; border-right: 1px solid #808080;">NOMBRE</th>
-                    <th style="padding: 8px; text-align: center; border-right: 1px solid #808080; width: 100px;">EMISIÓN</th>
-                    <th style="padding: 8px; text-align: center; border-right: 1px solid #808080; width: 100px;">VENCIMIENTO</th>
-                    <th style="padding: 8px; text-align: center; border-right: 1px solid #808080; width: 80px;">ESTADO</th>
-                    <th style="padding: 8px; text-align: center; width: 150px;">ACCIONES</th>
+    <table>
+        <thead>
+            <tr>
+                <th>TIPO</th>
+                <th>NOMBRE</th>
+                <th style="width: 100px;">EMISIÓN</th>
+                <th style="width: 100px;">VENCIMIENTO</th>
+                <th style="width: 80px;">ESTADO</th>
+                <th style="width: 150px;">ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var doc in documentos)
+            {
+                <tr class="@(!doc.EstaVigente ? "row-expired" : "") @(selectedDocumento?.Id == doc.Id ? "selected" : "")"
+                    @onclick="() => SelectDocumento(doc)">
+                    <td>
+                        <strong>@GetTipoNombre(doc.TipoDocumento)</strong>
+                    </td>
+                    <td>
+                        <strong>@doc.Nombre</strong><br/>
+                        <small style="color: #666;">@doc.NombreArchivoOriginal</small>
+                    </td>
+                    <td class="text-center">
+                        @(doc.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")
+                    </td>
+                    <td class="text-center">
+                        @(doc.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")
+                    </td>
+                    <td class="text-center">
+                        @if (doc.EstaVigente)
+                        {
+                            <span class="badge badge-vigente">VIGENTE</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-vencido">VENCIDO</span>
+                        }
+                    </td>
+                    <td class="table-actions">
+                        @if (!string.IsNullOrEmpty(doc.ArchivoPath))
+                        {
+                            <button @onclick="() => DescargarDocumento(doc)" @onclick:stopPropagation="true">
+                                VER
+                            </button>
+                        }
+                        @if (AuthService.IsAdmin)
+                        {
+                            <button class="btn-danger" @onclick="() => ConfirmarEliminar(doc)" @onclick:stopPropagation="true">
+                                ELIMINAR
+                            </button>
+                        }
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach (var doc in documentos)
-                {
-                    <tr style="@(doc.EstaVigente ? "" : "background-color: #FFCCCC;") border-bottom: 1px solid #C0C0C0; cursor: pointer;"
-                        @onclick="() => SelectDocumento(doc)"
-                        class="@(selectedDocumento?.Id == doc.Id ? "selected-row" : "")">
-                        <td style="padding: 8px; border-right: 1px solid #E0E0E0;">
-                            <span style="font-weight: bold;">@GetTipoNombre(doc.TipoDocumento)</span>
-                        </td>
-                        <td style="padding: 8px; border-right: 1px solid #E0E0E0;">
-                            <strong>@doc.Nombre</strong><br/>
-                            <small style="color: #666;">@doc.NombreArchivoOriginal</small>
-                        </td>
-                        <td style="padding: 8px; text-align: center; border-right: 1px solid #E0E0E0;">
-                            @(doc.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")
-                        </td>
-                        <td style="padding: 8px; text-align: center; border-right: 1px solid #E0E0E0;">
-                            @(doc.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")
-                        </td>
-                        <td style="padding: 8px; text-align: center; border-right: 1px solid #E0E0E0;">
-                            @if (doc.EstaVigente)
-                            {
-                                <span style="background-color: #00AA00; color: white; padding: 2px 8px; font-size: 10px; font-weight: bold;">VIGENTE</span>
-                            }
-                            else
-                            {
-                                <span style="background-color: #CC0000; color: white; padding: 2px 8px; font-size: 10px; font-weight: bold;">VENCIDO</span>
-                            }
-                        </td>
-                        <td style="padding: 8px; text-align: center;">
-                            @if (!string.IsNullOrEmpty(doc.ArchivoPath))
-                            {
-                                <button @onclick="() => DescargarDocumento(doc)" @onclick:stopPropagation="true"
-                                        style="padding: 4px 8px; margin-right: 4px;">
-                                    VER
-                                </button>
-                            }
-                            @if (AuthService.IsAdmin)
-                            {
-                                <button @onclick="() => ConfirmarEliminar(doc)" @onclick:stopPropagation="true"
-                                        style="padding: 4px 8px; background-color: #CC0000; color: white;">
-                                    ELIMINAR
-                                </button>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-    <div style="background-color: #F0F0F0; border: 2px solid #000000; border-top: 0; padding: 8px; font-size: 12px;">
+            }
+        </tbody>
+    </table>
+    <div class="results-info">
         <strong>Total: @documentos.Count()</strong> documentos
         @if (selectedDocumento != null)
         {
@@ -165,25 +156,19 @@ else
 @* Modal de Subir Documento *@
 @if (showUploadModal)
 {
-    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
-        <div style="background-color: #C0C0C0; border: 4px solid #000000; border-style: outset; width: 600px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-overlay">
+        <div class="modal-box" style="width: 600px;">
             <!-- Header -->
-            <div style="background-color: #000080; color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: bold; font-size: 14px;">📄 SUBIR DOCUMENTO</span>
-                <button @onclick="CloseUploadModal" 
-                        style="background-color: #C0C0C0; border: 2px solid #FFFFFF; padding: 2px 8px; font-weight: bold;">
-                    ✕
-                </button>
+            <div class="modal-header">
+                <span>📄 SUBIR DOCUMENTO</span>
+                <button @onclick="CloseUploadModal" class="btn-close">✕</button>
             </div>
 
             <!-- Body -->
-            <div style="padding: 16px; background-color: #F0F0F0;">
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
-                        TIPO DE DOCUMENTO:
-                    </label>
-                    <select @bind="uploadTipo" 
-                            style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;">
+            <div class="modal-content">
+                <div class="form-group">
+                    <label>TIPO DE DOCUMENTO</label>
+                    <select @bind="uploadTipo">
                         @foreach (TipoDocumentoEmpleado tipo in Enum.GetValues<TipoDocumentoEmpleado>())
                         {
                             <option value="@tipo">@GetTipoNombre(tipo)</option>
@@ -191,48 +176,33 @@ else
                     </select>
                 </div>
 
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
-                        NOMBRE DEL DOCUMENTO:
-                    </label>
+                <div class="form-group">
+                    <label>NOMBRE DEL DOCUMENTO</label>
                     <input type="text" @bind="uploadNombre" 
-                           style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;"
                            placeholder="Nombre descriptivo del documento" />
                 </div>
 
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
-                        DESCRIPCIÓN (Opcional):
-                    </label>
+                <div class="form-group">
+                    <label>DESCRIPCIÓN (OPCIONAL)</label>
                     <input type="text" @bind="uploadDescripcion" 
-                           style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;"
                            placeholder="Descripción adicional" />
                 </div>
 
-                <div style="display: flex; gap: 16px; margin-bottom: 12px;">
-                    <div style="flex: 1;">
-                        <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
-                            FECHA DE EMISIÓN:
-                        </label>
-                        <input type="date" @bind="uploadFechaEmision" 
-                               style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;" />
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>FECHA DE EMISIÓN</label>
+                        <input type="date" @bind="uploadFechaEmision" />
                     </div>
 
-                    <div style="flex: 1;">
-                        <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
-                            FECHA DE VENCIMIENTO:
-                        </label>
-                        <input type="date" @bind="uploadFechaVencimiento" 
-                               style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;" />
+                    <div class="form-group">
+                        <label>FECHA DE VENCIMIENTO</label>
+                        <input type="date" @bind="uploadFechaVencimiento" />
                     </div>
                 </div>
 
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; font-weight: bold; margin-bottom: 4px; font-size: 12px;">
-                        ARCHIVO (PDF, Word, Imágenes - Máx. 10MB):
-                    </label>
-                    <InputFile OnChange="OnFileSelected" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" 
-                               style="width: 100%; padding: 4px 8px; font-family: 'Courier New', monospace; font-size: 12px;" />
+                <div class="form-group">
+                    <label>ARCHIVO (PDF, WORD, IMÁGENES - MÁX. 10MB)</label>
+                    <InputFile OnChange="OnFileSelected" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
                     @if (!string.IsNullOrEmpty(selectedFileName))
                     {
                         <small style="color: #006600; display: block; margin-top: 4px;">
@@ -243,12 +213,9 @@ else
             </div>
 
             <!-- Footer -->
-            <div style="background-color: #C0C0C0; padding: 12px; border-top: 2px solid #808080; display: flex; justify-content: flex-end; gap: 8px;">
-                <button @onclick="CloseUploadModal" style="padding: 6px 16px;">
-                    CANCELAR [ESC]
-                </button>
-                <button @onclick="UploadDocument" disabled="@isUploading"
-                        style="padding: 6px 16px; background-color: #00AA00; color: white;">
+            <div class="modal-actions">
+                <button @onclick="CloseUploadModal">CANCELAR [ESC]</button>
+                <button class="btn-success" @onclick="UploadDocument" disabled="@isUploading">
                     @(isUploading ? "SUBIENDO..." : "SUBIR DOCUMENTO")
                 </button>
             </div>
@@ -259,28 +226,23 @@ else
 @* Modal de Confirmación de Eliminación *@
 @if (showConfirmModal)
 {
-    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1001; display: flex; align-items: center; justify-content: center;">
-        <div style="background-color: #C0C0C0; border: 4px solid #000000; border-style: outset; width: 400px;">
-            <div style="background-color: #CC0000; color: white; padding: 8px 12px;">
-                <span style="font-weight: bold; font-size: 14px;">⚠️ CONFIRMAR ELIMINACIÓN</span>
+    <div class="modal-overlay">
+        <div class="modal-box" style="width: 400px;">
+            <div class="modal-header modal-header-danger">
+                <span>⚠️ CONFIRMAR ELIMINACIÓN</span>
             </div>
-            <div style="padding: 20px; background-color: #F0F0F0; text-align: center;">
-                <p style="margin-bottom: 16px; font-size: 12px;">
+            <div class="modal-content text-center">
+                <p style="margin-bottom: 16px;">
                     ¿Está seguro que desea eliminar el documento<br/>
                     <strong>@documentoAEliminar?.Nombre</strong>?
                 </p>
-                <p style="color: #CC0000; font-size: 11px; margin-bottom: 20px;">
+                <p class="text-danger" style="margin-bottom: 20px;">
                     Esta acción no se puede deshacer.
                 </p>
-                <div style="display: flex; justify-content: center; gap: 12px;">
-                    <button @onclick="CancelarEliminar" style="padding: 6px 16px;">
-                        CANCELAR
-                    </button>
-                    <button @onclick="EliminarDocumento" 
-                            style="padding: 6px 16px; background-color: #CC0000; color: white;">
-                        SÍ, ELIMINAR
-                    </button>
-                </div>
+            </div>
+            <div class="modal-actions">
+                <button @onclick="CancelarEliminar">CANCELAR</button>
+                <button class="btn-danger" @onclick="EliminarDocumento">SÍ, ELIMINAR</button>
             </div>
         </div>
     </div>
@@ -628,70 +590,3 @@ else
         StateHasChanged();
     }
 }
-
-<style>
-    .page-title {
-        font-size: 24px;
-        font-weight: bold;
-        margin-bottom: 24px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid #000000;
-    }
-
-    .error-block {
-        background-color: #FFCCCC;
-        border: 2px solid #CC0000;
-        padding: 16px;
-        margin-bottom: 16px;
-    }
-
-    .error-block h3 {
-        margin: 0 0 8px 0;
-        color: #CC0000;
-        font-size: 14px;
-    }
-
-    .error-block p {
-        margin: 0;
-        font-size: 12px;
-    }
-
-    .success-block {
-        background-color: #CCFFCC;
-        border: 2px solid #00AA00;
-        padding: 12px 16px;
-        margin-bottom: 16px;
-        font-size: 12px;
-        font-weight: bold;
-    }
-
-    button {
-        background-color: #E0E0E0;
-        border: 2px solid #000000;
-        border-style: outset;
-        padding: 8px 16px;
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    button:hover:not(:disabled) {
-        background-color: #C0C0C0;
-        border-style: inset;
-    }
-
-    button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-    .selected-row {
-        background-color: #FFFFAA !important;
-        outline: 2px solid #0000AA;
-    }
-
-    table tbody tr:hover {
-        background-color: #E8E8E8;
-    }
-</style>

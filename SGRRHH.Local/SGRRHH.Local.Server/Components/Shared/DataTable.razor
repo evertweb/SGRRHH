@@ -319,88 +319,95 @@
     }
     
     .datatable-container:focus {
-        outline: 2px solid #0066CC;
+        outline: 2px solid var(--color-text);
         outline-offset: 2px;
     }
 
     .datatable-pagination {
-        margin-top: 12px;
-        padding: 8px 12px;
-        background-color: #F0F0F0;
-        border: 1px solid #808080;
+        margin-top: var(--spacing-md);
+        padding: var(--spacing-sm) var(--spacing-md);
+        background-color: var(--color-nav);
+        border: 1px solid var(--color-border);
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 8px;
-        font-size: 12px;
+        gap: var(--spacing-sm);
+        font-size: var(--font-size-sm);
     }
 
     .pagination-info {
         color: #666;
+        font-family: var(--font-family);
     }
 
     .pagination-controls {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: var(--spacing-xs);
     }
 
     .pagination-controls button {
-        padding: 4px 8px;
-        font-size: 11px;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-xs);
         min-width: 28px;
+        font-family: var(--font-family);
     }
 
     .pagination-pages {
-        margin: 0 8px;
+        margin: 0 var(--spacing-sm);
+        font-family: var(--font-family);
     }
 
     .pagination-pages input {
-        margin: 0 4px;
-        padding: 2px 4px;
-        font-size: 11px;
-        border: 1px solid #808080;
+        margin: 0 var(--spacing-xs);
+        padding: 2px var(--spacing-xs);
+        font-size: var(--font-size-xs);
+        border: 1px solid var(--color-border);
+        font-family: var(--font-family);
     }
 
     .pagination-size select {
-        padding: 4px 8px;
-        font-size: 11px;
-        border: 1px solid #808080;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-xs);
+        border: 1px solid var(--color-border);
+        font-family: var(--font-family);
     }
 
     .datatable-hints {
-        margin-top: 8px;
-        padding: 4px 8px;
-        background-color: #E8E8E8;
-        border: 1px solid #C0C0C0;
-        font-size: 10px;
+        margin-top: var(--spacing-sm);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        background-color: var(--color-panel);
+        border: 1px solid var(--color-border-light);
+        font-size: var(--font-size-xs);
         color: #666;
         display: flex;
-        gap: 16px;
+        gap: var(--spacing-lg);
         flex-wrap: wrap;
+        font-family: var(--font-family);
     }
 
     .datatable-hints kbd {
-        background-color: #333;
-        color: #FFF;
-        padding: 1px 4px;
-        border-radius: 2px;
-        font-family: monospace;
-        font-size: 10px;
+        background-color: var(--color-text);
+        color: var(--color-bg);
+        padding: 1px var(--spacing-xs);
+        font-family: var(--font-family);
+        font-size: var(--font-size-xs);
     }
 
     .loading {
         text-align: center;
-        padding: 24px;
+        padding: var(--spacing-xl);
         color: #666666;
         font-style: italic;
+        font-family: var(--font-family);
     }
 
     .empty-state {
         text-align: center;
-        padding: 32px;
+        padding: var(--spacing-xxl);
         color: #999999;
         font-style: italic;
+        font-family: var(--font-family);
     }
 </style>
