@@ -25,8 +25,11 @@ $SSH_TARGET = "${SSH_USER}@${SSH_HOST}"
 $PROJECT_ROOT = Split-Path -Parent $PSScriptRoot
 $PROJECT_PATH = "$PROJECT_ROOT\SGRRHH.Local.Server\SGRRHH.Local.Server.csproj"
 $PUBLISH_PATH = "$PROJECT_ROOT\publish-ssh"
+$ZIP_PATH = "$env:TEMP\sgrrhh-deploy.zip"
 $REMOTE_PATH = "C:\SGRRHH"
 $REMOTE_DATA_PATH = "C:\SGRRHH\Data"
+$REMOTE_CERTS_PATH = "C:\SGRRHH\certs"
+$REMOTE_LOGS_PATH = "C:\SGRRHH\logs"
 
 # Archivos a excluir del deploy (base de datos, logs, etc.)
 $EXCLUDE_FILES = @(
@@ -39,6 +42,7 @@ $EXCLUDE_FILES = @(
 
 # Ejecutable
 $EXECUTABLE_NAME = "SGRRHH.Local.Server.exe"
+$SERVICE_NAME = "SGRRHH_Local"
 
 # ============================================================================
 # FUNCIONES
@@ -113,23 +117,35 @@ function Ensure-RemoteFolders {
     # Crear carpetas necesarias si no existen
     ssh $SSH_TARGET "if not exist $REMOTE_DATA_PATH\Fotos mkdir $REMOTE_DATA_PATH\Fotos" 2>&1 | Out-Null
     ssh $SSH_TARGET "if not exist $REMOTE_DATA_PATH\Backups mkdir $REMOTE_DATA_PATH\Backups" 2>&1 | Out-Null
+    ssh $SSH_TARGET "if not exist $REMOTE_CERTS_PATH mkdir $REMOTE_CERTS_PATH" 2>&1 | Out-Null
+    ssh $SSH_TARGET "if not exist $REMOTE_LOGS_PATH mkdir $REMOTE_LOGS_PATH" 2>&1 | Out-Null
     
-    Write-Success "Carpetas verificadas (Data, Fotos, Backups)"
+    Write-Success "Carpetas verificadas (Data, Fotos, Backups, certs, logs)"
 }
 
 function Stop-RemoteProcess {
-    Write-Step "Deteniendo proceso remoto si esta corriendo..."
-    
-    $result = ssh $SSH_TARGET "tasklist /FI `"IMAGENAME eq $EXECUTABLE_NAME`" 2>nul | findstr $EXECUTABLE_NAME" 2>&1
-    
-    if ($result -match $EXECUTABLE_NAME) {
-        Write-Host "    Proceso encontrado, deteniendo..." -ForegroundColor Gray
-        ssh $SSH_TARGET "taskkill /F /IM $EXECUTABLE_NAME" 2>&1 | Out-Null
-        Start-Sleep -Seconds 2
-        Write-Success "Proceso detenido"
+    Write-Step "Deteniendo procesos remotos si estan corriendo..."
+
+    # Detener exe y procesos dotnet sueltos
+    ssh $SSH_TARGET "taskkill /F /IM $EXECUTABLE_NAME 2>nul & taskkill /F /IM dotnet.exe 2>nul" 2>&1 | Out-Null
+    Start-Sleep -Seconds 3
+
+    $remaining = ssh $SSH_TARGET "tasklist | findstr /I \"$EXECUTABLE_NAME\" & tasklist | findstr /I \"dotnet.exe\"" 2>&1
+    if ($remaining) {
+        Write-Warning "Aun quedan procesos activos, revisar manualmente"
     } else {
-        Write-Host "    No hay proceso corriendo" -ForegroundColor Gray
+        Write-Success "Procesos detenidos"
     }
+}
+
+function Clean-RemoteAppFiles {
+    Write-Step "Limpiando destino remoto (preservando Data/certs/logs)..."
+
+    $cleanScript = "Get-ChildItem -LiteralPath '$REMOTE_PATH' -Force | Where-Object { @('Data','certs','logs') -notcontains `$_.Name } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+    $cleanEncoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($cleanScript))
+    ssh $SSH_TARGET "powershell -NoLogo -NoProfile -EncodedCommand $cleanEncoded" 2>&1 | Out-Null
+
+    Write-Success "Destino remoto limpio"
 }
 
 function Build-Application {
@@ -174,28 +190,79 @@ function Remove-ExcludedFiles {
     Write-Success "Archivos excluidos removidos"
 }
 
+function Build-Archive {
+    Write-Step "Empaquetando build en ZIP..."
+
+    if (Test-Path $ZIP_PATH) {
+        Remove-Item $ZIP_PATH -Force
+    }
+
+    Compress-Archive -Path "$PUBLISH_PATH\*" -DestinationPath $ZIP_PATH -Force
+
+    Write-Success "ZIP generado en $ZIP_PATH"
+}
+
 function Deploy-ToServer {
-    Write-Step "Copiando archivos al servidor via SCP..."
-    
+    Write-Step "Copiando ZIP al servidor y descomprimiendo..."
+
     $startTime = Get-Date
-    
-    # Contar archivos a copiar
-    $fileCount = (Get-ChildItem -Path $PUBLISH_PATH -Recurse -File).Count
-    Write-Host "    Archivos a transferir: $fileCount" -ForegroundColor Gray
-    
-    # Copiar usando SCP
-    # Nota: scp -r copia recursivamente
-    $scpResult = scp -r "$PUBLISH_PATH\*" "${SSH_TARGET}:$REMOTE_PATH/" 2>&1
-    
+    $zipName = Split-Path $ZIP_PATH -Leaf
+
+    # Copiar ZIP
+    $scpResult = scp $ZIP_PATH "${SSH_TARGET}:$REMOTE_PATH/" 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Error en SCP: $scpResult"
         return $false
     }
-    
+
+    # Descomprimir en servidor y eliminar ZIP
+    $extractCmd = 'powershell -NoLogo -NoProfile -Command "Expand-Archive -Path ''{0}\{1}'' -DestinationPath ''{0}'' -Force; Remove-Item ''{0}\{1}'' -Force"' -f $REMOTE_PATH, $zipName
+    $extractResult = ssh $SSH_TARGET $extractCmd 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Error descomprimiendo en servidor: $extractResult"
+        return $false
+    }
+
     $elapsed = (Get-Date) - $startTime
-    Write-Success "Archivos copiados en $($elapsed.TotalSeconds.ToString('F1')) segundos"
-    
+    Write-Success "Archivos desplegados en $($elapsed.TotalSeconds.ToString('F1')) segundos"
+
     return $true
+}
+
+function Start-ProcessFallback {
+    Write-Warning "nssm no encontrado en el servidor; iniciando proceso temporal (Start-Process)"
+    $startCmd = 'powershell -NoLogo -NoProfile -Command "Start-Process -FilePath ''{0}\{1}'' -WorkingDirectory ''{0}'' -WindowStyle Hidden"' -f $REMOTE_PATH, $EXECUTABLE_NAME
+    ssh $SSH_TARGET $startCmd 2>&1 | Out-Null
+    Write-Success "Proceso iniciado manualmente"
+}
+
+function Ensure-NssmService {
+    Write-Step "Configurando servicio con nssm ($SERVICE_NAME)..."
+
+    $checkCmd = 'powershell -NoLogo -NoProfile -Command "if (Get-Command nssm -ErrorAction SilentlyContinue) { ''OK'' } else { ''MISSING'' }"'
+    $nssmStatus = ssh $SSH_TARGET $checkCmd 2>&1
+
+    if ($nssmStatus -notmatch "OK") {
+        Start-ProcessFallback
+        return
+    }
+
+    ssh $SSH_TARGET "nssm stop $SERVICE_NAME 2>nul" 2>&1 | Out-Null
+    ssh $SSH_TARGET "nssm remove $SERVICE_NAME confirm 2>nul" 2>&1 | Out-Null
+
+    ssh $SSH_TARGET "nssm install $SERVICE_NAME '$REMOTE_PATH\$EXECUTABLE_NAME'" 2>&1 | Out-Null
+    ssh $SSH_TARGET "nssm set $SERVICE_NAME AppDirectory '$REMOTE_PATH'" 2>&1 | Out-Null
+    ssh $SSH_TARGET "nssm set $SERVICE_NAME Start SERVICE_AUTO_START" 2>&1 | Out-Null
+    ssh $SSH_TARGET "nssm set $SERVICE_NAME AppExit Default Restart" 2>&1 | Out-Null
+
+    ssh $SSH_TARGET "nssm start $SERVICE_NAME" 2>&1 | Out-Null
+    $svcState = ssh $SSH_TARGET "powershell -Command \"(Get-Service -Name '$SERVICE_NAME').Status\"" 2>&1
+
+    if ($svcState -match "Running") {
+        Write-Success "Servicio $SERVICE_NAME iniciado via nssm"
+    } else {
+        Write-Warning "Servicio $SERVICE_NAME no inicio correctamente: $svcState"
+    }
 }
 
 function Copy-DatabaseToServer {
@@ -243,11 +310,16 @@ function Show-Summary {
     $remoteFiles = ssh $SSH_TARGET "dir /b $REMOTE_PATH 2>nul" 2>&1
     $fileCount = ($remoteFiles | Measure-Object -Line).Lines
     Write-Host "    $fileCount archivos/carpetas en destino" -ForegroundColor Gray
-    
-    Write-Host ""
-    Write-Host "  Para iniciar la app en el servidor:" -ForegroundColor Yellow
-    Write-Host "    - Usar el acceso directo 'SGRRHH' en el escritorio" -ForegroundColor Gray
-    Write-Host "    - O ejecutar: ssh $SSH_TARGET `"C:\SGRRHH\$EXECUTABLE_NAME`"" -ForegroundColor Gray
+
+    $processCheck = ssh $SSH_TARGET "tasklist | findstr /I \"$EXECUTABLE_NAME\"" 2>&1
+    $portCheck = ssh $SSH_TARGET "netstat -an | findstr 5003" 2>&1
+    $dbCheck = ssh $SSH_TARGET "if exist $REMOTE_DATA_PATH\sgrrhh.db (echo EXISTS) else (echo MISSING)" 2>&1
+
+    Write-Host "" 
+    Write-Host "  Estado post-deploy:" -ForegroundColor Yellow
+    Write-Host "    Proceso: $processCheck" -ForegroundColor Gray
+    Write-Host "    Puerto 5003: $portCheck" -ForegroundColor Gray
+    Write-Host "    DB: $dbCheck" -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -265,7 +337,7 @@ if (-not (Test-SSHConnection)) {
     exit 1
 }
 
-# 2. Verificar base de datos remota
+# 2. Verificar base de datos remota (no se sobrescribe)
 $dbExists = Test-RemoteDatabase
 
 # 3. Asegurar carpetas requeridas existen
@@ -274,7 +346,10 @@ Ensure-RemoteFolders
 # 4. Detener proceso remoto
 Stop-RemoteProcess
 
-# 5. Compilar (si no se omite)
+# 5. Limpiar archivos antiguos (sin tocar Data/certs/logs)
+Clean-RemoteAppFiles
+
+# 6. Compilar (si no se omite)
 if (-not $SkipBuild) {
     if (-not (Build-Application)) {
         Write-Error "Error en compilacion, abortando deploy"
@@ -288,21 +363,27 @@ if (-not $SkipBuild) {
     }
 }
 
-# 6. Remover archivos excluidos
+# 7. Remover archivos excluidos
 Remove-ExcludedFiles
 
-# 7. Copiar al servidor
+# 8. Empaquetar build
+Build-Archive
+
+# 9. Copiar al servidor y extraer
 if (-not (Deploy-ToServer)) {
     Write-Error "Error en deploy, abortando"
     exit 1
 }
 
-# 8. Copiar base de datos si se solicita
+# 10. Copiar base de datos si se solicita (no recomendado salvo primera vez)
 if ($IncludeDatabase) {
     Copy-DatabaseToServer
 }
 
-# 8. Mostrar resumen
+# 11. Configurar/levantar servicio con nssm
+Ensure-NssmService
+
+# 12. Mostrar resumen
 Show-Summary -StartTime $totalStartTime
 
 Write-Host "Deploy completado exitosamente!" -ForegroundColor Green

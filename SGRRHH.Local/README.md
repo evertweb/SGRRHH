@@ -38,11 +38,17 @@ powershell -ExecutionPolicy Bypass -File scripts\Deploy-Production.ps1
 ```
 
 ### Características del Sistema de Deploy
-- ✅ Compilación automática Release + self-contained
-- ✅ Detección de puerto automático (evita conflictos)
-- ✅ Apertura automática de navegador
-- ✅ Exclusión automática de base de datos (nunca se sobrescribe)
+- ✅ Compilación automática Release, self-contained `win-x64`
+- ✅ Empaquetado en ZIP y copia íntegra (incluye wwwroot completo)
+- ✅ Limpieza de destino preservando `Data`, `certs` y `logs` (DB intacta)
+- ✅ Servicio persistente con `nssm` (`SGRRHH_Local`), arranque automático (stdout/stderr en `C:\SGRRHH\logs` con rotación)
 - ✅ Verificación de conexión SSH antes de compilar
+
+### Consola y acceso directo en servidor
+- En el escritorio del servidor existen:
+	- `SGRRHH - Consola`: abre PowerShell en `C:\SGRRHH` y ejecuta la app con consola visible (para ver logs en vivo).
+	- `SGRRHH - Ver Logs`: tail de `C:\SGRRHH\logs\nssm_stdout.log` en tiempo real.
+- El servicio puede controlarse con `nssm status/start/stop SGRRHH_Local`.
 
 ## Documentación de usuario
 El manual se encuentra en `SGRRHH.Local.Server/wwwroot/docs/manual-usuario.md` y se publica junto a la app.

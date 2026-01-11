@@ -174,6 +174,14 @@ Stop-Process -Name "SGRRHH.Local.Server" -Force -ErrorAction SilentlyContinue
 
 4. **Idioma:** Todo en español (código, comentarios, UI, documentación).
 
+5. **Deploy SSH actual:**
+        - Build Release self-contained `win-x64`, empaquetado ZIP → `C:\SGRRHH`.
+        - Limpieza en servidor preserva `Data`, `certs`, `logs`; nunca sobrescribir DB salvo petición explícita.
+        - Servicio `nssm` (`SGRRHH_Local`) obligatorio; logs en `C:\SGRRHH\logs` con rotación (1 MB / 24h).
+        - Accesos directos en escritorio del servidor: `SGRRHH - Consola` (ejecución con ventana y logs en vivo) y `SGRRHH - Ver Logs` (tail del log).
+        - Certificado requerido: `C:\SGRRHH\certs\localhost+2.p12`; si falta, copiar antes de iniciar.
+        - Si hay errores de esquema (columnas faltantes), la DB no se migra automáticamente: respaldar, eliminar wal/shm y copiar la DB válida.
+
 ---
 
 *Última actualización: Enero 2026*
