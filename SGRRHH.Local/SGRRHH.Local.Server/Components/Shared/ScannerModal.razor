@@ -2,7 +2,11 @@
 @using SGRRHH.Local.Shared.Interfaces
 @using QuestPDF.Fluent
 @using QuestPDF.Helpers
+@using System.Drawing
 @inject IScannerService ScannerService
+@inject IImageProcessingService ImageProcessor
+@inject IScanProfileRepository ProfileRepository
+@inject IOcrService ocrService
 
 @if (IsVisible)
 {
@@ -14,6 +18,29 @@
             </div>
             
             <div class="scanner-body">
+                @* Selector de Perfiles *@
+                <div class="scanner-profiles-section">
+                    <div class="scanner-option-row">
+                        <label class="scanner-label">PERFIL:</label>
+                        <select @bind="selectedProfileId" class="scanner-select" disabled="@isScanning"
+                                @bind:after="LoadSelectedProfile">
+                            <option value="0">-- CONFIGURACION MANUAL --</option>
+                            @foreach (var profile in profiles)
+                            {
+                                <option value="@profile.Id">
+                                    @profile.Name @(profile.IsDefault ? "(★)" : "")
+                                </option>
+                            }
+                        </select>
+                        <button class="scanner-btn-small" @onclick="RefreshProfiles" disabled="@isScanning" title="Actualizar perfiles">
+                            ↻
+                        </button>
+                        <button class="scanner-btn-small" @onclick="OpenSaveProfileDialog" disabled="@isScanning" title="Guardar configuración actual como perfil">
+                            💾
+                        </button>
+                    </div>
+                </div>
+                
                 @* Panel de Opciones *@
                 <div class="scanner-options">
                     <div class="scanner-option-row">
@@ -72,7 +99,87 @@
                                 <select @bind="outputFormat" class="scanner-select" disabled="@isScanning">
                                     <option value="images">Imágenes separadas</option>
                                     <option value="pdf">PDF combinado</option>
+                                    <option value="pdf-ocr">PDF buscable (OCR)</option>
                                 </select>
+                            </div>
+                            
+                            @if (outputFormat == "pdf-ocr")
+                            {
+                                <div class="scanner-option-row">
+                                    <label class="scanner-label">IDIOMA OCR:</label>
+                                    <select @bind="ocrLanguage" class="scanner-select" disabled="@isScanning">
+                                        <option value="spa">Español</option>
+                                        <option value="eng">Inglés</option>
+                                        <option value="por">Portugués</option>
+                                    </select>
+                                    @if (!ocrService.IsAvailable)
+                                    {
+                                        <span class="scanner-ocr-warning" title="OCR no está instalado. El PDF se generará sin texto buscable.">⚠️</span>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                    
+                    @* Panel de Corrección de Imagen (colapsable) *@
+                    <div class="scanner-correction-panel">
+                        <div class="scanner-correction-header" @onclick="ToggleCorrectionPanel">
+                            <span>CORRECCION DE IMAGEN</span>
+                            <span class="scanner-correction-toggle">@(showCorrectionPanel ? "▼" : "▶")</span>
+                        </div>
+                        
+                        @if (showCorrectionPanel)
+                        {
+                            <div class="scanner-correction-body">
+                                <div class="scanner-slider-row">
+                                    <label>BRILLO:</label>
+                                    <input type="range" min="-100" max="100" @bind="imageCorrection.Brightness" 
+                                           @bind:event="oninput" disabled="@isScanning" />
+                                    <span class="scanner-slider-value">@imageCorrection.Brightness</span>
+                                </div>
+                                
+                                <div class="scanner-slider-row">
+                                    <label>CONTRASTE:</label>
+                                    <input type="range" min="-100" max="100" @bind="imageCorrection.Contrast" 
+                                           @bind:event="oninput" disabled="@isScanning" />
+                                    <span class="scanner-slider-value">@imageCorrection.Contrast</span>
+                                </div>
+                                
+                                <div class="scanner-slider-row">
+                                    <label>GAMMA:</label>
+                                    <input type="range" min="10" max="300" @bind="gammaSliderValue" 
+                                           @bind:event="oninput" disabled="@isScanning" />
+                                    <span class="scanner-slider-value">@imageCorrection.Gamma.ToString("F1")</span>
+                                </div>
+                                
+                                <div class="scanner-slider-row">
+                                    <label>NITIDEZ:</label>
+                                    <input type="range" min="0" max="100" @bind="imageCorrection.Sharpness" 
+                                           @bind:event="oninput" disabled="@isScanning" />
+                                    <span class="scanner-slider-value">@imageCorrection.Sharpness</span>
+                                </div>
+                                
+                                @if (scanOptions.ColorMode == ScanColorMode.BlackWhite)
+                                {
+                                    <div class="scanner-slider-row">
+                                        <label>UMBRAL B/N:</label>
+                                        <input type="range" min="0" max="255" @bind="imageCorrection.BlackWhiteThreshold" 
+                                               @bind:event="oninput" disabled="@isScanning" />
+                                        <span class="scanner-slider-value">@imageCorrection.BlackWhiteThreshold</span>
+                                    </div>
+                                }
+                                
+                                <div class="scanner-correction-actions">
+                                    <button class="scanner-btn-small" @onclick="ResetCorrections" disabled="@isScanning">
+                                        RESTABLECER
+                                    </button>
+                                    @if (scannedPages.Count > 0 && imageCorrection.HasCorrections)
+                                    {
+                                        <button class="scanner-btn-small" @onclick="ApplyCorrectionsToCurrentPage" disabled="@isScanning">
+                                            APLICAR A PAGINA
+                                        </button>
+                                    }
+                                </div>
                             </div>
                         }
                     </div>
@@ -136,6 +243,31 @@
                                     <span>PAGINA @(previewIndex + 1) DE @scannedPages.Count</span>
                                     <button class="scanner-btn-nav" @onclick="NextPage" disabled="@(previewIndex >= scannedPages.Count - 1)">▶</button>
                                 </div>
+                                
+                                @* Barra de herramientas de transformación *@
+                                <div class="scanner-toolbar">
+                                    <button class="scanner-tool-btn" @onclick="() => RotatePage(-90)" title="Rotar izquierda 90°">
+                                        ↺
+                                    </button>
+                                    <button class="scanner-tool-btn" @onclick="() => RotatePage(90)" title="Rotar derecha 90°">
+                                        ↻
+                                    </button>
+                                    <button class="scanner-tool-btn" @onclick="() => RotatePage(180)" title="Rotar 180°">
+                                        ⟲
+                                    </button>
+                                    <div class="scanner-tool-separator"></div>
+                                    <button class="scanner-tool-btn" @onclick="FlipHorizontalPage" title="Voltear horizontal">
+                                        ⇆
+                                    </button>
+                                    <button class="scanner-tool-btn" @onclick="FlipVerticalPage" title="Voltear vertical">
+                                        ⇅
+                                    </button>
+                                    <div class="scanner-tool-separator"></div>
+                                    <button class="scanner-tool-btn" @onclick="AutoCropPage" title="Auto-recortar bordes">
+                                        ⬚
+                                    </button>
+                                </div>
+                                
                                 <div class="scanner-preview-image">
                                     <img src="data:@scannedPages[previewIndex].MimeType;base64,@Convert.ToBase64String(scannedPages[previewIndex].ImageBytes)" 
                                          alt="Página escaneada" />
@@ -144,6 +276,51 @@
                                     @scannedPages[previewIndex].Width x @scannedPages[previewIndex].Height px | 
                                     @FormatFileSize(scannedPages[previewIndex].ImageBytes.Length) |
                                     Escaneado: @scannedPages[previewIndex].ScannedAt.ToString("HH:mm:ss")
+                                </div>
+                            </div>
+                        }
+                        else if (isPreviewMode && previewImage != null)
+                        {
+                            @* Modo Vista Previa con selección de área *@
+                            <div class="scanner-preview-mode">
+                                <div class="scanner-preview-header">
+                                    SELECCIONE EL ÁREA A ESCANEAR (o deje vacío para área completa)
+                                </div>
+                                <div class="scanner-preview-canvas" 
+                                     @onmousedown="StartAreaSelection"
+                                     @onmousemove="UpdateAreaSelection"
+                                     @onmouseup="EndAreaSelection"
+                                     @onmouseleave="EndAreaSelection">
+                                    <img src="data:@previewImage.MimeType;base64,@Convert.ToBase64String(previewImage.ImageBytes)" 
+                                         alt="Vista previa" @ref="previewImageElement" />
+                                    
+                                    @if (selectedArea != null && !selectedArea.IsFullArea)
+                                    {
+                                        <div class="scanner-selection-box"
+                                             style="left: @(selectedArea.Left)%; top: @(selectedArea.Top)%; 
+                                                    width: @(selectedArea.Width)%; height: @(selectedArea.Height)%;">
+                                            <div class="scanner-selection-info">
+                                                @(selectedArea.Width.ToString("F0"))% x @(selectedArea.Height.ToString("F0"))%
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (isSelectingArea)
+                                    {
+                                        <div class="scanner-selection-box scanner-selection-active"
+                                             style="left: @Math.Min(selectionStart.X, selectionCurrent.X)%; 
+                                                    top: @Math.Min(selectionStart.Y, selectionCurrent.Y)%; 
+                                                    width: @Math.Abs(selectionCurrent.X - selectionStart.X)%; 
+                                                    height: @Math.Abs(selectionCurrent.Y - selectionStart.Y)%;">
+                                        </div>
+                                    }
+                                </div>
+                                <div class="scanner-preview-actions">
+                                    <button class="scanner-btn-small" @onclick="ClearSelectedArea">
+                                        ÁREA COMPLETA
+                                    </button>
+                                    <span class="scanner-preview-info-text">
+                                        Vista previa: @previewImage.Width x @previewImage.Height px (75 DPI)
+                                    </span>
                                 </div>
                             </div>
                         }
@@ -159,7 +336,7 @@
                                     }
                                     else
                                     {
-                                        <span>Y PRESIONE "ESCANEAR"</span>
+                                        <span>USE "VISTA PREVIA" PARA SELECCIONAR ÁREA O "ESCANEAR" DIRECTO</span>
                                     }
                                 </div>
                             </div>
@@ -202,22 +379,46 @@
                         <button class="scanner-btn" @onclick="Cerrar">
                             CERRAR [ESC]
                         </button>
-                        <button class="scanner-btn scanner-btn-primary" @onclick="StartScan" disabled="@(scanners.Count == 0)">
-                            @if (AllowMultiplePages && scannedPages.Count > 0)
-                            {
-                                <span>+ ESCANEAR [F5]</span>
-                            }
-                            else
-                            {
-                                <span>ESCANEAR [F5]</span>
-                            }
-                        </button>
+                        @if (scannedPages.Count == 0 && !isPreviewMode)
+                        {
+                            <button class="scanner-btn" @onclick="StartPreviewScan" disabled="@(scanners.Count == 0)" title="Escaneo rápido de vista previa para seleccionar área">
+                                VISTA PREVIA
+                            </button>
+                        }
+                        @if (isPreviewMode)
+                        {
+                            <button class="scanner-btn scanner-btn-secondary" @onclick="ExitPreviewMode">
+                                CANCELAR PREVIEW
+                            </button>
+                            <button class="scanner-btn scanner-btn-success" @onclick="ScanWithSelectedArea" disabled="@(scanners.Count == 0)">
+                                ESCANEAR @(selectedArea?.IsFullArea != false ? "COMPLETO" : "ÁREA")
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="scanner-btn scanner-btn-primary" @onclick="StartScan" disabled="@(scanners.Count == 0)">
+                                @if (AllowMultiplePages && scannedPages.Count > 0)
+                                {
+                                    <span>+ ESCANEAR [F5]</span>
+                                }
+                                else
+                                {
+                                    <span>ESCANEAR [F5]</span>
+                                }
+                            </button>
+                        }
                         @if (scannedPages.Count > 0)
                         {
                             @if (AllowMultiplePages && outputFormat == "pdf")
                             {
                                 <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsPdf">
                                     GENERAR PDF (@scannedPages.Count)
+                                </button>
+                            }
+                            else if (AllowMultiplePages && outputFormat == "pdf-ocr")
+                            {
+                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsOcrPdf">
+                                    PDF BUSCABLE (@scannedPages.Count)
                                 </button>
                             }
                             else
@@ -229,6 +430,52 @@
                         }
                     }
                 </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal para Guardar Perfil *@
+@if (showSaveProfileDialog)
+{
+    <div class="scanner-backdrop" @onclick:stopPropagation="true">
+        <div class="scanner-profile-dialog" @onclick:stopPropagation="true">
+            <div class="scanner-header">
+                <span>GUARDAR PERFIL</span>
+                <button class="scanner-close" @onclick="CloseSaveProfileDialog">X</button>
+            </div>
+            <div class="scanner-profile-dialog-body">
+                <div class="scanner-option-row">
+                    <label class="scanner-label">NOMBRE:</label>
+                    <input type="text" @bind="newProfileName" class="scanner-input" 
+                           placeholder="Ej: Mi perfil de documentos" maxlength="50" />
+                </div>
+                <div class="scanner-option-row">
+                    <label class="scanner-label">DESCRIPCION:</label>
+                    <input type="text" @bind="newProfileDescription" class="scanner-input" 
+                           placeholder="Descripción opcional" maxlength="200" />
+                </div>
+                <div class="scanner-option-row">
+                    <label class="scanner-checkbox-label">
+                        <input type="checkbox" @bind="newProfileIsDefault" />
+                        <span>ESTABLECER COMO PREDETERMINADO</span>
+                    </label>
+                </div>
+                <div class="scanner-profile-dialog-info">
+                    <strong>CONFIGURACIÓN A GUARDAR:</strong><br/>
+                    DPI: @scanOptions.Dpi | Color: @scanOptions.ColorMode | Fuente: @scanOptions.Source<br/>
+                    @if (imageCorrection.HasCorrections)
+                    {
+                        <span>Correcciones: Brillo=@imageCorrection.Brightness, Contraste=@imageCorrection.Contrast</span>
+                    }
+                </div>
+            </div>
+            <div class="scanner-footer">
+                <button class="scanner-btn" @onclick="CloseSaveProfileDialog">CANCELAR</button>
+                <button class="scanner-btn scanner-btn-success" @onclick="SaveCurrentProfile" 
+                        disabled="@string.IsNullOrWhiteSpace(newProfileName)">
+                    GUARDAR PERFIL
+                </button>
             </div>
         </div>
     </div>
@@ -271,7 +518,36 @@
     private List<ScannedPageDto> scannedPages = new();
     private ScanOptionsDto scanOptions = new() { Dpi = 200 };
     private string? selectedDeviceId;
-    private string outputFormat = "images"; // "images" o "pdf"
+    private string outputFormat = "images"; // "images", "pdf" o "pdf-ocr"
+    private string ocrLanguage = "spa"; // Idioma para OCR
+    
+    // Perfiles de escaneo
+    private List<ScanProfileDto> profiles = new();
+    private int selectedProfileId = 0;
+    private bool showSaveProfileDialog = false;
+    private string newProfileName = "";
+    private string newProfileDescription = "";
+    private bool newProfileIsDefault = false;
+    
+    // Vista previa y selección de área
+    private bool isPreviewMode = false;
+    private ScannedDocumentDto? previewImage = null;
+    private ScanAreaDto? selectedArea = null;
+    private bool isSelectingArea = false;
+    private (double X, double Y) selectionStart = (0, 0);
+    private (double X, double Y) selectionCurrent = (0, 0);
+    private ElementReference previewImageElement;
+    
+    // Corrección de imagen
+    private ImageCorrectionDto imageCorrection = new();
+    private bool showCorrectionPanel = false;
+    
+    // Gamma usa slider entero (10-300) mapeado a float (0.1-3.0)
+    private int gammaSliderValue
+    {
+        get => (int)(imageCorrection.Gamma * 100);
+        set => imageCorrection.Gamma = value / 100f;
+    }
     
     private bool isScanning = false;
     private bool isGeneratingPdf = false;
@@ -289,6 +565,7 @@
         if (IsVisible && scanners.Count == 0 && !isLoadingScanners)
         {
             await RefreshScanners();
+            await RefreshProfiles();
         }
     }
 
@@ -462,6 +739,44 @@
         }
     }
 
+    private async Task ConfirmAsOcrPdf()
+    {
+        if (scannedPages.Count == 0) return;
+        
+        isGeneratingPdf = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            // Generar PDF con OCR usando el servicio dedicado
+            var result = await ocrService.GenerateSearchablePdfAsync(scannedPages, ocrLanguage);
+            
+            if (result.IsSuccess && result.Value != null)
+            {
+                if (!ocrService.IsAvailable)
+                {
+                    successMessage = "PDF generado (sin OCR - función no habilitada)";
+                }
+                await OnPdfGenerated.InvokeAsync(result.Value);
+                await Cerrar();
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Error al generar el PDF buscable";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error generando PDF con OCR: {ex.Message}";
+        }
+        finally
+        {
+            isGeneratingPdf = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task<byte[]?> GeneratePdfFromPagesAsync()
     {
         // Usar QuestPDF para generar el PDF
@@ -599,6 +914,366 @@
         if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
         return $"{bytes / (1024.0 * 1024.0):F2} MB";
     }
+
+    #region Corrección y Transformación de Imagen
+    
+    private void ToggleCorrectionPanel() => showCorrectionPanel = !showCorrectionPanel;
+
+    private void ResetCorrections()
+    {
+        imageCorrection = new ImageCorrectionDto();
+    }
+    
+    private void ApplyCorrectionsToCurrentPage()
+    {
+        if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
+        if (!imageCorrection.HasCorrections) return;
+        
+        var page = scannedPages[previewIndex];
+        page.ImageBytes = ImageProcessor.ApplyCorrections(page.ImageBytes, imageCorrection);
+        
+        // Actualizar dimensiones en caso de que hayan cambiado
+        UpdatePageDimensions(page);
+        
+        successMessage = "Correcciones aplicadas a la página";
+        ResetCorrections();
+        StateHasChanged();
+    }
+    
+    private void RotatePage(int degrees)
+    {
+        if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
+        
+        var page = scannedPages[previewIndex];
+        byte[] rotated = degrees switch
+        {
+            90 => ImageProcessor.RotateClockwise(page.ImageBytes),
+            -90 => ImageProcessor.RotateCounterClockwise(page.ImageBytes),
+            180 => ImageProcessor.Rotate180(page.ImageBytes),
+            _ => page.ImageBytes
+        };
+        
+        page.ImageBytes = rotated;
+        UpdatePageDimensions(page);
+        StateHasChanged();
+    }
+
+    private void FlipHorizontalPage()
+    {
+        if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
+        
+        var page = scannedPages[previewIndex];
+        page.ImageBytes = ImageProcessor.FlipHorizontal(page.ImageBytes);
+        StateHasChanged();
+    }
+
+    private void FlipVerticalPage()
+    {
+        if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
+        
+        var page = scannedPages[previewIndex];
+        page.ImageBytes = ImageProcessor.FlipVertical(page.ImageBytes);
+        StateHasChanged();
+    }
+
+    private void AutoCropPage()
+    {
+        if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
+        
+        var page = scannedPages[previewIndex];
+        var cropped = ImageProcessor.AutoCrop(page.ImageBytes);
+        
+        page.ImageBytes = cropped;
+        UpdatePageDimensions(page);
+        
+        successMessage = "Imagen recortada automáticamente";
+        StateHasChanged();
+    }
+    
+    private void UpdatePageDimensions(ScannedPageDto page)
+    {
+        try
+        {
+            using var ms = new MemoryStream(page.ImageBytes);
+            using var img = Image.FromStream(ms);
+            page.Width = img.Width;
+            page.Height = img.Height;
+        }
+        catch
+        {
+            // Si falla, mantener dimensiones anteriores
+        }
+    }
+    
+    #endregion
+
+    #region Vista Previa y Selección de Área
+    
+    private async Task StartPreviewScan()
+    {
+        if (isScanning) return;
+        
+        isScanning = true;
+        errorMessage = null;
+        successMessage = null;
+        
+        try
+        {
+            scanOptions.DeviceId = selectedDeviceId;
+            
+            var result = await ScannerService.PreviewScanAsync(scanOptions);
+            if (result.IsSuccess && result.Value != null)
+            {
+                previewImage = result.Value;
+                isPreviewMode = true;
+                selectedArea = null;
+                successMessage = "Vista previa obtenida. Seleccione el área a escanear o presione ESCANEAR para área completa.";
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Error al obtener vista previa";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isScanning = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ExitPreviewMode()
+    {
+        isPreviewMode = false;
+        previewImage = null;
+        selectedArea = null;
+        isSelectingArea = false;
+    }
+    
+    private async Task ScanWithSelectedArea()
+    {
+        if (isScanning) return;
+        
+        isScanning = true;
+        isPreviewMode = false;
+        errorMessage = null;
+        
+        try
+        {
+            scanOptions.DeviceId = selectedDeviceId;
+            
+            var result = await ScannerService.ScanSinglePageAsync(scanOptions);
+            if (result.IsSuccess && result.Value != null)
+            {
+                var doc = result.Value;
+                byte[] finalBytes = doc.ImageBytes;
+                int width = doc.Width;
+                int height = doc.Height;
+                
+                // Si hay área seleccionada, recortar
+                if (selectedArea != null && !selectedArea.IsFullArea)
+                {
+                    finalBytes = ImageProcessor.CropToArea(finalBytes, selectedArea);
+                    
+                    using var ms = new MemoryStream(finalBytes);
+                    using var img = Image.FromStream(ms);
+                    width = img.Width;
+                    height = img.Height;
+                }
+                
+                scannedPages.Add(new ScannedPageDto
+                {
+                    ImageBytes = finalBytes,
+                    MimeType = doc.MimeType,
+                    Width = width,
+                    Height = height,
+                    Dpi = doc.Dpi,
+                    ScannedAt = doc.ScannedAt,
+                    PageNumber = scannedPages.Count + 1
+                });
+                previewIndex = scannedPages.Count - 1;
+                
+                successMessage = selectedArea?.IsFullArea == false 
+                    ? "Área seleccionada escaneada y recortada correctamente"
+                    : "Página escaneada correctamente";
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Error al escanear";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isScanning = false;
+            previewImage = null;
+            selectedArea = null;
+            StateHasChanged();
+        }
+    }
+    
+    private void StartAreaSelection(MouseEventArgs e)
+    {
+        // Calcular posición relativa como porcentaje
+        // Nota: Esto es una aproximación, idealmente usaríamos JS interop
+        isSelectingArea = true;
+        selectionStart = (e.OffsetX / 4, e.OffsetY / 3); // Aproximación basada en tamaño típico
+        selectionCurrent = selectionStart;
+    }
+    
+    private void UpdateAreaSelection(MouseEventArgs e)
+    {
+        if (!isSelectingArea) return;
+        selectionCurrent = (e.OffsetX / 4, e.OffsetY / 3);
+        StateHasChanged();
+    }
+    
+    private void EndAreaSelection(MouseEventArgs e)
+    {
+        if (!isSelectingArea) return;
+        isSelectingArea = false;
+        
+        double left = Math.Min(selectionStart.X, selectionCurrent.X);
+        double top = Math.Min(selectionStart.Y, selectionCurrent.Y);
+        double width = Math.Abs(selectionCurrent.X - selectionStart.X);
+        double height = Math.Abs(selectionCurrent.Y - selectionStart.Y);
+        
+        // Solo crear área si es significativa (más de 5%)
+        if (width > 5 && height > 5)
+        {
+            selectedArea = new ScanAreaDto
+            {
+                Left = Math.Max(0, Math.Min(100, left)),
+                Top = Math.Max(0, Math.Min(100, top)),
+                Width = Math.Min(100 - left, width),
+                Height = Math.Min(100 - top, height)
+            };
+        }
+        
+        StateHasChanged();
+    }
+    
+    private void ClearSelectedArea()
+    {
+        selectedArea = null;
+        StateHasChanged();
+    }
+    
+    #endregion
+
+    #region Perfiles de Escaneo
+    
+    private async Task RefreshProfiles()
+    {
+        try
+        {
+            profiles = await ProfileRepository.GetAllAsync();
+            
+            // Cargar perfil por defecto si existe
+            var defaultProfile = profiles.FirstOrDefault(p => p.IsDefault);
+            if (defaultProfile != null && selectedProfileId == 0)
+            {
+                selectedProfileId = defaultProfile.Id;
+                await LoadSelectedProfile();
+            }
+        }
+        catch
+        {
+            // Ignorar errores de carga de perfiles (la tabla puede no existir aún)
+            profiles = new List<ScanProfileDto>();
+        }
+    }
+    
+    private async Task LoadSelectedProfile()
+    {
+        if (selectedProfileId == 0)
+        {
+            // Modo manual - no cambiar configuración
+            return;
+        }
+        
+        var profile = profiles.FirstOrDefault(p => p.Id == selectedProfileId);
+        if (profile != null)
+        {
+            // Aplicar configuración del perfil
+            scanOptions.Dpi = profile.Dpi;
+            scanOptions.ColorMode = profile.ColorMode;
+            scanOptions.Source = profile.Source;
+            scanOptions.PageSize = profile.PageSize;
+            
+            // Aplicar correcciones
+            imageCorrection = profile.ToImageCorrection();
+            
+            // Actualizar fecha de último uso
+            await ProfileRepository.UpdateLastUsedAsync(profile.Id);
+            
+            successMessage = $"Perfil \"{profile.Name}\" cargado";
+            StateHasChanged();
+        }
+    }
+    
+    private void OpenSaveProfileDialog()
+    {
+        newProfileName = "";
+        newProfileDescription = "";
+        newProfileIsDefault = false;
+        showSaveProfileDialog = true;
+    }
+    
+    private void CloseSaveProfileDialog()
+    {
+        showSaveProfileDialog = false;
+    }
+    
+    private async Task SaveCurrentProfile()
+    {
+        if (string.IsNullOrWhiteSpace(newProfileName)) return;
+        
+        try
+        {
+            var profile = new ScanProfileDto
+            {
+                Name = newProfileName.Trim(),
+                Description = string.IsNullOrWhiteSpace(newProfileDescription) ? null : newProfileDescription.Trim(),
+                IsDefault = newProfileIsDefault,
+                Dpi = scanOptions.Dpi,
+                ColorMode = scanOptions.ColorMode,
+                Source = scanOptions.Source,
+                PageSize = scanOptions.PageSize,
+                Brightness = imageCorrection.Brightness,
+                Contrast = imageCorrection.Contrast,
+                Gamma = imageCorrection.Gamma,
+                Sharpness = imageCorrection.Sharpness,
+                BlackWhiteThreshold = imageCorrection.BlackWhiteThreshold
+            };
+            
+            if (newProfileIsDefault)
+            {
+                await ProfileRepository.SetDefaultAsync(0); // Quitar default de todos primero
+            }
+            
+            var saved = await ProfileRepository.SaveAsync(profile);
+            
+            // Recargar perfiles y seleccionar el nuevo
+            await RefreshProfiles();
+            selectedProfileId = saved.Id;
+            
+            successMessage = $"Perfil \"{saved.Name}\" guardado correctamente";
+            CloseSaveProfileDialog();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error guardando perfil: {ex.Message}";
+        }
+    }
+    
+    #endregion
 
     public void Dispose()
     {

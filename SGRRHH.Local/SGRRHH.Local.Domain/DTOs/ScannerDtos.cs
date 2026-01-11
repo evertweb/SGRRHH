@@ -40,6 +40,11 @@ public class ScanOptionsDto
     /// Tamaño de página
     /// </summary>
     public ScanPageSize PageSize { get; set; } = ScanPageSize.Letter;
+    
+    /// <summary>
+    /// Correcciones de imagen a aplicar después del escaneo
+    /// </summary>
+    public ImageCorrectionDto? ImageCorrection { get; set; }
 }
 
 /// <summary>
@@ -231,4 +236,114 @@ public class BatchScanResultDto
     /// Tiempo total del escaneo
     /// </summary>
     public TimeSpan Duration { get; set; }
+}
+
+/// <summary>
+/// Opciones de corrección de imagen post-escaneo
+/// </summary>
+public class ImageCorrectionDto
+{
+    /// <summary>
+    /// Brillo: -100 a +100 (0 = sin cambio)
+    /// </summary>
+    public int Brightness { get; set; } = 0;
+    
+    /// <summary>
+    /// Contraste: -100 a +100 (0 = sin cambio)
+    /// </summary>
+    public int Contrast { get; set; } = 0;
+    
+    /// <summary>
+    /// Gamma: 0.1 a 3.0 (1.0 = sin cambio)
+    /// </summary>
+    public float Gamma { get; set; } = 1.0f;
+    
+    /// <summary>
+    /// Nitidez/Sharpness: 0 a 100 (0 = sin cambio)
+    /// </summary>
+    public int Sharpness { get; set; } = 0;
+    
+    /// <summary>
+    /// Umbral para blanco y negro: 0-255 (128 = default)
+    /// Solo aplica cuando ColorMode = BlackWhite
+    /// </summary>
+    public int BlackWhiteThreshold { get; set; } = 128;
+    
+    /// <summary>
+    /// Indica si hay correcciones activas
+    /// </summary>
+    public bool HasCorrections => 
+        Brightness != 0 || Contrast != 0 || 
+        Math.Abs(Gamma - 1.0f) > 0.01f || Sharpness > 0;
+}
+
+/// <summary>
+/// Área rectangular de selección para recorte en vista previa.
+/// Valores en porcentaje (0-100) del área total.
+/// </summary>
+public class ScanAreaDto
+{
+    public double Left { get; set; } = 0;
+    public double Top { get; set; } = 0;
+    public double Width { get; set; } = 100;
+    public double Height { get; set; } = 100;
+    
+    public bool IsFullArea => 
+        Left == 0 && Top == 0 && Width == 100 && Height == 100;
+}
+
+/// <summary>
+/// Perfil de escaneo guardado por el usuario
+/// </summary>
+public class ScanProfileDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public bool IsDefault { get; set; }
+    
+    // Configuración de escaneo
+    public int Dpi { get; set; } = 200;
+    public ScanColorMode ColorMode { get; set; } = ScanColorMode.Color;
+    public ScanSource Source { get; set; } = ScanSource.Flatbed;
+    public ScanPageSize PageSize { get; set; } = ScanPageSize.Letter;
+    
+    // Correcciones de imagen
+    public int Brightness { get; set; } = 0;
+    public int Contrast { get; set; } = 0;
+    public float Gamma { get; set; } = 1.0f;
+    public int Sharpness { get; set; } = 0;
+    public int BlackWhiteThreshold { get; set; } = 128;
+    
+    // Transformaciones automáticas
+    public bool AutoDeskew { get; set; }
+    public bool AutoCrop { get; set; }
+    
+    // Metadatos
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime? LastUsedAt { get; set; }
+    
+    /// <summary>
+    /// Convierte las opciones del perfil a ImageCorrectionDto
+    /// </summary>
+    public ImageCorrectionDto ToImageCorrection() => new()
+    {
+        Brightness = Brightness,
+        Contrast = Contrast,
+        Gamma = Gamma,
+        Sharpness = Sharpness,
+        BlackWhiteThreshold = BlackWhiteThreshold
+    };
+    
+    /// <summary>
+    /// Convierte el perfil a ScanOptionsDto
+    /// </summary>
+    public ScanOptionsDto ToScanOptions() => new()
+    {
+        Dpi = Dpi,
+        ColorMode = ColorMode,
+        Source = Source,
+        PageSize = PageSize,
+        ImageCorrection = ToImageCorrection()
+    };
 }

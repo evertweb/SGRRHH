@@ -149,6 +149,26 @@ public class ScannerService : IScannerService
         return Result<ScannerDeviceDto>.Ok(device);
     }
     
+    public async Task<Result<ScannedDocumentDto>> PreviewScanAsync(ScanOptionsDto? options = null)
+    {
+        options ??= new ScanOptionsDto();
+        
+        // Forzar configuración para preview rápido (baja resolución)
+        var previewOptions = new ScanOptionsDto
+        {
+            DeviceId = options.DeviceId,
+            Source = options.Source,
+            Dpi = 75, // Baja resolución para velocidad
+            ColorMode = options.ColorMode,
+            PageSize = options.PageSize
+            // No aplicar correcciones de imagen en preview
+        };
+        
+        _logger.LogInformation("Realizando pre-escaneo de vista previa a {Dpi} DPI", previewOptions.Dpi);
+        
+        return await ScanSinglePageAsync(previewOptions);
+    }
+    
     public async Task<Result<ScannedDocumentDto>> ScanSinglePageAsync(ScanOptionsDto? options = null)
     {
         options ??= new ScanOptionsDto();

@@ -6,7 +6,8 @@ using SGRRHH.Local.Shared.Interfaces;
 namespace SGRRHH.Local.Infrastructure.Repositories;
 
 /// <summary>
-/// Repositorio para gestionar las categorías de actividades silviculturales
+/// Repositorio para gestionar las categorías de actividades silviculturales.
+/// Usa tabla activity_categories (snake_case estandarizado).
 /// </summary>
 public class CategoriaActividadRepository : ICategoriaActividadRepository
 {
@@ -23,7 +24,7 @@ public class CategoriaActividadRepository : ICategoriaActividadRepository
     {
         entity.FechaCreacion = DateTime.Now;
         const string sql = @"
-            INSERT INTO CategoriasActividades (Codigo, Nombre, Descripcion, Icono, ColorHex, Orden, Activo, FechaCreacion)
+            INSERT INTO activity_categories (code, name, description, icon, color_hex, display_order, is_active, created_at)
             VALUES (@Codigo, @Nombre, @Descripcion, @Icono, @ColorHex, @Orden, @Activo, @FechaCreacion);
             SELECT last_insert_rowid();";
 
@@ -36,16 +37,16 @@ public class CategoriaActividadRepository : ICategoriaActividadRepository
     {
         entity.FechaModificacion = DateTime.Now;
         const string sql = @"
-            UPDATE CategoriasActividades
-            SET Codigo = @Codigo,
-                Nombre = @Nombre,
-                Descripcion = @Descripcion,
-                Icono = @Icono,
-                ColorHex = @ColorHex,
-                Orden = @Orden,
-                Activo = @Activo,
-                FechaModificacion = @FechaModificacion
-            WHERE Id = @Id";
+            UPDATE activity_categories
+            SET code = @Codigo,
+                name = @Nombre,
+                description = @Descripcion,
+                icon = @Icono,
+                color_hex = @ColorHex,
+                display_order = @Orden,
+                is_active = @Activo,
+                updated_at = @FechaModificacion
+            WHERE id = @Id";
 
         using var connection = _context.CreateConnection();
         await connection.ExecuteAsync(sql, entity);
@@ -55,37 +56,53 @@ public class CategoriaActividadRepository : ICategoriaActividadRepository
     {
         // Soft delete - desactivar la categoría
         const string sql = @"
-            UPDATE CategoriasActividades 
-            SET Activo = 0, FechaModificacion = @FechaModificacion 
-            WHERE Id = @Id";
+            UPDATE activity_categories 
+            SET is_active = 0, updated_at = @FechaModificacion 
+            WHERE id = @Id";
         using var connection = _context.CreateConnection();
         await connection.ExecuteAsync(sql, new { Id = id, FechaModificacion = DateTime.Now });
     }
 
     public async Task<CategoriaActividad?> GetByIdAsync(int id)
     {
-        const string sql = "SELECT * FROM CategoriasActividades WHERE Id = @Id";
+        const string sql = @"
+            SELECT id, code AS Codigo, name AS Nombre, description AS Descripcion, 
+                   icon AS Icono, color_hex AS ColorHex, display_order AS Orden, 
+                   is_active AS Activo, created_at AS FechaCreacion, updated_at AS FechaModificacion
+            FROM activity_categories WHERE id = @Id";
         using var connection = _context.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<CategoriaActividad>(sql, new { Id = id });
     }
 
     public async Task<IEnumerable<CategoriaActividad>> GetAllAsync()
     {
-        const string sql = "SELECT * FROM CategoriasActividades ORDER BY Orden, Nombre";
+        const string sql = @"
+            SELECT id, code AS Codigo, name AS Nombre, description AS Descripcion, 
+                   icon AS Icono, color_hex AS ColorHex, display_order AS Orden, 
+                   is_active AS Activo, created_at AS FechaCreacion, updated_at AS FechaModificacion
+            FROM activity_categories ORDER BY display_order, name";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<CategoriaActividad>(sql);
     }
 
     public async Task<IEnumerable<CategoriaActividad>> GetAllActiveAsync()
     {
-        const string sql = "SELECT * FROM CategoriasActividades WHERE Activo = 1 ORDER BY Orden, Nombre";
+        const string sql = @"
+            SELECT id, code AS Codigo, name AS Nombre, description AS Descripcion, 
+                   icon AS Icono, color_hex AS ColorHex, display_order AS Orden, 
+                   is_active AS Activo, created_at AS FechaCreacion, updated_at AS FechaModificacion
+            FROM activity_categories WHERE is_active = 1 ORDER BY display_order, name";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<CategoriaActividad>(sql);
     }
 
     public async Task<CategoriaActividad?> GetByCodigoAsync(string codigo)
     {
-        const string sql = "SELECT * FROM CategoriasActividades WHERE Codigo = @Codigo";
+        const string sql = @"
+            SELECT id, code AS Codigo, name AS Nombre, description AS Descripcion, 
+                   icon AS Icono, color_hex AS ColorHex, display_order AS Orden, 
+                   is_active AS Activo, created_at AS FechaCreacion, updated_at AS FechaModificacion
+            FROM activity_categories WHERE code = @Codigo";
         using var connection = _context.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<CategoriaActividad>(sql, new { Codigo = codigo });
     }
@@ -93,8 +110,8 @@ public class CategoriaActividadRepository : ICategoriaActividadRepository
     public async Task<bool> ExistsCodigoAsync(string codigo, int? excludeId = null)
     {
         const string sql = @"
-            SELECT COUNT(1) FROM CategoriasActividades 
-            WHERE Codigo = @Codigo AND (@ExcludeId IS NULL OR Id <> @ExcludeId)";
+            SELECT COUNT(1) FROM activity_categories 
+            WHERE code = @Codigo AND (@ExcludeId IS NULL OR id <> @ExcludeId)";
         using var connection = _context.CreateConnection();
         var count = await connection.ExecuteScalarAsync<int>(sql, new { Codigo = codigo, ExcludeId = excludeId });
         return count > 0;
@@ -102,7 +119,11 @@ public class CategoriaActividadRepository : ICategoriaActividadRepository
 
     public async Task<IEnumerable<CategoriaActividad>> GetAllOrderedAsync()
     {
-        const string sql = "SELECT * FROM CategoriasActividades WHERE Activo = 1 ORDER BY Orden ASC";
+        const string sql = @"
+            SELECT id, code AS Codigo, name AS Nombre, description AS Descripcion, 
+                   icon AS Icono, color_hex AS ColorHex, display_order AS Orden, 
+                   is_active AS Activo, created_at AS FechaCreacion, updated_at AS FechaModificacion
+            FROM activity_categories WHERE is_active = 1 ORDER BY display_order ASC";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<CategoriaActividad>(sql);
     }

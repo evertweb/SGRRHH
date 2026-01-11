@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.FileProviders;
+﻿using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using QuestPDF.Infrastructure;
 using SGRRHH.Local.Domain.Interfaces;
@@ -9,6 +12,19 @@ using SGRRHH.Local.Server.Components;
 using SGRRHH.Local.Shared.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ============================================================================
+// Configuracion de puertos automaticos (evita conflictos si ya esta corriendo)
+// ============================================================================
+int httpPort = FindAvailablePort(5002);
+int httpsPort = FindAvailablePort(5003);
+
+// Solo configurar puertos automaticos si NO hay configuracion de Kestrel en appsettings
+// (en desarrollo usa appsettings.Development.json con URLs especificas)
+if (!builder.Environment.IsDevelopment())
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{httpPort}", $"https://0.0.0.0:{httpsPort}");
+}
 
 // QuestPDF requires selecting a license type.
 QuestPDF.Settings.License = LicenseType.Community;
@@ -87,6 +103,15 @@ builder.Services.AddScoped<IReporteProductividadService, ReporteProductividadSer
 // Servicio de Escaneo de Documentos (NAPS2.Sdk)
 builder.Services.AddScoped<IScannerService, ScannerService>();
 
+// Servicio de Procesamiento de Imágenes (corrección, rotación, recorte)
+builder.Services.AddScoped<IImageProcessingService, ImageProcessingService>();
+
+// Servicio de OCR (reconocimiento óptico de caracteres)
+builder.Services.AddScoped<IOcrService, OcrService>();
+
+// Repositorio de Perfiles de Escaneo
+builder.Services.AddScoped<IScanProfileRepository, ScanProfileRepository>();
+
 // Servicio de Impresión de Documentos
 builder.Services.AddScoped<IPrintService, PrintService>();
 
@@ -158,5 +183,88 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+// ============================================================================
+// Banner informativo y apertura de navegador
+// ============================================================================
+var urls = app.Urls.Any() ? app.Urls : new[] { $"https://localhost:{httpsPort}" };
+var primaryUrl = urls.FirstOrDefault(u => u.StartsWith("https")) ?? urls.First();
+
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    Console.WriteLine();
+    Console.WriteLine("╔════════════════════════════════════════════════════════════════╗");
+    Console.WriteLine("║                    SGRRHH Local - Iniciado                     ║");
+    Console.WriteLine("╠════════════════════════════════════════════════════════════════╣");
+    Console.WriteLine($"║  HTTP:  http://localhost:{httpPort,-5}                                  ║");
+    Console.WriteLine($"║  HTTPS: https://localhost:{httpsPort,-5}                                 ║");
+    Console.WriteLine("╠════════════════════════════════════════════════════════════════╣");
+    Console.WriteLine("║  Presione Ctrl+C para detener el servidor                      ║");
+    Console.WriteLine("╚════════════════════════════════════════════════════════════════╝");
+    Console.WriteLine();
+
+    // Abrir navegador automaticamente (solo en produccion/self-contained)
+    if (!builder.Environment.IsDevelopment())
+    {
+        OpenBrowser(primaryUrl);
+    }
+});
+
 app.Run();
+
+// ============================================================================
+// Funciones auxiliares
+// ============================================================================
+
+/// <summary>
+/// Busca un puerto disponible empezando desde el puerto especificado.
+/// Si el puerto esta ocupado, busca el siguiente disponible.
+/// </summary>
+static int FindAvailablePort(int startPort)
+{
+    for (int port = startPort; port < startPort + 100; port++)
+    {
+        if (IsPortAvailable(port))
+        {
+            return port;
+        }
+    }
+    return startPort; // Fallback al puerto original
+}
+
+/// <summary>
+/// Verifica si un puerto TCP esta disponible.
+/// </summary>
+static bool IsPortAvailable(int port)
+{
+    try
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, port);
+        listener.Start();
+        listener.Stop();
+        return true;
+    }
+    catch (SocketException)
+    {
+        return false;
+    }
+}
+
+/// <summary>
+/// Abre el navegador por defecto con la URL especificada.
+/// </summary>
+static void OpenBrowser(string url)
+{
+    try
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = url,
+            UseShellExecute = true
+        });
+    }
+    catch
+    {
+        // Ignorar errores al abrir navegador
+    }
+}
 

@@ -95,4 +95,11 @@ public interface IScannerService : IDisposable
     /// <param name="deviceId">ID del dispositivo</param>
     /// <returns>Información del escáner</returns>
     Task<Result<ScannerDeviceDto>> GetScannerInfoAsync(string deviceId);
+    
+    /// <summary>
+    /// Realiza un pre-escaneo rápido en baja resolución para vista previa
+    /// </summary>
+    /// <param name="options">Opciones de escaneo (se forzará DPI bajo)</param>
+    /// <returns>Imagen de preview</returns>
+    Task<Result<ScannedDocumentDto>> PreviewScanAsync(ScanOptionsDto? options = null);
 }

@@ -245,8 +245,19 @@ CREATE TABLE IF NOT EXISTS actividades (
     nombre TEXT NOT NULL,
     descripcion TEXT,
     categoria TEXT,
+    category_id INTEGER REFERENCES activity_categories(id),
+    category_text TEXT,
+    unit_of_measure INTEGER DEFAULT 0,
+    unit_abbreviation TEXT,
+    expected_yield REAL,
+    minimum_yield REAL,
+    unit_cost REAL,
     requiere_proyecto INTEGER DEFAULT 0,
+    requires_quantity INTEGER DEFAULT 0,
+    applicable_project_types TEXT,
+    applicable_species TEXT,
     orden INTEGER DEFAULT 0,
+    is_featured INTEGER DEFAULT 0,
     activo INTEGER DEFAULT 1,
     fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
     fecha_modificacion TEXT
@@ -612,6 +623,118 @@ CREATE INDEX IF NOT EXISTS idx_eps_activo ON eps_colombia(activo);
 CREATE INDEX IF NOT EXISTS idx_afp_codigo ON afp_colombia(codigo);
 CREATE INDEX IF NOT EXISTS idx_arl_codigo ON arl_colombia(codigo);
 CREATE INDEX IF NOT EXISTS idx_cajas_codigo ON cajas_compensacion(codigo);
+
+-- =====================================================
+-- TABLAS SILVICULTURALES AVANZADAS
+-- =====================================================
+
+-- TABLA DE CATEGORÍAS DE ACTIVIDADES (snake_case estandarizado)
+CREATE TABLE IF NOT EXISTS activity_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    icon TEXT,
+    color_hex TEXT,
+    display_order INTEGER DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    updated_at TEXT
+);
+
+-- Vista de compatibilidad para tablas antiguas (transición)
+CREATE VIEW IF NOT EXISTS CategoriasActividades AS 
+SELECT id AS Id, code AS Codigo, name AS Nombre, description AS Descripcion, 
+       icon AS Icono, color_hex AS ColorHex, display_order AS Orden, 
+       is_active AS Activo, created_at AS FechaCreacion, updated_at AS FechaModificacion
+FROM activity_categories;
+
+-- TABLA DE ESPECIES FORESTALES
+CREATE TABLE IF NOT EXISTS especies_forestales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    codigo TEXT NOT NULL UNIQUE,
+    nombre_comun TEXT NOT NULL,
+    nombre_cientifico TEXT,
+    familia TEXT,
+    turno_promedio INTEGER,
+    densidad_recomendada INTEGER,
+    observaciones TEXT,
+    activo INTEGER NOT NULL DEFAULT 1,
+    fecha_creacion TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    fecha_modificacion TEXT
+);
+
+-- TABLA DE PERFILES DE ESCANEO (snake_case estandarizado)
+CREATE TABLE IF NOT EXISTS scan_profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    dpi INTEGER NOT NULL DEFAULT 200,
+    color_mode TEXT NOT NULL DEFAULT 'Color',
+    source TEXT NOT NULL DEFAULT 'Flatbed',
+    page_size TEXT NOT NULL DEFAULT 'Letter',
+    brightness INTEGER DEFAULT 0,
+    contrast INTEGER DEFAULT 0,
+    gamma REAL DEFAULT 1.0,
+    sharpness INTEGER DEFAULT 0,
+    black_white_threshold INTEGER DEFAULT 128,
+    auto_deskew INTEGER DEFAULT 0,
+    auto_crop INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TEXT
+);
+
+-- Vista de compatibilidad para tablas antiguas (transición)
+CREATE VIEW IF NOT EXISTS ScanProfiles AS 
+SELECT id AS Id, name AS Name, description AS Description, is_default AS IsDefault,
+       dpi AS Dpi, color_mode AS ColorMode, source AS Source, page_size AS PageSize,
+       brightness AS Brightness, contrast AS Contrast, gamma AS Gamma, sharpness AS Sharpness,
+       black_white_threshold AS BlackWhiteThreshold, auto_deskew AS AutoDeskew, 
+       auto_crop AS AutoCrop, created_at AS CreatedAt, last_used_at AS LastUsedAt
+FROM scan_profiles;
+
+-- TABLA DE SEGUIMIENTO DE PERMISOS
+CREATE TABLE IF NOT EXISTS seguimiento_permisos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    permiso_id INTEGER NOT NULL REFERENCES permisos(id),
+    fecha_accion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    tipo_accion INTEGER NOT NULL,
+    descripcion TEXT,
+    realizado_por_id INTEGER NOT NULL REFERENCES usuarios(id),
+    datos_adicionales TEXT,
+    activo INTEGER DEFAULT 1,
+    fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
+    fecha_modificacion TEXT
+);
+
+-- TABLA DE COMPENSACIONES DE HORAS
+CREATE TABLE IF NOT EXISTS compensaciones_horas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    permiso_id INTEGER NOT NULL REFERENCES permisos(id),
+    fecha_compensacion TEXT NOT NULL,
+    horas_compensadas INTEGER NOT NULL,
+    descripcion TEXT,
+    aprobado_por_id INTEGER REFERENCES usuarios(id),
+    fecha_aprobacion TEXT,
+    activo INTEGER DEFAULT 1,
+    fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
+    fecha_modificacion TEXT
+);
+
+-- Índices para tablas silviculturales (snake_case estandarizado)
+CREATE INDEX IF NOT EXISTS idx_activity_categories_code ON activity_categories(code);
+CREATE INDEX IF NOT EXISTS idx_activity_categories_is_active ON activity_categories(is_active);
+CREATE INDEX IF NOT EXISTS idx_especies_forestales_codigo ON especies_forestales(codigo);
+CREATE INDEX IF NOT EXISTS idx_especies_forestales_nombre ON especies_forestales(nombre_comun);
+CREATE INDEX IF NOT EXISTS idx_especies_forestales_activo ON especies_forestales(activo);
+CREATE INDEX IF NOT EXISTS idx_scan_profiles_name ON scan_profiles(name);
+CREATE INDEX IF NOT EXISTS idx_scan_profiles_default ON scan_profiles(is_default);
+CREATE INDEX IF NOT EXISTS idx_seguimiento_permisos_permiso ON seguimiento_permisos(permiso_id);
+CREATE INDEX IF NOT EXISTS idx_seguimiento_permisos_fecha ON seguimiento_permisos(fecha_accion);
+CREATE INDEX IF NOT EXISTS idx_seguimiento_permisos_tipo ON seguimiento_permisos(tipo_accion);
+CREATE INDEX IF NOT EXISTS idx_compensaciones_horas_permiso ON compensaciones_horas(permiso_id);
+CREATE INDEX IF NOT EXISTS idx_compensaciones_horas_fecha ON compensaciones_horas(fecha_compensacion);
 ";
 
     public const string SeedData = @"-- =====================================================
@@ -862,6 +985,63 @@ VALUES
 ('2026-05-18', 'Ascensión del Señor', 'Ascensión de Jesús (trasladado al lunes)', 1, 0, 2026, 1),
 ('2026-06-08', 'Corpus Christi', 'Cuerpo y Sangre de Cristo (trasladado al lunes)', 1, 0, 2026, 1),
 ('2026-06-15', 'Sagrado Corazón de Jesús', 'Sagrado Corazón (trasladado al lunes)', 1, 0, 2026, 1);
+
+-- =====================================================
+-- CATEGORÍAS DE ACTIVIDADES SILVICULTURALES (snake_case)
+-- =====================================================
+INSERT OR IGNORE INTO activity_categories (code, name, description, color_hex, display_order, is_active) VALUES
+('PREP', 'Preparación de Terreno', 'Actividades previas a la siembra: limpieza, trazado, ahoyado', '#8B4513', 1, 1),
+('SIEM', 'Siembra y Establecimiento', 'Plantación de árboles y establecimiento inicial', '#228B22', 2, 1),
+('MANT', 'Mantenimiento', 'Limpias, plateos, control de malezas, fertilización', '#32CD32', 3, 1),
+('PODA', 'Podas', 'Podas de formación, sanitarias, levante', '#006400', 4, 1),
+('RALE', 'Raleos', 'Entresaca y raleo comercial', '#556B2F', 5, 1),
+('FITO', 'Control Fitosanitario', 'Control de plagas, enfermedades, aplicación de agroquímicos', '#FF6347', 6, 1),
+('COSE', 'Cosecha', 'Apeo, desrame, troceo, extracción, cargue', '#A0522D', 7, 1),
+('VIVE', 'Vivero', 'Producción de plántulas: llenado, siembra, riego, mantenimiento', '#90EE90', 8, 1),
+('INVE', 'Inventarios', 'Inventarios forestales, mediciones, parcelas', '#4682B4', 9, 1),
+('INFR', 'Infraestructura', 'Vías, cercas, campamentos, bodegas', '#708090', 10, 1),
+('INCE', 'Control de Incendios', 'Cortafuegos, quemas controladas, vigilancia', '#FF4500', 11, 1),
+('ADMI', 'Administrativa', 'Supervisión, reuniones, capacitación, transporte', '#4169E1', 12, 1),
+('OTRA', 'Otras Actividades', 'Actividades no clasificadas', '#808080', 99, 1);
+
+-- =====================================================
+-- ESPECIES FORESTALES COLOMBIANAS
+-- =====================================================
+INSERT OR IGNORE INTO especies_forestales (codigo, nombre_comun, nombre_cientifico, familia, turno_promedio, densidad_recomendada, activo) VALUES
+('PIN-PAT', 'Pino Pátula', 'Pinus patula', 'Pinaceae', 18, 1111, 1),
+('PIN-CAR', 'Pino Caribe', 'Pinus caribaea', 'Pinaceae', 15, 1111, 1),
+('PIN-OOC', 'Pino Oocarpa', 'Pinus oocarpa', 'Pinaceae', 20, 1111, 1),
+('PIN-RAD', 'Pino Radiata', 'Pinus radiata', 'Pinaceae', 20, 1111, 1),
+('PIN-TEC', 'Pino Tecunumanii', 'Pinus tecunumanii', 'Pinaceae', 16, 1111, 1),
+('EUC-GRA', 'Eucalipto Grandis', 'Eucalyptus grandis', 'Myrtaceae', 7, 1111, 1),
+('EUC-GLO', 'Eucalipto Glóbulus', 'Eucalyptus globulus', 'Myrtaceae', 10, 1111, 1),
+('EUC-URO', 'Eucalipto Urograndis', 'Eucalyptus urograndis', 'Myrtaceae', 6, 1111, 1),
+('EUC-PEL', 'Eucalipto Pellita', 'Eucalyptus pellita', 'Myrtaceae', 8, 1111, 1),
+('EUC-TER', 'Eucalipto Tereticornis', 'Eucalyptus tereticornis', 'Myrtaceae', 8, 1111, 1),
+('TEC-GRA', 'Teca', 'Tectona grandis', 'Lamiaceae', 20, 816, 1),
+('ACA-MAN', 'Acacia Mangium', 'Acacia mangium', 'Fabaceae', 8, 1111, 1),
+('ACA-AUR', 'Acacia Auriculiformis', 'Acacia auriculiformis', 'Fabaceae', 8, 1111, 1),
+('MEL-AZE', 'Melina', 'Gmelina arborea', 'Lamiaceae', 12, 1111, 1),
+('CED-ODO', 'Cedro Rosado', 'Cedrela odorata', 'Meliaceae', 25, 625, 1),
+('CED-MON', 'Cedro de Montaña', 'Cedrela montana', 'Meliaceae', 25, 625, 1),
+('CIP-LUS', 'Ciprés', 'Cupressus lusitanica', 'Cupressaceae', 20, 1111, 1),
+('NOG-CAF', 'Nogal Cafetero', 'Cordia alliodora', 'Boraginaceae', 15, 400, 1),
+('CAU-CAU', 'Caucho', 'Hevea brasiliensis', 'Euphorbiaceae', 30, 500, 1),
+('BAL-SAM', 'Balso', 'Ochroma pyramidale', 'Malvaceae', 5, 1111, 1),
+('ROB-NEG', 'Roble Negro', 'Colombobalanus excelsa', 'Fagaceae', 40, 400, 1),
+('ALI-MAC', 'Aliso', 'Alnus acuminata', 'Betulaceae', 12, 816, 1),
+('MAC-INT', 'Macadamia', 'Macadamia integrifolia', 'Proteaceae', 15, 278, 1),
+('GUA-ANG', 'Guadua', 'Guadua angustifolia', 'Poaceae', 5, 625, 1);
+
+-- =====================================================
+-- PERFILES DE ESCANEO PREDEFINIDOS (snake_case)
+-- =====================================================
+INSERT OR IGNORE INTO scan_profiles (id, name, description, is_default, dpi, color_mode, source, page_size) VALUES 
+(1, 'Documento Rápido', 'Escaneo rápido de documentos en escala de grises', 0, 150, 'Grayscale', 'Flatbed', 'Letter'),
+(2, 'Documento Alta Calidad', 'Escaneo de alta calidad para archivo permanente', 1, 300, 'Color', 'Flatbed', 'Letter'),
+(3, 'Cédula/ID', 'Optimizado para documentos de identidad', 0, 300, 'Color', 'Flatbed', 'A5'),
+(4, 'Foto', 'Escaneo de fotografías en alta resolución', 0, 600, 'Color', 'Flatbed', 'Letter'),
+(5, 'Blanco y Negro', 'Documentos de texto para OCR', 0, 300, 'BlackWhite', 'Flatbed', 'Letter');
 ";
 
     public const string PerformanceIndexes = @"-- Índices adicionales para consultas frecuentes
