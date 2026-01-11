@@ -7,6 +7,7 @@
 @inject IImageProcessingService ImageProcessor
 @inject IScanProfileRepository ProfileRepository
 @inject IOcrService ocrService
+@inject IJSRuntime JS
 
 @if (IsVisible)
 {
@@ -66,29 +67,32 @@
                     <div class="scanner-option-group">
                         <div class="scanner-option-row">
                             <label class="scanner-label">DPI:</label>
-                            <select @bind="scanOptions.Dpi" class="scanner-select" disabled="@isScanning">
-                                <option value="150">150 (Rápido)</option>
-                                <option value="200">200 (Normal)</option>
-                                <option value="300">300 (Alta calidad)</option>
-                                <option value="600">600 (Muy alta)</option>
+                            <select @bind="selectedDpi" class="scanner-select" disabled="@isScanning">
+                                <option value="75">75 ppp</option>
+                                <option value="100">100 ppp</option>
+                                <option value="150">150 ppp</option>
+                                <option value="200">200 ppp</option>
+                                <option value="300">300 ppp</option>
+                                <option value="400">400 ppp</option>
+                                <option value="600">600 ppp</option>
                             </select>
                         </div>
                         
                         <div class="scanner-option-row">
                             <label class="scanner-label">COLOR:</label>
-                            <select @bind="scanOptions.ColorMode" class="scanner-select" disabled="@isScanning">
-                                <option value="@ScanColorMode.Color">Color</option>
-                                <option value="@ScanColorMode.Grayscale">Escala de grises</option>
-                                <option value="@ScanColorMode.BlackWhite">Blanco y negro</option>
+                            <select @bind="selectedColorMode" class="scanner-select" disabled="@isScanning">
+                                <option value="Color">Color</option>
+                                <option value="Grayscale">Escala de grises</option>
+                                <option value="BlackWhite">Blanco y negro</option>
                             </select>
                         </div>
                         
                         <div class="scanner-option-row">
                             <label class="scanner-label">FUENTE:</label>
-                            <select @bind="scanOptions.Source" class="scanner-select" disabled="@isScanning">
-                                <option value="@ScanSource.Flatbed">Cama plana</option>
-                                <option value="@ScanSource.Feeder">Alimentador</option>
-                                <option value="@ScanSource.Auto">Automático</option>
+                            <select @bind="selectedSource" class="scanner-select" disabled="@isScanning">
+                                <option value="Flatbed">Documento (Cama plana)</option>
+                                <option value="Feeder">Alimentador</option>
+                                <option value="Auto">Automático</option>
                             </select>
                         </div>
                         
@@ -175,8 +179,14 @@
                                     </button>
                                     @if (scannedPages.Count > 0 && imageCorrection.HasCorrections)
                                     {
-                                        <button class="scanner-btn-small" @onclick="ApplyCorrectionsToCurrentPage" disabled="@isScanning">
-                                            APLICAR A PAGINA
+                                        <button class="scanner-btn-small scanner-btn-preview" @onclick="PreviewCorrections" 
+                                                disabled="@(isScanning || isPreviewingCorrections)"
+                                                title="Ver cómo quedará la imagen con las correcciones actuales">
+                                            @(isPreviewingCorrections ? "PREVISUALIZANDO..." : "VISTA PREVIA")
+                                        </button>
+                                        <button class="scanner-btn-small scanner-btn-apply" @onclick="ApplyCorrectionsToCurrentPage" 
+                                                disabled="@isScanning">
+                                            APLICAR
                                         </button>
                                     }
                                 </div>
@@ -246,13 +256,13 @@
                                 
                                 @* Barra de herramientas de transformación *@
                                 <div class="scanner-toolbar">
-                                    <button class="scanner-tool-btn" @onclick="() => RotatePage(-90)" title="Rotar izquierda 90°">
+                                    <button class="scanner-tool-btn" @onclick="@(() => RotatePage(-90))" title="Rotar izquierda 90°">
                                         ↺
                                     </button>
-                                    <button class="scanner-tool-btn" @onclick="() => RotatePage(90)" title="Rotar derecha 90°">
+                                    <button class="scanner-tool-btn" @onclick="@(() => RotatePage(90))" title="Rotar derecha 90°">
                                         ↻
                                     </button>
-                                    <button class="scanner-tool-btn" @onclick="() => RotatePage(180)" title="Rotar 180°">
+                                    <button class="scanner-tool-btn" @onclick="@(() => RotatePage(180))" title="Rotar 180°">
                                         ⟲
                                     </button>
                                     <div class="scanner-tool-separator"></div>
@@ -268,7 +278,7 @@
                                     </button>
                                 </div>
                                 
-                                <div class="scanner-preview-image">
+                                <div class="scanner-preview-image @(IsPortrait(scannedPages[previewIndex]) ? "portrait" : "landscape")">
                                     <img src="data:@scannedPages[previewIndex].MimeType;base64,@Convert.ToBase64String(scannedPages[previewIndex].ImageBytes)" 
                                          alt="Página escaneada" />
                                 </div>
@@ -287,10 +297,10 @@
                                     SELECCIONE EL ÁREA A ESCANEAR (o deje vacío para área completa)
                                 </div>
                                 <div class="scanner-preview-canvas" 
-                                     @onmousedown="StartAreaSelection"
-                                     @onmousemove="UpdateAreaSelection"
-                                     @onmouseup="EndAreaSelection"
-                                     @onmouseleave="EndAreaSelection">
+                                     @onmousedown="StartAreaSelectionAsync"
+                                     @onmousemove="UpdateAreaSelectionAsync"
+                                     @onmouseup="EndAreaSelectionAsync"
+                                     @onmouseleave="EndAreaSelectionAsync">
                                     <img src="data:@previewImage.MimeType;base64,@Convert.ToBase64String(previewImage.ImageBytes)" 
                                          alt="Vista previa" @ref="previewImageElement" />
                                     
@@ -516,10 +526,47 @@
     // Estado interno
     private List<ScannerDeviceDto> scanners = new();
     private List<ScannedPageDto> scannedPages = new();
-    private ScanOptionsDto scanOptions = new() { Dpi = 200 };
+    private ScanOptionsDto scanOptions = new() { Dpi = 300 };
     private string? selectedDeviceId;
     private string outputFormat = "images"; // "images", "pdf" o "pdf-ocr"
     private string ocrLanguage = "spa"; // Idioma para OCR
+    
+    // Propiedades de binding para los selectores (sincronizadas con scanOptions)
+    private int selectedDpi
+    {
+        get => scanOptions.Dpi;
+        set
+        {
+            scanOptions.Dpi = value;
+            Console.WriteLine($"[UI] DPI cambiado a: {value}");
+        }
+    }
+    
+    private string selectedColorMode
+    {
+        get => scanOptions.ColorMode.ToString();
+        set
+        {
+            if (Enum.TryParse<ScanColorMode>(value, out var mode))
+            {
+                scanOptions.ColorMode = mode;
+                Console.WriteLine($"[UI] ColorMode cambiado a: {mode}");
+            }
+        }
+    }
+    
+    private string selectedSource
+    {
+        get => scanOptions.Source.ToString();
+        set
+        {
+            if (Enum.TryParse<ScanSource>(value, out var source))
+            {
+                scanOptions.Source = source;
+                Console.WriteLine($"[UI] Source cambiado a: {source}");
+            }
+        }
+    }
     
     // Perfiles de escaneo
     private List<ScanProfileDto> profiles = new();
@@ -541,6 +588,8 @@
     // Corrección de imagen
     private ImageCorrectionDto imageCorrection = new();
     private bool showCorrectionPanel = false;
+    private bool isPreviewingCorrections = false;
+    private byte[]? correctionPreviewBytes = null;
     
     // Gamma usa slider entero (10-300) mapeado a float (0.1-3.0)
     private int gammaSliderValue
@@ -565,6 +614,9 @@
         if (IsVisible && scanners.Count == 0 && !isLoadingScanners)
         {
             await RefreshScanners();
+            
+            // Inicializar perfiles predeterminados si no existen
+            await ProfileRepository.InitializeDefaultProfilesAsync();
             await RefreshProfiles();
         }
     }
@@ -638,16 +690,35 @@
         
         try
         {
+            // Preparar opciones para el escaneo
             scanOptions.DeviceId = selectedDeviceId;
             
-            // Siempre escanea una página a la vez (el usuario puede agregar más en modo batch)
+            // Log para debug de las opciones
+            Console.WriteLine($"[SCAN-UI] ========== INICIANDO ESCANEO ==========");
+            Console.WriteLine($"[SCAN-UI] DeviceId: {scanOptions.DeviceId}");
+            Console.WriteLine($"[SCAN-UI] DPI: {scanOptions.Dpi}");
+            Console.WriteLine($"[SCAN-UI] ColorMode: {scanOptions.ColorMode}");
+            Console.WriteLine($"[SCAN-UI] Source: {scanOptions.Source}");
+            Console.WriteLine($"[SCAN-UI] PageSize: {scanOptions.PageSize}");
+            Console.WriteLine($"[SCAN-UI] =========================================");
+            
+            // Escanear una página
             var result = await ScannerService.ScanSinglePageAsync(scanOptions);
             if (result.IsSuccess && result.Value != null)
             {
                 var doc = result.Value;
+                
+                // Aplicar correcciones de imagen si hay alguna configurada
+                byte[] finalBytes = doc.ImageBytes;
+                if (imageCorrection.HasCorrections)
+                {
+                    Console.WriteLine($"[SCAN-UI] Aplicando correcciones: Brillo={imageCorrection.Brightness}, Contraste={imageCorrection.Contrast}");
+                    finalBytes = ImageProcessor.ApplyCorrections(doc.ImageBytes, imageCorrection);
+                }
+                
                 scannedPages.Add(new ScannedPageDto
                 {
-                    ImageBytes = doc.ImageBytes,
+                    ImageBytes = finalBytes,
                     MimeType = doc.MimeType,
                     Width = doc.Width,
                     Height = doc.Height,
@@ -678,6 +749,7 @@
         catch (Exception ex)
         {
             errorMessage = $"Error: {ex.Message}";
+            Console.WriteLine($"[SCAN-UI] ERROR: {ex}");
         }
         finally
         {
@@ -922,6 +994,50 @@
     private void ResetCorrections()
     {
         imageCorrection = new ImageCorrectionDto();
+        correctionPreviewBytes = null;
+        isPreviewingCorrections = false;
+    }
+    
+    /// <summary>
+    /// Genera una vista previa de las correcciones sin aplicarlas permanentemente
+    /// </summary>
+    private async Task PreviewCorrections()
+    {
+        if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
+        if (!imageCorrection.HasCorrections) return;
+        
+        isPreviewingCorrections = true;
+        StateHasChanged();
+        
+        try
+        {
+            var page = scannedPages[previewIndex];
+            
+            // Procesar en un task para no bloquear UI
+            correctionPreviewBytes = await Task.Run(() => 
+                ImageProcessor.ApplyCorrections(page.ImageBytes, imageCorrection));
+            
+            // Mostrar temporalmente la vista previa
+            var originalBytes = page.ImageBytes;
+            page.ImageBytes = correctionPreviewBytes;
+            StateHasChanged();
+            
+            // Esperar 2 segundos y restaurar original
+            await Task.Delay(2000);
+            page.ImageBytes = originalBytes;
+            correctionPreviewBytes = null;
+            
+            successMessage = "Vista previa terminada. Presione APLICAR para confirmar.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error generando vista previa: {ex.Message}";
+        }
+        finally
+        {
+            isPreviewingCorrections = false;
+            StateHasChanged();
+        }
     }
     
     private void ApplyCorrectionsToCurrentPage()
@@ -940,7 +1056,7 @@
         StateHasChanged();
     }
     
-    private void RotatePage(int degrees)
+    private async Task RotatePage(int degrees)
     {
         if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
         
@@ -955,28 +1071,34 @@
         
         page.ImageBytes = rotated;
         UpdatePageDimensions(page);
-        StateHasChanged();
+        
+        successMessage = $"Imagen rotada {Math.Abs(degrees)}°";
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void FlipHorizontalPage()
+    private async Task FlipHorizontalPage()
     {
         if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
         
         var page = scannedPages[previewIndex];
         page.ImageBytes = ImageProcessor.FlipHorizontal(page.ImageBytes);
-        StateHasChanged();
+        
+        successMessage = "Imagen volteada horizontalmente";
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void FlipVerticalPage()
+    private async Task FlipVerticalPage()
     {
         if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
         
         var page = scannedPages[previewIndex];
         page.ImageBytes = ImageProcessor.FlipVertical(page.ImageBytes);
-        StateHasChanged();
+        
+        successMessage = "Imagen volteada verticalmente";
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void AutoCropPage()
+    private async Task AutoCropPage()
     {
         if (previewIndex < 0 || previewIndex >= scannedPages.Count) return;
         
@@ -987,7 +1109,7 @@
         UpdatePageDimensions(page);
         
         successMessage = "Imagen recortada automáticamente";
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
     
     private void UpdatePageDimensions(ScannedPageDto page)
@@ -1004,6 +1126,11 @@
             // Si falla, mantener dimensiones anteriores
         }
     }
+    
+    /// <summary>
+    /// Determina si la imagen es vertical (portrait) u horizontal (landscape)
+    /// </summary>
+    private bool IsPortrait(ScannedPageDto page) => page.Height > page.Width;
     
     #endregion
 
@@ -1118,26 +1245,63 @@
         }
     }
     
-    private void StartAreaSelection(MouseEventArgs e)
+    private async Task StartAreaSelectionAsync(MouseEventArgs e)
     {
-        // Calcular posición relativa como porcentaje
-        // Nota: Esto es una aproximación, idealmente usaríamos JS interop
-        isSelectingArea = true;
-        selectionStart = (e.OffsetX / 4, e.OffsetY / 3); // Aproximación basada en tamaño típico
-        selectionCurrent = selectionStart;
+        try
+        {
+            var pos = await JS.InvokeAsync<PositionResult?>("getMousePercentInContainer", e);
+            if (pos != null)
+            {
+                isSelectingArea = true;
+                selectionStart = (pos.x, pos.y);
+                selectionCurrent = selectionStart;
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Fallback: usar posición aproximada
+            isSelectingArea = true;
+            selectionStart = (e.OffsetX / 4, e.OffsetY / 3);
+            selectionCurrent = selectionStart;
+        }
     }
     
-    private void UpdateAreaSelection(MouseEventArgs e)
+    private async Task UpdateAreaSelectionAsync(MouseEventArgs e)
     {
         if (!isSelectingArea) return;
-        selectionCurrent = (e.OffsetX / 4, e.OffsetY / 3);
-        StateHasChanged();
+        
+        try
+        {
+            var pos = await JS.InvokeAsync<PositionResult?>("getMousePercentInContainer", e);
+            if (pos != null)
+            {
+                selectionCurrent = (pos.x, pos.y);
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Fallback
+            selectionCurrent = (e.OffsetX / 4, e.OffsetY / 3);
+            StateHasChanged();
+        }
     }
     
-    private void EndAreaSelection(MouseEventArgs e)
+    private async Task EndAreaSelectionAsync(MouseEventArgs e)
     {
         if (!isSelectingArea) return;
         isSelectingArea = false;
+        
+        try
+        {
+            var pos = await JS.InvokeAsync<PositionResult?>("getMousePercentInContainer", e);
+            if (pos != null)
+            {
+                selectionCurrent = (pos.x, pos.y);
+            }
+        }
+        catch { }
         
         double left = Math.Min(selectionStart.X, selectionCurrent.X);
         double top = Math.Min(selectionStart.Y, selectionCurrent.Y);
@@ -1159,6 +1323,13 @@
         StateHasChanged();
     }
     
+    // Clase para deserializar resultado de JS (propiedades en minúsculas para match con JSON)
+    private class PositionResult
+    {
+        public double x { get; set; }
+        public double y { get; set; }
+    }
+    
     private void ClearSelectedArea()
     {
         selectedArea = null;
@@ -1173,39 +1344,59 @@
     {
         try
         {
+            Console.WriteLine("[PROFILES] Cargando perfiles de escaneo...");
             profiles = await ProfileRepository.GetAllAsync();
+            
+            Console.WriteLine($"[PROFILES] Se encontraron {profiles.Count} perfiles:");
+            foreach (var p in profiles)
+            {
+                Console.WriteLine($"[PROFILES]   - ID:{p.Id} '{p.Name}' ColorMode:{p.ColorMode} Dpi:{p.Dpi} Default:{p.IsDefault}");
+            }
             
             // Cargar perfil por defecto si existe
             var defaultProfile = profiles.FirstOrDefault(p => p.IsDefault);
             if (defaultProfile != null && selectedProfileId == 0)
             {
+                Console.WriteLine($"[PROFILES] Aplicando perfil predeterminado: {defaultProfile.Name}");
                 selectedProfileId = defaultProfile.Id;
                 await LoadSelectedProfile();
             }
         }
-        catch
+        catch (Exception ex)
         {
             // Ignorar errores de carga de perfiles (la tabla puede no existir aún)
+            Console.WriteLine($"[PROFILES] ERROR al cargar perfiles: {ex.Message}");
             profiles = new List<ScanProfileDto>();
         }
     }
     
     private async Task LoadSelectedProfile()
     {
+        Console.WriteLine($"[PROFILE] LoadSelectedProfile llamado con selectedProfileId={selectedProfileId}");
+        
         if (selectedProfileId == 0)
         {
             // Modo manual - no cambiar configuración
+            Console.WriteLine("[PROFILE] selectedProfileId es 0, no se carga perfil");
             return;
         }
         
         var profile = profiles.FirstOrDefault(p => p.Id == selectedProfileId);
         if (profile != null)
         {
+            Console.WriteLine($"[PROFILE] Cargando perfil: {profile.Name}");
+            Console.WriteLine($"[PROFILE]   - Dpi: {profile.Dpi}");
+            Console.WriteLine($"[PROFILE]   - ColorMode: {profile.ColorMode}");
+            Console.WriteLine($"[PROFILE]   - Source: {profile.Source}");
+            Console.WriteLine($"[PROFILE]   - PageSize: {profile.PageSize}");
+            
             // Aplicar configuración del perfil
             scanOptions.Dpi = profile.Dpi;
             scanOptions.ColorMode = profile.ColorMode;
             scanOptions.Source = profile.Source;
             scanOptions.PageSize = profile.PageSize;
+            
+            Console.WriteLine($"[PROFILE] Después de aplicar: scanOptions.ColorMode = {scanOptions.ColorMode}");
             
             // Aplicar correcciones
             imageCorrection = profile.ToImageCorrection();

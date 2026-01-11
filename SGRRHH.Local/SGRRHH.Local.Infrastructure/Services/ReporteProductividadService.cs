@@ -47,9 +47,9 @@ public class ReporteProductividadService : IReporteProductividadService
             var proyectosSql = @"
                 SELECT 
                     COUNT(*) as Total,
-                    COALESCE(SUM(AreaHectareas), 0) as TotalArea
-                FROM Proyectos 
-                WHERE Estado = 0 AND Activo = 1";
+                    COALESCE(SUM(area_hectareas), 0) as TotalArea
+                FROM proyectos 
+                WHERE estado = 0 AND activo = 1";
             
             var proyectosData = await connection.QuerySingleOrDefaultAsync<dynamic>(proyectosSql);
             if (proyectosData != null)
@@ -60,19 +60,19 @@ public class ReporteProductividadService : IReporteProductividadService
 
             // Empleados asignados activos
             var empleadosSql = @"
-                SELECT COUNT(DISTINCT EmpleadoId) 
-                FROM ProyectosEmpleados 
-                WHERE FechaDesasignacion IS NULL";
+                SELECT COUNT(DISTINCT empleado_id) 
+                FROM proyectos_empleados 
+                WHERE fecha_desasignacion IS NULL";
             kpis.TotalEmpleadosAsignados = await connection.ExecuteScalarAsync<int>(empleadosSql);
 
             // Métricas del periodo actual
             var periodoSql = @"
                 SELECT 
-                    COALESCE(SUM(da.Horas), 0) as TotalHoras,
-                    COUNT(DISTINCT rd.Id) as TotalJornales
-                FROM DetallesActividades da
-                INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-                WHERE rd.Fecha BETWEEN @Inicio AND @Fin";
+                    COALESCE(SUM(da.horas), 0) as TotalHoras,
+                    COUNT(DISTINCT rd.id) as TotalJornales
+                FROM detalles_actividad da
+                INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+                WHERE rd.fecha BETWEEN @Inicio AND @Fin";
 
             var periodoData = await connection.QuerySingleOrDefaultAsync<dynamic>(periodoSql, 
                 new { Inicio = inicio.ToString("yyyy-MM-dd"), Fin = fin.ToString("yyyy-MM-dd") });
@@ -87,14 +87,14 @@ public class ReporteProductividadService : IReporteProductividadService
                 SELECT COALESCE(SUM(sub.CostoDia), 0)
                 FROM (
                     SELECT DISTINCT 
-                        rd.EmpleadoId, 
-                        rd.Fecha,
-                        COALESCE(e.SalarioBase / 30.0, 0) as CostoDia
-                    FROM RegistrosDiarios rd
-                    INNER JOIN Empleados e ON rd.EmpleadoId = e.Id
-                    INNER JOIN DetallesActividades da ON rd.Id = da.RegistroDiarioId
-                    WHERE rd.Fecha BETWEEN @Inicio AND @Fin
-                    AND e.SalarioBase IS NOT NULL
+                        rd.empleado_id, 
+                        rd.fecha,
+                        COALESCE(e.salario_base / 30.0, 0) as CostoDia
+                    FROM registros_diarios rd
+                    INNER JOIN empleados e ON rd.empleado_id = e.id
+                    INNER JOIN detalles_actividad da ON rd.id = da.registro_diario_id
+                    WHERE rd.fecha BETWEEN @Inicio AND @Fin
+                    AND e.salario_base IS NOT NULL
                 ) sub";
             kpis.CostoManoObraMes = await connection.ExecuteScalarAsync<decimal>(costoSql, 
                 new { Inicio = inicio.ToString("yyyy-MM-dd"), Fin = fin.ToString("yyyy-MM-dd") });
@@ -105,16 +105,16 @@ public class ReporteProductividadService : IReporteProductividadService
                 FROM (
                     SELECT 
                         CASE 
-                            WHEN a.RendimientoEsperado > 0 AND da.Cantidad IS NOT NULL AND da.Horas > 0 
-                            THEN ((da.Cantidad / da.Horas) / a.RendimientoEsperado) * 100
+                            WHEN a.expected_yield > 0 AND da.cantidad IS NOT NULL AND da.horas > 0 
+                            THEN ((da.cantidad / da.horas) / a.expected_yield) * 100
                             ELSE NULL 
                         END as rendimiento
-                    FROM DetallesActividades da
-                    INNER JOIN Actividades a ON da.ActividadId = a.Id
-                    INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-                    WHERE rd.Fecha BETWEEN @Inicio AND @Fin
-                    AND da.Cantidad IS NOT NULL
-                    AND a.RendimientoEsperado > 0
+                    FROM detalles_actividad da
+                    INNER JOIN actividades a ON da.actividad_id = a.id
+                    INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+                    WHERE rd.fecha BETWEEN @Inicio AND @Fin
+                    AND da.cantidad IS NOT NULL
+                    AND a.expected_yield > 0
                 ) sub
                 WHERE rendimiento IS NOT NULL";
             
@@ -156,29 +156,29 @@ public class ReporteProductividadService : IReporteProductividadService
 
         var sql = @"
             SELECT 
-                p.Id as ProyectoId,
-                p.Codigo,
-                p.Nombre,
-                ef.NombreComun as Especie,
-                p.AreaHectareas,
-                COALESCE(p.TotalHorasTrabajadas, 0) as HorasTrabajadas,
-                COALESCE(p.CostoManoObraAcumulado, 0) as CostoManoObra,
-                (SELECT COUNT(DISTINCT pe.EmpleadoId) 
-                 FROM ProyectosEmpleados pe 
-                 WHERE pe.ProyectoId = p.Id AND pe.FechaDesasignacion IS NULL) as EmpleadosActivos,
-                CASE p.Estado 
+                p.id as ProyectoId,
+                p.codigo as Codigo,
+                p.nombre as Nombre,
+                ef.nombre_comun as Especie,
+                p.area_hectareas as AreaHectareas,
+                COALESCE(p.total_horas_trabajadas, 0) as HorasTrabajadas,
+                COALESCE(p.costo_mano_obra_acumulado, 0) as CostoManoObra,
+                (SELECT COUNT(DISTINCT pe.empleado_id) 
+                 FROM proyectos_empleados pe 
+                 WHERE pe.proyecto_id = p.id AND pe.fecha_desasignacion IS NULL) as EmpleadosActivos,
+                CASE p.estado 
                      WHEN 0 THEN 'Activo' 
                      WHEN 1 THEN 'Suspendido'
                      WHEN 2 THEN 'Finalizado'
                      ELSE 'Cancelado' END as Estado,
-                CASE WHEN p.AreaHectareas > 0 
-                     THEN ROUND(COALESCE(p.CostoManoObraAcumulado, 0) / p.AreaHectareas, 0) 
+                CASE WHEN p.area_hectareas > 0 
+                     THEN ROUND(COALESCE(p.costo_mano_obra_acumulado, 0) / p.area_hectareas, 0) 
                      ELSE NULL END as CostoPorHectarea,
                 0 as RendimientoPromedio
-            FROM Proyectos p
-            LEFT JOIN EspeciesForestales ef ON p.EspecieId = ef.Id
-            WHERE p.Activo = 1
-            ORDER BY COALESCE(p.TotalHorasTrabajadas, 0) DESC
+            FROM proyectos p
+            LEFT JOIN especies_forestales ef ON p.especie_id = ef.id
+            WHERE p.activo = 1
+            ORDER BY COALESCE(p.total_horas_trabajadas, 0) DESC
             LIMIT @Top";
 
         try
@@ -203,23 +203,23 @@ public class ReporteProductividadService : IReporteProductividadService
         // Información del proyecto
         var proyectoSql = @"
             SELECT 
-                p.Id as ProyectoId, 
-                p.Codigo, 
-                p.Nombre,
-                CASE p.TipoProyecto 
+                p.id as ProyectoId, 
+                p.codigo as Codigo, 
+                p.nombre as Nombre,
+                CASE p.tipo_proyecto 
                     WHEN 1 THEN 'Plantación Nueva'
                     WHEN 2 THEN 'Mantenimiento'
                     WHEN 3 THEN 'Raleo'
                     WHEN 4 THEN 'Cosecha'
                     WHEN 5 THEN 'Aprovechamiento'
                     ELSE 'Otro' END as TipoProyecto,
-                ef.NombreComun as Especie,
-                p.Predio, 
-                p.Lote, 
-                p.AreaHectareas
-            FROM Proyectos p
-            LEFT JOIN EspeciesForestales ef ON p.EspecieId = ef.Id
-            WHERE p.Id = @ProyectoId";
+                ef.nombre_comun as Especie,
+                p.predio as Predio, 
+                p.lote as Lote, 
+                p.area_hectareas as AreaHectareas
+            FROM proyectos p
+            LEFT JOIN especies_forestales ef ON p.especie_id = ef.id
+            WHERE p.id = @ProyectoId";
 
         var reporte = await connection.QuerySingleOrDefaultAsync<ReporteProyectoDetalle>(proyectoSql, 
             new { ProyectoId = proyectoId });
@@ -236,12 +236,12 @@ public class ReporteProductividadService : IReporteProductividadService
         // Totales del periodo
         var totalesSql = @"
             SELECT 
-                COALESCE(SUM(da.Horas), 0) as TotalHoras,
-                COUNT(DISTINCT rd.Fecha) as TotalDiasTrabajados
-            FROM DetallesActividades da
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            WHERE da.ProyectoId = @ProyectoId
-            AND rd.Fecha BETWEEN @FechaInicio AND @FechaFin";
+                COALESCE(SUM(da.horas), 0) as TotalHoras,
+                COUNT(DISTINCT rd.fecha) as TotalDiasTrabajados
+            FROM detalles_actividad da
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            WHERE da.proyecto_id = @ProyectoId
+            AND rd.fecha BETWEEN @FechaInicio AND @FechaFin";
 
         var totales = await connection.QuerySingleOrDefaultAsync<dynamic>(totalesSql, 
             new { ProyectoId = proyectoId, FechaInicio = fechaInicioStr, FechaFin = fechaFinStr });
@@ -280,17 +280,17 @@ public class ReporteProductividadService : IReporteProductividadService
     {
         var sql = @"
             SELECT 
-                COALESCE(ca.Nombre, a.CategoriaTexto, 'Sin Categoría') as Categoria,
-                ca.ColorHex,
-                SUM(da.Horas) as Horas,
-                COUNT(DISTINCT da.ActividadId) as CantidadActividades
-            FROM DetallesActividades da
-            INNER JOIN Actividades a ON da.ActividadId = a.Id
-            LEFT JOIN CategoriasActividades ca ON a.CategoriaId = ca.Id
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            WHERE da.ProyectoId = @ProyectoId
-            AND rd.Fecha BETWEEN @FechaInicio AND @FechaFin
-            GROUP BY COALESCE(ca.Nombre, a.CategoriaTexto, 'Sin Categoría'), ca.ColorHex
+                COALESCE(ca.name, a.category_text, a.categoria, 'Sin Categoría') as Categoria,
+                ca.color_hex as ColorHex,
+                SUM(da.horas) as Horas,
+                COUNT(DISTINCT da.actividad_id) as CantidadActividades
+            FROM detalles_actividad da
+            INNER JOIN actividades a ON da.actividad_id = a.id
+            LEFT JOIN activity_categories ca ON a.category_id = ca.id
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            WHERE da.proyecto_id = @ProyectoId
+            AND rd.fecha BETWEEN @FechaInicio AND @FechaFin
+            GROUP BY COALESCE(ca.name, a.category_text, a.categoria, 'Sin Categoría'), ca.color_hex
             ORDER BY Horas DESC";
 
         var categorias = (await connection.QueryAsync<ActividadCategoriaResumen>(sql, 
@@ -311,22 +311,22 @@ public class ReporteProductividadService : IReporteProductividadService
     {
         var sql = @"
             SELECT 
-                a.Id as ActividadId,
-                a.Codigo,
-                a.Nombre,
-                COALESCE(ca.Nombre, a.CategoriaTexto) as Categoria,
-                a.UnidadAbreviatura as UnidadMedida,
-                SUM(da.Horas) as Horas,
-                SUM(da.Cantidad) as Cantidad,
-                a.RendimientoEsperado,
+                a.id as ActividadId,
+                a.codigo,
+                a.nombre,
+                COALESCE(ca.name, a.category_text, a.categoria) as Categoria,
+                a.unit_abbreviation as UnidadMedida,
+                SUM(da.horas) as Horas,
+                SUM(da.cantidad) as Cantidad,
+                a.expected_yield as RendimientoEsperado,
                 COUNT(*) as Registros
-            FROM DetallesActividades da
-            INNER JOIN Actividades a ON da.ActividadId = a.Id
-            LEFT JOIN CategoriasActividades ca ON a.CategoriaId = ca.Id
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            WHERE da.ProyectoId = @ProyectoId
-            AND rd.Fecha BETWEEN @FechaInicio AND @FechaFin
-            GROUP BY a.Id, a.Codigo, a.Nombre, ca.Nombre, a.CategoriaTexto, a.UnidadAbreviatura, a.RendimientoEsperado
+            FROM detalles_actividad da
+            INNER JOIN actividades a ON da.actividad_id = a.id
+            LEFT JOIN activity_categories ca ON a.category_id = ca.id
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            WHERE da.proyecto_id = @ProyectoId
+            AND rd.fecha BETWEEN @FechaInicio AND @FechaFin
+            GROUP BY a.id, a.codigo, a.nombre, ca.name, a.category_text, a.categoria, a.unit_abbreviation, a.expected_yield
             ORDER BY Horas DESC";
 
         var actividades = (await connection.QueryAsync<ActividadResumen>(sql, 
@@ -362,19 +362,19 @@ public class ReporteProductividadService : IReporteProductividadService
     {
         var sql = @"
             SELECT 
-                e.Id as EmpleadoId,
-                e.Codigo,
-                e.Nombres || ' ' || e.Apellidos as Nombre,
-                c.Nombre as Cargo,
-                SUM(da.Horas) as Horas,
-                COUNT(DISTINCT rd.Fecha) as DiasTrabajados
-            FROM DetallesActividades da
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            INNER JOIN Empleados e ON rd.EmpleadoId = e.Id
-            LEFT JOIN Cargos c ON e.CargoId = c.Id
-            WHERE da.ProyectoId = @ProyectoId
-            AND rd.Fecha BETWEEN @FechaInicio AND @FechaFin
-            GROUP BY e.Id, e.Codigo, e.Nombres, e.Apellidos, c.Nombre
+                e.id as EmpleadoId,
+                e.codigo,
+                e.nombres || ' ' || e.apellidos as Nombre,
+                c.nombre as Cargo,
+                SUM(da.horas) as Horas,
+                COUNT(DISTINCT rd.fecha) as DiasTrabajados
+            FROM detalles_actividad da
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            INNER JOIN empleados e ON rd.empleado_id = e.id
+            LEFT JOIN cargos c ON e.cargo_id = c.id
+            WHERE da.proyecto_id = @ProyectoId
+            AND rd.fecha BETWEEN @FechaInicio AND @FechaFin
+            GROUP BY e.id, e.codigo, e.nombres, e.apellidos, c.nombre
             ORDER BY Horas DESC";
 
         var empleados = (await connection.QueryAsync<EmpleadoResumen>(sql, 
@@ -394,16 +394,16 @@ public class ReporteProductividadService : IReporteProductividadService
     {
         var sql = @"
             SELECT 
-                rd.Fecha,
-                SUM(da.Horas) as Horas,
-                COUNT(DISTINCT rd.EmpleadoId) as Empleados,
-                SUM(da.Cantidad) as Cantidad
-            FROM DetallesActividades da
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            WHERE da.ProyectoId = @ProyectoId
-            AND rd.Fecha BETWEEN @FechaInicio AND @FechaFin
-            GROUP BY rd.Fecha
-            ORDER BY rd.Fecha";
+                rd.fecha,
+                SUM(da.horas) as Horas,
+                COUNT(DISTINCT rd.empleado_id) as Empleados,
+                SUM(da.cantidad) as Cantidad
+            FROM detalles_actividad da
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            WHERE da.proyecto_id = @ProyectoId
+            AND rd.fecha BETWEEN @FechaInicio AND @FechaFin
+            GROUP BY rd.fecha
+            ORDER BY rd.fecha";
 
         return await connection.QueryAsync<ProductividadDiaria>(sql, 
             new { ProyectoId = proyectoId, FechaInicio = fechaInicio, FechaFin = fechaFin });
@@ -437,15 +437,15 @@ public class ReporteProductividadService : IReporteProductividadService
         // Información del empleado
         var empleadoSql = @"
             SELECT 
-                e.Id as EmpleadoId,
-                e.Codigo,
-                e.Nombres || ' ' || e.Apellidos as Nombre,
-                c.Nombre as Cargo,
-                d.Nombre as Departamento
-            FROM Empleados e
-            LEFT JOIN Cargos c ON e.CargoId = c.Id
-            LEFT JOIN Departamentos d ON e.DepartamentoId = d.Id
-            WHERE e.Id = @EmpleadoId";
+                e.id as EmpleadoId,
+                e.codigo,
+                e.nombres || ' ' || e.apellidos as Nombre,
+                c.nombre as Cargo,
+                d.nombre as Departamento
+            FROM empleados e
+            LEFT JOIN cargos c ON e.cargo_id = c.id
+            LEFT JOIN departamentos d ON e.departamento_id = d.id
+            WHERE e.id = @EmpleadoId";
 
         var reporte = await connection.QuerySingleOrDefaultAsync<ReporteEmpleadoProductividad>(empleadoSql, 
             new { EmpleadoId = empleadoId });
@@ -459,14 +459,14 @@ public class ReporteProductividadService : IReporteProductividadService
         // Totales
         var totalesSql = @"
             SELECT 
-                COALESCE(SUM(da.Horas), 0) as TotalHoras,
-                COUNT(DISTINCT rd.Fecha) as DiasTrabajados,
-                COUNT(DISTINCT da.ActividadId) as ActividadesRealizadas,
-                COUNT(DISTINCT da.ProyectoId) as ProyectosParticipados
-            FROM DetallesActividades da
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            WHERE rd.EmpleadoId = @EmpleadoId
-            AND rd.Fecha BETWEEN @FechaInicio AND @FechaFin";
+                COALESCE(SUM(da.horas), 0) as TotalHoras,
+                COUNT(DISTINCT rd.fecha) as DiasTrabajados,
+                COUNT(DISTINCT da.actividad_id) as ActividadesRealizadas,
+                COUNT(DISTINCT da.proyecto_id) as ProyectosParticipados
+            FROM detalles_actividad da
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            WHERE rd.empleado_id = @EmpleadoId
+            AND rd.fecha BETWEEN @FechaInicio AND @FechaFin";
 
         var totales = await connection.QuerySingleOrDefaultAsync<dynamic>(totalesSql, 
             new { EmpleadoId = empleadoId, FechaInicio = fechaInicioStr, FechaFin = fechaFinStr });
@@ -486,16 +486,16 @@ public class ReporteProductividadService : IReporteProductividadService
         // Por proyecto
         var porProyectoSql = @"
             SELECT 
-                p.Id as ProyectoId,
-                p.Codigo || ' - ' || p.Nombre as ProyectoNombre,
-                SUM(da.Horas) as Horas,
-                COUNT(DISTINCT rd.Fecha) as Dias
-            FROM DetallesActividades da
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            INNER JOIN Proyectos p ON da.ProyectoId = p.Id
-            WHERE rd.EmpleadoId = @EmpleadoId
-            AND rd.Fecha BETWEEN @FechaInicio AND @FechaFin
-            GROUP BY p.Id, p.Codigo, p.Nombre
+                p.id as ProyectoId,
+                p.codigo || ' - ' || p.nombre as ProyectoNombre,
+                SUM(da.horas) as Horas,
+                COUNT(DISTINCT rd.fecha) as Dias
+            FROM detalles_actividad da
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            INNER JOIN proyectos p ON da.proyecto_id = p.id
+            WHERE rd.empleado_id = @EmpleadoId
+            AND rd.fecha BETWEEN @FechaInicio AND @FechaFin
+            GROUP BY p.id, p.codigo, p.nombre
             ORDER BY Horas DESC";
 
         reporte.PorProyecto = (await connection.QueryAsync<EmpleadoEnProyectoResumen>(porProyectoSql, 
@@ -504,19 +504,19 @@ public class ReporteProductividadService : IReporteProductividadService
         // Por actividad
         var porActividadSql = @"
             SELECT 
-                a.Nombre as Actividad,
-                COALESCE(ca.Nombre, a.CategoriaTexto) as Categoria,
-                SUM(da.Horas) as Horas,
-                SUM(da.Cantidad) as Cantidad,
-                a.UnidadAbreviatura as Unidad,
+                a.nombre as Actividad,
+                COALESCE(ca.name, a.category_text, a.categoria) as Categoria,
+                SUM(da.horas) as Horas,
+                SUM(da.cantidad) as Cantidad,
+                a.unit_abbreviation as Unidad,
                 COUNT(*) as Veces
-            FROM DetallesActividades da
-            INNER JOIN Actividades a ON da.ActividadId = a.Id
-            LEFT JOIN CategoriasActividades ca ON a.CategoriaId = ca.Id
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            WHERE rd.EmpleadoId = @EmpleadoId
-            AND rd.Fecha BETWEEN @FechaInicio AND @FechaFin
-            GROUP BY a.Id, a.Nombre, ca.Nombre, a.CategoriaTexto, a.UnidadAbreviatura
+            FROM detalles_actividad da
+            INNER JOIN actividades a ON da.actividad_id = a.id
+            LEFT JOIN activity_categories ca ON a.category_id = ca.id
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            WHERE rd.empleado_id = @EmpleadoId
+            AND rd.fecha BETWEEN @FechaInicio AND @FechaFin
+            GROUP BY a.id, a.nombre, ca.name, a.category_text, a.categoria, a.unit_abbreviation
             ORDER BY Horas DESC";
 
         reporte.PorActividad = (await connection.QueryAsync<EmpleadoActividadResumen>(porActividadSql, 
@@ -531,14 +531,14 @@ public class ReporteProductividadService : IReporteProductividadService
 
         var sql = @"
             SELECT 
-                CAST(strftime('%Y', rd.Fecha) AS INTEGER) as Anio,
-                CAST(strftime('%m', rd.Fecha) AS INTEGER) as Mes,
-                SUM(da.Horas) as Horas
-            FROM DetallesActividades da
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            WHERE rd.EmpleadoId = @EmpleadoId
-            AND rd.Fecha >= date('now', '-' || @Meses || ' months')
-            GROUP BY strftime('%Y', rd.Fecha), strftime('%m', rd.Fecha)
+                CAST(strftime('%Y', rd.fecha) AS INTEGER) as Anio,
+                CAST(strftime('%m', rd.fecha) AS INTEGER) as Mes,
+                SUM(da.horas) as Horas
+            FROM detalles_actividad da
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            WHERE rd.empleado_id = @EmpleadoId
+            AND rd.fecha >= date('now', '-' || @Meses || ' months')
+            GROUP BY strftime('%Y', rd.fecha), strftime('%m', rd.fecha)
             ORDER BY Anio DESC, Mes DESC";
 
         var datos = (await connection.QueryAsync<EmpleadoMensualResumen>(sql, 
@@ -568,23 +568,23 @@ public class ReporteProductividadService : IReporteProductividadService
 
         var sql = @"
             SELECT 
-                a.Id as ActividadId,
-                a.Codigo,
-                a.Nombre,
-                COALESCE(ca.Nombre, a.CategoriaTexto) as Categoria,
-                a.UnidadAbreviatura as UnidadMedida,
-                SUM(da.Horas) as Horas,
-                SUM(da.Cantidad) as Cantidad,
-                a.RendimientoEsperado,
+                a.id as ActividadId,
+                a.codigo,
+                a.nombre,
+                COALESCE(ca.name, a.category_text, a.categoria) as Categoria,
+                a.unit_abbreviation as UnidadMedida,
+                SUM(da.horas) as Horas,
+                SUM(da.cantidad) as Cantidad,
+                a.expected_yield,
                 COUNT(*) as Registros
-            FROM DetallesActividades da
-            INNER JOIN Actividades a ON da.ActividadId = a.Id
-            LEFT JOIN CategoriasActividades ca ON a.CategoriaId = ca.Id
-            INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-            WHERE rd.Fecha BETWEEN @FechaInicio AND @FechaFin
-            AND (@ProyectoId IS NULL OR da.ProyectoId = @ProyectoId)
-            AND (@CategoriaId IS NULL OR a.CategoriaId = @CategoriaId)
-            GROUP BY a.Id, a.Codigo, a.Nombre, ca.Nombre, a.CategoriaTexto, a.UnidadAbreviatura, a.RendimientoEsperado
+            FROM detalles_actividad da
+            INNER JOIN actividades a ON da.actividad_id = a.id
+            LEFT JOIN activity_categories ca ON a.category_id = ca.id
+            INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+            WHERE rd.fecha BETWEEN @FechaInicio AND @FechaFin
+            AND (@ProyectoId IS NULL OR da.proyecto_id = @ProyectoId)
+            AND (@CategoriaId IS NULL OR a.category_id = @CategoriaId)
+            GROUP BY a.id, a.codigo, a.nombre, ca.name, a.category_text, a.categoria, a.unit_abbreviation, a.expected_yield
             ORDER BY Horas DESC";
 
         var actividades = (await connection.QueryAsync<ActividadResumen>(sql, new { 
@@ -638,22 +638,22 @@ public class ReporteProductividadService : IReporteProductividadService
 
         var sql = @"
             SELECT 
-                p.Id as ProyectoId,
-                p.Codigo,
-                p.Nombre,
-                ef.NombreComun as Especie,
-                p.AreaHectareas,
-                COALESCE(SUM(da.Horas), 0) as HorasTotales,
-                (SELECT COUNT(DISTINCT pe.EmpleadoId) 
-                 FROM ProyectosEmpleados pe 
-                 WHERE pe.ProyectoId = p.Id AND pe.FechaDesasignacion IS NULL) as EmpleadosPromedio
-            FROM Proyectos p
-            LEFT JOIN EspeciesForestales ef ON p.EspecieId = ef.Id
-            LEFT JOIN DetallesActividades da ON da.ProyectoId = p.Id
-            LEFT JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id 
-                AND rd.Fecha BETWEEN @FechaInicio AND @FechaFin
-            WHERE p.Id IN @ProyectoIds
-            GROUP BY p.Id, p.Codigo, p.Nombre, ef.NombreComun, p.AreaHectareas";
+                p.id as ProyectoId,
+                p.codigo,
+                p.nombre,
+                ef.nombre_comun as Especie,
+                p.area_hectareas as AreaHectareas,
+                COALESCE(SUM(da.horas), 0) as HorasTotales,
+                (SELECT COUNT(DISTINCT pe.empleado_id) 
+                 FROM proyectos_empleados pe 
+                 WHERE pe.proyecto_id = p.id AND pe.fecha_desasignacion IS NULL) as EmpleadosPromedio
+            FROM proyectos p
+            LEFT JOIN especies_forestales ef ON p.especie_id = ef.id
+            LEFT JOIN detalles_actividad da ON da.proyecto_id = p.id
+            LEFT JOIN registros_diarios rd ON da.registro_diario_id = rd.id 
+                AND rd.fecha BETWEEN @FechaInicio AND @FechaFin
+            WHERE p.id IN @ProyectoIds
+            GROUP BY p.id, p.codigo, p.nombre, ef.nombre_comun, p.area_hectareas";
 
         var proyectos = (await connection.QueryAsync<ProyectoComparativo>(sql, new { 
             ProyectoIds = proyectoIds, 
@@ -693,36 +693,36 @@ public class ReporteProductividadService : IReporteProductividadService
         using var connection = _context.CreateConnection();
 
         var sql = @"
-            UPDATE Proyectos 
+            UPDATE proyectos 
             SET 
-                TotalHorasTrabajadas = (
-                    SELECT COALESCE(SUM(da.Horas), 0) 
-                    FROM DetallesActividades da 
-                    WHERE da.ProyectoId = @ProyectoId
+                total_horas_trabajadas = (
+                    SELECT COALESCE(SUM(da.horas), 0) 
+                    FROM detalles_actividad da 
+                    WHERE da.proyecto_id = @ProyectoId
                 ),
-                TotalJornales = (
-                    SELECT COUNT(DISTINCT rd.Id) 
-                    FROM RegistrosDiarios rd
-                    INNER JOIN DetallesActividades da ON rd.Id = da.RegistroDiarioId
-                    WHERE da.ProyectoId = @ProyectoId
+                total_jornales = (
+                    SELECT COUNT(DISTINCT rd.id) 
+                    FROM registros_diarios rd
+                    INNER JOIN detalles_actividad da ON rd.id = da.registro_diario_id
+                    WHERE da.proyecto_id = @ProyectoId
                 ),
-                CostoManoObraAcumulado = (
+                costo_mano_obra_acumulado = (
                     SELECT COALESCE(SUM(sub.CostoDia), 0)
                     FROM (
                         SELECT DISTINCT 
-                            rd.EmpleadoId, 
-                            rd.Fecha,
-                            COALESCE(e.SalarioBase / 30.0, 0) as CostoDia
-                        FROM RegistrosDiarios rd
-                        INNER JOIN Empleados e ON rd.EmpleadoId = e.Id
-                        INNER JOIN DetallesActividades da ON rd.Id = da.RegistroDiarioId
-                        WHERE da.ProyectoId = @ProyectoId
-                        AND e.SalarioBase IS NOT NULL
+                            rd.empleado_id, 
+                            rd.fecha,
+                            COALESCE(e.salario_base / 30.0, 0) as CostoDia
+                        FROM registros_diarios rd
+                        INNER JOIN empleados e ON rd.empleado_id = e.id
+                        INNER JOIN detalles_actividad da ON rd.id = da.registro_diario_id
+                        WHERE da.proyecto_id = @ProyectoId
+                        AND e.salario_base IS NOT NULL
                     ) sub
                 ),
-                FechaUltimaActualizacionMetricas = datetime('now', 'localtime'),
-                FechaModificacion = datetime('now', 'localtime')
-            WHERE Id = @ProyectoId";
+                fecha_ultima_actualizacion_metricas = datetime('now', 'localtime'),
+                fecha_modificacion = datetime('now', 'localtime')
+            WHERE id = @ProyectoId";
 
         try
         {
@@ -741,22 +741,34 @@ public class ReporteProductividadService : IReporteProductividadService
         using var connection = _context.CreateConnection();
 
         var sql = @"
-            UPDATE ProyectosEmpleados 
+            UPDATE proyectos_empleados 
             SET 
-                HorasTrabajadasProyecto = (
-                    SELECT COALESCE(SUM(da.Horas), 0) 
-                    FROM DetallesActividades da
-                    INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-                    WHERE da.ProyectoId = @ProyectoId AND rd.EmpleadoId = @EmpleadoId
+                total_horas_trabajadas = (
+                    SELECT COALESCE(SUM(da.horas), 0) 
+                    FROM detalles_actividad da
+                    INNER JOIN registros_diarios rd ON da.registro_diario_id = rd.id
+                    WHERE da.proyecto_id = @ProyectoId AND rd.empleado_id = @EmpleadoId
                 ),
-                UltimaActividadFecha = (
-                    SELECT MAX(rd.Fecha)
-                    FROM DetallesActividades da
-                    INNER JOIN RegistrosDiarios rd ON da.RegistroDiarioId = rd.Id
-                    WHERE da.ProyectoId = @ProyectoId AND rd.EmpleadoId = @EmpleadoId
+                total_jornales = (
+                    SELECT COUNT(DISTINCT rd.fecha)
+                    FROM registros_diarios rd
+                    INNER JOIN detalles_actividad da ON rd.id = da.registro_diario_id
+                    WHERE da.proyecto_id = @ProyectoId AND rd.empleado_id = @EmpleadoId
                 ),
-                FechaModificacion = datetime('now', 'localtime')
-            WHERE ProyectoId = @ProyectoId AND EmpleadoId = @EmpleadoId";
+                ultima_fecha_trabajo = (
+                    SELECT MAX(rd.fecha)
+                    FROM registros_diarios rd
+                    INNER JOIN detalles_actividad da ON rd.id = da.registro_diario_id
+                    WHERE da.proyecto_id = @ProyectoId AND rd.empleado_id = @EmpleadoId
+                ),
+                dias_trabajados = (
+                    SELECT COUNT(DISTINCT rd.fecha)
+                    FROM registros_diarios rd
+                    INNER JOIN detalles_actividad da ON rd.id = da.registro_diario_id
+                    WHERE da.proyecto_id = @ProyectoId AND rd.empleado_id = @EmpleadoId
+                ),
+                fecha_modificacion = datetime('now', 'localtime')
+            WHERE proyecto_id = @ProyectoId AND empleado_id = @EmpleadoId";
 
         try
         {
@@ -777,7 +789,7 @@ public class ReporteProductividadService : IReporteProductividadService
         {
             // Obtener todos los proyectos activos
             var proyectoIds = await connection.QueryAsync<int>(
-                "SELECT Id FROM Proyectos WHERE Activo = 1");
+                "SELECT id FROM proyectos WHERE activo = 1");
 
             foreach (var proyectoId in proyectoIds)
             {

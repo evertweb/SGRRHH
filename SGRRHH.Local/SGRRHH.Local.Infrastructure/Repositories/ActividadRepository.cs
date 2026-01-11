@@ -81,25 +81,25 @@ public class ActividadRepository : IActividadRepository
     {
         const string sql = @"
             SELECT a.id, a.codigo, a.nombre, a.descripcion, 
-                   COALESCE(a.category_text, a.CategoriaTexto, a.categoria) as CategoriaTexto,
-                   COALESCE(a.category_id, a.CategoriaId) as CategoriaId,
-                   COALESCE(a.unit_of_measure, a.UnidadMedida, 0) as UnidadMedida,
-                   COALESCE(a.unit_abbreviation, a.UnidadAbreviatura) as UnidadAbreviatura,
-                   COALESCE(a.expected_yield, a.RendimientoEsperado) as RendimientoEsperado,
-                   COALESCE(a.minimum_yield, a.RendimientoMinimo) as RendimientoMinimo,
-                   COALESCE(a.unit_cost, a.CostoUnitario) as CostoUnitario,
+                   COALESCE(a.category_text, a.categoria) as CategoriaTexto,
+                   a.category_id as CategoriaId,
+                   COALESCE(a.unit_of_measure, 0) as UnidadMedida,
+                   a.unit_abbreviation as UnidadAbreviatura,
+                   a.expected_yield as RendimientoEsperado,
+                   a.minimum_yield as RendimientoMinimo,
+                   a.unit_cost as CostoUnitario,
                    a.requiere_proyecto as RequiereProyecto,
-                   COALESCE(a.requires_quantity, a.RequiereCantidad, 0) as RequiereCantidad,
-                   COALESCE(a.applicable_project_types, a.TiposProyectoAplicables, a.TiposProyectoAplicables) as TiposProyectoAplicables,
-                   COALESCE(a.applicable_species, a.EspeciesAplicables, a.EspeciesAplicables) as EspeciesAplicables,
+                   COALESCE(a.requires_quantity, 0) as RequiereCantidad,
+                   a.applicable_project_types as TiposProyectoAplicables,
+                   a.applicable_species as EspeciesAplicables,
                    a.orden as Orden,
-                   COALESCE(a.is_featured, a.EsDestacada, 0) as EsDestacada,
+                   COALESCE(a.is_featured, 0) as EsDestacada,
                    a.activo as Activo,
                    a.fecha_creacion as FechaCreacion,
                    a.fecha_modificacion as FechaModificacion,
                    c.id, c.code AS Codigo, c.name AS Nombre, c.color_hex AS ColorHex, c.display_order AS Orden
             FROM actividades a
-            LEFT JOIN activity_categories c ON COALESCE(a.category_id, a.CategoriaId) = c.id
+            LEFT JOIN activity_categories c ON a.category_id = c.id
             WHERE a.id = @Id";
         using var connection = _context.CreateConnection();
         
@@ -121,17 +121,17 @@ public class ActividadRepository : IActividadRepository
     {
         const string sql = @"
             SELECT id, codigo, nombre, descripcion, 
-                   COALESCE(category_text, CategoriaTexto, categoria) as CategoriaTexto,
-                   COALESCE(category_id, CategoriaId) as CategoriaId,
-                   COALESCE(unit_of_measure, UnidadMedida, 0) as UnidadMedida,
-                   COALESCE(unit_abbreviation, UnidadAbreviatura) as UnidadAbreviatura,
-                   COALESCE(expected_yield, RendimientoEsperado) as RendimientoEsperado,
-                   COALESCE(minimum_yield, RendimientoMinimo) as RendimientoMinimo,
-                   COALESCE(unit_cost, CostoUnitario) as CostoUnitario,
+                   COALESCE(category_text, categoria) as CategoriaTexto,
+                   category_id as CategoriaId,
+                   COALESCE(unit_of_measure, 0) as UnidadMedida,
+                   unit_abbreviation as UnidadAbreviatura,
+                   expected_yield as RendimientoEsperado,
+                   minimum_yield as RendimientoMinimo,
+                   unit_cost as CostoUnitario,
                    requiere_proyecto as RequiereProyecto,
-                   COALESCE(requires_quantity, RequiereCantidad, 0) as RequiereCantidad,
-                   COALESCE(applicable_project_types, TiposProyectoAplicables) as TiposProyectoAplicables,
-                   COALESCE(applicable_species, EspeciesAplicables) as EspeciesAplicables,
+                   COALESCE(requires_quantity, 0) as RequiereCantidad,
+                   applicable_project_types as TiposProyectoAplicables,
+                   applicable_species as EspeciesAplicables,
                    orden as Orden,
                    COALESCE(is_featured, 0) as EsDestacada,
                    activo as Activo,
@@ -146,17 +146,17 @@ public class ActividadRepository : IActividadRepository
     {
         const string sql = @"
             SELECT id, codigo, nombre, descripcion, 
-                   COALESCE(category_text, CategoriaTexto, categoria) as CategoriaTexto,
-                   COALESCE(category_id, CategoriaId) as CategoriaId,
-                   COALESCE(unit_of_measure, UnidadMedida, 0) as UnidadMedida,
-                   COALESCE(unit_abbreviation, UnidadAbreviatura) as UnidadAbreviatura,
-                   COALESCE(expected_yield, RendimientoEsperado) as RendimientoEsperado,
-                   COALESCE(minimum_yield, RendimientoMinimo) as RendimientoMinimo,
-                   COALESCE(unit_cost, CostoUnitario) as CostoUnitario,
+                   COALESCE(category_text, categoria) as CategoriaTexto,
+                   category_id as CategoriaId,
+                   COALESCE(unit_of_measure, 0) as UnidadMedida,
+                   unit_abbreviation as UnidadAbreviatura,
+                   expected_yield as RendimientoEsperado,
+                   minimum_yield as RendimientoMinimo,
+                   unit_cost as CostoUnitario,
                    requiere_proyecto as RequiereProyecto,
-                   COALESCE(requires_quantity, RequiereCantidad, 0) as RequiereCantidad,
-                   COALESCE(applicable_project_types, TiposProyectoAplicables) as TiposProyectoAplicables,
-                   COALESCE(applicable_species, EspeciesAplicables) as EspeciesAplicables,
+                   COALESCE(requires_quantity, 0) as RequiereCantidad,
+                   applicable_project_types as TiposProyectoAplicables,
+                   applicable_species as EspeciesAplicables,
                    orden as Orden,
                    COALESCE(is_featured, 0) as EsDestacada,
                    activo as Activo,
@@ -171,25 +171,25 @@ public class ActividadRepository : IActividadRepository
     {
         const string sql = @"
             SELECT a.id, a.codigo, a.nombre, a.descripcion, 
-                   COALESCE(a.category_text, a.CategoriaTexto, a.categoria) as CategoriaTexto,
-                   COALESCE(a.category_id, a.CategoriaId) as CategoriaId,
-                   COALESCE(a.unit_of_measure, a.UnidadMedida, 0) as UnidadMedida,
-                   COALESCE(a.unit_abbreviation, a.UnidadAbreviatura) as UnidadAbreviatura,
-                   COALESCE(a.expected_yield, a.RendimientoEsperado) as RendimientoEsperado,
-                   COALESCE(a.minimum_yield, a.RendimientoMinimo) as RendimientoMinimo,
-                   COALESCE(a.unit_cost, a.CostoUnitario) as CostoUnitario,
+                   COALESCE(a.category_text, a.categoria) as CategoriaTexto,
+                   a.category_id as CategoriaId,
+                   COALESCE(a.unit_of_measure, 0) as UnidadMedida,
+                   a.unit_abbreviation as UnidadAbreviatura,
+                   a.expected_yield as RendimientoEsperado,
+                   a.minimum_yield as RendimientoMinimo,
+                   a.unit_cost as CostoUnitario,
                    a.requiere_proyecto as RequiereProyecto,
-                   COALESCE(a.requires_quantity, a.RequiereCantidad, 0) as RequiereCantidad,
-                   COALESCE(a.applicable_project_types, a.TiposProyectoAplicables, a.TiposProyectoAplicables) as TiposProyectoAplicables,
-                   COALESCE(a.applicable_species, a.EspeciesAplicables, a.EspeciesAplicables) as EspeciesAplicables,
+                   COALESCE(a.requires_quantity, 0) as RequiereCantidad,
+                   a.applicable_project_types as TiposProyectoAplicables,
+                   a.applicable_species as EspeciesAplicables,
                    a.orden as Orden,
-                   COALESCE(a.is_featured, a.EsDestacada, 0) as EsDestacada,
+                   COALESCE(a.is_featured, 0) as EsDestacada,
                    a.activo as Activo,
                    a.fecha_creacion as FechaCreacion,
                    a.fecha_modificacion as FechaModificacion,
                    c.id, c.code AS Codigo, c.name AS Nombre, c.color_hex AS ColorHex, c.display_order AS CatOrden
             FROM actividades a
-            LEFT JOIN activity_categories c ON COALESCE(a.category_id, a.CategoriaId) = c.id
+            LEFT JOIN activity_categories c ON a.category_id = c.id
             ORDER BY COALESCE(c.display_order, 999), a.orden, a.nombre";
         
         using var connection = _context.CreateConnection();
@@ -214,25 +214,25 @@ public class ActividadRepository : IActividadRepository
     {
         const string sql = @"
             SELECT a.id, a.codigo, a.nombre, a.descripcion, 
-                   COALESCE(a.category_text, a.CategoriaTexto, a.categoria) as CategoriaTexto,
-                   COALESCE(a.category_id, a.CategoriaId) as CategoriaId,
-                   COALESCE(a.unit_of_measure, a.UnidadMedida, 0) as UnidadMedida,
-                   COALESCE(a.unit_abbreviation, a.UnidadAbreviatura) as UnidadAbreviatura,
-                   COALESCE(a.expected_yield, a.RendimientoEsperado) as RendimientoEsperado,
-                   COALESCE(a.minimum_yield, a.RendimientoMinimo) as RendimientoMinimo,
-                   COALESCE(a.unit_cost, a.CostoUnitario) as CostoUnitario,
+                   COALESCE(a.category_text, a.categoria) as CategoriaTexto,
+                   a.category_id as CategoriaId,
+                   COALESCE(a.unit_of_measure, 0) as UnidadMedida,
+                   a.unit_abbreviation as UnidadAbreviatura,
+                   a.expected_yield as RendimientoEsperado,
+                   a.minimum_yield as RendimientoMinimo,
+                   a.unit_cost as CostoUnitario,
                    a.requiere_proyecto as RequiereProyecto,
-                   COALESCE(a.requires_quantity, a.RequiereCantidad, 0) as RequiereCantidad,
-                   COALESCE(a.applicable_project_types, a.TiposProyectoAplicables, a.TiposProyectoAplicables) as TiposProyectoAplicables,
-                   COALESCE(a.applicable_species, a.EspeciesAplicables, a.EspeciesAplicables) as EspeciesAplicables,
+                   COALESCE(a.requires_quantity, 0) as RequiereCantidad,
+                   a.applicable_project_types as TiposProyectoAplicables,
+                   a.applicable_species as EspeciesAplicables,
                    a.orden as Orden,
-                   COALESCE(a.is_featured, a.EsDestacada, 0) as EsDestacada,
+                   COALESCE(a.is_featured, 0) as EsDestacada,
                    a.activo as Activo,
                    a.fecha_creacion as FechaCreacion,
                    a.fecha_modificacion as FechaModificacion,
                    c.id, c.code AS Codigo, c.name AS Nombre, c.color_hex AS ColorHex, c.display_order AS CatOrden
             FROM actividades a
-            LEFT JOIN activity_categories c ON COALESCE(a.category_id, a.CategoriaId) = c.id
+            LEFT JOIN activity_categories c ON a.category_id = c.id
             WHERE a.activo = 1
             ORDER BY COALESCE(c.display_order, 999), a.orden, a.nombre";
         
@@ -258,24 +258,24 @@ public class ActividadRepository : IActividadRepository
     {
         const string sql = @"
             SELECT id, codigo, nombre, descripcion, 
-                   COALESCE(category_text, CategoriaTexto, categoria) as CategoriaTexto,
-                   COALESCE(category_id, CategoriaId) as CategoriaId,
-                   COALESCE(unit_of_measure, UnidadMedida, 0) as UnidadMedida,
-                   COALESCE(unit_abbreviation, UnidadAbreviatura) as UnidadAbreviatura,
-                   COALESCE(expected_yield, RendimientoEsperado) as RendimientoEsperado,
-                   COALESCE(minimum_yield, RendimientoMinimo) as RendimientoMinimo,
-                   COALESCE(unit_cost, CostoUnitario) as CostoUnitario,
+                   COALESCE(category_text, categoria) as CategoriaTexto,
+                   category_id as CategoriaId,
+                   COALESCE(unit_of_measure, 0) as UnidadMedida,
+                   unit_abbreviation as UnidadAbreviatura,
+                   expected_yield as RendimientoEsperado,
+                   minimum_yield as RendimientoMinimo,
+                   unit_cost as CostoUnitario,
                    requiere_proyecto as RequiereProyecto,
-                   COALESCE(requires_quantity, RequiereCantidad, 0) as RequiereCantidad,
-                   COALESCE(applicable_project_types, TiposProyectoAplicables) as TiposProyectoAplicables,
-                   COALESCE(applicable_species, EspeciesAplicables) as EspeciesAplicables,
+                   COALESCE(requires_quantity, 0) as RequiereCantidad,
+                   applicable_project_types as TiposProyectoAplicables,
+                   applicable_species as EspeciesAplicables,
                    orden as Orden,
                    COALESCE(is_featured, 0) as EsDestacada,
                    activo as Activo,
                    fecha_creacion as FechaCreacion,
                    fecha_modificacion as FechaModificacion
             FROM actividades 
-            WHERE (categoria = @Categoria OR COALESCE(category_text, CategoriaTexto) = @Categoria) AND activo = 1
+            WHERE (categoria = @Categoria OR category_text = @Categoria) AND activo = 1
             ORDER BY orden, nombre";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<Actividad>(sql, new { Categoria = categoria });
@@ -285,26 +285,26 @@ public class ActividadRepository : IActividadRepository
     {
         const string sql = @"
             SELECT a.id, a.codigo, a.nombre, a.descripcion, 
-                   COALESCE(a.category_text, a.CategoriaTexto, a.categoria) as CategoriaTexto,
-                   COALESCE(a.category_id, a.CategoriaId) as CategoriaId,
-                   COALESCE(a.unit_of_measure, a.UnidadMedida, 0) as UnidadMedida,
-                   COALESCE(a.unit_abbreviation, a.UnidadAbreviatura) as UnidadAbreviatura,
-                   COALESCE(a.expected_yield, a.RendimientoEsperado) as RendimientoEsperado,
-                   COALESCE(a.minimum_yield, a.RendimientoMinimo) as RendimientoMinimo,
-                   COALESCE(a.unit_cost, a.CostoUnitario) as CostoUnitario,
+                   COALESCE(a.category_text, a.categoria) as CategoriaTexto,
+                   a.category_id as CategoriaId,
+                   COALESCE(a.unit_of_measure, 0) as UnidadMedida,
+                   a.unit_abbreviation as UnidadAbreviatura,
+                   a.expected_yield as RendimientoEsperado,
+                   a.minimum_yield as RendimientoMinimo,
+                   a.unit_cost as CostoUnitario,
                    a.requiere_proyecto as RequiereProyecto,
-                   COALESCE(a.requires_quantity, a.RequiereCantidad, 0) as RequiereCantidad,
-                   COALESCE(a.applicable_project_types, a.TiposProyectoAplicables, a.TiposProyectoAplicables) as TiposProyectoAplicables,
-                   COALESCE(a.applicable_species, a.EspeciesAplicables, a.EspeciesAplicables) as EspeciesAplicables,
+                   COALESCE(a.requires_quantity, 0) as RequiereCantidad,
+                   a.applicable_project_types as TiposProyectoAplicables,
+                   a.applicable_species as EspeciesAplicables,
                    a.orden as Orden,
-                   COALESCE(a.is_featured, a.EsDestacada, 0) as EsDestacada,
+                   COALESCE(a.is_featured, 0) as EsDestacada,
                    a.activo as Activo,
                    a.fecha_creacion as FechaCreacion,
                    a.fecha_modificacion as FechaModificacion,
                    c.id, c.code AS Codigo, c.name AS Nombre, c.color_hex AS ColorHex
             FROM actividades a
-            LEFT JOIN activity_categories c ON COALESCE(a.category_id, a.CategoriaId) = c.id
-            WHERE COALESCE(a.category_id, a.CategoriaId) = @CategoriaId AND a.activo = 1
+            LEFT JOIN activity_categories c ON a.category_id = c.id
+            WHERE a.category_id = @CategoriaId AND a.activo = 1
             ORDER BY a.orden, a.nombre";
         
         using var connection = _context.CreateConnection();
@@ -326,10 +326,10 @@ public class ActividadRepository : IActividadRepository
     public async Task<IEnumerable<string>> GetCategoriasAsync()
     {
         const string sql = @"
-            SELECT DISTINCT COALESCE(category_text, CategoriaTexto, categoria) as Categoria 
+            SELECT DISTINCT COALESCE(category_text, categoria) as Categoria 
             FROM actividades 
-            WHERE COALESCE(category_text, CategoriaTexto, categoria) IS NOT NULL 
-              AND COALESCE(category_text, CategoriaTexto, categoria) <> ''
+            WHERE COALESCE(category_text, categoria) IS NOT NULL 
+              AND COALESCE(category_text, categoria) <> ''
             ORDER BY Categoria";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<string>(sql);
@@ -339,26 +339,26 @@ public class ActividadRepository : IActividadRepository
     {
         const string sql = @"
             SELECT a.id, a.codigo, a.nombre, a.descripcion, 
-                   COALESCE(a.category_text, a.CategoriaTexto, a.categoria) as CategoriaTexto,
-                   COALESCE(a.category_id, a.CategoriaId) as CategoriaId,
-                   COALESCE(a.unit_of_measure, a.UnidadMedida, 0) as UnidadMedida,
-                   COALESCE(a.unit_abbreviation, a.UnidadAbreviatura) as UnidadAbreviatura,
-                   COALESCE(a.expected_yield, a.RendimientoEsperado) as RendimientoEsperado,
-                   COALESCE(a.minimum_yield, a.RendimientoMinimo) as RendimientoMinimo,
-                   COALESCE(a.unit_cost, a.CostoUnitario) as CostoUnitario,
+                   COALESCE(a.category_text, a.categoria) as CategoriaTexto,
+                   a.category_id as CategoriaId,
+                   COALESCE(a.unit_of_measure, 0) as UnidadMedida,
+                   a.unit_abbreviation as UnidadAbreviatura,
+                   a.expected_yield as RendimientoEsperado,
+                   a.minimum_yield as RendimientoMinimo,
+                   a.unit_cost as CostoUnitario,
                    a.requiere_proyecto as RequiereProyecto,
-                   COALESCE(a.requires_quantity, a.RequiereCantidad, 0) as RequiereCantidad,
-                   COALESCE(a.applicable_project_types, a.TiposProyectoAplicables, a.TiposProyectoAplicables) as TiposProyectoAplicables,
-                   COALESCE(a.applicable_species, a.EspeciesAplicables, a.EspeciesAplicables) as EspeciesAplicables,
+                   COALESCE(a.requires_quantity, 0) as RequiereCantidad,
+                   a.applicable_project_types as TiposProyectoAplicables,
+                   a.applicable_species as EspeciesAplicables,
                    a.orden as Orden,
-                   COALESCE(a.is_featured, a.EsDestacada, 0) as EsDestacada,
+                   COALESCE(a.is_featured, 0) as EsDestacada,
                    a.activo as Activo,
                    a.fecha_creacion as FechaCreacion,
                    a.fecha_modificacion as FechaModificacion,
                    c.id, c.code AS Codigo, c.name AS Nombre, c.color_hex AS ColorHex
             FROM actividades a
-            LEFT JOIN activity_categories c ON COALESCE(a.category_id, a.CategoriaId) = c.id
-            WHERE COALESCE(a.is_featured, a.EsDestacada, 0) = 1 AND a.activo = 1
+            LEFT JOIN activity_categories c ON a.category_id = c.id
+            WHERE COALESCE(a.is_featured, 0) = 1 AND a.activo = 1
             ORDER BY a.orden, a.nombre";
         
         using var connection = _context.CreateConnection();
@@ -384,29 +384,29 @@ public class ActividadRepository : IActividadRepository
         var term = $"%{searchTerm}%";
         const string sql = @"
             SELECT a.id, a.codigo, a.nombre, a.descripcion, 
-                   COALESCE(a.category_text, a.CategoriaTexto, a.categoria) as CategoriaTexto,
-                   COALESCE(a.category_id, a.CategoriaId) as CategoriaId,
-                   COALESCE(a.unit_of_measure, a.UnidadMedida, 0) as UnidadMedida,
-                   COALESCE(a.unit_abbreviation, a.UnidadAbreviatura) as UnidadAbreviatura,
-                   COALESCE(a.expected_yield, a.RendimientoEsperado) as RendimientoEsperado,
-                   COALESCE(a.minimum_yield, a.RendimientoMinimo) as RendimientoMinimo,
-                   COALESCE(a.unit_cost, a.CostoUnitario) as CostoUnitario,
+                   COALESCE(a.category_text, a.categoria) as CategoriaTexto,
+                   a.category_id as CategoriaId,
+                   COALESCE(a.unit_of_measure, 0) as UnidadMedida,
+                   a.unit_abbreviation as UnidadAbreviatura,
+                   a.expected_yield as RendimientoEsperado,
+                   a.minimum_yield as RendimientoMinimo,
+                   a.unit_cost as CostoUnitario,
                    a.requiere_proyecto as RequiereProyecto,
-                   COALESCE(a.requires_quantity, a.RequiereCantidad, 0) as RequiereCantidad,
-                   COALESCE(a.applicable_project_types, a.TiposProyectoAplicables, a.TiposProyectoAplicables) as TiposProyectoAplicables,
-                   COALESCE(a.applicable_species, a.EspeciesAplicables, a.EspeciesAplicables) as EspeciesAplicables,
+                   COALESCE(a.requires_quantity, 0) as RequiereCantidad,
+                   a.applicable_project_types as TiposProyectoAplicables,
+                   a.applicable_species as EspeciesAplicables,
                    a.orden as Orden,
-                   COALESCE(a.is_featured, a.EsDestacada, 0) as EsDestacada,
+                   COALESCE(a.is_featured, 0) as EsDestacada,
                    a.activo as Activo,
                    a.fecha_creacion as FechaCreacion,
                    a.fecha_modificacion as FechaModificacion,
                    c.id, c.code AS Codigo, c.name AS Nombre, c.color_hex AS ColorHex
             FROM actividades a
-            LEFT JOIN activity_categories c ON COALESCE(a.category_id, a.CategoriaId) = c.id
+            LEFT JOIN activity_categories c ON a.category_id = c.id
             WHERE lower(a.nombre) LIKE lower(@Term) 
                OR lower(a.codigo) LIKE lower(@Term) 
                OR lower(a.descripcion) LIKE lower(@Term)
-               OR lower(COALESCE(a.category_text, a.CategoriaTexto)) LIKE lower(@Term)
+               OR lower(COALESCE(a.category_text, a.categoria)) LIKE lower(@Term)
             ORDER BY a.orden, a.nombre";
 
         using var connection = _context.CreateConnection();

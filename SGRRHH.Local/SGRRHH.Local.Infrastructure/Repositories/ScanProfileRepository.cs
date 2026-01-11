@@ -149,6 +149,49 @@ public class ScanProfileRepository : IScanProfileRepository
         await connection.ExecuteAsync(sql, new { Id = id, LastUsedAt = DateTime.Now.ToString("o") });
     }
 
+    /// <summary>
+    /// Inicializa el perfil predeterminado DOCUMENTO si no existe
+    /// </summary>
+    public async Task InitializeDefaultProfilesAsync()
+    {
+        try
+        {
+            var existingProfiles = await GetAllAsync();
+            if (existingProfiles.Count > 0)
+            {
+                _logger.LogDebug("Ya existen {Count} perfiles de escaneo, omitiendo inicialización", existingProfiles.Count);
+                return;
+            }
+            
+            _logger.LogInformation("Inicializando perfil de escaneo DOCUMENTO...");
+            
+            // Un solo perfil basado en las opciones de IJ Scan (Canon)
+            var documentoProfile = new ScanProfileDto
+            {
+                Name = "DOCUMENTO",
+                Description = "Perfil estándar para escaneo de documentos",
+                IsDefault = true,
+                Dpi = 300,
+                ColorMode = ScanColorMode.Color,
+                Source = ScanSource.Flatbed,
+                PageSize = ScanPageSize.Letter,
+                Brightness = 0,
+                Contrast = 0,
+                Gamma = 1.0f,
+                Sharpness = 0,
+                AutoDeskew = false,
+                AutoCrop = false
+            };
+            
+            await SaveAsync(documentoProfile);
+            _logger.LogInformation("Perfil DOCUMENTO creado exitosamente");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al inicializar perfil de escaneo predeterminado");
+        }
+    }
+
     #region Mapeo DB <-> DTO
 
     private static ScanProfileDto MapToDto(ScanProfileDbRow row)

@@ -151,7 +151,9 @@
     display: flex;
     gap: 16px;
     flex: 1;
-    min-height: 300px;
+    min-height: 320px;
+    max-height: 500px;
+    overflow: hidden;
 }
 
 /* ========================================
@@ -254,12 +256,14 @@
    ======================================== */
 .scanner-preview-container {
     flex: 1;
-    min-height: 280px;
+    min-height: 320px;
+    max-height: 450px;
     border: 2px dashed #ccc;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: #f5f5f5;
+    overflow: hidden;
 }
 
 .scanner-placeholder {
@@ -290,6 +294,7 @@
     flex-direction: column;
     align-items: center;
     padding: 8px;
+    overflow: hidden;
 }
 
 .scanner-preview-nav {
@@ -321,7 +326,7 @@
 
 .scanner-preview-image {
     flex: 1;
-    max-height: 220px;
+    max-height: 300px;
     overflow: hidden;
     border: 1px solid #000;
     background-color: #fff;
@@ -332,8 +337,24 @@
 
 .scanner-preview-image img {
     max-width: 100%;
-    max-height: 220px;
+    max-height: 300px;
     object-fit: contain;
+}
+
+/* Imagen vertical (portrait) - más alta que ancha */
+.scanner-preview-image.portrait {
+    max-height: 350px;
+}
+
+.scanner-preview-image.portrait img {
+    max-height: 350px;
+    max-width: auto;
+}
+
+/* Imagen horizontal (landscape) - más ancha que alta */
+.scanner-preview-image.landscape img {
+    max-width: 100%;
+    max-height: 250px;
 }
 
 .scanner-preview-info {
@@ -625,6 +646,29 @@
     gap: 8px;
     margin-top: 4px;
     justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.scanner-btn-preview {
+    background-color: #1976d2;
+    color: #fff;
+    border-color: #1976d2;
+}
+
+.scanner-btn-preview:hover:not(:disabled) {
+    background-color: #1565c0;
+    border-color: #1565c0;
+}
+
+.scanner-btn-apply {
+    background-color: #2e7d32;
+    color: #fff;
+    border-color: #2e7d32;
+}
+
+.scanner-btn-apply:hover:not(:disabled) {
+    background-color: #1b5e20;
+    border-color: #1b5e20;
 }
 
 /* ========================================
@@ -758,7 +802,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 200px;
+    min-height: 250px;
+    max-height: 400px;
 }
 
 .scanner-preview-canvas img {
@@ -766,6 +811,7 @@
     max-height: 100%;
     object-fit: contain;
     user-select: none;
+    -webkit-user-drag: none;
     pointer-events: none;
 }
 
@@ -774,6 +820,7 @@
     border: 2px dashed #1976d2;
     background-color: rgba(25, 118, 210, 0.2);
     pointer-events: none;
+    z-index: 10;
 }
 
 .scanner-selection-active {

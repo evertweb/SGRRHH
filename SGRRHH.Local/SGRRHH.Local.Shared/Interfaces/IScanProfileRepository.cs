@@ -41,4 +41,9 @@ public interface IScanProfileRepository
     /// Actualiza la fecha de último uso del perfil
     /// </summary>
     Task UpdateLastUsedAsync(int id);
+    
+    /// <summary>
+    /// Inicializa perfiles predeterminados si no existen
+    /// </summary>
+    Task InitializeDefaultProfilesAsync();
 }

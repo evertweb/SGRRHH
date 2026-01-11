@@ -197,8 +197,8 @@ public class IncapacidadRepository : IIncapacidadRepository
             SELECT 
                 i.id as Id,
                 i.numero_incapacidad as NumeroIncapacidad,
-                e.nombre || ' ' || e.apellidos as EmpleadoNombre,
-                e.numero_documento as EmpleadoCedula,
+                e.nombres || ' ' || e.apellidos as EmpleadoNombre,
+                e.cedula as EmpleadoCedula,
                 i.empleado_id as EmpleadoId,
                 i.fecha_inicio as FechaInicio,
                 i.fecha_fin as FechaFin,
@@ -662,12 +662,12 @@ public class IncapacidadRepository : IIncapacidadRepository
         const string sql = @"
             SELECT 
                 i.*,
-                e.nombre || ' ' || e.apellidos as EmpleadoNombre,
-                e.numero_documento as EmpleadoCedula,
+                e.nombres || ' ' || e.apellidos as EmpleadoNombre,
+                e.cedula as EmpleadoCedula,
                 c.nombre as EmpleadoCargo,
                 d.nombre as EmpleadoDepartamento,
-                cont.salario_basico as EmpleadoSalario,
-                u.nombre_usuario as RegistradoPorNombre,
+                cont.salario as EmpleadoSalario,
+                u.nombre_completo as RegistradoPorNombre,
                 p.numero_acta as PermisoOrigenNumero,
                 ia.numero_incapacidad as IncapacidadAnteriorNumero
             FROM incapacidades i
@@ -797,8 +797,8 @@ public class IncapacidadRepository : IIncapacidadRepository
         const string sql = @"
             SELECT 
                 i.numero_incapacidad as NumeroIncapacidad,
-                e.numero_documento as EmpleadoCedula,
-                e.nombre || ' ' || e.apellidos as EmpleadoNombre,
+                e.cedula as EmpleadoCedula,
+                e.nombres || ' ' || e.apellidos as EmpleadoNombre,
                 c.nombre as Cargo,
                 i.fecha_inicio as FechaInicio,
                 i.fecha_fin as FechaFin,

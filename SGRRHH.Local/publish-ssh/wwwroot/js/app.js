@@ -456,3 +456,92 @@ window.initHospitalForm = function() {
         });
     });
 };
+
+// ========================================
+// SCANNER AREA SELECTION HELPERS
+// ========================================
+
+/**
+ * Obtiene las dimensiones de un elemento por selector CSS
+ * @returns {{ width: number, height: number, left: number, top: number }}
+ */
+window.getElementBounds = function(selector) {
+    const element = document.querySelector(selector);
+    if (!element) return null;
+    
+    const rect = element.getBoundingClientRect();
+    return {
+        width: rect.width,
+        height: rect.height,
+        left: rect.left,
+        top: rect.top
+    };
+};
+
+/**
+ * Obtiene las dimensiones de la imagen dentro del contenedor de preview
+ * @returns {{ width: number, height: number, offsetX: number, offsetY: number }}
+ */
+window.getScannerPreviewImageBounds = function() {
+    const container = document.querySelector('.scanner-preview-canvas');
+    const img = container?.querySelector('img');
+    
+    if (!container || !img) return null;
+    
+    const containerRect = container.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    
+    return {
+        containerWidth: containerRect.width,
+        containerHeight: containerRect.height,
+        imageWidth: imgRect.width,
+        imageHeight: imgRect.height,
+        offsetX: imgRect.left - containerRect.left,
+        offsetY: imgRect.top - containerRect.top
+    };
+};
+
+/**
+ * Calcula la posición relativa del mouse como porcentaje de la imagen
+ * @param {number} clientX - Posición X del mouse (event.clientX)
+ * @param {number} clientY - Posición Y del mouse (event.clientY)
+ * @returns {{ x: number, y: number } | null} - Porcentaje (0-100) o null si está fuera
+ */
+window.getMousePositionOnScannerImage = function(clientX, clientY) {
+    const container = document.querySelector('.scanner-preview-canvas');
+    const img = container?.querySelector('img');
+    
+    if (!container || !img) return null;
+    
+    const containerRect = container.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    
+    // Posición relativa a la imagen
+    const relX = clientX - imgRect.left;
+    const relY = clientY - imgRect.top;
+    
+    // Convertir a porcentaje
+    const percentX = Math.max(0, Math.min(100, (relX / imgRect.width) * 100));
+    const percentY = Math.max(0, Math.min(100, (relY / imgRect.height) * 100));
+    
+    return { x: percentX, y: percentY };
+};
+
+/**
+ * Calcula la posición del mouse relativa al contenedor como porcentaje
+ * @param {MouseEvent} event
+ * @returns {{ x: number, y: number } | null}
+ */
+window.getMousePercentInContainer = function(event) {
+    const container = document.querySelector('.scanner-preview-canvas');
+    if (!container) return null;
+    
+    const rect = container.getBoundingClientRect();
+    const relX = event.clientX - rect.left;
+    const relY = event.clientY - rect.top;
+    
+    return {
+        x: Math.max(0, Math.min(100, (relX / rect.width) * 100)),
+        y: Math.max(0, Math.min(100, (relY / rect.height) * 100))
+    };
+};
