@@ -1,10 +1,25 @@
 @if (IsVisible)
 {
-    <div class="loading-overlay">
-        <div class="loading-content">
-            <div class="satellite-spinner">@GetSatelliteFrame()</div>
-            <div class="loading-message">@Message</div>
-            <div class="loading-dots">@dots</div>
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background-color: rgba(255, 255, 255, 0.9); z-index: 9999; 
+                display: flex; align-items: center; justify-content: center;">
+        <div style="background-color: #ffffff; border: 2px solid #000000; 
+                    padding: 20px; min-width: 400px; text-align: center;">
+            <div style="font-family: 'Courier New', monospace; font-size: 16px; 
+                        font-weight: bold; margin-bottom: 15px; letter-spacing: 2px;">
+                @Message
+            </div>
+            <div style="width: 100%; height: 30px; border: 2px solid #000000; 
+                        background-color: #ffffff; position: relative;">
+                <div style="position: absolute; top: 0; left: 0; height: 100%; width: 100%; 
+                            background-image: repeating-linear-gradient(90deg, #000000 0px, #000000 10px, #ffffff 10px, #ffffff 20px); 
+                            background-size: 40px 100%;">
+                </div>
+            </div>
+            <div style="font-family: 'Courier New', monospace; font-size: 12px; 
+                        margin-top: 10px; color: #666666;">
+                OPERACION EN CURSO - ESPERE
+            </div>
         </div>
     </div>
 }
@@ -15,72 +30,4 @@
     
     [Parameter]
     public string Message { get; set; } = "PROCESANDO";
-    
-    private int frameIndex = 0;
-    private string dots = ".";
-    private Timer? animationTimer;
-    
-    private readonly string[] satelliteFrames = new[]
-    {
-        @"    ___
-   /   \
-  | ◯ ◯ |
-  |  ▼  |
-   \___/
-    |█|
-   /| |\
-  █ | | █",
-        @"    ___
-   /   \
-  | ◯ ◯ |
-  |  ▼  |
-   \___/
-    |█|
-   /|█|\
-  █ |█| █",
-        @"    ___
-   /   \
-  | ◯ ◯ |
-  |  ▼  |
-   \___/
-    |█|
-  /|█|█\
-  █|█|█ █",
-        @"    ___
-   /   \
-  | ◯ ◯ |
-  |  ▼  |
-   \___/
-    |█|
-   /|█|\
-  █ |█| █"
-    };
-    
-    protected override void OnInitialized()
-    {
-        animationTimer = new Timer(_ =>
-        {
-            frameIndex = (frameIndex + 1) % satelliteFrames.Length;
-            
-            // Animate dots
-            switch (dots.Length)
-            {
-                case 1: dots = ".."; break;
-                case 2: dots = "..."; break;
-                default: dots = "."; break;
-            }
-            
-            InvokeAsync(StateHasChanged);
-        }, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(300));
-    }
-    
-    private string GetSatelliteFrame()
-    {
-        return satelliteFrames[frameIndex];
-    }
-    
-    public void Dispose()
-    {
-        animationTimer?.Dispose();
-    }
 }

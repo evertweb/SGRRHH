@@ -1,0 +1,90 @@
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Domain.Enums
+
+<table class="tabla-seguimiento">
+    <thead>
+        <tr>
+            <th style="width: 100px;">ACTA</th>
+            <th>EMPLEADO</th>
+            <th>TIPO PERMISO</th>
+            <th style="width: 90px;">FECHA</th>
+            <th style="width: 100px;">TIPO</th>
+            <th style="width: 100px;">FECHA LÍMITE</th>
+            <th style="width: 80px;">VENCIDO</th>
+            <th style="width: 150px;">ACCIONES</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Permisos.Any())
+        {
+            <tr>
+                <td colspan="8" class="empty-cell">NO HAY PERMISOS VENCIDOS</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var permiso in Permisos)
+            {
+                var tipoVencimiento = permiso.TipoResolucion == TipoResolucionPermiso.Compensado 
+                    ? "COMPENSACIÓN" 
+                    : "DOCUMENTO";
+                var diasVencido = permiso.DiasRestantes.HasValue 
+                    ? Math.Abs(permiso.DiasRestantes.Value) 
+                    : 0;
+                
+                <tr>
+                    <td class="td-acta">@permiso.NumeroActa</td>
+                    <td>@permiso.EmpleadoNombre</td>
+                    <td>@permiso.TipoPermiso</td>
+                    <td class="td-centro">@permiso.FechaInicio.ToString("dd/MM/yy")</td>
+                    <td class="td-centro">
+                        @if (tipoVencimiento == "COMPENSACIÓN")
+                        {
+                            <span class="badge badge-compensacion">@tipoVencimiento</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-pendiente">@tipoVencimiento</span>
+                        }
+                    </td>
+                    <td class="td-centro">
+                        @if (permiso.FechaLimite.HasValue)
+                        {
+                            @permiso.FechaLimite.Value.ToString("dd/MM/yy")
+                        }
+                    </td>
+                    <td class="td-centro">
+                        <span class="badge badge-vencido">@diasVencido DÍAS</span>
+                    </td>
+                    <td class="td-centro">
+                        <button class="btn btn-sm" @onclick="() => OnVerDetalle.InvokeAsync(permiso.Id)">VER</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => OnCambiarResolucion.InvokeAsync(permiso)">RESOLVER</button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@if (Permisos.Any())
+{
+    var docVencidos = Permisos.Count(p => p.TipoResolucion != TipoResolucionPermiso.Compensado);
+    var compVencidos = Permisos.Count(p => p.TipoResolucion == TipoResolucionPermiso.Compensado);
+    
+    <div style="font-size: 11px; color: #666; margin-top: 10px;">
+        Total vencidos: @Permisos.Count | 
+        Documentos: @docVencidos | 
+        Compensaciones: @compVencidos
+    </div>
+}
+
+@code {
+    [Parameter]
+    public List<PermisoConSeguimiento> Permisos { get; set; } = new();
+    
+    [Parameter]
+    public EventCallback<int> OnVerDetalle { get; set; }
+    
+    [Parameter]
+    public EventCallback<PermisoConSeguimiento> OnCambiarResolucion { get; set; }
+}

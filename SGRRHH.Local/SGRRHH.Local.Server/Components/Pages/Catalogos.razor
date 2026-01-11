@@ -9,57 +9,61 @@
 @inject IProyectoRepository ProyectoRepository
 @inject IActividadRepository ActividadRepository
 @inject IEmpleadoRepository EmpleadoRepository
+@inject IKeyboardShortcutService KeyboardShortcutService
 @inject NavigationManager Navigation
 @inject ILogger<Catalogos> Logger
+@implements IDisposable
 
 <PageTitle>Catálogos - SGRRHH</PageTitle>
 
-<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
-
-<h1 class="page-title">GESTIÓN DE CATÁLOGOS</h1>
+<div class="hospital-page-header">
+    <div class="hospital-page-title">GESTIÓN DE CATÁLOGOS</div>
+</div>
 
 @if (errorMessage != null)
 {
-    <div class="error-block">
-        <h3>ERROR</h3>
-        <p>@errorMessage</p>
-        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    <div class="hospital-error-block">
+        <div class="hospital-error-header">ERROR</div>
+        <div class="hospital-error-body">@errorMessage</div>
+        <div class="hospital-error-footer">
+            <button class="hospital-btn" @onclick="() => errorMessage = null">ACEPTAR</button>
+        </div>
     </div>
 }
 
 @if (successMessage != null)
 {
-    <div class="success-block">
-        <p>@successMessage</p>
+    <div class="hospital-success-block">
+        @successMessage
     </div>
 }
 
 <!-- Tabs -->
-<div class="tabs-container">
-    <div class="tabs-header">
-        <button class="tab-button @(activeTab == "departamentos" ? "active" : "")" 
+<div class="hospital-tabs-container">
+    <div class="hospital-tabs-header">
+        <button class="hospital-tab-button @(activeTab == "departamentos" ? "hospital-tab-active" : "")" 
                 @onclick='() => ChangeTab("departamentos")'>
             DEPARTAMENTOS
         </button>
-        <button class="tab-button @(activeTab == "cargos" ? "active" : "")" 
+        <button class="hospital-tab-button @(activeTab == "cargos" ? "hospital-tab-active" : "")" 
                 @onclick='() => ChangeTab("cargos")'>
             CARGOS
         </button>
-        <button class="tab-button @(activeTab == "tiposPermiso" ? "active" : "")" 
+        <button class="hospital-tab-button @(activeTab == "tiposPermiso" ? "hospital-tab-active" : "")" 
                 @onclick='() => ChangeTab("tiposPermiso")'>
             TIPOS DE PERMISO
         </button>
-        <button class="tab-button @(activeTab == "proyectos" ? "active" : "")" 
+        <button class="hospital-tab-button @(activeTab == "proyectos" ? "hospital-tab-active" : "")" 
                 @onclick='() => ChangeTab("proyectos")'>
             PROYECTOS
         </button>
-        <button class="tab-button @(activeTab == "actividades" ? "active" : "")" 
+        <button class="hospital-tab-button @(activeTab == "actividades" ? "hospital-tab-active" : "")" 
                 @onclick='() => ChangeTab("actividades")'>
             ACTIVIDADES
         </button>
     </div>
     
-    <div class="tabs-content">
+    <div class="hospital-tabs-content">
         @if (activeTab == "departamentos")
         {
             <DepartamentosTab @bind-ErrorMessage="errorMessage" 
@@ -89,8 +93,7 @@
 </div>
 
 @code {
-    private KeyboardHandler? keyboardHandler;
-    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    private const string PageId = "catalogos";
     
     private string activeTab = "departamentos";
     private string? errorMessage;
@@ -111,16 +114,22 @@
             return;
         }
         
-        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        // Registrar atajos de teclado para esta página
+        KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
         {
-            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = NuevoItem, ShowInBar = true },
-            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = ActualizarTab, ShowInBar = true },
-            new() { Key = "1", KeyDisplay = "1", Description = "Departamentos", Action = async () => ChangeTab("departamentos"), ShowInBar = false },
-            new() { Key = "2", KeyDisplay = "2", Description = "Cargos", Action = async () => ChangeTab("cargos"), ShowInBar = false },
-            new() { Key = "3", KeyDisplay = "3", Description = "Tipos Permiso", Action = async () => ChangeTab("tiposPermiso"), ShowInBar = false },
-            new() { Key = "4", KeyDisplay = "4", Description = "Proyectos", Action = async () => ChangeTab("proyectos"), ShowInBar = false },
-            new() { Key = "5", KeyDisplay = "5", Description = "Actividades", Action = async () => ChangeTab("actividades"), ShowInBar = false }
-        };
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = NuevoItem, ShowInBar = true, Priority = 10 },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = ActualizarTab, ShowInBar = true, Priority = 10 },
+            new() { Key = "1", KeyDisplay = "1", Description = "Departamentos", Action = async () => ChangeTab("departamentos"), ShowInBar = false, Priority = 50 },
+            new() { Key = "2", KeyDisplay = "2", Description = "Cargos", Action = async () => ChangeTab("cargos"), ShowInBar = false, Priority = 50 },
+            new() { Key = "3", KeyDisplay = "3", Description = "Tipos Permiso", Action = async () => ChangeTab("tiposPermiso"), ShowInBar = false, Priority = 50 },
+            new() { Key = "4", KeyDisplay = "4", Description = "Proyectos", Action = async () => ChangeTab("proyectos"), ShowInBar = false, Priority = 50 },
+            new() { Key = "5", KeyDisplay = "5", Description = "Actividades", Action = async () => ChangeTab("actividades"), ShowInBar = false, Priority = 50 }
+        });
+    }
+    
+    public void Dispose()
+    {
+        KeyboardShortcutService.ClearPageShortcuts(PageId);
     }
     
     private void ChangeTab(string tab)

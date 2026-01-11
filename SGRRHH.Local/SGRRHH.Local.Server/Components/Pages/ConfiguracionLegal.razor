@@ -1,0 +1,794 @@
+@page "/configuracion-legal"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Shared.Interfaces
+@inject IAuthService AuthService
+@inject IConfiguracionLegalRepository ConfiguracionLegalRepository
+@inject IKeyboardShortcutService KeyboardShortcutService
+@inject NavigationManager Navigation
+@inject ILogger<ConfiguracionLegal> Logger
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>Configuración Legal - SGRRHH</PageTitle>
+
+<style>
+    .page-container {
+        width: 100%;
+        min-width: 1024px;
+        padding: 20px;
+        font-family: 'Courier New', monospace;
+    }
+
+    .page-header {
+        border-bottom: 2px solid #000000;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    .page-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .action-bar {
+        border: 1px solid #000000;
+        padding: 10px;
+        margin-bottom: 20px;
+        background: #FFFFFF;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 8px 16px;
+        border: 2px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+        cursor: pointer;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    .btn:hover:not(:disabled) {
+        background: #F0F0F0;
+    }
+
+    .btn:disabled {
+        border-color: #CCCCCC;
+        color: #CCCCCC;
+        cursor: not-allowed;
+    }
+
+    .btn-primary {
+        background: #000000;
+        color: #FFFFFF;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #333333;
+    }
+
+    .results-info {
+        font-size: 12px;
+        color: #000000;
+        padding: 10px 0;
+        border-bottom: 1px solid #CCCCCC;
+        margin-bottom: 10px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 2px solid #000000;
+        background: #FFFFFF;
+        font-size: 11px;
+    }
+
+    .data-table thead {
+        background: #F0F0F0;
+        border-bottom: 2px solid #000000;
+    }
+
+    .data-table th {
+        padding: 8px;
+        text-align: left;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+        border-right: 1px solid #CCCCCC;
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    .data-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid #CCCCCC;
+        border-right: 1px solid #CCCCCC;
+        color: #000000;
+    }
+
+    .data-table tbody tr:hover {
+        background: #F9F9F9;
+    }
+
+    .data-table tbody tr.selected {
+        background: #E8E8E8;
+    }
+
+    .loading-message,
+    .empty-message {
+        text-align: center;
+        padding: 40px;
+        color: #666666;
+        font-size: 12px;
+    }
+
+    .cell-vigente {
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 10px;
+    }
+
+    .vigente-si {
+        color: #006400;
+    }
+
+    .vigente-no {
+        color: #8B0000;
+    }
+
+    .cell-money {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+    }
+
+    .cell-percent {
+        text-align: right;
+    }
+
+    .cell-actions {
+        white-space: nowrap;
+    }
+
+    .btn-table {
+        font-family: 'Courier New', monospace;
+        font-size: 10px;
+        padding: 4px 8px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+        cursor: pointer;
+        margin-right: 4px;
+        text-transform: uppercase;
+    }
+
+    .btn-table:hover {
+        background: #F0F0F0;
+    }
+
+    .shortcuts-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #000000;
+        color: #FFFFFF;
+        padding: 8px 20px;
+        font-size: 11px;
+        border-top: 2px solid #000000;
+        display: flex;
+        gap: 20px;
+        z-index: 1000;
+    }
+
+    .shortcut-item {
+        display: flex;
+        gap: 5px;
+    }
+
+    .shortcut-key {
+        font-weight: bold;
+        color: #FFFF00;
+    }
+
+    .error-message {
+        border: 2px solid #FF0000;
+        background: #FFFFFF;
+        color: #FF0000;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .success-message {
+        border: 2px solid #008000;
+        background: #FFFFFF;
+        color: #008000;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    }
+
+    .modal-box {
+        background: #FFFFFF;
+        border: 3px solid #000000;
+        padding: 20px;
+        max-width: 800px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-box h3 {
+        font-size: 16px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #000000;
+        padding-bottom: 10px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .form-group.full-width {
+        grid-column: span 2;
+    }
+
+    .form-label {
+        font-size: 11px;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+    }
+
+    .form-input {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 8px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+    }
+
+    .form-input:focus {
+        outline: 2px solid #000000;
+        outline-offset: 1px;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #CCCCCC;
+    }
+
+    .section-title {
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-top: 15px;
+        margin-bottom: 10px;
+        padding: 5px;
+        background: #F0F0F0;
+        border-left: 3px solid #000000;
+    }
+</style>
+
+<MessageToast @ref="messageToast" />
+
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">CONFIGURACIÓN LEGAL COLOMBIA</h1>
+    </div>
+
+    @if (!AuthService.IsAuthenticated)
+    {
+        <div class="error-message">ACCESO DENEGADO - DEBE INICIAR SESIÓN</div>
+        return;
+    }
+
+    <div class="action-bar">
+        <div class="action-buttons">
+            <button class="btn" @onclick="NuevaConfiguracion">NUEVO (F3)</button>
+            <button class="btn" @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+        </div>
+    </div>
+
+    <div class="results-info">
+        Mostrando @configuraciones.Count configuración(es)
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>AÑO</th>
+                <th>SMLMV</th>
+                <th>AUX. TRANSPORTE</th>
+                <th>SALUD EMP.</th>
+                <th>SALUD PATR.</th>
+                <th>PENSIÓN EMP.</th>
+                <th>PENSIÓN PATR.</th>
+                <th>CAJA COMP.</th>
+                <th>INT. CESANTÍAS</th>
+                <th>VIGENTE</th>
+                <th>ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (isLoading)
+            {
+                <tr><td colspan="11" class="loading-message">CARGANDO DATOS...</td></tr>
+            }
+            else if (!configuraciones.Any())
+            {
+                <tr><td colspan="11" class="empty-message">NO HAY CONFIGURACIONES REGISTRADAS</td></tr>
+            }
+            else
+            {
+                @foreach (var config in configuraciones.OrderByDescending(c => c.Año))
+                {
+                    <tr class="@(selectedConfiguracion?.Id == config.Id ? "selected" : "")"
+                        @onclick="() => SelectConfiguracion(config)">
+                        <td>@config.Año</td>
+                        <td class="cell-money">@config.SalarioMinimoMensual.ToString("C0")</td>
+                        <td class="cell-money">@config.AuxilioTransporte.ToString("C0")</td>
+                        <td class="cell-percent">@config.PorcentajeSaludEmpleado%</td>
+                        <td class="cell-percent">@config.PorcentajeSaludEmpleador%</td>
+                        <td class="cell-percent">@config.PorcentajePensionEmpleado%</td>
+                        <td class="cell-percent">@config.PorcentajePensionEmpleador%</td>
+                        <td class="cell-percent">@config.PorcentajeCajaCompensacion%</td>
+                        <td class="cell-percent">@config.PorcentajeInteresesCesantias%</td>
+                        <td class="cell-vigente @(config.EsVigente ? "vigente-si" : "vigente-no")">
+                            @(config.EsVigente ? "SÍ" : "NO")
+                        </td>
+                        <td class="cell-actions">
+                            <button class="btn-table" @onclick="() => EditarConfiguracion(config)" @onclick:stopPropagation="true">EDITAR</button>
+                            @if (!config.EsVigente)
+                            {
+                                <button class="btn-table" @onclick="() => ActivarConfiguracion(config)" @onclick:stopPropagation="true">ACTIVAR</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="shortcuts-bar">
+    <div class="shortcut-item">
+        <span class="shortcut-key">F3</span>
+        <span>=NUEVO</span>
+    </div>
+    <div class="shortcut-item">
+        <span class="shortcut-key">F5</span>
+        <span>=ACTUALIZAR</span>
+    </div>
+    <div class="shortcut-item">
+        <span class="shortcut-key">ESC</span>
+        <span>=SALIR</span>
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick:stopPropagation="true">
+        <div class="modal-box">
+            <h3>@(isEditing ? "EDITAR" : "NUEVA") CONFIGURACIÓN LEGAL</h3>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">AÑO *</label>
+                    <input type="number" class="form-input" @bind="configEdit.Año" min="2020" max="2050" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">VIGENTE</label>
+                    <select class="form-input" @bind="configEdit.EsVigente">
+                        <option value="true">SÍ</option>
+                        <option value="false">NO</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="section-title">SALARIOS</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">SALARIO MÍNIMO MENSUAL *</label>
+                    <input type="number" class="form-input" @bind="configEdit.SalarioMinimoMensual" step="1" min="0" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">AUXILIO DE TRANSPORTE *</label>
+                    <input type="number" class="form-input" @bind="configEdit.AuxilioTransporte" step="1" min="0" />
+                </div>
+            </div>
+
+            <div class="section-title">SEGURIDAD SOCIAL - EMPLEADO</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">% SALUD EMPLEADO</label>
+                    <input type="number" class="form-input" @bind="configEdit.PorcentajeSaludEmpleado" step="0.01" min="0" max="100" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">% PENSIÓN EMPLEADO</label>
+                    <input type="number" class="form-input" @bind="configEdit.PorcentajePensionEmpleado" step="0.01" min="0" max="100" />
+                </div>
+            </div>
+
+            <div class="section-title">SEGURIDAD SOCIAL - EMPLEADOR</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">% SALUD EMPLEADOR</label>
+                    <input type="number" class="form-input" @bind="configEdit.PorcentajeSaludEmpleador" step="0.01" min="0" max="100" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">% PENSIÓN EMPLEADOR</label>
+                    <input type="number" class="form-input" @bind="configEdit.PorcentajePensionEmpleador" step="0.01" min="0" max="100" />
+                </div>
+            </div>
+
+            <div class="section-title">PARAFISCALES</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">% CAJA COMPENSACIÓN</label>
+                    <input type="number" class="form-input" @bind="configEdit.PorcentajeCajaCompensacion" step="0.01" min="0" max="100" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">% ICBF</label>
+                    <input type="number" class="form-input" @bind="configEdit.PorcentajeICBF" step="0.01" min="0" max="100" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">% SENA</label>
+                    <input type="number" class="form-input" @bind="configEdit.PorcentajeSENA" step="0.01" min="0" max="100" />
+                </div>
+            </div>
+
+            <div class="section-title">ARL - RIESGOS LABORALES</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">ARL CLASE I (MÍN %)</label>
+                    <input type="number" class="form-input" @bind="configEdit.ARLClase1Min" step="0.001" min="0" max="100" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">ARL CLASE V (MÁX %)</label>
+                    <input type="number" class="form-input" @bind="configEdit.ARLClase5Max" step="0.001" min="0" max="100" />
+                </div>
+            </div>
+
+            <div class="section-title">PRESTACIONES Y JORNADA</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">% INTERESES CESANTÍAS</label>
+                    <input type="number" class="form-input" @bind="configEdit.PorcentajeInteresesCesantias" step="0.01" min="0" max="100" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">DÍAS VACACIONES/AÑO</label>
+                    <input type="number" class="form-input" @bind="configEdit.DiasVacacionesAño" min="1" max="30" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">HORAS MÁX. SEMANALES</label>
+                    <input type="number" class="form-input" @bind="configEdit.HorasMaximasSemanales" min="1" max="60" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">HORAS ORDINARIAS/DÍA</label>
+                    <input type="number" class="form-input" @bind="configEdit.HorasOrdinariasDiarias" min="1" max="12" />
+                </div>
+            </div>
+
+            <div class="section-title">RECARGOS</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">% HORA EXTRA DIURNA</label>
+                    <input type="number" class="form-input" @bind="configEdit.RecargoHoraExtraDiurna" step="0.01" min="0" max="200" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">% HORA EXTRA NOCTURNA</label>
+                    <input type="number" class="form-input" @bind="configEdit.RecargoHoraExtraNocturna" step="0.01" min="0" max="200" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">% HORA NOCTURNA</label>
+                    <input type="number" class="form-input" @bind="configEdit.RecargoHoraNocturna" step="0.01" min="0" max="200" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">% DOMINICAL/FESTIVO</label>
+                    <input type="number" class="form-input" @bind="configEdit.RecargoHoraDominicalFestivo" step="0.01" min="0" max="200" />
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label class="form-label">OBSERVACIONES</label>
+                    <textarea class="form-input" @bind="configEdit.Observaciones" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" @onclick="CerrarModal">CANCELAR (ESC)</button>
+                <button class="btn btn-primary" @onclick="Guardar" disabled="@isSaving">
+                    @(isSaving ? "GUARDANDO..." : "GUARDAR (F10)")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const string PageId = "ConfiguracionLegal";
+    private MessageToast? messageToast;
+    
+    private List<Domain.Entities.ConfiguracionLegal> configuraciones = new();
+    private Domain.Entities.ConfiguracionLegal? selectedConfiguracion;
+    private Domain.Entities.ConfiguracionLegal configEdit = new();
+    
+    private bool isLoading;
+    private bool showModal;
+    private bool isSaving;
+    private bool isEditing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
+        {
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = () => { NuevaConfiguracion(); return Task.CompletedTask; } },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarDatos },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModalAsync },
+            new() { Key = "F10", KeyDisplay = "F10", Description = "Guardar", Action = GuardarAsync }
+        });
+        
+        await CargarDatos();
+    }
+    
+    public void Dispose()
+    {
+        KeyboardShortcutService.ClearPageShortcuts(PageId);
+    }
+    
+    private async Task CargarDatos()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            configuraciones = (await ConfiguracionLegalRepository.GetAllAsync()).ToList();
+            
+            Logger.LogInformation("Configuraciones legales cargadas: {Count}", configuraciones.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando configuraciones legales");
+            messageToast?.ShowError("Error al cargar datos: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void NuevaConfiguracion()
+    {
+        isEditing = false;
+        configEdit = new Domain.Entities.ConfiguracionLegal
+        {
+            Año = DateTime.Now.Year,
+            SalarioMinimoMensual = 1300000m,
+            AuxilioTransporte = 162000m,
+            PorcentajeSaludEmpleado = 4.0m,
+            PorcentajeSaludEmpleador = 8.5m,
+            PorcentajePensionEmpleado = 4.0m,
+            PorcentajePensionEmpleador = 12.0m,
+            PorcentajeCajaCompensacion = 4.0m,
+            PorcentajeICBF = 3.0m,
+            PorcentajeSENA = 2.0m,
+            ARLClase1Min = 0.522m,
+            ARLClase5Max = 6.96m,
+            PorcentajeInteresesCesantias = 12.0m,
+            DiasVacacionesAño = 15,
+            HorasMaximasSemanales = 48,
+            HorasOrdinariasDiarias = 8,
+            RecargoHoraExtraDiurna = 25.0m,
+            RecargoHoraExtraNocturna = 75.0m,
+            RecargoHoraNocturna = 35.0m,
+            RecargoHoraDominicalFestivo = 75.0m,
+            EdadMinimaLaboral = 18,
+            EsVigente = false
+        };
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void EditarConfiguracion(Domain.Entities.ConfiguracionLegal config)
+    {
+        isEditing = true;
+        configEdit = new Domain.Entities.ConfiguracionLegal
+        {
+            Id = config.Id,
+            Año = config.Año,
+            SalarioMinimoMensual = config.SalarioMinimoMensual,
+            AuxilioTransporte = config.AuxilioTransporte,
+            PorcentajeSaludEmpleado = config.PorcentajeSaludEmpleado,
+            PorcentajeSaludEmpleador = config.PorcentajeSaludEmpleador,
+            PorcentajePensionEmpleado = config.PorcentajePensionEmpleado,
+            PorcentajePensionEmpleador = config.PorcentajePensionEmpleador,
+            PorcentajeCajaCompensacion = config.PorcentajeCajaCompensacion,
+            PorcentajeICBF = config.PorcentajeICBF,
+            PorcentajeSENA = config.PorcentajeSENA,
+            ARLClase1Min = config.ARLClase1Min,
+            ARLClase5Max = config.ARLClase5Max,
+            PorcentajeInteresesCesantias = config.PorcentajeInteresesCesantias,
+            DiasVacacionesAño = config.DiasVacacionesAño,
+            HorasMaximasSemanales = config.HorasMaximasSemanales,
+            HorasOrdinariasDiarias = config.HorasOrdinariasDiarias,
+            RecargoHoraExtraDiurna = config.RecargoHoraExtraDiurna,
+            RecargoHoraExtraNocturna = config.RecargoHoraExtraNocturna,
+            RecargoHoraNocturna = config.RecargoHoraNocturna,
+            RecargoHoraDominicalFestivo = config.RecargoHoraDominicalFestivo,
+            EdadMinimaLaboral = config.EdadMinimaLaboral,
+            EsVigente = config.EsVigente,
+            Observaciones = config.Observaciones
+        };
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void SelectConfiguracion(Domain.Entities.ConfiguracionLegal config)
+    {
+        selectedConfiguracion = selectedConfiguracion?.Id == config.Id ? null : config;
+        StateHasChanged();
+    }
+    
+    private async Task ActivarConfiguracion(Domain.Entities.ConfiguracionLegal config)
+    {
+        try
+        {
+            await ConfiguracionLegalRepository.SetVigenteAsync(config.Id);
+            messageToast?.ShowSuccess($"Configuración del año {config.Año} activada como vigente");
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error activando configuración");
+            messageToast?.ShowError("Error al activar: " + ex.Message);
+        }
+    }
+    
+    private async Task Guardar()
+    {
+        if (configEdit == null) return;
+        
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+            
+            // Validaciones
+            if (configEdit.Año < 2020 || configEdit.Año > 2050)
+            {
+                messageToast?.ShowError("El año debe estar entre 2020 y 2050");
+                return;
+            }
+            
+            if (configEdit.SalarioMinimoMensual <= 0)
+            {
+                messageToast?.ShowError("El salario mínimo debe ser mayor a 0");
+                return;
+            }
+            
+            // Verificar si ya existe configuración para este año (si es nuevo)
+            if (!isEditing && await ConfiguracionLegalRepository.ExisteAñoAsync(configEdit.Año))
+            {
+                messageToast?.ShowError($"Ya existe configuración para el año {configEdit.Año}");
+                return;
+            }
+            
+            if (isEditing)
+            {
+                await ConfiguracionLegalRepository.UpdateAsync(configEdit);
+                messageToast?.ShowSuccess($"Configuración del año {configEdit.Año} actualizada correctamente");
+            }
+            else
+            {
+                await ConfiguracionLegalRepository.AddAsync(configEdit);
+                messageToast?.ShowSuccess($"Configuración del año {configEdit.Año} creada correctamente");
+            }
+            
+            // Si se marcó como vigente, activarla
+            if (configEdit.EsVigente)
+            {
+                await ConfiguracionLegalRepository.SetVigenteAsync(configEdit.Id);
+            }
+            
+            showModal = false;
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error guardando configuración");
+            messageToast?.ShowError("Error al guardar: " + ex.Message);
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private Task GuardarAsync()
+    {
+        if (showModal)
+        {
+            return Guardar();
+        }
+        return Task.CompletedTask;
+    }
+    
+    private void CerrarModal()
+    {
+        if (!isSaving)
+        {
+            showModal = false;
+            StateHasChanged();
+        }
+    }
+    
+    private Task CerrarModalAsync()
+    {
+        CerrarModal();
+        return Task.CompletedTask;
+    }
+}

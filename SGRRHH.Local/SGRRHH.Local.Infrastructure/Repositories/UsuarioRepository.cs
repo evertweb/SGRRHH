@@ -49,7 +49,8 @@ WHERE id = @Id";
 
     public async Task DeleteAsync(int id)
     {
-        const string sql = "UPDATE usuarios SET activo = 0, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = @Id";
+        // Hard delete - elimina permanentemente el registro
+        const string sql = "DELETE FROM usuarios WHERE id = @Id";
         using var connection = _context.CreateConnection();
         await connection.ExecuteAsync(sql, new { Id = id });
     }

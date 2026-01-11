@@ -1,139 +1,54 @@
-@code {
+﻿@code {
     [Parameter] public string Estado { get; set; } = string.Empty;
     [Parameter] public string Size { get; set; } = "normal"; // small, normal, large
 
-    private string GetBadgeClass()
+    private string GetBadgeStyle()
     {
         var estado = Estado.ToLower();
-        var sizeClass = Size == "small" ? "badge-sm" : Size == "large" ? "badge-lg" : "";
         
-        // Mapeo de estados comunes
-        var colorClass = estado switch
+        // Mapeo de estados con colores hospitalarios estrictos
+        var backgroundColor = estado switch
         {
-            "activo" => "badge-success",
-            "inactivo" or "retirado" => "badge-danger",
-            "pendiente" or "pendienteaprobacion" => "badge-warning",
-            "aprobado" => "badge-success",
-            "rechazado" => "badge-danger",
-            "envacaciones" => "badge-info",
-            "suspendido" => "badge-danger",
-            "encurso" => "badge-info",
-            "finalizado" or "completado" => "badge-success",
-            "cancelado" => "badge-danger",
-            "vencido" => "badge-danger",
-            "porvencer" => "badge-warning",
-            "vigente" => "badge-success",
-            _ => "badge-default"
+            // Estados negativos/error: ROJO
+            "inactivo" or "retirado" or "rechazado" or "suspendido" 
+            or "cancelado" or "vencido" => "#cc0000",
+            
+            // Estados de advertencia/pendiente: AMARILLO
+            "pendiente" or "pendienteaprobacion" or "porvencer" => "#ffcc00",
+            
+            // Estados positivos/confirmación: VERDE
+            "activo" or "aprobado" or "finalizado" or "completado" or "vigente" => "#009900",
+            
+            // Estados neutrales/informativos: GRIS
+            _ => "#666666"
         };
 
-        return $"estado-badge {colorClass} {sizeClass}".Trim();
+        var textColor = (estado == "pendiente" || estado == "pendienteaprobacion" || estado == "porvencer") 
+            ? "#000000" // Texto negro en amarillo
+            : "#ffffff"; // Texto blanco en otros colores
+
+        var fontSize = Size == "small" ? "10px" : Size == "large" ? "14px" : "12px";
+        var padding = Size == "small" ? "2px 6px" : Size == "large" ? "6px 12px" : "4px 8px";
+
+        return $"display: inline-block; font-family: 'Courier New', monospace; font-size: {fontSize}; "
+             + $"padding: {padding}; background-color: {backgroundColor}; color: {textColor}; "
+             + $"border: 1px solid #000000; font-weight: bold; letter-spacing: 1px;";
     }
 
     private string GetEstadoText()
     {
-        // Formatear el texto del estado
+        // Formatear el texto del estado en MAYÚSCULAS
         return Estado switch
         {
-            "PendienteAprobacion" => "PENDIENTE",
-            "EnVacaciones" => "EN VACACIONES",
-            "EnCurso" => "EN CURSO",
-            "PorVencer" => "POR VENCER",
+            "PendienteAprobacion" or "pendienteaprobacion" => "PENDIENTE",
+            "EnVacaciones" or "envacaciones" => "EN VACACIONES",
+            "EnCurso" or "encurso" => "EN CURSO",
+            "PorVencer" or "porvencer" => "POR VENCER",
             _ => Estado.ToUpper()
         };
     }
 }
 
-<span class="@GetBadgeClass()">@GetEstadoText()</span>
+<span style="@GetBadgeStyle()">@GetEstadoText()</span>
 
-<style>
-    .estado-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        font-size: 10px;
-        font-weight: bold;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        white-space: nowrap;
-        text-align: center;
-        border: 1px solid #000000;
-    }
 
-    .badge-sm {
-        padding: 2px 6px;
-        font-size: 9px;
-    }
-
-    .badge-lg {
-        padding: 6px 14px;
-        font-size: 11px;
-    }
-
-    /* Estados de éxito */
-    .badge-success {
-        background: #CCFFCC;
-        color: #006600;
-        border-color: #006600;
-    }
-
-    /* Estados de advertencia */
-    .badge-warning {
-        background: #FFFFCC;
-        color: #996600;
-        border-color: #CC9900;
-    }
-
-    /* Estados de peligro/error */
-    .badge-danger {
-        background: #FFCCCC;
-        color: #CC0000;
-        border-color: #CC0000;
-    }
-
-    /* Estados informativos */
-    .badge-info {
-        background: #CCE5FF;
-        color: #0066CC;
-        border-color: #0066CC;
-    }
-
-    /* Estado por defecto */
-    .badge-default {
-        background: #F0F0F0;
-        color: #666666;
-        border-color: #808080;
-    }
-
-    /* Estados específicos - alias para compatibilidad */
-    .badge-activo {
-        background: #CCFFCC;
-        color: #006600;
-        border-color: #006600;
-    }
-
-    .badge-retirado,
-    .badge-inactivo {
-        background: #F0F0F0;
-        color: #666666;
-        border-color: #808080;
-    }
-
-    .badge-pendiente,
-    .badge-pendienteaprobacion {
-        background: #FFFFCC;
-        color: #996600;
-        border-color: #CC9900;
-    }
-
-    .badge-envacaciones {
-        background: #CCE5FF;
-        color: #0066CC;
-        border-color: #0066CC;
-    }
-
-    .badge-suspendido,
-    .badge-rechazado {
-        background: #FFCCCC;
-        color: #CC0000;
-        border-color: #CC0000;
-    }
-</style>

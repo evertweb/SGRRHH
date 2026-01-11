@@ -292,7 +292,7 @@ Write-Log "=== PASO 7: INICIAR SERVIDOR ===" "Cyan"
 if ($wasRunning -or $Force) {
     if (Start-Server) {
         Start-Sleep -Seconds 2
-        Start-Process "https://localhost:5001"
+        Start-Process "https://localhost:5003"
     }
 } else {
     Write-Host ""
@@ -300,7 +300,7 @@ if ($wasRunning -or $Force) {
     if ($startNow -eq "S" -or $startNow -eq "s") {
         Start-Server
         Start-Sleep -Seconds 2
-        Start-Process "https://localhost:5001"
+        Start-Process "https://localhost:5003"
     }
 }
 
@@ -311,7 +311,7 @@ Write-Host " DESPLIEGUE COMPLETADO EXITOSAMENTE" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Ubicacion: $productionPath" -ForegroundColor Gray
-Write-Host "URL: https://localhost:5001" -ForegroundColor Gray
+Write-Host "URL: https://localhost:5003" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Si hay problemas, ejecute:" -ForegroundColor Yellow
 Write-Host "  .\Restore-Backup.ps1" -ForegroundColor Yellow

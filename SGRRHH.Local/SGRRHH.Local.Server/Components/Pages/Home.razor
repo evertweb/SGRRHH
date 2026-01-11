@@ -1,8 +1,253 @@
 ﻿@page "/home"
+@using SGRRHH.Local.Shared.Interfaces
+@inject IEmpleadoRepository EmpleadoRepo
+@inject IPermisoRepository PermisoRepo
+@inject IContratoRepository ContratoRepo
+@inject IVacacionRepository VacacionRepo
+@inject IAuthService AuthService
+@inject IKeyboardShortcutService KeyboardShortcutService
+@inject NavigationManager Navigation
+@implements IDisposable
 
-<PageTitle>Home</PageTitle>
+<PageTitle>SGRRHH - Panel de Control</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="dashboard-container">
+    <!-- Tarjetas de Métricas -->
+    <div class="dashboard-metrics">
+        <div class="metric-card" @onclick="@(() => Navigation.NavigateTo("/empleados"))">
+            <div class="metric-value">@empleadosActivos</div>
+            <div class="metric-label">EMPLEADOS ACTIVOS</div>
+            <div class="metric-action">VER TODOS</div>
+        </div>
+        <div class="metric-card @(permisosPendientes > 0 ? "metric-warning" : "")" @onclick="@(() => Navigation.NavigateTo("/permisos"))">
+            <div class="metric-value">@permisosPendientes</div>
+            <div class="metric-label">PERMISOS PENDIENTES</div>
+            @if (permisosPendientes > 0)
+            {
+                <div class="metric-action">CLICK PARA VER</div>
+            }
+        </div>
+        <div class="metric-card @(contratosPorVencer > 0 ? "metric-alert" : "")" @onclick="@(() => Navigation.NavigateTo("/contratos"))">
+            <div class="metric-value">@contratosPorVencer</div>
+            <div class="metric-label">CONTRATOS POR VENCER</div>
+            @if (contratosPorVencer > 0)
+            {
+                <div class="metric-action">CLICK PARA VER</div>
+            }
+        </div>
+        <div class="metric-card @(vacacionesPendientes > 0 ? "metric-info" : "")" @onclick="@(() => Navigation.NavigateTo("/vacaciones"))">
+            <div class="metric-value">@vacacionesPendientes</div>
+            <div class="metric-label">VACACIONES PENDIENTES</div>
+            @if (vacacionesPendientes > 0)
+            {
+                <div class="metric-action">CLICK PARA VER</div>
+            }
+        </div>
+    </div>
 
-Welcome to your new app.
+    <!-- Alertas Importantes -->
+    @if (alertas.Count > 0)
+    {
+        <div class="dashboard-section">
+            <div class="dashboard-section-header">
+                <span>⚠ ALERTAS IMPORTANTES</span>
+                <span class="badge">@alertas.Count</span>
+            </div>
+            <div class="dashboard-section-body">
+                @foreach (var alerta in alertas.Take(5))
+                {
+                    <div class="alert-item alert-@alerta.Tipo.ToLower()">
+                        <span class="alert-icon">@GetAlertIcon(alerta.Tipo)</span>
+                        <span class="alert-text">@alerta.Mensaje</span>
+                        <button class="alert-action" @onclick="@(() => Navigation.NavigateTo(alerta.Url))">
+                            @alerta.Accion
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Accesos Rápidos -->
+    <div class="dashboard-section">
+        <div class="dashboard-section-header">
+            <span>ACCESOS RÁPIDOS</span>
+        </div>
+        <div class="dashboard-quick-access">
+            <button class="quick-access-btn" @onclick="@(() => Navigation.NavigateTo("/control-diario"))">
+                <span class="qa-icon">📋</span>
+                <span class="qa-label">CONTROL DIARIO</span>
+            </button>
+            <button class="quick-access-btn" @onclick="@(() => Navigation.NavigateTo("/empleados"))">
+                <span class="qa-icon">👥</span>
+                <span class="qa-label">EMPLEADOS</span>
+            </button>
+            <button class="quick-access-btn" @onclick="@(() => Navigation.NavigateTo("/permisos"))">
+                <span class="qa-icon">📝</span>
+                <span class="qa-label">PERMISOS</span>
+            </button>
+            <button class="quick-access-btn" @onclick="@(() => Navigation.NavigateTo("/nomina"))">
+                <span class="qa-icon">💰</span>
+                <span class="qa-label">NÓMINA</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Información del Sistema -->
+    <div class="dashboard-section">
+        <div class="dashboard-section-header">
+            <span>INFORMACIÓN DEL SISTEMA</span>
+        </div>
+        <div class="dashboard-section-body">
+            <table class="hospital-table">
+                <tbody>
+                    <tr>
+                        <td style="width: 200px; font-weight: 700;">USUARIO ACTUAL</td>
+                        <td>@AuthService.CurrentUser?.NombreCompleto</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 700;">FECHA/HORA</td>
+                        <td>@DateTime.Now.ToString("dddd, dd MMMM yyyy - HH:mm")</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: 700;">VERSIÓN</td>
+                        <td>SGRRHH LOCAL v1.0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int empleadosActivos = 0;
+    private int permisosPendientes = 0;
+    private int contratosPorVencer = 0;
+    private int vacacionesPendientes = 0;
+    private List<AlertaDto> alertas = new();
+    private bool isLoading = true;
+    private const string PageId = "home";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Registrar atajos de teclado para el Home
+        KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
+        {
+            new() { Key = "F2", KeyDisplay = "F2", Description = "Empleados", Action = () => { Navigation.NavigateTo("/empleados"); return Task.CompletedTask; }, Priority = 10 },
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Permisos", Action = () => { Navigation.NavigateTo("/permisos"); return Task.CompletedTask; }, Priority = 10 },
+            new() { Key = "F4", KeyDisplay = "F4", Description = "Contratos", Action = () => { Navigation.NavigateTo("/contratos"); return Task.CompletedTask; }, Priority = 10 },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = RefrescarDatos, Priority = 10 }
+        });
+        
+        await CargarMetricas();
+        await CargarAlertas();
+        isLoading = false;
+    }
+    
+    private async Task RefrescarDatos()
+    {
+        isLoading = true;
+        await CargarMetricas();
+        await CargarAlertas();
+        isLoading = false;
+    }
+    
+    public void Dispose()
+    {
+        KeyboardShortcutService.ClearPageShortcuts(PageId);
+    }
+
+    private async Task CargarMetricas()
+    {
+        try
+        {
+            // Empleados activos
+            empleadosActivos = await EmpleadoRepo.CountActiveAsync();
+            
+            // Permisos pendientes de aprobación
+            var permisosPendientesLista = await PermisoRepo.GetPendientesAsync();
+            permisosPendientes = permisosPendientesLista.Count();
+            
+            // Contratos próximos a vencer (30 días)
+            var contratosProximos = await ContratoRepo.GetContratosProximosAVencerAsync(30);
+            contratosPorVencer = contratosProximos.Count();
+            
+            // Vacaciones pendientes de aprobación
+            var vacacionesPendientesLista = await VacacionRepo.GetPendientesAsync();
+            vacacionesPendientes = vacacionesPendientesLista.Count();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando métricas: {ex.Message}");
+            // Mantener valores en 0 si hay error
+        }
+    }
+
+    private async Task CargarAlertas()
+    {
+        alertas = new List<AlertaDto>();
+        
+        try
+        {
+            // Alerta de contratos por vencer
+            if (contratosPorVencer > 0)
+            {
+                alertas.Add(new AlertaDto
+                {
+                    Tipo = "CONTRATO",
+                    Mensaje = $"{contratosPorVencer} contrato(s) vencen en los próximos 30 días",
+                    Url = "/contratos",
+                    Accion = "VER"
+                });
+            }
+            
+            // Alerta de permisos pendientes
+            if (permisosPendientes > 0)
+            {
+                alertas.Add(new AlertaDto
+                {
+                    Tipo = "PERMISO",
+                    Mensaje = $"{permisosPendientes} permiso(s) pendientes de aprobación",
+                    Url = "/permisos",
+                    Accion = "REVISAR"
+                });
+            }
+            
+            // Alerta de vacaciones pendientes
+            if (vacacionesPendientes > 0)
+            {
+                alertas.Add(new AlertaDto
+                {
+                    Tipo = "VACACIONES",
+                    Mensaje = $"{vacacionesPendientes} solicitud(es) de vacaciones pendientes",
+                    Url = "/vacaciones",
+                    Accion = "VER"
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando alertas: {ex.Message}");
+        }
+        
+        await Task.CompletedTask;
+    }
+
+    private string GetAlertIcon(string tipo) => tipo switch
+    {
+        "CONTRATO" => "📄",
+        "PERMISO" => "✋",
+        "VACACIONES" => "🏖️",
+        "URGENTE" => "🚨",
+        _ => "⚠️"
+    };
+
+    private class AlertaDto
+    {
+        public string Tipo { get; set; } = "";
+        public string Mensaje { get; set; } = "";
+        public string Url { get; set; } = "";
+        public string Accion { get; set; } = "";
+    }
+}
 

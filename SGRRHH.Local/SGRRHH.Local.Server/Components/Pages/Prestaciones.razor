@@ -1,0 +1,1163 @@
+@page "/prestaciones"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@inject IAuthService AuthService
+@inject IPrestacionRepository PrestacionRepository
+@inject ILiquidacionService LiquidacionService
+@inject IEmpleadoRepository EmpleadoRepository
+@inject IKeyboardShortcutService KeyboardShortcutService
+@inject NavigationManager Navigation
+@inject ILogger<Prestaciones> Logger
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>Prestaciones Sociales - SGRRHH</PageTitle>
+
+<style>
+    .page-container {
+        width: 100%;
+        min-width: 1024px;
+        padding: 20px;
+        font-family: 'Courier New', monospace;
+    }
+
+    .page-header {
+        border-bottom: 2px solid #000000;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    .page-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .action-bar {
+        border: 1px solid #000000;
+        padding: 10px;
+        margin-bottom: 20px;
+        background: #FFFFFF;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 8px 16px;
+        border: 2px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+        cursor: pointer;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    .btn:hover:not(:disabled) {
+        background: #F0F0F0;
+    }
+
+    .btn:disabled {
+        border-color: #CCCCCC;
+        color: #CCCCCC;
+        cursor: not-allowed;
+    }
+
+    .btn-primary {
+        background: #000000;
+        color: #FFFFFF;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #333333;
+    }
+
+    .btn-success {
+        background: #006400;
+        color: #FFFFFF;
+        border-color: #006400;
+    }
+
+    .btn-success:hover:not(:disabled) {
+        background: #008000;
+    }
+
+    .filter-section {
+        border-top: 1px solid #CCCCCC;
+        padding-top: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .filter-label {
+        font-size: 11px;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+    }
+
+    .filter-select {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 6px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+        min-width: 120px;
+    }
+
+    .info-box {
+        border: 2px solid #4169E1;
+        background: #F0F8FF;
+        color: #000080;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 12px;
+    }
+
+    .results-info {
+        font-size: 12px;
+        color: #000000;
+        padding: 10px 0;
+        border-bottom: 1px solid #CCCCCC;
+        margin-bottom: 10px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 2px solid #000000;
+        background: #FFFFFF;
+        font-size: 11px;
+    }
+
+    .data-table thead {
+        background: #F0F0F0;
+        border-bottom: 2px solid #000000;
+    }
+
+    .data-table th {
+        padding: 8px;
+        text-align: left;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+        border-right: 1px solid #CCCCCC;
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    .data-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid #CCCCCC;
+        border-right: 1px solid #CCCCCC;
+        color: #000000;
+    }
+
+    .data-table tbody tr:hover {
+        background: #F9F9F9;
+    }
+
+    .data-table tbody tr.selected {
+        background: #E8E8E8;
+    }
+
+    .loading-message,
+    .empty-message {
+        text-align: center;
+        padding: 40px;
+        color: #666666;
+        font-size: 12px;
+    }
+
+    .cell-code {
+        font-weight: bold;
+    }
+
+    .cell-money {
+        text-align: right;
+        font-family: 'Courier New', monospace;
+    }
+
+    .cell-tipo {
+        text-transform: uppercase;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    .tipo-cesantias {
+        color: #8B4513;
+    }
+
+    .tipo-interesescesantias {
+        color: #D2691E;
+    }
+
+    .tipo-primaservicios {
+        color: #006400;
+    }
+
+    .tipo-dotacion {
+        color: #4169E1;
+    }
+
+    .tipo-auxiliotransporte {
+        color: #2F4F4F;
+    }
+
+    .tipo-bonificacion {
+        color: #800080;
+    }
+
+    .cell-estado {
+        text-transform: uppercase;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    .estado-calculada {
+        color: #4169E1;
+    }
+
+    .estado-aprobada {
+        color: #006400;
+    }
+
+    .estado-pagada {
+        color: #228B22;
+    }
+
+    .estado-consignada {
+        color: #2F4F4F;
+    }
+
+    .estado-anulada {
+        color: #8B0000;
+    }
+
+    .cell-actions {
+        white-space: nowrap;
+    }
+
+    .btn-table {
+        font-family: 'Courier New', monospace;
+        font-size: 10px;
+        padding: 4px 8px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+        cursor: pointer;
+        margin-right: 4px;
+        text-transform: uppercase;
+    }
+
+    .btn-table:hover {
+        background: #F0F0F0;
+    }
+
+    .shortcuts-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #000000;
+        color: #FFFFFF;
+        padding: 8px 20px;
+        font-size: 11px;
+        border-top: 2px solid #000000;
+        display: flex;
+        gap: 20px;
+        z-index: 1000;
+    }
+
+    .shortcut-item {
+        display: flex;
+        gap: 5px;
+    }
+
+    .shortcut-key {
+        font-weight: bold;
+        color: #FFFF00;
+    }
+
+    .error-message {
+        border: 2px solid #FF0000;
+        background: #FFFFFF;
+        color: #FF0000;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .success-message {
+        border: 2px solid #008000;
+        background: #FFFFFF;
+        color: #008000;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    }
+
+    .modal-box {
+        background: #FFFFFF;
+        border: 3px solid #000000;
+        padding: 20px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-box h3 {
+        font-size: 16px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #000000;
+        padding-bottom: 10px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .form-group.full-width {
+        grid-column: span 2;
+    }
+
+    .form-label {
+        font-size: 11px;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+    }
+
+    .form-input {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 8px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+    }
+
+    .form-input:focus {
+        outline: 2px solid #000000;
+        outline-offset: 1px;
+    }
+
+    .form-input:read-only {
+        background: #F0F0F0;
+        color: #666666;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #CCCCCC;
+    }
+
+    .section-title {
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-top: 15px;
+        margin-bottom: 10px;
+        padding: 5px;
+        background: #F0F0F0;
+        border-left: 3px solid #000000;
+        grid-column: span 2;
+    }
+
+    .calc-result {
+        background: #FFFACD;
+        border: 2px solid #FFD700;
+        padding: 15px;
+        margin: 15px 0;
+        font-size: 14px;
+        text-align: center;
+    }
+
+    .calc-result .valor {
+        font-size: 24px;
+        font-weight: bold;
+        color: #006400;
+    }
+</style>
+
+<MessageToast @ref="messageToast" />
+
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">PRESTACIONES SOCIALES - LEGISLACIÓN COLOMBIANA</h1>
+    </div>
+
+    @if (!AuthService.IsAuthenticated)
+    {
+        <div class="error-message">ACCESO DENEGADO - DEBE INICIAR SESIÓN</div>
+        return;
+    }
+
+    <div class="action-bar">
+        <div class="action-buttons">
+            <button class="btn btn-success" @onclick="CalcularCesantias">CALCULAR CESANTÍAS</button>
+            <button class="btn btn-success" @onclick="CalcularInteresesCesantias">CALCULAR INTERESES</button>
+            <button class="btn btn-success" @onclick="CalcularPrimaServicios">CALCULAR PRIMA</button>
+            <button class="btn" @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+        </div>
+        
+        <div class="filter-section">
+            <div class="filter-group">
+                <label class="filter-label">AÑO:</label>
+                <select class="filter-select" @bind="añoSeleccionado" @bind:after="CargarDatos">
+                    @for (int año = DateTime.Now.Year + 1; año >= 2020; año--)
+                    {
+                        <option value="@año">@año</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">TIPO:</label>
+                <select class="filter-select" @bind="tipoFiltro" @bind:after="AplicarFiltros">
+                    <option value="">TODOS</option>
+                    <option value="@((int)TipoPrestacion.Cesantias)">CESANTÍAS</option>
+                    <option value="@((int)TipoPrestacion.InteresesCesantias)">INTERESES CESANTÍAS</option>
+                    <option value="@((int)TipoPrestacion.PrimaServicios)">PRIMA DE SERVICIOS</option>
+                    <option value="@((int)TipoPrestacion.Dotacion)">DOTACIÓN</option>
+                    <option value="@((int)TipoPrestacion.AuxilioTransporte)">AUXILIO TRANSPORTE</option>
+                    <option value="@((int)TipoPrestacion.Bonificacion)">BONIFICACIÓN</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">ESTADO:</label>
+                <select class="filter-select" @bind="estadoFiltro" @bind:after="AplicarFiltros">
+                    <option value="">TODOS</option>
+                    <option value="@((int)EstadoPrestacion.Calculada)">CALCULADA</option>
+                    <option value="@((int)EstadoPrestacion.Aprobada)">APROBADA</option>
+                    <option value="@((int)EstadoPrestacion.Pagada)">PAGADA</option>
+                    <option value="@((int)EstadoPrestacion.Consignada)">CONSIGNADA</option>
+                    <option value="@((int)EstadoPrestacion.Anulada)">ANULADA</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <strong>PRESTACIONES SOCIALES:</strong><br/>
+        • <strong>Cesantías:</strong> 1 mes de salario por año trabajado. Fórmula: (Salario × Días) / 360<br/>
+        • <strong>Intereses Cesantías:</strong> 12% anual sobre cesantías. Pago: Enero 31<br/>
+        • <strong>Prima de Servicios:</strong> 30 días de salario/año. Pagos: Junio 30 y Diciembre 20
+    </div>
+
+    <div class="results-info">
+        Mostrando @prestacionesFiltradas.Count prestación(es) del año @añoSeleccionado
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>CÓDIGO</th>
+                <th>EMPLEADO</th>
+                <th>TIPO</th>
+                <th>PERÍODO</th>
+                <th>FECHA INICIO</th>
+                <th>FECHA FIN</th>
+                <th>SALARIO BASE</th>
+                <th>DÍAS PROP.</th>
+                <th>VALOR CALCULADO</th>
+                <th>VALOR PAGADO</th>
+                <th>FECHA PAGO</th>
+                <th>ESTADO</th>
+                <th>ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (isLoading)
+            {
+                <tr><td colspan="13" class="loading-message">CARGANDO DATOS...</td></tr>
+            }
+            else if (!prestacionesFiltradas.Any())
+            {
+                <tr><td colspan="13" class="empty-message">NO HAY PRESTACIONES PARA ESTE PERÍODO</td></tr>
+            }
+            else
+            {
+                @foreach (var prest in prestacionesFiltradas.OrderBy(p => p.Empleado?.Codigo ?? "").ThenBy(p => p.Tipo))
+                {
+                    <tr class="@(selectedPrestacion?.Id == prest.Id ? "selected" : "")"
+                        @onclick="() => SelectPrestacion(prest)">
+                        <td class="cell-code">@(prest.Empleado?.Codigo ?? "-")</td>
+                        <td>@(prest.Empleado?.NombreCompleto ?? "-")</td>
+                        <td class="cell-tipo tipo-@GetTipoClass(prest.Tipo)">@GetTipoNombre(prest.Tipo)</td>
+                        <td>@prest.Periodo</td>
+                        <td>@prest.FechaInicio.ToString("dd/MM/yyyy")</td>
+                        <td>@prest.FechaFin.ToString("dd/MM/yyyy")</td>
+                        <td class="cell-money">@NumberFormatHelper.FormatearMonedaSinSimbolo(prest.SalarioBase)</td>
+                        <td>@(prest.DiasProporcionales?.ToString() ?? "-")</td>
+                        <td class="cell-money">@NumberFormatHelper.FormatearMonedaSinSimbolo(prest.ValorCalculado)</td>
+                        <td class="cell-money">@NumberFormatHelper.FormatearMonedaSinSimbolo(prest.ValorPagado)</td>
+                        <td>@(prest.FechaPago?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td class="cell-estado estado-@GetEstadoClass(prest.Estado)">@prest.Estado.ToString().ToUpper()</td>
+                        <td class="cell-actions">
+                            <button class="btn-table" @onclick="() => VerDetalle(prest)" @onclick:stopPropagation="true">VER</button>
+                            @if (prest.Estado == EstadoPrestacion.Calculada)
+                            {
+                                <button class="btn-table" @onclick="() => AprobarPrestacion(prest)" @onclick:stopPropagation="true">APROBAR</button>
+                            }
+                            @if (prest.Estado == EstadoPrestacion.Aprobada)
+                            {
+                                <button class="btn-table" @onclick="() => MarcarPagada(prest)" @onclick:stopPropagation="true">PAGAR</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="shortcuts-bar">
+    <div class="shortcut-item">
+        <span class="shortcut-key">F5</span>
+        <span>=ACTUALIZAR</span>
+    </div>
+    <div class="shortcut-item">
+        <span class="shortcut-key">ESC</span>
+        <span>=SALIR</span>
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick:stopPropagation="true">
+        <div class="modal-box">
+            <h3>DETALLE PRESTACIÓN - @(prestacionEdit?.Empleado?.NombreCompleto ?? "")</h3>
+            
+            @if (prestacionEdit != null)
+            {
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">TIPO</label>
+                        <input type="text" class="form-input" value="@GetTipoNombre(prestacionEdit.Tipo)" readonly />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">PERÍODO (AÑO)</label>
+                        <input type="number" class="form-input" value="@prestacionEdit.Periodo" readonly />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">FECHA INICIO</label>
+                        <input type="date" class="form-input" value="@prestacionEdit.FechaInicio.ToString("yyyy-MM-dd")" readonly />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">FECHA FIN</label>
+                        <input type="date" class="form-input" value="@prestacionEdit.FechaFin.ToString("yyyy-MM-dd")" readonly />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">SALARIO BASE</label>
+                        <input type="text" class="form-input" value="@NumberFormatHelper.FormatearMoneda(prestacionEdit.SalarioBase)" readonly />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">DÍAS PROPORCIONALES</label>
+                        <input type="text" class="form-input" value="@(prestacionEdit.DiasProporcionales?.ToString() ?? "-")" readonly />
+                    </div>
+                </div>
+
+                <div class="section-title">VALORES</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">VALOR CALCULADO</label>
+                        <input type="text" class="form-input" value="@NumberFormatHelper.FormatearMoneda(prestacionEdit.ValorCalculado)" readonly style="font-weight: bold; color: #006400;" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">VALOR PAGADO</label>
+                        <input type="text" class="form-input" value="@NumberFormatHelper.FormatearMoneda(prestacionEdit.ValorPagado)" readonly />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ESTADO</label>
+                        <input type="text" class="form-input" value="@prestacionEdit.Estado.ToString().ToUpper()" readonly />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">FECHA PAGO</label>
+                        <input type="text" class="form-input" value="@(prestacionEdit.FechaPago?.ToString("dd/MM/yyyy") ?? "NO PAGADO")" readonly />
+                    </div>
+                    
+                    @if (prestacionEdit.ValorBase.HasValue)
+                    {
+                        <div class="form-group">
+                            <label class="form-label">VALOR BASE (CESANTÍAS)</label>
+                            <input type="text" class="form-input" value="@prestacionEdit.ValorBase?.ToString("C0")" readonly />
+                        </div>
+                    }
+                    
+                    @if (prestacionEdit.PorcentajeAplicado.HasValue)
+                    {
+                        <div class="form-group">
+                            <label class="form-label">% APLICADO</label>
+                            <input type="text" class="form-input" value="@prestacionEdit.PorcentajeAplicado?.ToString("N2")%" readonly />
+                        </div>
+                    }
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">MÉTODO PAGO</label>
+                        <input type="text" class="form-input" value="@(prestacionEdit.MetodoPago ?? "-")" readonly />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">COMPROBANTE</label>
+                        <input type="text" class="form-input" value="@(prestacionEdit.ComprobanteReferencia ?? "-")" readonly />
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label class="form-label">OBSERVACIONES</label>
+                        <textarea class="form-input" rows="2" readonly>@(prestacionEdit.Observaciones ?? "")</textarea>
+                    </div>
+                </div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn" @onclick="CerrarModal">CERRAR (ESC)</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showCalcModal)
+{
+    <div class="modal-overlay" @onclick:stopPropagation="true">
+        <div class="modal-box">
+            <h3>@calcModalTitle</h3>
+            
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label class="form-label">EMPLEADO *</label>
+                    <select class="form-input" @bind="calcEmpleadoId">
+                        <option value="0">-- SELECCIONE EMPLEADO --</option>
+                        @foreach (var emp in empleadosActivos.OrderBy(e => e.NombreCompleto))
+                        {
+                            <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+                        }
+                    </select>
+                </div>
+                
+                @if (calcTipo == TipoPrestacion.PrimaServicios)
+                {
+                    <div class="form-group">
+                        <label class="form-label">SEMESTRE</label>
+                        <select class="form-input" @bind="calcSemestre">
+                            <option value="1">PRIMER SEMESTRE (Ene-Jun)</option>
+                            <option value="2">SEGUNDO SEMESTRE (Jul-Dic)</option>
+                        </select>
+                    </div>
+                }
+                
+                @if (calcTipo == TipoPrestacion.Cesantias)
+                {
+                    <div class="form-group">
+                        <label class="form-label">FECHA INICIO</label>
+                        <input type="date" class="form-input" @bind="calcFechaInicio" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">FECHA FIN</label>
+                        <input type="date" class="form-input" @bind="calcFechaFin" />
+                    </div>
+                }
+                
+                <div class="form-group">
+                    <label class="form-label">AÑO</label>
+                    <input type="number" class="form-input" @bind="calcAño" min="2020" max="2050" />
+                </div>
+            </div>
+
+            @if (calcResultado.HasValue)
+            {
+                <div class="calc-result">
+                    <div>VALOR CALCULADO:</div>
+                    <div class="valor">@calcResultado.Value.ToString("C0")</div>
+                </div>
+            }
+
+            <div class="modal-actions">
+                <button class="btn" @onclick="CerrarCalcModal">CANCELAR (ESC)</button>
+                <button class="btn btn-primary" @onclick="EjecutarCalculo" disabled="@isCalculating">
+                    @(isCalculating ? "CALCULANDO..." : "CALCULAR")
+                </button>
+                @if (calcResultado.HasValue)
+                {
+                    <button class="btn btn-success" @onclick="GuardarPrestacion" disabled="@isSaving">
+                        @(isSaving ? "GUARDANDO..." : "GUARDAR PRESTACIÓN")
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@if (showConfirmModal)
+{
+    <div class="modal-overlay" @onclick:stopPropagation="true">
+        <div class="modal-box">
+            <h3>CONFIRMAR ACCIÓN</h3>
+            <p>@confirmMessage</p>
+            <div class="modal-actions">
+                <button class="btn" @onclick="() => showConfirmModal = false">CANCELAR</button>
+                <button class="btn btn-primary" @onclick="ConfirmarAccion">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const string PageId = "Prestaciones";
+    private MessageToast? messageToast;
+    
+    private List<Prestacion> prestaciones = new();
+    private List<Prestacion> prestacionesFiltradas = new();
+    private List<Empleado> empleadosActivos = new();
+    private Prestacion? selectedPrestacion;
+    private Prestacion? prestacionEdit;
+    
+    private int añoSeleccionado = DateTime.Now.Year;
+    private string tipoFiltro = "";
+    private string estadoFiltro = "";
+    
+    private bool isLoading;
+    private bool showModal;
+    private bool showCalcModal;
+    private bool isSaving;
+    private bool isCalculating;
+    
+    // Campos para cálculo
+    private string calcModalTitle = "";
+    private TipoPrestacion calcTipo;
+    private int calcEmpleadoId;
+    private int calcAño;
+    private int calcSemestre = 1;
+    private DateTime calcFechaInicio;
+    private DateTime calcFechaFin;
+    private decimal? calcResultado;
+    
+    private bool showConfirmModal;
+    private string confirmMessage = "";
+    private Func<Task>? confirmAction;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
+        {
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarDatos },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModalAsync }
+        });
+        
+        await CargarEmpleados();
+        await CargarDatos();
+    }
+    
+    public void Dispose()
+    {
+        KeyboardShortcutService.ClearPageShortcuts(PageId);
+    }
+    
+    private async Task CargarEmpleados()
+    {
+        try
+        {
+            empleadosActivos = (await EmpleadoRepository.GetAllActiveWithRelationsAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando empleados");
+        }
+    }
+    
+    private async Task CargarDatos()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            prestaciones = (await PrestacionRepository.GetByPeriodoAsync(añoSeleccionado)).ToList();
+            
+            // Cargar relación con empleados
+            foreach (var prest in prestaciones)
+            {
+                if (prest.Empleado == null)
+                {
+                    prest.Empleado = empleadosActivos.FirstOrDefault(e => e.Id == prest.EmpleadoId);
+                }
+            }
+            
+            AplicarFiltros();
+            
+            Logger.LogInformation("Prestaciones cargadas para {Año}: {Count}", añoSeleccionado, prestaciones.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando prestaciones");
+            messageToast?.ShowError("Error al cargar datos: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void AplicarFiltros()
+    {
+        prestacionesFiltradas = prestaciones
+            .Where(p => string.IsNullOrEmpty(tipoFiltro) || (int)p.Tipo == int.Parse(tipoFiltro))
+            .Where(p => string.IsNullOrEmpty(estadoFiltro) || (int)p.Estado == int.Parse(estadoFiltro))
+            .ToList();
+        StateHasChanged();
+    }
+    
+    private void CalcularCesantias()
+    {
+        calcModalTitle = "CALCULAR CESANTÍAS";
+        calcTipo = TipoPrestacion.Cesantias;
+        calcEmpleadoId = 0;
+        calcAño = añoSeleccionado;
+        calcFechaInicio = new DateTime(añoSeleccionado, 1, 1);
+        calcFechaFin = new DateTime(añoSeleccionado, 12, 31);
+        calcResultado = null;
+        showCalcModal = true;
+        StateHasChanged();
+    }
+    
+    private void CalcularInteresesCesantias()
+    {
+        calcModalTitle = "CALCULAR INTERESES SOBRE CESANTÍAS";
+        calcTipo = TipoPrestacion.InteresesCesantias;
+        calcEmpleadoId = 0;
+        calcAño = añoSeleccionado;
+        calcResultado = null;
+        showCalcModal = true;
+        StateHasChanged();
+    }
+    
+    private void CalcularPrimaServicios()
+    {
+        calcModalTitle = "CALCULAR PRIMA DE SERVICIOS";
+        calcTipo = TipoPrestacion.PrimaServicios;
+        calcEmpleadoId = 0;
+        calcAño = añoSeleccionado;
+        calcSemestre = DateTime.Now.Month <= 6 ? 1 : 2;
+        calcResultado = null;
+        showCalcModal = true;
+        StateHasChanged();
+    }
+    
+    private async Task EjecutarCalculo()
+    {
+        if (calcEmpleadoId == 0)
+        {
+            messageToast?.ShowError("Debe seleccionar un empleado");
+            return;
+        }
+        
+        try
+        {
+            isCalculating = true;
+            StateHasChanged();
+            
+            Result<decimal> resultado;
+            
+            switch (calcTipo)
+            {
+                case TipoPrestacion.Cesantias:
+                    resultado = await LiquidacionService.CalcularCesantiasAsync(calcEmpleadoId, calcFechaInicio, calcFechaFin);
+                    break;
+                    
+                case TipoPrestacion.InteresesCesantias:
+                    resultado = await LiquidacionService.CalcularInteresesCesantiasAsync(calcEmpleadoId, calcAño);
+                    break;
+                    
+                case TipoPrestacion.PrimaServicios:
+                    DateTime fechaInicio, fechaFin;
+                    if (calcSemestre == 1)
+                    {
+                        fechaInicio = new DateTime(calcAño, 1, 1);
+                        fechaFin = new DateTime(calcAño, 6, 30);
+                    }
+                    else
+                    {
+                        fechaInicio = new DateTime(calcAño, 7, 1);
+                        fechaFin = new DateTime(calcAño, 12, 31);
+                    }
+                    resultado = await LiquidacionService.CalcularPrimaServiciosAsync(calcEmpleadoId, fechaInicio, fechaFin);
+                    break;
+                    
+                default:
+                    messageToast?.ShowError("Tipo de prestación no soportado para cálculo automático");
+                    return;
+            }
+            
+            if (resultado.IsSuccess)
+            {
+                calcResultado = resultado.Value;
+                messageToast?.ShowSuccess($"Cálculo realizado: {resultado.Value:C0}");
+            }
+            else
+            {
+                messageToast?.ShowError(resultado.Message ?? "Error en el cálculo");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error calculando prestación");
+            messageToast?.ShowError("Error al calcular: " + ex.Message);
+        }
+        finally
+        {
+            isCalculating = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task GuardarPrestacion()
+    {
+        if (!calcResultado.HasValue || calcEmpleadoId == 0)
+        {
+            messageToast?.ShowError("Debe realizar el cálculo primero");
+            return;
+        }
+        
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+            
+            var empleado = empleadosActivos.FirstOrDefault(e => e.Id == calcEmpleadoId);
+            
+            DateTime fechaInicio, fechaFin;
+            
+            if (calcTipo == TipoPrestacion.Cesantias)
+            {
+                fechaInicio = calcFechaInicio;
+                fechaFin = calcFechaFin;
+            }
+            else if (calcTipo == TipoPrestacion.PrimaServicios)
+            {
+                if (calcSemestre == 1)
+                {
+                    fechaInicio = new DateTime(calcAño, 1, 1);
+                    fechaFin = new DateTime(calcAño, 6, 30);
+                }
+                else
+                {
+                    fechaInicio = new DateTime(calcAño, 7, 1);
+                    fechaFin = new DateTime(calcAño, 12, 31);
+                }
+            }
+            else
+            {
+                fechaInicio = new DateTime(calcAño, 1, 1);
+                fechaFin = new DateTime(calcAño, 12, 31);
+            }
+            
+            var prestacion = new Prestacion
+            {
+                EmpleadoId = calcEmpleadoId,
+                Periodo = calcAño,
+                Tipo = calcTipo,
+                FechaInicio = fechaInicio,
+                FechaFin = fechaFin,
+                SalarioBase = empleado?.SalarioBase ?? 0,
+                ValorCalculado = calcResultado.Value,
+                ValorPagado = 0,
+                Estado = EstadoPrestacion.Calculada,
+                DiasProporcionales = (int)(fechaFin - fechaInicio).TotalDays + 1
+            };
+            
+            await PrestacionRepository.AddAsync(prestacion);
+            messageToast?.ShowSuccess($"Prestación guardada correctamente: {calcResultado.Value:C0}");
+            
+            showCalcModal = false;
+            calcResultado = null;
+            añoSeleccionado = calcAño;
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error guardando prestación");
+            messageToast?.ShowError("Error al guardar: " + ex.Message);
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void VerDetalle(Prestacion prestacion)
+    {
+        prestacionEdit = prestacion;
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void SelectPrestacion(Prestacion prestacion)
+    {
+        selectedPrestacion = selectedPrestacion?.Id == prestacion.Id ? null : prestacion;
+        StateHasChanged();
+    }
+    
+    private async Task AprobarPrestacion(Prestacion prestacion)
+    {
+        try
+        {
+            prestacion.Estado = EstadoPrestacion.Aprobada;
+            await PrestacionRepository.UpdateAsync(prestacion);
+            messageToast?.ShowSuccess($"Prestación de {prestacion.Empleado?.NombreCompleto} aprobada");
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error aprobando prestación");
+            messageToast?.ShowError("Error al aprobar: " + ex.Message);
+        }
+    }
+    
+    private async Task MarcarPagada(Prestacion prestacion)
+    {
+        try
+        {
+            prestacion.Estado = EstadoPrestacion.Pagada;
+            prestacion.FechaPago = DateTime.Now;
+            prestacion.ValorPagado = prestacion.ValorCalculado;
+            await PrestacionRepository.UpdateAsync(prestacion);
+            messageToast?.ShowSuccess($"Prestación de {prestacion.Empleado?.NombreCompleto} marcada como pagada");
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error marcando prestación como pagada");
+            messageToast?.ShowError("Error al marcar como pagada: " + ex.Message);
+        }
+    }
+    
+    private void CerrarModal()
+    {
+        showModal = false;
+        prestacionEdit = null;
+        StateHasChanged();
+    }
+    
+    private void CerrarCalcModal()
+    {
+        showCalcModal = false;
+        calcResultado = null;
+        StateHasChanged();
+    }
+    
+    private Task CerrarModalAsync()
+    {
+        if (showCalcModal)
+        {
+            CerrarCalcModal();
+        }
+        else
+        {
+            CerrarModal();
+        }
+        return Task.CompletedTask;
+    }
+    
+    private async Task ConfirmarAccion()
+    {
+        showConfirmModal = false;
+        if (confirmAction != null)
+        {
+            await confirmAction();
+        }
+        StateHasChanged();
+    }
+    
+    private string GetTipoNombre(TipoPrestacion tipo)
+    {
+        return tipo switch
+        {
+            TipoPrestacion.Cesantias => "CESANTÍAS",
+            TipoPrestacion.InteresesCesantias => "INT. CESANTÍAS",
+            TipoPrestacion.PrimaServicios => "PRIMA SERVICIOS",
+            TipoPrestacion.Dotacion => "DOTACIÓN",
+            TipoPrestacion.AuxilioTransporte => "AUX. TRANSPORTE",
+            TipoPrestacion.Bonificacion => "BONIFICACIÓN",
+            _ => "-"
+        };
+    }
+    
+    private string GetTipoClass(TipoPrestacion tipo)
+    {
+        return tipo.ToString().ToLower();
+    }
+    
+    private string GetEstadoClass(EstadoPrestacion estado)
+    {
+        return estado.ToString().ToLower();
+    }
+}

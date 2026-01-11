@@ -1,0 +1,306 @@
+/* ========================================
+   DATATABLE - ESTILO HOSPITALARIO
+   Tabla de datos funcional sin decoraciones
+   ======================================== */
+
+/* ===== CONTENEDOR PRINCIPAL ===== */
+.hospital-datatable {
+    width: 100%;
+    background-color: #FFFFFF;
+    border: 2px solid #000000;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+}
+
+.hospital-datatable:focus {
+    outline: 3px solid #000000;
+    outline-offset: -3px;
+}
+
+/* ===== WRAPPER DE TABLA CON SCROLL ===== */
+.datatable-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 600px;
+    border-bottom: 2px solid #000000;
+}
+
+/* ===== TABLA BASE ===== */
+.hospital-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: none;
+    background-color: #FFFFFF;
+}
+
+/* ===== HEADERS ===== */
+.hospital-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.hospital-table thead tr {
+    background-color: #F5F5F5;
+}
+
+.hospital-table thead th {
+    background-color: #F5F5F5;
+    color: #000000;
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid #666666;
+    font-size: 11px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* ===== BODY ===== */
+.hospital-table tbody tr {
+    background-color: #FFFFFF;
+}
+
+.hospital-table tbody td {
+    padding: 6px 12px;
+    border: 1px solid #CCCCCC;
+    color: #000000;
+    font-size: 12px;
+    vertical-align: middle;
+}
+
+/* ===== ESTADOS DE FILA ===== */
+/* Hover - fondo amarillo claro */
+.hospital-table tbody tr.row-normal:hover {
+    background-color: #FFFFCC;
+    cursor: pointer;
+}
+
+/* Fila seleccionada - fondo amarillo más intenso */
+.hospital-table tbody tr.row-selected {
+    background-color: #FFFF99;
+}
+
+.hospital-table tbody tr.row-selected:hover {
+    background-color: #FFFF99;
+}
+
+/* Borde en celdas de fila seleccionada */
+.hospital-table tbody tr.row-selected td {
+    border-color: #999999;
+}
+
+/* ===== ESTADOS ESPECIALES ===== */
+/* Estado cargando */
+.loading-state {
+    text-align: center;
+    padding: 40px 20px !important;
+    font-weight: 700;
+    color: #000000;
+    background-color: #F5F5F5 !important;
+    border: 1px solid #666666 !important;
+    font-size: 13px;
+    letter-spacing: 2px;
+}
+
+/* Estado vacío */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px !important;
+    font-weight: 700;
+    color: #666666;
+    background-color: #FFFFFF !important;
+    border: 1px solid #CCCCCC !important;
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+/* ===== PAGINACIÓN ===== */
+.datatable-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background-color: #F5F5F5;
+    border-top: 2px solid #000000;
+    gap: 16px;
+    flex-wrap: nowrap;
+}
+
+.pagination-info {
+    font-size: 11px;
+    font-weight: 700;
+    color: #000000;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.pagination-btn {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    background-color: #FFFFFF;
+    border: 1px solid #666666;
+    color: #000000;
+    cursor: pointer;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: #E0E0E0;
+}
+
+.pagination-btn:disabled {
+    background-color: #CCCCCC;
+    color: #666666;
+    cursor: not-allowed;
+    border-color: #999999;
+}
+
+.pagination-page {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #000000;
+    white-space: nowrap;
+}
+
+.pagination-input {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    width: 50px;
+    padding: 2px 4px;
+    border: 1px solid #666666;
+    background-color: #FFFFFF;
+    color: #000000;
+    text-align: center;
+}
+
+.pagination-input:focus {
+    outline: 2px solid #000000;
+    outline-offset: -2px;
+}
+
+.pagination-size {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.pagination-size-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #000000;
+    white-space: nowrap;
+}
+
+.pagination-select {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 2px 4px;
+    border: 1px solid #666666;
+    background-color: #FFFFFF;
+    color: #000000;
+}
+
+.pagination-select:focus {
+    outline: 2px solid #000000;
+    outline-offset: -2px;
+}
+
+/* ===== ATAJOS DE TECLADO ===== */
+.datatable-keyboard {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 6px 12px;
+    background-color: #2C2C2C;
+    color: #FFFFFF;
+    border-top: 1px solid #000000;
+    font-size: 10px;
+}
+
+.keyboard-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.keyboard-hint kbd {
+    background-color: #444444;
+    color: #FFFFFF;
+    padding: 2px 6px;
+    border: 1px solid #666666;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: 400;
+}
+
+/* ===== SCROLLBARS CUSTOM (OPCIONAL) ===== */
+.datatable-wrapper::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+}
+
+.datatable-wrapper::-webkit-scrollbar-track {
+    background: #F5F5F5;
+    border: 1px solid #CCCCCC;
+}
+
+.datatable-wrapper::-webkit-scrollbar-thumb {
+    background: #999999;
+    border: 2px solid #F5F5F5;
+}
+
+.datatable-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #666666;
+}
+
+.datatable-wrapper::-webkit-scrollbar-corner {
+    background: #F5F5F5;
+}
+
+/* ===== RESPONSIVE (ANCHO MÍNIMO) ===== */
+@media (max-width: 1280px) {
+    .datatable-pagination {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .pagination-controls {
+        order: 2;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .pagination-info {
+        order: 1;
+    }
+    
+    .pagination-size {
+        order: 3;
+    }
+}
+
+/* ===== ELIMINACIÓN DE ANIMACIONES ===== */
+.hospital-datatable *,
+.hospital-datatable *::before,
+.hospital-datatable *::after {
+    transition: none !important;
+    animation: none !important;
+}

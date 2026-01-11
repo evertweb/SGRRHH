@@ -2,6 +2,11 @@
 @using SGRRHH.Local.Shared.Interfaces
 @inject IAuthService AuthService
 
+@* =====================================================================
+   ROLES TEMPORALMENTE DESHABILITADOS - Todos los usuarios autenticados 
+   tienen acceso completo mientras se rediseña el sistema de roles
+   ===================================================================== *@
+
 @if (IsAuthorized)
 {
     @Authorized
@@ -14,25 +19,15 @@ else
 @code {
     [Parameter] public RenderFragment? Authorized { get; set; }
     [Parameter] public RenderFragment? NotAuthorized { get; set; }
+    
+    /// <summary>
+    /// [OBSOLETO] El parámetro RequiredRole se ignora temporalmente.
+    /// Todos los usuarios autenticados tienen acceso completo.
+    /// </summary>
     [Parameter] public RolUsuario? RequiredRole { get; set; }
     
-    private bool IsAuthorized
-    {
-        get
-        {
-            if (!AuthService.IsAuthenticated)
-                return false;
-            
-            if (RequiredRole == null)
-                return true;
-            
-            return RequiredRole switch
-            {
-                RolUsuario.Administrador => AuthService.IsAdmin,
-                RolUsuario.Aprobador => AuthService.IsAprobador,
-                RolUsuario.Operador => AuthService.IsOperador,
-                _ => false
-            };
-        }
-    }
+    /// <summary>
+    /// Mientras el sistema de roles está deshabilitado, solo se verifica autenticación.
+    /// </summary>
+    private bool IsAuthorized => AuthService.IsAuthenticated;
 }

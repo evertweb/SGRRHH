@@ -1,23 +1,28 @@
-@using SGRRHH.Local.Domain.Entities
+﻿@using SGRRHH.Local.Domain.Entities
 @using SGRRHH.Local.Shared.Interfaces
 @inject IDepartamentoRepository DepartamentoRepository
 @inject IEmpleadoRepository EmpleadoRepository
+@inject ICatalogCacheService CatalogCache
 @inject ILogger<DepartamentosTab> Logger
+@inject IJSRuntime JSRuntime
 
-<!-- Header con controles -->
-<div class="toolbar">
-    <div class="toolbar-group">
-        <button @onclick="Nuevo">NUEVO (F3)</button>
-        <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+<!-- Toolbar -->
+<div class="hospital-toolbar">
+    <div class="hospital-toolbar-group">
+        <button @onclick="Nuevo">NUEVO</button>
+        <button @onclick="CargarDatos">ACTUALIZAR</button>
         @if (selectedItem != null)
         {
-            <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
+            <button @onclick="EditarSeleccionado">EDITAR</button>
+            <button @onclick="() => ConfirmarEliminar(selectedItem)" 
+                    disabled="@(selectedItem.Empleados?.Count > 0)">
+                ELIMINAR
+            </button>
         }
     </div>
-    <div class="toolbar-group">
-        <input type="text" placeholder="Buscar..." 
-               @bind="searchTerm" @bind:event="oninput" />
-        <button @onclick="Buscar">BUSCAR</button>
+    <div class="hospital-toolbar-group">
+        <input type="text" placeholder="BUSCAR..." 
+               @bind="searchTerm" @bind:event="oninput" @bind:after="Buscar" />
         @if (!string.IsNullOrEmpty(searchTerm))
         {
             <button @onclick="LimpiarBusqueda">LIMPIAR</button>
@@ -25,26 +30,26 @@
     </div>
 </div>
 
-<!-- Tabla -->
-<table>
+<!-- Tabla de Áreas/Departamentos Organizacionales -->
+<table class="hospital-table">
     <thead>
         <tr>
-            <th style="width: 100px;">CÓDIGO</th>
-            <th>NOMBRE</th>
+            <th>CÓDIGO</th>
+            <th>NOMBRE DEL ÁREA</th>
             <th>DESCRIPCIÓN</th>
-            <th style="width: 120px;">JEFE</th>
-            <th style="width: 100px;">EMPLEADOS</th>
-            <th style="width: 150px;">ACCIONES</th>
+            <th>JEFE DE ÁREA</th>
+            <th class="text-center">EMPLEADOS</th>
+            <th>ACCIONES</th>
         </tr>
     </thead>
     <tbody>
         @if (isLoading)
         {
-            <tr><td colspan="6" class="loading">Cargando departamentos...</td></tr>
+            <tr><td colspan="6" class="loading">CARGANDO ÁREAS/DEPARTAMENTOS...</td></tr>
         }
         else if (!itemsFiltrados.Any())
         {
-            <tr><td colspan="6" class="empty-state">No hay departamentos para mostrar</td></tr>
+            <tr><td colspan="6" class="empty-state">NO HAY ÁREAS/DEPARTAMENTOS PARA MOSTRAR</td></tr>
         }
         else
         {
@@ -56,7 +61,7 @@
                     <td>@item.Nombre</td>
                     <td>@(item.Descripcion ?? "-")</td>
                     <td>@GetJefeNombre(item.JefeId)</td>
-                    <td class="text-center">@item.Empleados?.Count ?? 0</td>
+                    <td class="text-center">@(item.Empleados?.Count ?? 0)</td>
                     <td class="table-actions">
                         <button @onclick="() => Editar(item)" @onclick:stopPropagation="true">
                             EDITAR
@@ -74,44 +79,57 @@
 
 <!-- Modal de edición -->
 <FormModal @bind-IsVisible="showModal" 
-           Title="@(isEditing ? $"EDITAR DEPARTAMENTO - {editItem?.Codigo}" : "NUEVO DEPARTAMENTO")"
-           Width="600px"
+           Title="@(isEditing ? $"EDITAR ÁREA/DEPARTAMENTO - {editItem?.Codigo}" : "NUEVA ÁREA/DEPARTAMENTO ORGANIZACIONAL")"
            OnSaveClicked="Guardar"
            OnCancelClicked="CerrarModal"
            IsSaving="isSaving">
     
     @if (editItem != null)
     {
-        <div class="form-group required">
+        <div class="hospital-form-note">
+            <strong>NOTA:</strong> ESTE ES UN DEPARTAMENTO/ÁREA ORGANIZACIONAL DE LA EMPRESA (EJ: RECURSOS HUMANOS, CONTABILIDAD), 
+            NO UN DEPARTAMENTO GEOGRÁFICO DE COLOMBIA.
+        </div>
+        
+        <div class="hospital-form-group required">
             <label>CÓDIGO</label>
-            <input type="text" @bind="editItem.Codigo" maxlength="20" 
-                   readonly="@isEditing" disabled="@isSaving" />
-            <small>Identificador único del departamento</small>
+            <div class="hospital-input-prefix">
+                <span class="prefix">DP-</span>
+                <input type="text" 
+                       id="codigoInput"
+                       @bind="codigoNumero" 
+                       @bind:event="oninput"
+                       maxlength="10" 
+                       disabled="@isSaving"
+                       placeholder="1, 2, 3..." />
+            </div>
+            <small>INGRESE EL NÚMERO DEL CÓDIGO (EJ: 1, 2, 3...)</small>
         </div>
         
-        <div class="form-group required">
-            <label>NOMBRE</label>
-            <input type="text" @bind="editItem.Nombre" maxlength="100" 
-                   disabled="@isSaving" />
+        <div class="hospital-form-group required">
+            <label>NOMBRE DEL ÁREA/DEPARTAMENTO</label>
+            <input type="text" id="nombreInput" @bind="editItem.Nombre" maxlength="100" 
+                   disabled="@isSaving" placeholder="EJ: RECURSOS HUMANOS, CONTABILIDAD, SISTEMAS..." />
         </div>
         
-        <div class="form-group">
+        <div class="hospital-form-group">
             <label>DESCRIPCIÓN</label>
             <textarea @bind="editItem.Descripcion" rows="3" 
                      disabled="@isSaving" 
-                     maxlength="500"></textarea>
+                     maxlength="500"
+                     placeholder="DESCRIPCIÓN DE LAS FUNCIONES Y RESPONSABILIDADES DEL ÁREA..."></textarea>
         </div>
         
-        <div class="form-group">
-            <label>JEFE DEL DEPARTAMENTO</label>
+        <div class="hospital-form-group">
+            <label>JEFE DEL ÁREA/DEPARTAMENTO</label>
             <select @bind="editItem.JefeId" disabled="@isSaving">
-                <option value="">-- Sin asignar --</option>
+                <option value="">-- SIN ASIGNAR --</option>
                 @foreach (var emp in empleadosActivos)
                 {
                     <option value="@emp.Id">@emp.NombreCompleto - @emp.Codigo</option>
                 }
             </select>
-            <small>Empleado responsable del departamento</small>
+            <small>EMPLEADO RESPONSABLE DE ESTA ÁREA</small>
         </div>
     }
 </FormModal>
@@ -119,15 +137,16 @@
 <!-- Modal de confirmación de eliminación -->
 <FormModal @bind-IsVisible="showConfirmModal"
            Title="CONFIRMAR ELIMINACIÓN"
-           Width="400px"
            OnSaveClicked="EliminarConfirmado"
            OnCancelClicked="() => showConfirmModal = false"
            ShowSaveButton="true"
            IsSaving="isSaving">
-    <p>¿Está seguro que desea eliminar el departamento <strong>@itemToDelete?.Nombre</strong>?</p>
-    <p class="text-danger">
-        <strong>Advertencia:</strong> Esta acción no se puede deshacer.
-    </p>
+    <div style="padding: 16px;">
+        <p style="margin-bottom: 12px;">¿CONFIRMA LA ELIMINACIÓN DEL ÁREA/DEPARTAMENTO <strong>@itemToDelete?.Nombre</strong>?</p>
+        <p style="color: #CC0000; font-weight: 600;">
+            ADVERTENCIA: ESTA ACCIÓN NO SE PUEDE DESHACER.
+        </p>
+    </div>
 </FormModal>
 
 @code {
@@ -149,6 +168,7 @@
     private bool isSaving;
     private bool isEditing;
     private string searchTerm = "";
+    private string codigoNumero = ""; // Número del código (sin el prefijo DP-)
     
     protected override async Task OnInitializedAsync()
     {
@@ -162,7 +182,8 @@
         
         try
         {
-            var departamentos = await DepartamentoRepository.GetAllAsync();
+            // Usar GetAllActiveAsync para excluir departamentos eliminados (soft delete)
+            var departamentos = await DepartamentoRepository.GetAllActiveAsync();
             items = departamentos.OrderBy(d => d.Nombre).ToList();
             itemsFiltrados = items;
             
@@ -172,8 +193,8 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error al cargar departamentos");
-            await SetError($"Error al cargar departamentos: {ex.Message}");
+            Logger.LogError(ex, "Error al cargar áreas/departamentos");
+            await SetError($"Error al cargar áreas/departamentos: {ex.Message}");
         }
         finally
         {
@@ -213,10 +234,16 @@
         StateHasChanged();
     }
     
-    private void Nuevo()
+    private async Task Nuevo()
     {
+        // Obtener sugerencia de siguiente código
+        var sugerido = await DepartamentoRepository.GetNextCodigoAsync();
+        // Extraer solo el número (quitar "DP-")
+        codigoNumero = sugerido.StartsWith("DP-") ? sugerido.Substring(3) : "1";
+        
         editItem = new Departamento
         {
+            Codigo = sugerido,
             Activo = true,
             FechaCreacion = DateTime.Now
         };
@@ -227,9 +254,11 @@
     
     private void Editar(Departamento item)
     {
+        // Extraer número del código existente
+        codigoNumero = item.Codigo.StartsWith("DP-") ? item.Codigo.Substring(3) : item.Codigo;
+        
         editItem = new Departamento
         {
-            Id = item.Id,
             Codigo = item.Codigo,
             Nombre = item.Nombre,
             Descripcion = item.Descripcion,
@@ -238,6 +267,8 @@
             FechaCreacion = item.FechaCreacion,
             FechaModificacion = DateTime.Now
         };
+        // Guardar el Id original para actualización
+        editItem.Id = item.Id;
         isEditing = true;
         showModal = true;
         StateHasChanged();
@@ -255,16 +286,45 @@
     {
         if (editItem == null) return;
         
-        // Validaciones
-        if (string.IsNullOrWhiteSpace(editItem.Codigo))
+        // Limpiar errores previos
+        await JSRuntime.InvokeVoidAsync("clearAllFieldErrors");
+        
+        // Validar código
+        if (string.IsNullOrWhiteSpace(codigoNumero))
         {
-            await SetError("El código es requerido");
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "codigoInput", "EL NÚMERO DEL CÓDIGO ES REQUERIDO");
             return;
         }
         
+        // Validar que sea un número válido
+        codigoNumero = codigoNumero.Trim();
+        if (!int.TryParse(codigoNumero, out var numCodigo) || numCodigo <= 0)
+        {
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "codigoInput", "EL CÓDIGO DEBE SER UN NÚMERO POSITIVO (EJ: 1, 2, 3...)");
+            return;
+        }
+        
+        // Construir código completo
+        editItem.Codigo = $"DP-{numCodigo}";
+        
+        // Validar nombre
         if (string.IsNullOrWhiteSpace(editItem.Nombre))
         {
-            await SetError("El nombre es requerido");
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "nombreInput", "EL NOMBRE DEL ÁREA/DEPARTAMENTO ES REQUERIDO");
+            return;
+        }
+        
+        // Validar código duplicado
+        if (await DepartamentoRepository.ExistsCodigoAsync(editItem.Codigo, isEditing ? editItem.Id : null))
+        {
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "codigoInput", $"YA EXISTE UN ÁREA/DEPARTAMENTO CON EL CÓDIGO '{editItem.Codigo}'");
+            return;
+        }
+        
+        // Validar nombre duplicado
+        if (await DepartamentoRepository.ExistsByNameAsync(editItem.Nombre, isEditing ? editItem.Id : null))
+        {
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "nombreInput", $"YA EXISTE UN ÁREA/DEPARTAMENTO CON EL NOMBRE '{editItem.Nombre}'");
             return;
         }
         
@@ -276,17 +336,41 @@
             if (isEditing)
             {
                 await DepartamentoRepository.UpdateAsync(editItem);
-                await SetSuccess($"Departamento '{editItem.Nombre}' actualizado correctamente");
-                Logger.LogInformation($"Departamento actualizado: {editItem.Codigo}");
+                
+                // Actualizar el item en la lista local sin recargar todo
+                var itemIndex = items.FindIndex(d => d.Id == editItem.Id);
+                if (itemIndex >= 0)
+                {
+                    var reloaded = await DepartamentoRepository.GetByIdAsync(editItem.Id);
+                    if (reloaded != null)
+                    {
+                        items[itemIndex] = reloaded;
+                    }
+                }
+                
+                await SetSuccess($"Área/Departamento '{editItem.Nombre}' actualizado correctamente");
+                Logger.LogInformation($"Área/Departamento actualizado: {editItem.Codigo}");
             }
             else
             {
-                await DepartamentoRepository.AddAsync(editItem);
-                await SetSuccess($"Departamento '{editItem.Nombre}' creado correctamente");
-                Logger.LogInformation($"Departamento creado: {editItem.Codigo}");
+                var newDept = await DepartamentoRepository.AddAsync(editItem);
+                
+                // Agregar el nuevo item a la lista
+                var reloaded = await DepartamentoRepository.GetByIdAsync(newDept.Id);
+                if (reloaded != null)
+                {
+                    items.Add(reloaded);
+                    items = items.OrderBy(d => d.Nombre).ToList();
+                }
+                
+                await SetSuccess($"Área/Departamento '{editItem.Nombre}' creado correctamente");
+                Logger.LogInformation($"Área/Departamento creado: {editItem.Codigo}");
             }
             
-            await CargarDatos();
+            // Invalidar caché
+            CatalogCache.InvalidateCache(CatalogType.Departamentos);
+            
+            Buscar();
             CerrarModal();
         }
         catch (Exception ex)
@@ -305,7 +389,7 @@
     {
         if (item.Empleados?.Count > 0)
         {
-            SetError($"No se puede eliminar el departamento porque tiene {item.Empleados.Count} empleado(s) asignado(s)");
+            SetError($"No se puede eliminar el área/departamento porque tiene {item.Empleados.Count} empleado(s) asignado(s)");
             return;
         }
         
@@ -324,10 +408,17 @@
         try
         {
             await DepartamentoRepository.DeleteAsync(itemToDelete.Id);
-            await SetSuccess($"Departamento '{itemToDelete.Nombre}' eliminado correctamente");
-            Logger.LogInformation($"Departamento eliminado: {itemToDelete.Codigo}");
             
-            await CargarDatos();
+            // Remover de la lista local
+            items.RemoveAll(d => d.Id == itemToDelete.Id);
+            
+            // Invalidar caché
+            CatalogCache.InvalidateCache(CatalogType.Departamentos);
+            
+            await SetSuccess($"Área/Departamento '{itemToDelete.Nombre}' eliminado correctamente");
+            Logger.LogInformation($"Área/Departamento eliminado: {itemToDelete.Codigo}");
+            
+            Buscar();
             showConfirmModal = false;
             itemToDelete = null;
         }
@@ -369,9 +460,19 @@
         SuccessMessage = message;
         await SuccessMessageChanged.InvokeAsync(message);
         
-        // Auto-hide después de 3 segundos
-        await Task.Delay(3000);
-        SuccessMessage = null;
-        await SuccessMessageChanged.InvokeAsync(null);
+        // Auto-hide después de 3 segundos (fire-and-forget, no bloquea)
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            if (SuccessMessage == message)
+            {
+                SuccessMessage = null;
+                await InvokeAsync(async () =>
+                {
+                    await SuccessMessageChanged.InvokeAsync(null);
+                    StateHasChanged();
+                });
+            }
+        });
     }
 }

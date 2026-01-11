@@ -1,0 +1,899 @@
+@page "/festivos"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Shared.Interfaces
+@inject IAuthService AuthService
+@inject IFestivoColombiaRepository FestivoRepository
+@inject IKeyboardShortcutService KeyboardShortcutService
+@inject NavigationManager Navigation
+@inject ILogger<Festivos> Logger
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<PageTitle>Festivos Colombia - SGRRHH</PageTitle>
+
+<style>
+    .page-container {
+        width: 100%;
+        min-width: 1024px;
+        padding: 20px;
+        font-family: 'Courier New', monospace;
+    }
+
+    .page-header {
+        border-bottom: 2px solid #000000;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    .page-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .action-bar {
+        border: 1px solid #000000;
+        padding: 10px;
+        margin-bottom: 20px;
+        background: #FFFFFF;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .btn {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 8px 16px;
+        border: 2px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+        cursor: pointer;
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    .btn:hover:not(:disabled) {
+        background: #F0F0F0;
+    }
+
+    .btn:disabled {
+        border-color: #CCCCCC;
+        color: #CCCCCC;
+        cursor: not-allowed;
+    }
+
+    .btn-primary {
+        background: #000000;
+        color: #FFFFFF;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #333333;
+    }
+
+    .filter-section {
+        border-top: 1px solid #CCCCCC;
+        padding-top: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .filter-label {
+        font-size: 11px;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+    }
+
+    .filter-select {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 6px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+        min-width: 120px;
+    }
+
+    .results-info {
+        font-size: 12px;
+        color: #000000;
+        padding: 10px 0;
+        border-bottom: 1px solid #CCCCCC;
+        margin-bottom: 10px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 2px solid #000000;
+        background: #FFFFFF;
+        font-size: 11px;
+    }
+
+    .data-table thead {
+        background: #F0F0F0;
+        border-bottom: 2px solid #000000;
+    }
+
+    .data-table th {
+        padding: 8px;
+        text-align: left;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+        border-right: 1px solid #CCCCCC;
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    .data-table td {
+        padding: 6px 8px;
+        border-bottom: 1px solid #CCCCCC;
+        border-right: 1px solid #CCCCCC;
+        color: #000000;
+    }
+
+    .data-table tbody tr:hover {
+        background: #F9F9F9;
+    }
+
+    .data-table tbody tr.selected {
+        background: #E8E8E8;
+    }
+
+    .loading-message,
+    .empty-message {
+        text-align: center;
+        padding: 40px;
+        color: #666666;
+        font-size: 12px;
+    }
+
+    .cell-fecha {
+        font-weight: bold;
+        white-space: nowrap;
+    }
+
+    .cell-tipo {
+        text-transform: uppercase;
+        font-size: 10px;
+    }
+
+    .tipo-religioso {
+        color: #8B4513;
+    }
+
+    .tipo-civil {
+        color: #006400;
+    }
+
+    .tipo-nacional {
+        color: #00008B;
+    }
+
+    .cell-boolean {
+        text-transform: uppercase;
+        font-size: 10px;
+    }
+
+    .boolean-si {
+        color: #006400;
+    }
+
+    .boolean-no {
+        color: #8B0000;
+    }
+
+    .cell-actions {
+        white-space: nowrap;
+    }
+
+    .btn-table {
+        font-family: 'Courier New', monospace;
+        font-size: 10px;
+        padding: 4px 8px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+        cursor: pointer;
+        margin-right: 4px;
+        text-transform: uppercase;
+    }
+
+    .btn-table:hover {
+        background: #F0F0F0;
+    }
+
+    .shortcuts-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #000000;
+        color: #FFFFFF;
+        padding: 8px 20px;
+        font-size: 11px;
+        border-top: 2px solid #000000;
+        display: flex;
+        gap: 20px;
+        z-index: 1000;
+    }
+
+    .shortcut-item {
+        display: flex;
+        gap: 5px;
+    }
+
+    .shortcut-key {
+        font-weight: bold;
+        color: #FFFF00;
+    }
+
+    .error-message {
+        border: 2px solid #FF0000;
+        background: #FFFFFF;
+        color: #FF0000;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .success-message {
+        border: 2px solid #008000;
+        background: #FFFFFF;
+        color: #008000;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 12px;
+        font-weight: bold;
+    }
+
+    .info-box {
+        border: 2px solid #4169E1;
+        background: #F0F8FF;
+        color: #000080;
+        padding: 12px;
+        margin: 10px 0;
+        font-size: 12px;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+    }
+
+    .modal-box {
+        background: #FFFFFF;
+        border: 3px solid #000000;
+        padding: 20px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal-box h3 {
+        font-size: 16px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #000000;
+        padding-bottom: 10px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .form-group.full-width {
+        grid-column: span 2;
+    }
+
+    .form-label {
+        font-size: 11px;
+        font-weight: bold;
+        color: #000000;
+        text-transform: uppercase;
+    }
+
+    .form-input {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 8px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+        color: #000000;
+    }
+
+    .form-input:focus {
+        outline: 2px solid #000000;
+        outline-offset: 1px;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #CCCCCC;
+    }
+</style>
+
+<MessageToast @ref="messageToast" />
+
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">FESTIVOS COLOMBIA - LEY 51/1983</h1>
+    </div>
+
+    @if (!AuthService.IsAuthenticated)
+    {
+        <div class="error-message">ACCESO DENEGADO - DEBE INICIAR SESIÓN</div>
+        return;
+    }
+
+    <div class="action-bar">
+        <div class="action-buttons">
+            <button class="btn" @onclick="NuevoFestivo">NUEVO (F3)</button>
+            <button class="btn" @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+            <button class="btn" @onclick="GenerarFestivosAño">GENERAR AÑO</button>
+        </div>
+        
+        <div class="filter-section">
+            <div class="filter-group">
+                <label class="filter-label">AÑO:</label>
+                <select class="filter-select" @bind="añoSeleccionado" @bind:after="CargarDatos">
+                    @for (int año = DateTime.Now.Year + 1; año >= 2020; año--)
+                    {
+                        <option value="@año">@año</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">TIPO:</label>
+                <select class="filter-select" @bind="tipoFiltro" @bind:after="AplicarFiltros">
+                    <option value="">TODOS</option>
+                    <option value="1">RELIGIOSO</option>
+                    <option value="2">CIVIL</option>
+                    <option value="3">NACIONAL</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <strong>LEY EMILIANI (Ley 51 de 1983):</strong> Los festivos marcados con "SÍ" se trasladan al lunes siguiente cuando caen entre martes y domingo.
+    </div>
+
+    <div class="results-info">
+        Mostrando @festivosFiltrados.Count festivo(s) del año @añoSeleccionado
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>FECHA</th>
+                <th>DÍA</th>
+                <th>NOMBRE</th>
+                <th>DESCRIPCIÓN</th>
+                <th>TIPO</th>
+                <th>LEY EMILIANI</th>
+                <th>FECHA FIJA</th>
+                <th>FECHA ORIGINAL</th>
+                <th>ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (isLoading)
+            {
+                <tr><td colspan="9" class="loading-message">CARGANDO DATOS...</td></tr>
+            }
+            else if (!festivosFiltrados.Any())
+            {
+                <tr><td colspan="9" class="empty-message">NO HAY FESTIVOS REGISTRADOS PARA ESTE AÑO</td></tr>
+            }
+            else
+            {
+                @foreach (var festivo in festivosFiltrados.OrderBy(f => f.Fecha))
+                {
+                    <tr class="@(selectedFestivo?.Id == festivo.Id ? "selected" : "")"
+                        @onclick="() => SelectFestivo(festivo)">
+                        <td class="cell-fecha">@festivo.Fecha.ToString("dd/MM/yyyy")</td>
+                        <td>@GetDiaSemana(festivo.Fecha)</td>
+                        <td>@festivo.Nombre</td>
+                        <td>@(festivo.Descripcion ?? "-")</td>
+                        <td class="cell-tipo tipo-@GetTipoClass(festivo.Tipo)">@GetTipoNombre(festivo.Tipo)</td>
+                        <td class="cell-boolean @(festivo.EsLeyEmiliani ? "boolean-si" : "boolean-no")">
+                            @(festivo.EsLeyEmiliani ? "SÍ" : "NO")
+                        </td>
+                        <td class="cell-boolean @(festivo.EsFechaFija ? "boolean-si" : "boolean-no")">
+                            @(festivo.EsFechaFija ? "SÍ" : "NO")
+                        </td>
+                        <td>@(festivo.FechaOriginal?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td class="cell-actions">
+                            <button class="btn-table" @onclick="() => EditarFestivo(festivo)" @onclick:stopPropagation="true">EDITAR</button>
+                            <button class="btn-table" @onclick="() => EliminarFestivo(festivo)" @onclick:stopPropagation="true">ELIMINAR</button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="shortcuts-bar">
+    <div class="shortcut-item">
+        <span class="shortcut-key">F3</span>
+        <span>=NUEVO</span>
+    </div>
+    <div class="shortcut-item">
+        <span class="shortcut-key">F5</span>
+        <span>=ACTUALIZAR</span>
+    </div>
+    <div class="shortcut-item">
+        <span class="shortcut-key">ESC</span>
+        <span>=SALIR</span>
+    </div>
+</div>
+
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick:stopPropagation="true">
+        <div class="modal-box">
+            <h3>@(isEditing ? "EDITAR" : "NUEVO") FESTIVO</h3>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">FECHA *</label>
+                    <input type="date" class="form-input" @bind="festivoEdit.Fecha" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">TIPO *</label>
+                    <select class="form-input" @bind="festivoEdit.Tipo">
+                        <option value="@TipoFestivo.Religioso">RELIGIOSO</option>
+                        <option value="@TipoFestivo.Civil">CIVIL</option>
+                        <option value="@TipoFestivo.Nacional">NACIONAL</option>
+                    </select>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label class="form-label">NOMBRE *</label>
+                    <input type="text" class="form-input" @bind="festivoEdit.Nombre" maxlength="100" />
+                </div>
+                
+                <div class="form-group full-width">
+                    <label class="form-label">DESCRIPCIÓN</label>
+                    <input type="text" class="form-input" @bind="festivoEdit.Descripcion" maxlength="200" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">LEY EMILIANI</label>
+                    <select class="form-input" @bind="festivoEdit.EsLeyEmiliani">
+                        <option value="true">SÍ - Se traslada al lunes</option>
+                        <option value="false">NO - Fecha fija</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">ES FECHA FIJA</label>
+                    <select class="form-input" @bind="festivoEdit.EsFechaFija">
+                        <option value="true">SÍ</option>
+                        <option value="false">NO (Variable como Semana Santa)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">FECHA ORIGINAL (Si fue trasladado)</label>
+                    <input type="date" class="form-input" @bind="festivoEdit.FechaOriginal" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">AÑO</label>
+                    <input type="number" class="form-input" @bind="festivoEdit.Año" readonly />
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" @onclick="CerrarModal">CANCELAR (ESC)</button>
+                <button class="btn btn-primary" @onclick="Guardar" disabled="@isSaving">
+                    @(isSaving ? "GUARDANDO..." : "GUARDAR (F10)")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showConfirmModal)
+{
+    <div class="modal-overlay" @onclick:stopPropagation="true">
+        <div class="modal-box">
+            <h3>CONFIRMAR ACCIÓN</h3>
+            <p>@confirmMessage</p>
+            <div class="modal-actions">
+                <button class="btn" @onclick="() => showConfirmModal = false">CANCELAR</button>
+                <button class="btn btn-primary" @onclick="ConfirmarAccion">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const string PageId = "festivos";
+    private MessageToast? messageToast;
+    
+    private List<FestivoColombia> festivos = new();
+    private List<FestivoColombia> festivosFiltrados = new();
+    private FestivoColombia? selectedFestivo;
+    private FestivoColombia festivoEdit = new();
+    
+    private int añoSeleccionado = DateTime.Now.Year;
+    private string tipoFiltro = "";
+    
+    private bool isLoading;
+    private bool showModal;
+    private bool isSaving;
+    private bool isEditing;
+    private bool showConfirmModal;
+    private string confirmMessage = "";
+    private Action? confirmAction;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        // Registrar atajos de teclado para esta página
+        KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
+        {
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = () => { NuevoFestivo(); return Task.CompletedTask; }, Priority = 10 },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarDatos, Priority = 10 },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModalAsync, Priority = 10 },
+            new() { Key = "F10", KeyDisplay = "F10", Description = "Guardar", Action = GuardarAsync, Priority = 10 }
+        });
+        
+        await CargarDatos();
+    }
+    
+    public void Dispose()
+    {
+        KeyboardShortcutService.ClearPageShortcuts(PageId);
+    }
+    
+    private async Task CargarDatos()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+            
+            festivos = (await FestivoRepository.GetByAñoAsync(añoSeleccionado)).ToList();
+            AplicarFiltros();
+            
+            Logger.LogInformation("Festivos cargados para {Año}: {Count}", añoSeleccionado, festivos.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando festivos");
+            messageToast?.ShowError("Error al cargar datos: " + ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void AplicarFiltros()
+    {
+        festivosFiltrados = festivos
+            .Where(f => string.IsNullOrEmpty(tipoFiltro) || (int)f.Tipo == int.Parse(tipoFiltro))
+            .ToList();
+        StateHasChanged();
+    }
+    
+    private void NuevoFestivo()
+    {
+        isEditing = false;
+        festivoEdit = new FestivoColombia
+        {
+            Fecha = new DateTime(añoSeleccionado, 1, 1),
+            Nombre = "",
+            Tipo = TipoFestivo.Nacional,
+            EsLeyEmiliani = false,
+            EsFechaFija = true,
+            Año = añoSeleccionado
+        };
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void EditarFestivo(FestivoColombia festivo)
+    {
+        isEditing = true;
+        festivoEdit = new FestivoColombia
+        {
+            Id = festivo.Id,
+            Fecha = festivo.Fecha,
+            Nombre = festivo.Nombre,
+            Descripcion = festivo.Descripcion,
+            Tipo = festivo.Tipo,
+            EsLeyEmiliani = festivo.EsLeyEmiliani,
+            EsFechaFija = festivo.EsFechaFija,
+            FechaOriginal = festivo.FechaOriginal,
+            Año = festivo.Año
+        };
+        showModal = true;
+        StateHasChanged();
+    }
+    
+    private void SelectFestivo(FestivoColombia festivo)
+    {
+        selectedFestivo = selectedFestivo?.Id == festivo.Id ? null : festivo;
+        StateHasChanged();
+    }
+    
+    private void EliminarFestivo(FestivoColombia festivo)
+    {
+        confirmMessage = $"¿Está seguro de eliminar el festivo '{festivo.Nombre}' del {festivo.Fecha:dd/MM/yyyy}?";
+        confirmAction = async () => await EliminarFestivoConfirmado(festivo);
+        showConfirmModal = true;
+        StateHasChanged();
+    }
+    
+    private async Task EliminarFestivoConfirmado(FestivoColombia festivo)
+    {
+        try
+        {
+            await FestivoRepository.DeleteAsync(festivo.Id);
+            messageToast?.ShowSuccess($"Festivo '{festivo.Nombre}' eliminado correctamente");
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error eliminando festivo");
+            messageToast?.ShowError("Error al eliminar: " + ex.Message);
+        }
+    }
+    
+    private async Task GenerarFestivosAño()
+    {
+        // Verificar si ya existen festivos para el año
+        if (await FestivoRepository.ExisteFestivosAñoAsync(añoSeleccionado))
+        {
+            confirmMessage = $"Ya existen festivos para el año {añoSeleccionado}. ¿Desea agregar los festivos fijos nuevamente? (No se duplicarán los existentes)";
+            confirmAction = async () => await GenerarFestivosConfirmado();
+            showConfirmModal = true;
+            StateHasChanged();
+            return;
+        }
+        
+        await GenerarFestivosConfirmado();
+    }
+    
+    private async Task GenerarFestivosConfirmado()
+    {
+        try
+        {
+            var festivosFijos = GetFestivosFijosAnuales(añoSeleccionado);
+            int agregados = 0;
+            
+            foreach (var festivo in festivosFijos)
+            {
+                // Verificar si ya existe
+                var existente = await FestivoRepository.GetByFechaAsync(festivo.Fecha);
+                if (existente == null)
+                {
+                    await FestivoRepository.AddAsync(festivo);
+                    agregados++;
+                }
+            }
+            
+            messageToast?.ShowSuccess($"Se agregaron {agregados} festivo(s) para el año {añoSeleccionado}");
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error generando festivos");
+            messageToast?.ShowError("Error al generar festivos: " + ex.Message);
+        }
+    }
+    
+    private List<FestivoColombia> GetFestivosFijosAnuales(int año)
+    {
+        return new List<FestivoColombia>
+        {
+            // Festivos fijos
+            new() { Fecha = new DateTime(año, 1, 1), Nombre = "Año Nuevo", Tipo = TipoFestivo.Civil, EsFechaFija = true, EsLeyEmiliani = false, Año = año },
+            new() { Fecha = new DateTime(año, 5, 1), Nombre = "Día del Trabajo", Tipo = TipoFestivo.Civil, EsFechaFija = true, EsLeyEmiliani = false, Año = año },
+            new() { Fecha = new DateTime(año, 7, 20), Nombre = "Grito de Independencia", Tipo = TipoFestivo.Nacional, EsFechaFija = true, EsLeyEmiliani = false, Año = año },
+            new() { Fecha = new DateTime(año, 8, 7), Nombre = "Batalla de Boyacá", Tipo = TipoFestivo.Nacional, EsFechaFija = true, EsLeyEmiliani = false, Año = año },
+            new() { Fecha = new DateTime(año, 12, 8), Nombre = "Inmaculada Concepción", Tipo = TipoFestivo.Religioso, EsFechaFija = true, EsLeyEmiliani = false, Año = año },
+            new() { Fecha = new DateTime(año, 12, 25), Nombre = "Navidad", Tipo = TipoFestivo.Religioso, EsFechaFija = true, EsLeyEmiliani = false, Año = año },
+            
+            // Festivos Ley Emiliani (trasladables al lunes)
+            new() { Fecha = TrasladarAlLunes(new DateTime(año, 1, 6)), Nombre = "Reyes Magos", Tipo = TipoFestivo.Religioso, EsFechaFija = true, EsLeyEmiliani = true, FechaOriginal = new DateTime(año, 1, 6), Año = año },
+            new() { Fecha = TrasladarAlLunes(new DateTime(año, 3, 19)), Nombre = "San José", Tipo = TipoFestivo.Religioso, EsFechaFija = true, EsLeyEmiliani = true, FechaOriginal = new DateTime(año, 3, 19), Año = año },
+            new() { Fecha = TrasladarAlLunes(new DateTime(año, 6, 29)), Nombre = "San Pedro y San Pablo", Tipo = TipoFestivo.Religioso, EsFechaFija = true, EsLeyEmiliani = true, FechaOriginal = new DateTime(año, 6, 29), Año = año },
+            new() { Fecha = TrasladarAlLunes(new DateTime(año, 8, 15)), Nombre = "Asunción de la Virgen", Tipo = TipoFestivo.Religioso, EsFechaFija = true, EsLeyEmiliani = true, FechaOriginal = new DateTime(año, 8, 15), Año = año },
+            new() { Fecha = TrasladarAlLunes(new DateTime(año, 10, 12)), Nombre = "Día de la Raza", Tipo = TipoFestivo.Civil, EsFechaFija = true, EsLeyEmiliani = true, FechaOriginal = new DateTime(año, 10, 12), Año = año },
+            new() { Fecha = TrasladarAlLunes(new DateTime(año, 11, 1)), Nombre = "Todos los Santos", Tipo = TipoFestivo.Religioso, EsFechaFija = true, EsLeyEmiliani = true, FechaOriginal = new DateTime(año, 11, 1), Año = año },
+            new() { Fecha = TrasladarAlLunes(new DateTime(año, 11, 11)), Nombre = "Independencia de Cartagena", Tipo = TipoFestivo.Nacional, EsFechaFija = true, EsLeyEmiliani = true, FechaOriginal = new DateTime(año, 11, 11), Año = año }
+        };
+    }
+    
+    private DateTime TrasladarAlLunes(DateTime fecha)
+    {
+        // Si es lunes, se queda igual
+        if (fecha.DayOfWeek == DayOfWeek.Monday)
+            return fecha;
+        
+        // Si es domingo, se traslada al día siguiente (lunes)
+        if (fecha.DayOfWeek == DayOfWeek.Sunday)
+            return fecha.AddDays(1);
+        
+        // Para otros días, se traslada al próximo lunes
+        int diasHastaLunes = ((int)DayOfWeek.Monday - (int)fecha.DayOfWeek + 7) % 7;
+        if (diasHastaLunes == 0)
+            diasHastaLunes = 7;
+        
+        return fecha.AddDays(diasHastaLunes);
+    }
+    
+    private async Task Guardar()
+    {
+        if (festivoEdit == null) return;
+        
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+            
+            // Validaciones
+            if (string.IsNullOrWhiteSpace(festivoEdit.Nombre))
+            {
+                messageToast?.ShowError("El nombre del festivo es requerido");
+                return;
+            }
+            
+            if (festivoEdit.Fecha == default)
+            {
+                messageToast?.ShowError("La fecha es requerida");
+                return;
+            }
+            
+            // Actualizar año según fecha
+            festivoEdit.Año = festivoEdit.Fecha.Year;
+            
+            if (isEditing)
+            {
+                await FestivoRepository.UpdateAsync(festivoEdit);
+                messageToast?.ShowSuccess($"Festivo '{festivoEdit.Nombre}' actualizado correctamente");
+            }
+            else
+            {
+                await FestivoRepository.AddAsync(festivoEdit);
+                messageToast?.ShowSuccess($"Festivo '{festivoEdit.Nombre}' creado correctamente");
+            }
+            
+            showModal = false;
+            añoSeleccionado = festivoEdit.Año;
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error guardando festivo");
+            messageToast?.ShowError("Error al guardar: " + ex.Message);
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private Task GuardarAsync()
+    {
+        if (showModal)
+        {
+            return Guardar();
+        }
+        return Task.CompletedTask;
+    }
+    
+    private void CerrarModal()
+    {
+        if (!isSaving)
+        {
+            showModal = false;
+            StateHasChanged();
+        }
+    }
+    
+    private Task CerrarModalAsync()
+    {
+        CerrarModal();
+        return Task.CompletedTask;
+    }
+    
+    private void ConfirmarAccion()
+    {
+        confirmAction?.Invoke();
+        showConfirmModal = false;
+        StateHasChanged();
+    }
+    
+    private string GetDiaSemana(DateTime fecha)
+    {
+        return fecha.DayOfWeek switch
+        {
+            DayOfWeek.Monday => "LUN",
+            DayOfWeek.Tuesday => "MAR",
+            DayOfWeek.Wednesday => "MIÉ",
+            DayOfWeek.Thursday => "JUE",
+            DayOfWeek.Friday => "VIE",
+            DayOfWeek.Saturday => "SÁB",
+            DayOfWeek.Sunday => "DOM",
+            _ => "-"
+        };
+    }
+    
+    private string GetTipoClass(TipoFestivo tipo)
+    {
+        return tipo switch
+        {
+            TipoFestivo.Religioso => "religioso",
+            TipoFestivo.Civil => "civil",
+            TipoFestivo.Nacional => "nacional",
+            _ => "nacional"
+        };
+    }
+    
+    private string GetTipoNombre(TipoFestivo tipo)
+    {
+        return tipo switch
+        {
+            TipoFestivo.Religioso => "RELIGIOSO",
+            TipoFestivo.Civil => "CIVIL",
+            TipoFestivo.Nacional => "NACIONAL",
+            _ => "-"
+        };
+    }
+}

@@ -1,0 +1,1505 @@
+@page "/proyecto/{ProyectoId:int}"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Shared.Interfaces
+@inject IProyectoRepository ProyectoRepository
+@inject IProyectoEmpleadoRepository ProyectoEmpleadoRepository
+@inject IEmpleadoRepository EmpleadoRepository
+@inject IReporteProductividadService ReporteService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ILogger<ProyectoDetalle> Logger
+
+<PageTitle>Proyecto @proyecto?.Codigo - SGRRHH</PageTitle>
+
+<div class="hospital-page proyecto-dashboard">
+    @if (proyecto == null)
+    {
+        <div class="loading">CARGANDO PROYECTO...</div>
+    }
+    else
+    {
+        <!-- Encabezado del proyecto -->
+        <div class="proyecto-header">
+            <div class="proyecto-header-left">
+                <span class="proyecto-codigo">@proyecto.Codigo</span>
+                <h1>@proyecto.Nombre</h1>
+                <div class="proyecto-meta">
+                    <span class="badge badge-tipo-@((int)proyecto.TipoProyecto)">
+                        @GetTipoProyectoLabel(proyecto.TipoProyecto)
+                    </span>
+                    <span class="badge badge-@proyecto.Estado.ToString().ToLower()">@proyecto.Estado</span>
+                    @if (proyecto.Especie != null)
+                    {
+                        <span class="badge badge-especie">🌲 @proyecto.Especie.NombreComun</span>
+                    }
+                    @if (proyecto.EstaVencido)
+                    {
+                        <span class="badge badge-vencido">⚠️ VENCIDO</span>
+                    }
+                    else if (proyecto.EstaProximoAVencer)
+                    {
+                        <span class="badge badge-warning">⏰ POR VENCER</span>
+                    }
+                </div>
+            </div>
+            <div class="proyecto-header-right">
+                <button class="btn-primary" @onclick="EditarProyecto">✏️ EDITAR</button>
+                <button @onclick="Volver">← VOLVER</button>
+            </div>
+        </div>
+
+        <!-- Navegación interna (pestañas) -->
+        <div class="proyecto-nav">
+            <a class="nav-item @(tabActiva == "resumen" ? "active" : "")" 
+               @onclick='() => CambiarTab("resumen")'>📊 RESUMEN</a>
+            <a class="nav-item @(tabActiva == "cuadrilla" ? "active" : "")" 
+               @onclick='() => CambiarTab("cuadrilla")'>👥 CUADRILLA (@cuadrillaActiva.Count())</a>
+            <a class="nav-item @(tabActiva == "actividades" ? "active" : "")" 
+               @onclick='() => CambiarTab("actividades")'>📋 ACTIVIDADES</a>
+            <a class="nav-item @(tabActiva == "reportes" ? "active" : "")" 
+               @onclick='() => CambiarTab("reportes")'>📈 REPORTES</a>
+            <a class="nav-item @(tabActiva == "mapa" ? "active" : "")" 
+               @onclick='() => CambiarTab("mapa")'>🗺️ UBICACIÓN</a>
+            <a class="nav-item @(tabActiva == "historial" ? "active" : "")" 
+               @onclick='() => CambiarTab("historial")'>📜 HISTORIAL</a>
+        </div>
+
+        <!-- Contenido de pestañas -->
+        <div class="tab-content">
+            @if (tabActiva == "resumen")
+            {
+                @* PESTAÑA RESUMEN - Dashboard del proyecto *@
+                <div class="tab-pane proyecto-content">
+                    <!-- Ficha técnica -->
+                    <div class="card">
+                        <h2>FICHA TÉCNICA</h2>
+                        <div class="ficha-grid">
+                            <div class="ficha-item">
+                                <label>PREDIO:</label>
+                                <span>@(proyecto.Predio ?? "-")</span>
+                            </div>
+                            <div class="ficha-item">
+                                <label>LOTE:</label>
+                                <span>@(proyecto.Lote ?? "-")</span>
+                            </div>
+                            <div class="ficha-item">
+                                <label>ÁREA:</label>
+                                <span>@(proyecto.AreaHectareas?.ToString("F2") ?? "-") ha</span>
+                            </div>
+                            <div class="ficha-item">
+                                <label>MUNICIPIO:</label>
+                                <span>@(proyecto.Municipio ?? "-"), @(proyecto.Departamento ?? "-")</span>
+                            </div>
+                            <div class="ficha-item">
+                                <label>FECHA SIEMBRA:</label>
+                                <span>@(proyecto.FechaSiembra?.ToString("dd/MM/yyyy") ?? "-")</span>
+                            </div>
+                            <div class="ficha-item">
+                                <label>EDAD CULTIVO:</label>
+                                <span>@(proyecto.EdadCultivoAnios > 0 ? $"{proyecto.EdadCultivoAnios} años" : "-")</span>
+                            </div>
+                            <div class="ficha-item">
+                                <label>DENSIDAD ACTUAL:</label>
+                                <span>@(proyecto.DensidadActual?.ToString("N0") ?? "-") árboles/ha</span>
+                            </div>
+                            <div class="ficha-item">
+                                <label>TURNO COSECHA:</label>
+                                <span>@(proyecto.TurnoCosechaAnios.HasValue ? $"{proyecto.TurnoCosechaAnios} años" : "-")</span>
+                            </div>
+                            <div class="ficha-item">
+                                <label>RESPONSABLE:</label>
+                                <span>@(proyecto.Responsable?.NombreCompleto ?? "-")</span>
+                            </div>
+                            <div class="ficha-item">
+                                <label>CLIENTE:</label>
+                                <span>@(proyecto.Cliente ?? "-")</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPIs del proyecto -->
+                    <div class="kpi-row">
+                        <div class="kpi-card">
+                            <div class="kpi-icon">⏱️</div>
+                            <div class="kpi-value">@proyecto.TotalHorasTrabajadas.ToString("N0")</div>
+                            <div class="kpi-label">HORAS TRABAJADAS</div>
+                            @if (proyecto.AreaHectareas > 0)
+                            {
+                                <div class="kpi-detail">
+                                    @((proyecto.TotalHorasTrabajadas / proyecto.AreaHectareas.Value).ToString("F1")) h/ha
+                                </div>
+                            }
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon">📅</div>
+                            <div class="kpi-value">@proyecto.TotalJornales</div>
+                            <div class="kpi-label">JORNALES</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon">👥</div>
+                            <div class="kpi-value">@cuadrillaActiva.Count()</div>
+                            <div class="kpi-label">EN CUADRILLA</div>
+                            <button class="kpi-action" @onclick='() => CambiarTab("cuadrilla")'>
+                                GESTIONAR →
+                            </button>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon">💰</div>
+                            <div class="kpi-value">$@proyecto.CostoManoObraAcumulado.ToString("N0")</div>
+                            <div class="kpi-label">COSTO M.O.</div>
+                            @if (proyecto.AreaHectareas > 0)
+                            {
+                                <div class="kpi-detail">
+                                    $@((proyecto.CostoManoObraAcumulado / proyecto.AreaHectareas.Value).ToString("N0"))/ha
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Progreso del proyecto -->
+                    <div class="card">
+                        <h2>PROGRESO</h2>
+                        <div class="progreso-container">
+                            <div class="progreso-bar-grande">
+                                <div class="progreso-fill" style="width: @proyecto.Progreso%">
+                                    <span>@proyecto.Progreso%</span>
+                                </div>
+                            </div>
+                            <div class="progreso-fechas">
+                                <span>INICIO: @(proyecto.FechaInicio?.ToString("dd/MM/yyyy") ?? "-")</span>
+                                <span>FIN EST.: @(proyecto.FechaFin?.ToString("dd/MM/yyyy") ?? "-")</span>
+                                @if (proyecto.EstaVencido)
+                                {
+                                    var diasVencido = (DateTime.Today - proyecto.FechaFin!.Value).Days;
+                                    <span class="alerta-vencido">⚠️ VENCIDO hace @diasVencido días</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alertas -->
+                    @if (alertas.Any())
+                    {
+                        <div class="card alertas-card">
+                            <h2>⚠️ ALERTAS</h2>
+                            @foreach (var alerta in alertas)
+                            {
+                                <div class="alerta-item alerta-@alerta.Tipo">
+                                    <span class="alerta-icono">@alerta.Icono</span>
+                                    <span class="alerta-mensaje">@alerta.Mensaje</span>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <!-- Descripción -->
+                    @if (!string.IsNullOrEmpty(proyecto.Descripcion))
+                    {
+                        <div class="card">
+                            <h2>DESCRIPCIÓN</h2>
+                            <p>@proyecto.Descripcion</p>
+                        </div>
+                    }
+                </div>
+            }
+            else if (tabActiva == "cuadrilla")
+            {
+                @* PESTAÑA CUADRILLA *@
+                <div class="tab-pane">
+                    <div class="hospital-toolbar">
+                        <div class="hospital-toolbar-group">
+                            <button @onclick="MostrarModalAsignar">ASIGNAR EMPLEADO</button>
+                            <button @onclick="MostrarModalAsignarMasivo">ASIGNAR MÚLTIPLES</button>
+                            @if (empleadosSeleccionados.Any())
+                            {
+                                <button @onclick="DesasignarSeleccionados">
+                                    DESASIGNAR SELECCIONADOS (@empleadosSeleccionados.Count)
+                                </button>
+                            }
+                            <button @onclick="CargarDatos">ACTUALIZAR</button>
+                        </div>
+                    </div>
+
+                    <table class="hospital-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"><input type="checkbox" @onchange="ToggleSeleccionarTodos" /></th>
+                                <th>CÓDIGO</th>
+                                <th>NOMBRE</th>
+                                <th>ROL</th>
+                                <th class="text-center">DEDICACIÓN</th>
+                                <th>FECHA ASIGNACIÓN</th>
+                                <th class="text-right">HORAS</th>
+                                <th>ÚLTIMA ACTIVIDAD</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!cuadrillaActiva.Any())
+                            {
+                                <tr>
+                                    <td colspan="9" class="empty-state">
+                                        NO HAY EMPLEADOS ASIGNADOS A ESTE PROYECTO
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var asignacion in cuadrillaActiva)
+                                {
+                                    <tr class="@(asignacion.EsLiderCuadrilla ? "lider-row" : "")">
+                                        <td>
+                                            <input type="checkbox" 
+                                                   checked="@empleadosSeleccionados.Contains(asignacion.EmpleadoId)"
+                                                   @onchange="() => ToggleSeleccion(asignacion.EmpleadoId)" />
+                                        </td>
+                                        <td>@(asignacion.Empleado?.Codigo ?? "-")</td>
+                                        <td>
+                                            @(asignacion.Empleado?.NombreCompleto ?? "Empleado #" + asignacion.EmpleadoId)
+                                            @if (asignacion.EsLiderCuadrilla)
+                                            {
+                                                <span class="badge badge-lider">LÍDER</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (asignacion.RolEnum.HasValue)
+                                            {
+                                                <span>@GetRolLabel(asignacion.RolEnum.Value)</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@(asignacion.Rol ?? "-")</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">@asignacion.PorcentajeDedicacion%</td>
+                                        <td>@asignacion.FechaAsignacion.ToString("dd/MM/yyyy")</td>
+                                        <td class="text-right">@asignacion.TotalHorasTrabajadas.ToString("F1") h</td>
+                                        <td>@(asignacion.UltimaFechaTrabajo?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                        <td class="table-actions">
+                                            <button @onclick="() => EditarAsignacion(asignacion)">EDITAR</button>
+                                            <button @onclick="() => ConfirmarDesasignar(asignacion)">DESASIGNAR</button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else if (tabActiva == "metricas")
+            {
+                @* PESTAÑA MÉTRICAS - Productividad de la cuadrilla *@
+                <div class="tab-pane">
+                    <div class="metricas-grid">
+                        <div class="metrica-card">
+                            <span class="metrica-valor">@proyecto.TotalHorasTrabajadas.ToString("F0")</span>
+                            <span class="metrica-label">HORAS TOTALES</span>
+                        </div>
+                        <div class="metrica-card">
+                            <span class="metrica-valor">@proyecto.TotalJornales</span>
+                            <span class="metrica-label">JORNALES</span>
+                        </div>
+                        <div class="metrica-card">
+                            <span class="metrica-valor">$@proyecto.CostoManoObraAcumulado.ToString("N0")</span>
+                            <span class="metrica-label">COSTO MANO OBRA</span>
+                        </div>
+                        <div class="metrica-card">
+                            <span class="metrica-valor">@(proyecto.AreaHectareas > 0 ? (proyecto.CostoManoObraAcumulado / proyecto.AreaHectareas)?.ToString("C0") : "-")</span>
+                            <span class="metrica-label">COSTO / HECTÁREA</span>
+                        </div>
+                        <div class="metrica-card">
+                            <span class="metrica-valor">@(proyecto.AreaHectareas > 0 ? (proyecto.TotalHorasTrabajadas / proyecto.AreaHectareas)?.ToString("F1") : "-")</span>
+                            <span class="metrica-label">HORAS / HECTÁREA</span>
+                        </div>
+                        <div class="metrica-card">
+                            <span class="metrica-valor">@cuadrillaActiva.Count()</span>
+                            <span class="metrica-label">EMPLEADOS ACTIVOS</span>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de productividad por empleado -->
+                    <h3 style="margin-top: 24px; margin-bottom: 16px;">PRODUCTIVIDAD POR EMPLEADO</h3>
+                    <table class="hospital-table">
+                        <thead>
+                            <tr>
+                                <th>EMPLEADO</th>
+                                <th>ROL</th>
+                                <th class="text-right">HORAS</th>
+                                <th class="text-right">JORNALES</th>
+                                <th class="text-right">DÍAS</th>
+                                <th class="text-right">PROM. HORAS/DÍA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var emp in cuadrillaActiva.OrderByDescending(e => e.TotalHorasTrabajadas))
+                            {
+                                <tr>
+                                    <td>@(emp.Empleado?.NombreCompleto ?? "Empleado #" + emp.EmpleadoId)</td>
+                                    <td>@emp.NombreRol</td>
+                                    <td class="text-right">@emp.TotalHorasTrabajadas.ToString("F1")</td>
+                                    <td class="text-right">@emp.TotalJornales</td>
+                                    <td class="text-right">@emp.DiasTrabajados</td>
+                                    <td class="text-right">@emp.PromedioHorasDia.ToString("F1")</td>
+                                </tr>
+                            }
+                            @if (!cuadrillaActiva.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="empty-state">NO HAY DATOS DE PRODUCTIVIDAD</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else if (tabActiva == "actividades")
+            {
+                @* PESTAÑA ACTIVIDADES - Desglose por actividad *@
+                <div class="tab-pane">
+                    <div class="toolbar" style="margin-bottom: 16px;">
+                        <div class="toolbar-group">
+                            <label>DESDE:</label>
+                            <input type="date" @bind="fechaInicioActividades" />
+                        </div>
+                        <div class="toolbar-group">
+                            <label>HASTA:</label>
+                            <input type="date" @bind="fechaFinActividades" />
+                        </div>
+                        <div class="toolbar-group">
+                            <button @onclick="CargarActividades">APLICAR</button>
+                        </div>
+                    </div>
+
+                    @if (isLoadingActividades)
+                    {
+                        <div class="loading">CARGANDO ACTIVIDADES...</div>
+                    }
+                    else if (reporteProyecto != null)
+                    {
+                        <!-- Resumen por categoría -->
+                        @if (reporteProyecto.PorCategoria.Any())
+                        {
+                            <div class="categorias-resumen">
+                                @foreach (var categoria in reporteProyecto.PorCategoria)
+                                {
+                                    <div class="categoria-card" style="border-left: 4px solid @(categoria.ColorHex ?? "#333")">
+                                        <div class="categoria-nombre">@categoria.Categoria</div>
+                                        <div class="categoria-horas">@categoria.Horas.ToString("F0") h</div>
+                                        <div class="categoria-porcentaje">@categoria.PorcentajeHoras.ToString("F0")%</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Tabla de actividades -->
+                        @if (reporteProyecto.PorActividad.Any())
+                        {
+                            <table class="hospital-table">
+                                <thead>
+                                    <tr>
+                                        <th>ACTIVIDAD</th>
+                                        <th>CATEGORÍA</th>
+                                        <th class="text-right">HORAS</th>
+                                        <th class="text-right">CANTIDAD</th>
+                                        <th>UNIDAD</th>
+                                        <th class="text-right">REND. LOGRADO</th>
+                                        <th class="text-right">REND. ESP.</th>
+                                        <th class="text-center">% REND.</th>
+                                        <th class="text-center">VECES</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var actividad in reporteProyecto.PorActividad)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@actividad.Codigo</strong><br/>
+                                                <small>@actividad.Nombre</small>
+                                            </td>
+                                            <td>@(actividad.Categoria ?? "-")</td>
+                                            <td class="text-right">@actividad.Horas.ToString("F1")</td>
+                                            <td class="text-right">@(actividad.Cantidad?.ToString("F1") ?? "-")</td>
+                                            <td>@(actividad.UnidadMedida ?? "-")</td>
+                                            <td class="text-right">@(actividad.RendimientoLogrado?.ToString("F2") ?? "-")</td>
+                                            <td class="text-right">@(actividad.RendimientoEsperado?.ToString("F2") ?? "-")</td>
+                                            <td class="text-center">
+                                                @if (actividad.PorcentajeRendimiento.HasValue)
+                                                {
+                                                    <span class="badge @GetBadgeClaseRendimiento(actividad.PorcentajeRendimiento.Value)">
+                                                        @actividad.PorcentajeRendimiento.Value.ToString("F0")%
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                            <td class="text-center">@actividad.Registros</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                        else
+                        {
+                            <div class="empty-state">NO HAY ACTIVIDADES REGISTRADAS EN EL PERIODO</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="empty-state">SELECCIONE UN PERIODO Y PRESIONE APLICAR</div>
+                    }
+                </div>
+            }
+            else if (tabActiva == "reportes")
+            {
+                @* PESTAÑA REPORTES - Enlace al reporte detallado *@
+                <div class="tab-pane">
+                    <div class="card" style="text-align: center; padding: 32px;">
+                        <h2>📈 REPORTES DE PRODUCTIVIDAD</h2>
+                        <p>Acceda al reporte completo de productividad de este proyecto</p>
+                        <div style="margin-top: 16px;">
+                            <button class="btn-primary" @onclick="IrAReporteDetallado">
+                                VER REPORTE DETALLADO
+                            </button>
+                            <button @onclick="IrADashboard">
+                                VER DASHBOARD GENERAL
+                            </button>
+                        </div>
+                    </div>
+                    
+                    @if (reporteProyecto != null)
+                    {
+                        <div class="kpi-row" style="margin-top: 16px;">
+                            <div class="kpi-card">
+                                <div class="kpi-icon">📊</div>
+                                <div class="kpi-value">@reporteProyecto.TotalHoras.ToString("N0")</div>
+                                <div class="kpi-label">HORAS (PERIODO)</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-icon">📅</div>
+                                <div class="kpi-value">@reporteProyecto.TotalJornales</div>
+                                <div class="kpi-label">JORNALES</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-icon">📆</div>
+                                <div class="kpi-value">@reporteProyecto.TotalDiasTrabajados</div>
+                                <div class="kpi-label">DÍAS TRABAJADOS</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-icon">🌲</div>
+                                <div class="kpi-value">@(reporteProyecto.HorasPorHectarea?.ToString("F1") ?? "-")</div>
+                                <div class="kpi-label">HORAS / HA</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else if (tabActiva == "mapa")
+            {
+                @* PESTAÑA MAPA - Ubicación del proyecto *@
+                <div class="tab-pane">
+                    <div class="proyecto-mapa">
+                        @if (!proyecto.Latitud.HasValue || !proyecto.Longitud.HasValue)
+                        {
+                            <div class="sin-coordenadas">
+                                <div class="icono">🗺️</div>
+                                <h3>COORDENADAS NO REGISTRADAS</h3>
+                                <p>Para ver el proyecto en el mapa, registre las coordenadas GPS.</p>
+                                <div class="formato-coordenadas">
+                                    <p><strong>Formatos aceptados:</strong></p>
+                                    <ul>
+                                        <li>Grados decimales: -4.1234, -74.5678</li>
+                                        <li>Ejemplo: Latitud = 6.2518, Longitud = -75.5636</li>
+                                    </ul>
+                                </div>
+                                <button class="btn-primary" @onclick="EditarProyecto" style="margin-top: 16px;">
+                                    EDITAR PROYECTO PARA AGREGAR COORDENADAS
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mapa-info">
+                                <div class="coordenadas">
+                                    <strong>COORDENADAS:</strong> 
+                                    @proyecto.Latitud.Value.ToString("F6"), @proyecto.Longitud.Value.ToString("F6")
+                                    <button @onclick="AbrirEnGoogleMaps" title="Abrir en Google Maps">
+                                        🌐 VER EN GOOGLE MAPS
+                                    </button>
+                                </div>
+                                @if (proyecto.AltitudMsnm.HasValue)
+                                {
+                                    <div class="altitud">
+                                        <strong>ALTITUD:</strong> @proyecto.AltitudMsnm msnm
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Mapa embebido (OpenStreetMap) -->
+                            <div class="mapa-container">
+                                <iframe 
+                                    width="100%" 
+                                    height="400" 
+                                    frameborder="0" 
+                                    scrolling="no" 
+                                    src="https://www.openstreetmap.org/export/embed.html?bbox=@(((double)proyecto.Longitud.Value - 0.01).ToString(System.Globalization.CultureInfo.InvariantCulture)),@(((double)proyecto.Latitud.Value - 0.01).ToString(System.Globalization.CultureInfo.InvariantCulture)),@(((double)proyecto.Longitud.Value + 0.01).ToString(System.Globalization.CultureInfo.InvariantCulture)),@(((double)proyecto.Latitud.Value + 0.01).ToString(System.Globalization.CultureInfo.InvariantCulture))&layer=mapnik&marker=@(((double)proyecto.Latitud.Value).ToString(System.Globalization.CultureInfo.InvariantCulture)),@(((double)proyecto.Longitud.Value).ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                    style="border: 2px solid #333;">
+                                </iframe>
+                            </div>
+
+                            <!-- Información de ubicación -->
+                            <div class="ubicacion-info">
+                                <h3>INFORMACIÓN DE UBICACIÓN</h3>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <label>DEPARTAMENTO:</label>
+                                        <span>@(proyecto.Departamento ?? "-")</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>MUNICIPIO:</label>
+                                        <span>@(proyecto.Municipio ?? "-")</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>VEREDA:</label>
+                                        <span>@(proyecto.Vereda ?? "-")</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>PREDIO:</label>
+                                        <span>@(proyecto.Predio ?? "-")</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>LOTE:</label>
+                                        <span>@(proyecto.Lote ?? "-")</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <label>ÁREA:</label>
+                                        <span>@(proyecto.AreaHectareas?.ToString("F2") ?? "-") ha</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else if (tabActiva == "historial")
+            {
+                @* PESTAÑA HISTORIAL - Rotación de empleados *@
+                <div class="tab-pane">
+                    <h3>HISTORIAL DE ASIGNACIONES</h3>
+                    <table class="hospital-table">
+                        <thead>
+                            <tr>
+                                <th>EMPLEADO</th>
+                                <th>ROL</th>
+                                <th>FECHA INGRESO</th>
+                                <th>FECHA SALIDA</th>
+                                <th class="text-right">DÍAS</th>
+                                <th class="text-right">HORAS</th>
+                                <th>MOTIVO SALIDA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var hist in historial)
+                            {
+                                <tr class="@(!hist.FechaDesasignacion.HasValue ? "activo-row" : "")">
+                                    <td>@hist.NombreEmpleado</td>
+                                    <td>@hist.Rol</td>
+                                    <td>@hist.FechaAsignacion.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        @if (hist.FechaDesasignacion.HasValue)
+                                        {
+                                            @hist.FechaDesasignacion.Value.ToString("dd/MM/yyyy")
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-activo">ACTIVO</span>
+                                        }
+                                    </td>
+                                    <td class="text-right">@hist.DiasEnProyecto</td>
+                                    <td class="text-right">@hist.HorasTrabajadas.ToString("F1")</td>
+                                    <td>@(hist.MotivoDesasignacion ?? "-")</td>
+                                </tr>
+                            }
+                            @if (!historial.Any())
+                            {
+                                <tr>
+                                    <td colspan="7" class="empty-state">NO HAY HISTORIAL DE ASIGNACIONES</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal Asignar Empleado Individual -->
+<FormModal @bind-IsVisible="showModalAsignar"
+           Title="@(isEditingAsignacion ? "EDITAR ASIGNACIÓN" : "ASIGNAR EMPLEADO AL PROYECTO")"
+           OnSaveClicked="GuardarAsignacion"
+           OnCancelClicked="() => showModalAsignar = false"
+           IsSaving="isSaving">
+    
+    @if (!isEditingAsignacion)
+    {
+        <div class="hospital-form-group required">
+            <label>EMPLEADO:</label>
+            <select @bind="asignacionEdit.EmpleadoId">
+                <option value="0">-- Seleccione empleado --</option>
+                @foreach (var emp in empleadosDisponibles)
+                {
+                    <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+                }
+            </select>
+        </div>
+    }
+    else
+    {
+        <div class="form-group">
+            <label>EMPLEADO:</label>
+            <input type="text" value="@empleadoEditando?.NombreCompleto" readonly disabled />
+        </div>
+    }
+    
+    <div class="form-group">
+        <label>ROL EN EL PROYECTO:</label>
+        <select @bind="asignacionEdit.RolEnum">
+            <option value="">-- Sin rol específico --</option>
+            @foreach (var rol in Enum.GetValues<RolProyectoForestal>())
+            {
+                <option value="@rol">@GetRolLabel(rol)</option>
+            }
+        </select>
+    </div>
+    
+    <div class="grid-2">
+        <div class="form-group">
+            <label>PORCENTAJE DE DEDICACIÓN:</label>
+            <input type="number" @bind="asignacionEdit.PorcentajeDedicacion" min="10" max="100" step="10" />
+            <small>100% = Tiempo completo</small>
+        </div>
+        
+        <div class="form-group">
+            <label>FECHA DE ASIGNACIÓN:</label>
+            <input type="date" @bind="asignacionEdit.FechaAsignacion" />
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label>TIPO DE VINCULACIÓN:</label>
+        <select @bind="asignacionEdit.TipoVinculacion">
+            <option value="">-- Seleccione --</option>
+            <option value="Permanente">Permanente</option>
+            <option value="Temporal">Temporal</option>
+            <option value="Por Tarea">Por Tarea</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label class="checkbox-label">
+            <input type="checkbox" @bind="asignacionEdit.EsLiderCuadrilla" />
+            ES LÍDER DE CUADRILLA
+        </label>
+    </div>
+    
+    <div class="form-group">
+        <label>OBSERVACIONES:</label>
+        <textarea @bind="asignacionEdit.Observaciones" rows="2"></textarea>
+    </div>
+</FormModal>
+
+<!-- Modal Asignación Masiva -->
+<FormModal @bind-IsVisible="showModalAsignarMasivo"
+           Title="ASIGNAR MÚLTIPLES EMPLEADOS"
+           OnSaveClicked="GuardarAsignacionMasiva"
+           OnCancelClicked="() => showModalAsignarMasivo = false"
+           IsSaving="isSaving">
+    
+    <div class="form-group">
+        <label>ROL PARA TODOS:</label>
+        <select @bind="rolMasivo">
+            <option value="">-- Sin rol específico --</option>
+            @foreach (var rol in Enum.GetValues<RolProyectoForestal>())
+            {
+                <option value="@((int)rol)">@GetRolLabel(rol)</option>
+            }
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>SELECCIONE EMPLEADOS:</label>
+        <div class="empleados-checklist">
+            @foreach (var emp in empleadosDisponibles)
+            {
+                <label class="checkbox-item">
+                    <input type="checkbox" 
+                           checked="@empleadosParaAsignar.Contains(emp.Id)"
+                           @onchange="() => ToggleEmpleadoParaAsignar(emp.Id)" />
+                    @emp.Codigo - @emp.NombreCompleto
+                </label>
+            }
+            @if (!empleadosDisponibles.Any())
+            {
+                <p class="empty-message">No hay empleados disponibles para asignar</p>
+            }
+        </div>
+    </div>
+    
+    <div class="resumen-asignacion">
+        <strong>@empleadosParaAsignar.Count empleados seleccionados</strong>
+    </div>
+</FormModal>
+
+<!-- Modal Confirmar Desasignación -->
+<FormModal @bind-IsVisible="showModalDesasignar"
+           Title="CONFIRMAR DESASIGNACIÓN"
+           OnSaveClicked="EjecutarDesasignacion"
+           OnCancelClicked="() => showModalDesasignar = false"
+           IsSaving="isSaving">
+    
+    <p>¿Está seguro que desea desasignar a <strong>@(asignacionADesasignar?.Empleado?.NombreCompleto ?? "este empleado")</strong> del proyecto?</p>
+    
+    <div class="form-group">
+        <label>MOTIVO DE DESASIGNACIÓN:</label>
+        <select @bind="motivoDesasignacion">
+            <option value="">-- Seleccione motivo --</option>
+            <option value="Terminación de labor">Terminación de labor asignada</option>
+            <option value="Rotación a otro proyecto">Rotación a otro proyecto</option>
+            <option value="Finalización de contrato">Finalización de contrato</option>
+            <option value="Renuncia">Renuncia del empleado</option>
+            <option value="Bajo rendimiento">Bajo rendimiento</option>
+            <option value="Incapacidad">Incapacidad médica</option>
+            <option value="Vacaciones">Vacaciones</option>
+            <option value="Otro">Otro motivo</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>OBSERVACIONES:</label>
+        <textarea @bind="observacionesDesasignacion" rows="2"></textarea>
+    </div>
+</FormModal>
+
+<!-- Modal Desasignar Múltiples -->
+<FormModal @bind-IsVisible="showModalDesasignarMultiples"
+           Title="DESASIGNAR EMPLEADOS SELECCIONADOS"
+           OnSaveClicked="EjecutarDesasignacionMultiple"
+           OnCancelClicked="() => showModalDesasignarMultiples = false"
+           IsSaving="isSaving">
+    
+    <p>¿Está seguro que desea desasignar a <strong>@empleadosSeleccionados.Count empleados</strong> del proyecto?</p>
+    
+    <div class="form-group">
+        <label>MOTIVO DE DESASIGNACIÓN:</label>
+        <select @bind="motivoDesasignacion">
+            <option value="">-- Seleccione motivo --</option>
+            <option value="Terminación de labor">Terminación de labor asignada</option>
+            <option value="Rotación a otro proyecto">Rotación a otro proyecto</option>
+            <option value="Finalización de proyecto">Finalización de proyecto</option>
+            <option value="Otro">Otro motivo</option>
+        </select>
+    </div>
+</FormModal>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+<style>
+    .proyecto-resumen {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .resumen-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+    }
+    
+    .resumen-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .resumen-item .label {
+        font-size: 11px;
+        color: #6c757d;
+        margin-bottom: 2px;
+    }
+    
+    .resumen-item .value {
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .resumen-item .value.highlight {
+        color: #0d6efd;
+    }
+    
+    .lider-row {
+        background-color: #fff3cd !important;
+    }
+    
+    .badge-lider {
+        background: #ffc107;
+        color: #000;
+        padding: 2px 6px;
+        font-size: 10px;
+        margin-left: 8px;
+        border-radius: 2px;
+    }
+    
+    .badge-activo {
+        background: #198754;
+        color: #fff;
+        padding: 2px 8px;
+        font-size: 10px;
+        border-radius: 2px;
+    }
+    
+    .activo-row {
+        background-color: #d4edda !important;
+    }
+    
+    .metricas-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    
+    .metrica-card {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .metrica-valor {
+        display: block;
+        font-size: 28px;
+        font-weight: bold;
+        color: #0d6efd;
+    }
+    
+    .metrica-label {
+        display: block;
+        font-size: 11px;
+        color: #6c757d;
+        margin-top: 4px;
+    }
+    
+    .empleados-checklist {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        padding: 8px;
+        background: #fff;
+    }
+    
+    .checkbox-item {
+        display: block;
+        padding: 6px 8px;
+        cursor: pointer;
+    }
+    
+    .checkbox-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .checkbox-item input {
+        margin-right: 8px;
+    }
+    
+    .resumen-asignacion {
+        background: #e7f3ff;
+        padding: 12px;
+        text-align: center;
+        margin-top: 12px;
+    }
+    
+    .empty-message {
+        color: #6c757d;
+        font-style: italic;
+        padding: 16px;
+        text-align: center;
+    }
+    
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+    
+    .checkbox-label input {
+        width: auto;
+    }
+    
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    
+    .alert {
+        padding: 12px 16px;
+        margin-top: 16px;
+        border-radius: 4px;
+    }
+    
+    .alert-danger {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+</style>
+
+@code {
+    [Parameter] public int ProyectoId { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? TabQuery { get; set; }
+    
+    private Proyecto? proyecto;
+    private List<ProyectoEmpleado> cuadrillaActiva = new();
+    private List<ProyectoEmpleadoHistorial> historial = new();
+    private List<Empleado> empleadosDisponibles = new();
+    private List<AlertaProyecto> alertas = new();
+    private ReporteProyectoDetalle? reporteProyecto;
+    
+    private string tabActiva = "resumen";
+    private bool isSaving;
+    private bool isLoadingActividades;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    // Fechas para actividades
+    private DateTime fechaInicioActividades;
+    private DateTime fechaFinActividades;
+    
+    // Modales
+    private bool showModalAsignar;
+    private bool showModalAsignarMasivo;
+    private bool showModalDesasignar;
+    private bool showModalDesasignarMultiples;
+    private bool isEditingAsignacion;
+    
+    // Edición
+    private ProyectoEmpleado asignacionEdit = new();
+    private Empleado? empleadoEditando;
+    private ProyectoEmpleado? asignacionADesasignar;
+    private string motivoDesasignacion = "";
+    private string observacionesDesasignacion = "";
+    
+    // Selección múltiple
+    private HashSet<int> empleadosSeleccionados = new();
+    private HashSet<int> empleadosParaAsignar = new();
+    private string rolMasivo = "";
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Establecer fechas por defecto
+        fechaInicioActividades = new DateTime(DateTime.Today.Year, 1, 1);
+        fechaFinActividades = DateTime.Today;
+        
+        // Establecer tab inicial desde query string
+        if (!string.IsNullOrEmpty(TabQuery))
+        {
+            tabActiva = TabQuery;
+        }
+        
+        await CargarDatos();
+    }
+    
+    private async Task CargarDatos()
+    {
+        try
+        {
+            proyecto = await ProyectoRepository.GetByIdAsync(ProyectoId);
+            
+            if (proyecto != null)
+            {
+                var cuadrilla = await ProyectoEmpleadoRepository.GetActiveByProyectoWithEmpleadoAsync(ProyectoId);
+                cuadrillaActiva = cuadrilla.ToList();
+                
+                var hist = await ProyectoEmpleadoRepository.GetHistorialAsync(ProyectoId);
+                historial = hist.ToList();
+                
+                await CargarEmpleadosDisponibles();
+                GenerarAlertas();
+            }
+            
+            empleadosSeleccionados.Clear();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar datos del proyecto {ProyectoId}", ProyectoId);
+            errorMessage = $"Error al cargar datos: {ex.Message}";
+        }
+    }
+    
+    private void GenerarAlertas()
+    {
+        alertas.Clear();
+        if (proyecto == null) return;
+
+        // Proyecto vencido
+        if (proyecto.EstaVencido)
+        {
+            var diasVencido = (DateTime.Today - proyecto.FechaFin!.Value).Days;
+            alertas.Add(new AlertaProyecto
+            {
+                Tipo = "error",
+                Icono = "🚨",
+                Mensaje = $"Proyecto vencido hace {diasVencido} días"
+            });
+        }
+
+        // Sin cuadrilla
+        if (!cuadrillaActiva.Any() && proyecto.Estado == EstadoProyecto.Activo)
+        {
+            alertas.Add(new AlertaProyecto
+            {
+                Tipo = "warning",
+                Icono = "👥",
+                Mensaje = "Sin empleados asignados a la cuadrilla"
+            });
+        }
+
+        // Próximo a vencer
+        if (proyecto.EstaProximoAVencer)
+        {
+            var diasRestantes = (proyecto.FechaFin!.Value - DateTime.Today).Days;
+            alertas.Add(new AlertaProyecto
+            {
+                Tipo = "warning",
+                Icono = "⏰",
+                Mensaje = $"Vence en {diasRestantes} días"
+            });
+        }
+
+        // Sin actividad reciente
+        if (proyecto.FechaUltimaActualizacionMetricas.HasValue 
+            && proyecto.FechaUltimaActualizacionMetricas < DateTime.Today.AddDays(-7)
+            && proyecto.Estado == EstadoProyecto.Activo)
+        {
+            var diasSinActividad = (DateTime.Today - proyecto.FechaUltimaActualizacionMetricas.Value).Days;
+            alertas.Add(new AlertaProyecto
+            {
+                Tipo = "info",
+                Icono = "📝",
+                Mensaje = $"Sin actualización de métricas hace {diasSinActividad} días"
+            });
+        }
+    }
+    
+    private void CambiarTab(string tab)
+    {
+        tabActiva = tab;
+        if (tab == "actividades" && reporteProyecto == null)
+        {
+            _ = CargarActividades();
+        }
+    }
+    
+    private async Task CargarActividades()
+    {
+        isLoadingActividades = true;
+        StateHasChanged();
+        
+        try
+        {
+            reporteProyecto = await ReporteService.GetReporteProyectoAsync(ProyectoId, fechaInicioActividades, fechaFinActividades);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar actividades del proyecto");
+            errorMessage = $"Error al cargar actividades: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingActividades = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void IrAReporteDetallado()
+    {
+        Navigation.NavigateTo($"/reporte-proyecto/{ProyectoId}");
+    }
+    
+    private void IrADashboard()
+    {
+        Navigation.NavigateTo("/dashboard-productividad");
+    }
+    
+    private async Task AbrirEnGoogleMaps()
+    {
+        if (proyecto?.Latitud == null || proyecto?.Longitud == null) return;
+        var url = $"https://www.google.com/maps?q={((double)proyecto.Latitud.Value).ToString(System.Globalization.CultureInfo.InvariantCulture)},{((double)proyecto.Longitud.Value).ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+    
+    private void EditarProyecto()
+    {
+        Navigation.NavigateTo($"/catalogos?tab=proyectos&editar={ProyectoId}");
+    }
+    
+    private string GetBadgeClaseRendimiento(decimal porcentaje)
+    {
+        return porcentaje switch
+        {
+            >= 120 => "badge-excelente",
+            >= 100 => "badge-optimo",
+            >= 80 => "badge-aceptable",
+            >= 60 => "badge-bajo",
+            _ => "badge-critico"
+        };
+    }
+    
+    private class AlertaProyecto
+    {
+        public string Tipo { get; set; } = "info";
+        public string Icono { get; set; } = "ℹ️";
+        public string Mensaje { get; set; } = "";
+    }
+    
+    private async Task CargarEmpleadosDisponibles()
+    {
+        var todosEmpleados = await EmpleadoRepository.GetAllActiveAsync();
+        var asignadosIds = cuadrillaActiva.Select(c => c.EmpleadoId).ToHashSet();
+        empleadosDisponibles = todosEmpleados
+            .Where(e => !asignadosIds.Contains(e.Id))
+            .OrderBy(e => e.NombreCompleto)
+            .ToList();
+    }
+    
+    private void MostrarModalAsignar()
+    {
+        asignacionEdit = new ProyectoEmpleado
+        {
+            ProyectoId = ProyectoId,
+            FechaAsignacion = DateTime.Today,
+            PorcentajeDedicacion = 100
+        };
+        isEditingAsignacion = false;
+        empleadoEditando = null;
+        showModalAsignar = true;
+    }
+    
+    private void MostrarModalAsignarMasivo()
+    {
+        empleadosParaAsignar.Clear();
+        rolMasivo = "";
+        showModalAsignarMasivo = true;
+    }
+    
+    private void EditarAsignacion(ProyectoEmpleado asignacion)
+    {
+        asignacionEdit = new ProyectoEmpleado
+        {
+            Id = asignacion.Id,
+            ProyectoId = asignacion.ProyectoId,
+            EmpleadoId = asignacion.EmpleadoId,
+            FechaAsignacion = asignacion.FechaAsignacion,
+            RolEnum = asignacion.RolEnum,
+            Rol = asignacion.Rol,
+            PorcentajeDedicacion = asignacion.PorcentajeDedicacion,
+            TipoVinculacion = asignacion.TipoVinculacion,
+            EsLiderCuadrilla = asignacion.EsLiderCuadrilla,
+            Observaciones = asignacion.Observaciones
+        };
+        empleadoEditando = asignacion.Empleado;
+        isEditingAsignacion = true;
+        showModalAsignar = true;
+    }
+    
+    private async Task GuardarAsignacion()
+    {
+        if (!isEditingAsignacion && asignacionEdit.EmpleadoId <= 0)
+        {
+            errorMessage = "Debe seleccionar un empleado";
+            return;
+        }
+        
+        isSaving = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            // Sincronizar Rol texto con RolEnum
+            if (asignacionEdit.RolEnum.HasValue)
+            {
+                asignacionEdit.Rol = asignacionEdit.RolEnum.Value.ToString();
+            }
+            
+            if (isEditingAsignacion)
+            {
+                await ProyectoEmpleadoRepository.UpdateAsync(asignacionEdit);
+                successMessage = "Asignación actualizada correctamente";
+            }
+            else
+            {
+                // Verificar si ya existe
+                if (await ProyectoEmpleadoRepository.ExistsAsignacionActivaAsync(ProyectoId, asignacionEdit.EmpleadoId))
+                {
+                    errorMessage = "El empleado ya está asignado a este proyecto";
+                    return;
+                }
+                
+                await ProyectoEmpleadoRepository.AddAsync(asignacionEdit);
+                successMessage = "Empleado asignado correctamente";
+            }
+            
+            await CargarDatos();
+            showModalAsignar = false;
+            
+            // Limpiar mensaje después de un tiempo
+            _ = Task.Delay(3000).ContinueWith(_ =>
+            {
+                successMessage = null;
+                InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar asignación");
+            errorMessage = $"Error al guardar: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task GuardarAsignacionMasiva()
+    {
+        if (!empleadosParaAsignar.Any())
+        {
+            errorMessage = "Debe seleccionar al menos un empleado";
+            return;
+        }
+        
+        isSaving = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            RolProyectoForestal? rol = null;
+            if (!string.IsNullOrEmpty(rolMasivo) && int.TryParse(rolMasivo, out int rolInt))
+            {
+                rol = (RolProyectoForestal)rolInt;
+            }
+            
+            await ProyectoEmpleadoRepository.AsignarMultiplesAsync(ProyectoId, empleadosParaAsignar, rol);
+            
+            successMessage = $"{empleadosParaAsignar.Count} empleados asignados correctamente";
+            await CargarDatos();
+            showModalAsignarMasivo = false;
+            
+            _ = Task.Delay(3000).ContinueWith(_ =>
+            {
+                successMessage = null;
+                InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error en asignación masiva");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void ConfirmarDesasignar(ProyectoEmpleado asignacion)
+    {
+        asignacionADesasignar = asignacion;
+        motivoDesasignacion = "";
+        observacionesDesasignacion = "";
+        showModalDesasignar = true;
+    }
+    
+    private async Task EjecutarDesasignacion()
+    {
+        if (asignacionADesasignar == null) return;
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            var motivo = string.IsNullOrEmpty(observacionesDesasignacion) 
+                ? motivoDesasignacion 
+                : $"{motivoDesasignacion}: {observacionesDesasignacion}";
+            
+            await ProyectoEmpleadoRepository.DesasignarAsync(
+                ProyectoId, 
+                asignacionADesasignar.EmpleadoId, 
+                motivo);
+            
+            successMessage = "Empleado desasignado correctamente";
+            await CargarDatos();
+            showModalDesasignar = false;
+            
+            _ = Task.Delay(3000).ContinueWith(_ =>
+            {
+                successMessage = null;
+                InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al desasignar empleado");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void DesasignarSeleccionados()
+    {
+        motivoDesasignacion = "";
+        showModalDesasignarMultiples = true;
+    }
+    
+    private async Task EjecutarDesasignacionMultiple()
+    {
+        if (!empleadosSeleccionados.Any()) return;
+        
+        isSaving = true;
+        StateHasChanged();
+        
+        try
+        {
+            await ProyectoEmpleadoRepository.DesasignarMultiplesAsync(
+                ProyectoId, 
+                empleadosSeleccionados, 
+                motivoDesasignacion);
+            
+            successMessage = $"{empleadosSeleccionados.Count} empleados desasignados correctamente";
+            await CargarDatos();
+            showModalDesasignarMultiples = false;
+            
+            _ = Task.Delay(3000).ContinueWith(_ =>
+            {
+                successMessage = null;
+                InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error en desasignación múltiple");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void Volver() => Navigation.NavigateTo("/catalogos?tab=proyectos");
+    
+    private void ToggleSeleccionarTodos(ChangeEventArgs e)
+    {
+        if ((bool)(e.Value ?? false))
+        {
+            empleadosSeleccionados = cuadrillaActiva.Select(c => c.EmpleadoId).ToHashSet();
+        }
+        else
+        {
+            empleadosSeleccionados.Clear();
+        }
+        StateHasChanged();
+    }
+    
+    private void ToggleSeleccion(int empleadoId)
+    {
+        if (empleadosSeleccionados.Contains(empleadoId))
+            empleadosSeleccionados.Remove(empleadoId);
+        else
+            empleadosSeleccionados.Add(empleadoId);
+        StateHasChanged();
+    }
+    
+    private void ToggleEmpleadoParaAsignar(int empleadoId)
+    {
+        if (empleadosParaAsignar.Contains(empleadoId))
+            empleadosParaAsignar.Remove(empleadoId);
+        else
+            empleadosParaAsignar.Add(empleadoId);
+        StateHasChanged();
+    }
+    
+    private string GetTipoProyectoLabel(TipoProyectoForestal tipo) => tipo switch
+    {
+        TipoProyectoForestal.PlantacionNueva => "Plantación Nueva",
+        TipoProyectoForestal.Mantenimiento => "Mantenimiento",
+        TipoProyectoForestal.Raleo => "Raleo",
+        TipoProyectoForestal.PodaFormacion => "Poda Formación",
+        TipoProyectoForestal.PodaSanitaria => "Poda Sanitaria",
+        TipoProyectoForestal.Cosecha => "Cosecha",
+        TipoProyectoForestal.Reforestacion => "Reforestación",
+        TipoProyectoForestal.Vivero => "Vivero",
+        TipoProyectoForestal.InvestigacionEnsayo => "Investigación/Ensayo",
+        TipoProyectoForestal.InfraestructuraVial => "Infraestructura Vial",
+        TipoProyectoForestal.ControlFitosanitario => "Control Fitosanitario",
+        TipoProyectoForestal.Fertilizacion => "Fertilización",
+        TipoProyectoForestal.Inventario => "Inventario",
+        TipoProyectoForestal.ControlMalezas => "Control de Malezas",
+        TipoProyectoForestal.Otro => "Otro",
+        _ => tipo.ToString()
+    };
+    
+    private string GetRolLabel(RolProyectoForestal rol) => rol switch
+    {
+        RolProyectoForestal.Operario => "Operario",
+        RolProyectoForestal.Capataz => "Capataz",
+        RolProyectoForestal.Motosierrista => "Motosierrista",
+        RolProyectoForestal.Tractorista => "Tractorista",
+        RolProyectoForestal.Guadanero => "Guadañero",
+        RolProyectoForestal.Aplicador => "Aplicador",
+        RolProyectoForestal.Viverista => "Viverista",
+        RolProyectoForestal.Conductor => "Conductor",
+        RolProyectoForestal.Ayudante => "Ayudante",
+        RolProyectoForestal.Topografo => "Topógrafo",
+        RolProyectoForestal.Supervisor => "Supervisor",
+        RolProyectoForestal.TecnicoForestal => "Técnico Forestal",
+        RolProyectoForestal.Vigilante => "Vigilante",
+        RolProyectoForestal.Arriero => "Arriero",
+        RolProyectoForestal.Cocinero => "Cocinero",
+        RolProyectoForestal.Otro => "Otro",
+        _ => rol.ToString()
+    };
+}

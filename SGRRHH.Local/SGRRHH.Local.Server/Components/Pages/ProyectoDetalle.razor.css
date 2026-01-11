@@ -1,0 +1,393 @@
+/* Dashboard del proyecto */
+.proyecto-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Encabezado del proyecto */
+.proyecto-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 0;
+    border-bottom: 2px solid #333;
+    margin-bottom: 16px;
+}
+
+.proyecto-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.proyecto-codigo {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    background: #333;
+    color: white;
+    padding: 2px 8px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.proyecto-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.proyecto-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.proyecto-header-right {
+    display: flex;
+    gap: 8px;
+}
+
+/* Navegación de pestañas del proyecto */
+.proyecto-nav {
+    display: flex;
+    gap: 0;
+    border: 2px solid #333;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.proyecto-nav .nav-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.85rem;
+    border-right: 1px solid #333;
+    background: #f0f0f0;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.proyecto-nav .nav-item:last-child {
+    border-right: none;
+}
+
+.proyecto-nav .nav-item:hover {
+    background: #e0e0e0;
+}
+
+.proyecto-nav .nav-item.active {
+    background: #333;
+    color: white;
+}
+
+/* Contenido del proyecto */
+.proyecto-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Cards */
+.card {
+    border: 2px solid #333;
+    padding: 16px;
+    background: white;
+}
+
+.card h2 {
+    font-size: 0.9rem;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Ficha técnica */
+.ficha-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.ficha-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.ficha-item label {
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #666;
+}
+
+.ficha-item span {
+    font-size: 0.9rem;
+}
+
+/* KPIs */
+.kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.kpi-card {
+    border: 2px solid #333;
+    padding: 16px;
+    background: white;
+    text-align: center;
+}
+
+.kpi-icon {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+}
+
+.kpi-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.kpi-label {
+    font-size: 0.7rem;
+    color: #666;
+    font-weight: bold;
+}
+
+.kpi-detail {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 4px;
+}
+
+.kpi-action {
+    font-size: 0.7rem;
+    margin-top: 8px;
+    padding: 4px 8px;
+    background: #f0f0f0;
+    border: 1px solid #333;
+    cursor: pointer;
+}
+
+.kpi-action:hover {
+    background: #e0e0e0;
+}
+
+/* Progreso */
+.progreso-container {
+    padding: 16px 0;
+}
+
+.progreso-bar-grande {
+    height: 32px;
+    background: #e0e0e0;
+    border: 2px solid #333;
+    position: relative;
+    overflow: hidden;
+}
+
+.progreso-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #228B22, #32CD32);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    min-width: 50px;
+}
+
+.progreso-fechas {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.alerta-vencido {
+    color: #DC143C;
+    font-weight: bold;
+}
+
+/* Alertas */
+.alertas-card {
+    border-color: #DAA520;
+    background: #FFFACD;
+}
+
+.alerta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: 4px;
+}
+
+.alerta-error { background: #FFE4E1; }
+.alerta-warning { background: #FFF8DC; }
+.alerta-info { background: #E0FFFF; }
+
+.alerta-icono {
+    font-size: 1.2rem;
+}
+
+.alerta-mensaje {
+    font-size: 0.85rem;
+}
+
+/* Badges de tipo de proyecto */
+.badge-tipo-0, .badge-tipo-1 { background: #228B22; color: white; }
+.badge-tipo-2 { background: #4682B4; color: white; }
+.badge-tipo-3 { background: #8B4513; color: white; }
+.badge-tipo-4 { background: #2E8B57; color: white; }
+.badge-tipo-5 { background: #6B8E23; color: white; }
+.badge-tipo-6 { background: #FF6347; color: white; }
+.badge-tipo-7 { background: #9370DB; color: white; }
+.badge-tipo-8 { background: #20B2AA; color: white; }
+.badge-tipo-9 { background: #DAA520; color: white; }
+.badge-tipo-10 { background: #CD5C5C; color: white; }
+.badge-tipo-11 { background: #808080; color: white; }
+.badge-tipo-12 { background: #5F9EA0; color: white; }
+.badge-tipo-13 { background: #778899; color: white; }
+.badge-tipo-14 { background: #696969; color: white; }
+
+.badge-especie {
+    background: #2F4F4F;
+    color: white;
+}
+
+.badge-vencido {
+    background: #DC143C;
+    color: white;
+}
+
+/* Badges de rendimiento */
+.badge-excelente { background: #228B22; color: white; }
+.badge-optimo { background: #32CD32; color: white; }
+.badge-aceptable { background: #FFD700; color: #333; }
+.badge-bajo { background: #FFA500; color: white; }
+.badge-critico { background: #DC143C; color: white; }
+
+/* Categorías resumen */
+.categorias-resumen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.categoria-card {
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    padding: 12px;
+}
+
+.categoria-nombre {
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.categoria-horas {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.categoria-porcentaje {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Mapa */
+.proyecto-mapa {
+    padding: 16px 0;
+}
+
+.proyecto-mapa .sin-coordenadas {
+    text-align: center;
+    padding: 48px;
+    background: #f5f5f5;
+    border: 2px dashed #999;
+}
+
+.proyecto-mapa .sin-coordenadas .icono {
+    font-size: 3rem;
+}
+
+.formato-coordenadas {
+    margin-top: 16px;
+    text-align: left;
+    display: inline-block;
+}
+
+.formato-coordenadas ul {
+    margin-top: 8px;
+    padding-left: 20px;
+}
+
+.mapa-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mapa-info .coordenadas {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mapa-container {
+    margin-bottom: 16px;
+}
+
+.ubicacion-info {
+    border: 2px solid #333;
+    padding: 16px;
+    background: white;
+}
+
+.ubicacion-info h3 {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+}
+
+.ubicacion-info .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.ubicacion-info .info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.ubicacion-info .info-item label {
+    font-size: 0.7rem;
+    color: #666;
+    font-weight: bold;
+}
+
+/* Toolbar */
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+}
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toolbar-group label {
+    font-size: 0.8rem;
+    font-weight: bold;
+}

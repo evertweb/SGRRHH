@@ -1,0 +1,1045 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+@inject ICatalogCacheService CatalogCache
+@inject ILocalStorageService StorageService
+@inject ILogger<EmpleadoForm> Logger
+@inject IJSRuntime JSRuntime
+
+<!-- Modal Overlay -->
+@if (IsOpen)
+{
+    <div class="hospital-modal-overlay" @onclick:stopPropagation="true">
+        <div class="hospital-modal-container" id="empleado-form-container">
+            <!-- Header -->
+            <div class="hospital-modal-header">
+                <h2 class="hospital-modal-title">@(IsEditing ? "EDITAR EMPLEADO" : "NUEVO EMPLEADO")</h2>
+                <div class="hospital-shortcuts">
+                    ENTER=SIGUIENTE | F9=GUARDAR TODO | ESC=CANCELAR
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="hospital-modal-body">
+                @if (Empleado != null)
+                {
+                    <form @onsubmit="OnSubmit">
+                        <!-- SECCION: DATOS GENERALES -->
+                        <div class="hospital-section">
+                            <div class="hospital-section-header">DATOS GENERALES</div>
+                            <div class="hospital-section-body">
+                                <!-- FOTO DEL EMPLEADO -->
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">FOTO DEL EMPLEADO</label>
+                                        <div style="display: flex; align-items: center; gap: 15px;">
+                                            <div style="width: 100px; height: 120px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; background: #f0f0f0;">
+                                                @if (!string.IsNullOrEmpty(fotoPreviewUrl))
+                                                {
+                                                    <img src="@fotoPreviewUrl" alt="Vista previa" style="max-width: 100%; max-height: 100%; object-fit: cover;" />
+                                                }
+                                                else if (!string.IsNullOrEmpty(Empleado?.FotoPath))
+                                                {
+                                                    <img src="@GetFotoUrl()" alt="Foto actual" style="max-width: 100%; max-height: 100%; object-fit: cover;" />
+                                                }
+                                                else
+                                                {
+                                                    <span style="font-size: 10px; color: #666; text-align: center;">SIN FOTO</span>
+                                                }
+                                            </div>
+                                            <div>
+                                                <InputFile OnChange="OnFotoSelected" accept=".jpg,.jpeg,.png" class="hospital-file-input" />
+                                                <div class="hospital-field-hint">JPG o PNG, máximo 2MB</div>
+                                                @if (fotoFile != null)
+                                                {
+                                                    <div style="margin-top: 5px; color: #006400; font-size: 11px;">
+                                                        ✓ @fotoFile.Name (@FormatFileSize(fotoFile.Size))
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="hospital-form-field">
+                                        <!-- Espacio vacío -->
+                                    </div>
+                                </div>
+                                
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label @(IsRequired("Codigo") ? "required" : "")">
+                                            CODIGO @(IsRequired("Codigo") ? "*" : "")
+                                        </label>
+                                        <input type="text" 
+                                               id="field-codigo"
+                                               class="hospital-input @(GetFieldErrorClass("Codigo"))"
+                                               @bind="Empleado.Codigo" 
+                                               @bind:event="oninput"
+                                               maxlength="20"
+                                               readonly="@IsEditing"
+                                               tabindex="1" />
+                                        @if (HasFieldError("Codigo"))
+                                        {
+                                            <div class="hospital-field-error">@GetFieldError("Codigo")</div>
+                                        }
+                                    </div>
+
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label @(IsRequired("Cedula") ? "required" : "")">
+                                            CEDULA @(IsRequired("Cedula") ? "*" : "")
+                                        </label>
+                                        <InputCedula @bind-Value="Empleado.Cedula"
+                                                     CssClass="@($"hospital-input {GetFieldErrorClass("Cedula")}")"
+                                                     Placeholder="Ej: 1.192.208.848" />
+                                        @if (HasFieldError("Cedula"))
+                                        {
+                                            <div class="hospital-field-error">@GetFieldError("Cedula")</div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label @(IsRequired("Nombres") ? "required" : "")">
+                                            NOMBRES @(IsRequired("Nombres") ? "*" : "")
+                                        </label>
+                                        <input type="text" 
+                                               id="field-nombres"
+                                               class="hospital-input @(GetFieldErrorClass("Nombres"))"
+                                               @bind="Empleado.Nombres" 
+                                               @bind:event="oninput"
+                                               maxlength="100"
+                                               tabindex="3" />
+                                        @if (HasFieldError("Nombres"))
+                                        {
+                                            <div class="hospital-field-error">@GetFieldError("Nombres")</div>
+                                        }
+                                    </div>
+
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label @(IsRequired("Apellidos") ? "required" : "")">
+                                            APELLIDOS @(IsRequired("Apellidos") ? "*" : "")
+                                        </label>
+                                        <input type="text" 
+                                               id="field-apellidos"
+                                               class="hospital-input @(GetFieldErrorClass("Apellidos"))"
+                                               @bind="Empleado.Apellidos" 
+                                               @bind:event="oninput"
+                                               maxlength="100"
+                                               tabindex="4" />
+                                        @if (HasFieldError("Apellidos"))
+                                        {
+                                            <div class="hospital-field-error">@GetFieldError("Apellidos")</div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">FECHA NACIMIENTO</label>
+                                        <input type="date" 
+                                               id="field-fechanacimiento"
+                                               class="hospital-input"
+                                               @bind="Empleado.FechaNacimiento"
+                                               tabindex="5" />
+                                    </div>
+
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">GENERO</label>
+                                        <select class="hospital-input" 
+                                                id="field-genero"
+                                                @bind="Empleado.Genero" 
+                                                tabindex="6">
+                                            <option value="">-- SELECCIONE --</option>
+                                            @foreach (var g in Enum.GetValues<Genero>())
+                                            {
+                                                <option value="@g">@g.ToString().ToUpper()</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">ESTADO CIVIL</label>
+                                        <select class="hospital-input" 
+                                                id="field-estadocivil"
+                                                @bind="Empleado.EstadoCivil" 
+                                                tabindex="7">
+                                            <option value="">-- SELECCIONE --</option>
+                                            @foreach (var ec in Enum.GetValues<EstadoCivil>())
+                                            {
+                                                <option value="@ec">@ec.ToString().ToUpper()</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">DIRECCION</label>
+                                        <input type="text" 
+                                               id="field-direccion"
+                                               class="hospital-input"
+                                               @bind="Empleado.Direccion" 
+                                               @bind:event="oninput"
+                                               maxlength="250"
+                                               tabindex="8" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCION: INFORMACION LABORAL -->
+                        <div class="hospital-section">
+                            <div class="hospital-section-header">INFORMACION LABORAL</div>
+                            <div class="hospital-section-body">
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label @(IsRequired("FechaIngreso") ? "required" : "")">
+                                            FECHA INGRESO @(IsRequired("FechaIngreso") ? "*" : "")
+                                        </label>
+                                        <input type="date" 
+                                               id="field-fechaingreso"
+                                               class="hospital-input @(GetFieldErrorClass("FechaIngreso"))"
+                                               @bind="Empleado.FechaIngreso"
+                                               tabindex="9" />
+                                        @if (HasFieldError("FechaIngreso"))
+                                        {
+                                            <div class="hospital-field-error">@GetFieldError("FechaIngreso")</div>
+                                        }
+                                    </div>
+
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">FECHA RETIRO</label>
+                                        <input type="date" 
+                                               id="field-fecharetiro"
+                                               class="hospital-input"
+                                               @bind="Empleado.FechaRetiro"
+                                               tabindex="10" />
+                                    </div>
+                                </div>
+
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">DEPARTAMENTO</label>
+                                        <select class="hospital-input" 
+                                                id="field-departamento"
+                                                @bind="Empleado.DepartamentoId" 
+                                                tabindex="11">
+                                            <option value="">-- SELECCIONE --</option>
+                                            @foreach (var d in Departamentos)
+                                            {
+                                                <option value="@d.Id">@d.Nombre</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">CARGO</label>
+                                        <select class="hospital-input" 
+                                                id="field-cargo"
+                                                @bind="Empleado.CargoId" 
+                                                @bind:after="OnCargoChanged"
+                                                tabindex="12">
+                                            <option value="">-- SELECCIONE --</option>
+                                            @foreach (var c in Cargos)
+                                            {
+                                                <option value="@c.Id">@c.Nombre @(c.SalarioBase.HasValue ? $"({NumberFormatHelper.FormatearMoneda(c.SalarioBase)})" : "")</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">ESTADO</label>
+                                        <select class="hospital-input" 
+                                                id="field-estado"
+                                                @bind="Empleado.Estado" 
+                                                tabindex="13">
+                                            @foreach (var estado in Enum.GetValues<EstadoEmpleado>())
+                                            {
+                                                <option value="@estado">@estado.ToString().ToUpper()</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">SALARIO BASE</label>
+                                        <InputMoneda @bind-Value="Empleado.SalarioBase"
+                                                     CssClass="hospital-input"
+                                                     Placeholder="Ej: 1.750.905" />
+                                        <small style="@(Empleado?.SalarioBase.HasValue == true && Empleado.SalarioBase.Value < 1750905 ? "color: #CC0000; font-weight: bold;" : "")">
+                                            SMMLV 2026: @NumberFormatHelper.FormatearMoneda(1750905m)
+                                            @if (Empleado?.SalarioBase.HasValue == true && Empleado.SalarioBase.Value < 1750905)
+                                            {
+                                                <span> - ¡MENOR AL MÍNIMO!</span>
+                                            }
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCION: SEGURIDAD SOCIAL -->
+                        <div class="hospital-section">
+                            <div class="hospital-section-header">SEGURIDAD SOCIAL (COLOMBIA)</div>
+                            <div class="hospital-section-body">
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">EPS (SALUD)</label>
+                                        <input type="text" class="hospital-input" 
+                                               @bind="Empleado.EPS" maxlength="100" 
+                                               placeholder="Ej: SURA, SANITAS, NUEVA EPS" />
+                                    </div>
+                                    
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">CODIGO EPS</label>
+                                        <input type="text" class="hospital-input" 
+                                               @bind="Empleado.CodigoEPS" maxlength="20" 
+                                               placeholder="Código entidad" />
+                                    </div>
+                                </div>
+                                
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">AFP (PENSION)</label>
+                                        <input type="text" class="hospital-input" 
+                                               @bind="Empleado.AFP" maxlength="100" 
+                                               placeholder="Ej: PORVENIR, PROTECCION" />
+                                    </div>
+                                    
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">CODIGO AFP</label>
+                                        <input type="text" class="hospital-input" 
+                                               @bind="Empleado.CodigoAFP" maxlength="20" 
+                                               placeholder="Código entidad" />
+                                    </div>
+                                </div>
+                                
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">ARL (RIESGOS LABORALES)</label>
+                                        <input type="text" class="hospital-input" 
+                                               @bind="Empleado.ARL" maxlength="100" 
+                                               placeholder="Ej: SURA, POSITIVA" />
+                                    </div>
+                                    
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">CODIGO ARL</label>
+                                        <input type="text" class="hospital-input" 
+                                               @bind="Empleado.CodigoARL" maxlength="20" 
+                                               placeholder="Código entidad" />
+                                    </div>
+                                </div>
+                                
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">CLASE DE RIESGO ARL</label>
+                                        <select class="hospital-input" @bind="Empleado.ClaseRiesgoARL">
+                                            <option value="1">CLASE I - Riesgo Mínimo (0.522%)</option>
+                                            <option value="2">CLASE II - Riesgo Bajo (1.044%)</option>
+                                            <option value="3">CLASE III - Riesgo Medio (2.436%)</option>
+                                            <option value="4">CLASE IV - Riesgo Alto (4.350%)</option>
+                                            <option value="5">CLASE V - Riesgo Máximo (6.960%)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="hospital-form-field">
+                                        <!-- Espacio vacío -->
+                                    </div>
+                                </div>
+                                
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">CAJA DE COMPENSACION</label>
+                                        <input type="text" class="hospital-input" 
+                                               @bind="Empleado.CajaCompensacion" maxlength="100" 
+                                               placeholder="Ej: COMFAMA, CAFAM" />
+                                    </div>
+                                    
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">CODIGO CAJA COMPENSACION</label>
+                                        <input type="text" class="hospital-input" 
+                                               @bind="Empleado.CodigoCajaCompensacion" maxlength="20" 
+                                               placeholder="Código entidad" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECCION: CONTACTO -->
+                        <div class="hospital-section">
+                            <div class="hospital-section-header">CONTACTO</div>
+                            <div class="hospital-section-body">
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">TELEFONO</label>
+                                        <input type="text" 
+                                               id="field-telefono"
+                                               class="hospital-input"
+                                               @bind="Empleado.Telefono" 
+                                               @bind:event="oninput"
+                                               maxlength="20"
+                                               placeholder="Solo números y guiones"
+                                               tabindex="14" />
+                                    </div>
+
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">EMAIL</label>
+                                        <input type="email" 
+                                               id="field-email"
+                                               class="hospital-input @(GetFieldErrorClass("Email"))"
+                                               @bind="Empleado.Email" 
+                                               @bind:event="oninput"
+                                               maxlength="100"
+                                               tabindex="15" />
+                                        @if (HasFieldError("Email"))
+                                        {
+                                            <div class="hospital-field-error">@GetFieldError("Email")</div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">CONTACTO EMERGENCIA</label>
+                                        <input type="text" 
+                                               id="field-contactoemergencia"
+                                               class="hospital-input"
+                                               @bind="Empleado.ContactoEmergencia" 
+                                               @bind:event="oninput"
+                                               maxlength="100"
+                                               tabindex="16" />
+                                    </div>
+
+                                    <div class="hospital-form-field">
+                                        <label class="hospital-label">TELEFONO EMERGENCIA</label>
+                                        <input type="text" 
+                                               id="field-telefonoemergencia"
+                                               class="hospital-input"
+                                               @bind="Empleado.TelefonoEmergencia" 
+                                               @bind:event="oninput"
+                                               maxlength="20"
+                                               placeholder="Solo números y guiones"
+                                               tabindex="17" />
+                                    </div>
+                                </div>
+
+                                <div class="hospital-form-row">
+                                    <div class="hospital-form-field hospital-form-field-full">
+                                        <label class="hospital-label">OBSERVACIONES</label>
+                                        <textarea class="hospital-input hospital-textarea"
+                                                  id="field-observaciones"
+                                                  @bind="Empleado.Observaciones" 
+                                                  maxlength="500"
+                                                  rows="3"
+                                                  tabindex="18"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mensaje de validación general -->
+                        @if (!string.IsNullOrEmpty(ValidationMessage))
+                        {
+                            <div class="hospital-validation-message">
+                                ERROR: @ValidationMessage
+                            </div>
+                        }
+                    </form>
+                }
+            </div>
+
+            <!-- Footer con botones -->
+            <div class="hospital-modal-footer">
+                <button type="button" 
+                        class="hospital-btn hospital-btn-secondary" 
+                        @onclick="OnCancel"
+                        disabled="@IsSaving"
+                        tabindex="20">
+                    CANCELAR (ESC)
+                </button>
+                <button type="button" 
+                        class="hospital-btn hospital-btn-primary" 
+                        @onclick="OnGuardar"
+                        disabled="@IsSaving"
+                        tabindex="19">
+                    @(IsSaving ? "GUARDANDO..." : "GUARDAR (F9)")
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación -->
+    @if (ShowConfirmDialog)
+    {
+        <div class="hospital-confirm-overlay">
+            <div class="hospital-confirm-dialog">
+                <div class="hospital-confirm-header">CONFIRMAR OPERACION</div>
+                <div class="hospital-confirm-body">
+                    @ConfirmMessage
+                </div>
+                <div class="hospital-confirm-footer">
+                    <button type="button" 
+                            class="hospital-btn hospital-btn-secondary"
+                            @onclick="() => ShowConfirmDialog = false">
+                        NO
+                    </button>
+                    <button type="button" 
+                            class="hospital-btn hospital-btn-primary"
+                            @onclick="ConfirmAction">
+                        SI
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public Empleado? Empleado { get; set; }
+    [Parameter] public bool IsEditing { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<Cargo> Cargos { get; set; } = new();
+    private List<Departamento> Departamentos { get; set; } = new();
+
+    private bool IsSaving { get; set; }
+    private string ValidationMessage { get; set; } = "";
+    private Dictionary<string, string> FieldErrors { get; set; } = new();
+    
+    // Variables para foto
+    private IBrowserFile? fotoFile;
+    private string? fotoPreviewUrl;
+
+    private bool ShowConfirmDialog { get; set; }
+    private string ConfirmMessage { get; set; } = "";
+    private Func<Task>? PendingAction { get; set; }
+    
+    private DotNetObjectReference<EmpleadoForm>? dotNetRef;
+    private bool jsInitialized = false;
+    private bool wasOpen = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen)
+        {
+            await LoadCatalogs();
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Inicializar JS cuando el modal se abre
+        if (IsOpen && !wasOpen)
+        {
+            wasOpen = true;
+            await InitializeKeyboardHandler();
+        }
+        else if (!IsOpen && wasOpen)
+        {
+            wasOpen = false;
+            await DisposeKeyboardHandler();
+        }
+    }
+    
+    private async Task InitializeKeyboardHandler()
+    {
+        try
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("EmpleadoFormKeyboard.initialize", dotNetRef);
+            jsInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "No se pudo inicializar el manejador de teclado");
+        }
+    }
+    
+    private async Task DisposeKeyboardHandler()
+    {
+        if (jsInitialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("EmpleadoFormKeyboard.dispose");
+            }
+            catch { }
+            jsInitialized = false;
+        }
+        dotNetRef?.Dispose();
+        dotNetRef = null;
+    }
+    
+    /// <summary>
+    /// Llamado desde JS cuando se presiona F9
+    /// </summary>
+    [JSInvokable]
+    public async Task OnF9Pressed()
+    {
+        await OnGuardar();
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Llamado desde JS cuando se presiona ESC
+    /// </summary>
+    [JSInvokable]
+    public async Task OnEscPressed()
+    {
+        await OnCancel();
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Llamado desde JS cuando se presiona Enter en un campo
+    /// Retorna true si el campo es válido y se puede avanzar
+    /// </summary>
+    [JSInvokable]
+    public bool OnEnterPressed(int fieldIndex)
+    {
+        bool isValid = ValidateCurrentField(fieldIndex);
+        StateHasChanged();
+        return isValid;
+    }
+
+    private async Task LoadCatalogs()
+    {
+        try
+        {
+            Cargos = await CatalogCache.GetCargosAsync();
+            Departamentos = await CatalogCache.GetDepartamentosAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando catálogos");
+        }
+    }
+    
+    /// <summary>
+    /// Se ejecuta cuando se cambia el cargo seleccionado.
+    /// Copia el salario base del cargo al empleado automáticamente.
+    /// </summary>
+    private void OnCargoChanged()
+    {
+        if (Empleado?.CargoId.HasValue == true)
+        {
+            var cargoSeleccionado = Cargos.FirstOrDefault(c => c.Id == Empleado.CargoId);
+            if (cargoSeleccionado?.SalarioBase.HasValue == true)
+            {
+                Empleado.SalarioBase = cargoSeleccionado.SalarioBase;
+                Logger.LogInformation("Salario del cargo '{Cargo}' asignado al empleado: {Salario}", 
+                    cargoSeleccionado.Nombre, cargoSeleccionado.SalarioBase);
+            }
+        }
+        StateHasChanged();
+    }
+    
+    // Estos métodos ya no se usan directamente, el JS maneja los eventos
+    private Task HandleKeyDown(KeyboardEventArgs e) => Task.CompletedTask;
+    private Task HandleFieldKeyDown(KeyboardEventArgs e, int currentFieldIndex) => Task.CompletedTask;
+    private Task HandleTextAreaKeyDown(KeyboardEventArgs e, int currentFieldIndex) => Task.CompletedTask;
+    private void OnlyNumbers(KeyboardEventArgs e) { }
+    private void OnlyLetters(KeyboardEventArgs e) { }
+    private void OnlyPhoneCharacters(KeyboardEventArgs e) { }
+    
+    /// <summary>
+    /// Valida el campo actual antes de avanzar
+    /// </summary>
+    private bool ValidateCurrentField(int fieldIndex)
+    {
+        if (Empleado == null) return false;
+        
+        // Limpiar error previo del campo
+        string fieldName = GetFieldNameByIndex(fieldIndex);
+        FieldErrors.Remove(fieldName);
+        
+        bool isValid = fieldIndex switch
+        {
+            1 => ValidateField("Codigo", Empleado.Codigo, "El campo CODIGO es obligatorio.", true),
+            2 => ValidateField("Cedula", Empleado.Cedula, "El campo CEDULA es obligatorio.", true, ValidateCedula),
+            3 => ValidateField("Nombres", Empleado.Nombres, "El campo NOMBRES es obligatorio.", true),
+            4 => ValidateField("Apellidos", Empleado.Apellidos, "El campo APELLIDOS es obligatorio.", true),
+            5 => true, // Fecha nacimiento opcional
+            6 => true, // Género opcional
+            7 => true, // Estado civil opcional
+            8 => true, // Dirección opcional
+            9 => ValidateFechaIngreso(),
+            10 => true, // Fecha retiro opcional
+            11 => true, // Departamento opcional
+            12 => true, // Cargo opcional
+            13 => true, // Estado siempre tiene valor por defecto
+            14 => ValidateTelefono("Telefono", Empleado.Telefono),
+            15 => ValidateEmail(),
+            16 => true, // Contacto emergencia opcional
+            17 => ValidateTelefono("TelefonoEmergencia", Empleado.TelefonoEmergencia),
+            18 => true, // Observaciones opcional
+            _ => true
+        };
+        
+        if (!isValid)
+        {
+            StateHasChanged();
+        }
+        
+        return isValid;
+    }
+    
+    private string GetFieldNameByIndex(int index)
+    {
+        return index switch
+        {
+            1 => "Codigo",
+            2 => "Cedula",
+            3 => "Nombres",
+            4 => "Apellidos",
+            5 => "FechaNacimiento",
+            6 => "Genero",
+            7 => "EstadoCivil",
+            8 => "Direccion",
+            9 => "FechaIngreso",
+            10 => "FechaRetiro",
+            11 => "DepartamentoId",
+            12 => "CargoId",
+            13 => "Estado",
+            14 => "Telefono",
+            15 => "Email",
+            16 => "ContactoEmergencia",
+            17 => "TelefonoEmergencia",
+            18 => "Observaciones",
+            _ => ""
+        };
+    }
+    
+    private bool ValidateField(string fieldName, string? value, string errorMessage, bool required, Func<string, bool>? additionalValidation = null)
+    {
+        if (required && string.IsNullOrWhiteSpace(value))
+        {
+            FieldErrors[fieldName] = errorMessage;
+            ValidationMessage = $"Campo {fieldName}: {errorMessage}";
+            return false;
+        }
+        
+        if (additionalValidation != null && !string.IsNullOrWhiteSpace(value) && !additionalValidation(value))
+        {
+            return false;
+        }
+        
+        ValidationMessage = "";
+        return true;
+    }
+    
+    private bool ValidateCedula(string cedula)
+    {
+        // Cédula debe contener solo números
+        if (!System.Text.RegularExpressions.Regex.IsMatch(cedula, @"^\d+$"))
+        {
+            FieldErrors["Cedula"] = "La CEDULA debe contener solo números.";
+            ValidationMessage = "Campo Cedula: La CEDULA debe contener solo números.";
+            return false;
+        }
+        return true;
+    }
+    
+    private bool ValidateFechaIngreso()
+    {
+        if (Empleado?.FechaIngreso == default)
+        {
+            FieldErrors["FechaIngreso"] = "El campo FECHA INGRESO es obligatorio.";
+            ValidationMessage = "Campo FechaIngreso: El campo FECHA INGRESO es obligatorio.";
+            return false;
+        }
+        return true;
+    }
+    
+    private bool ValidateTelefono(string fieldName, string? telefono)
+    {
+        if (!string.IsNullOrWhiteSpace(telefono))
+        {
+            // Teléfono puede contener números, guiones y espacios
+            if (!System.Text.RegularExpressions.Regex.IsMatch(telefono, @"^[\d\s\-\+\(\)]+$"))
+            {
+                FieldErrors[fieldName] = "El TELEFONO solo puede contener números, guiones, espacios y paréntesis.";
+                ValidationMessage = $"Campo {fieldName}: Formato de teléfono inválido.";
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    private bool ValidateEmail()
+    {
+        if (!string.IsNullOrWhiteSpace(Empleado?.Email))
+        {
+            var emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+            if (!System.Text.RegularExpressions.Regex.IsMatch(Empleado.Email, emailPattern))
+            {
+                FieldErrors["Email"] = "El formato del EMAIL no es válido.";
+                ValidationMessage = "Campo Email: El formato del EMAIL no es válido.";
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    private bool IsRequired(string fieldName)
+    {
+        return fieldName switch
+        {
+            "Codigo" => true,
+            "Cedula" => true,
+            "Nombres" => true,
+            "Apellidos" => true,
+            "FechaIngreso" => true,
+            _ => false
+        };
+    }
+
+    private bool HasFieldError(string fieldName)
+    {
+        return FieldErrors.ContainsKey(fieldName);
+    }
+
+    private string GetFieldError(string fieldName)
+    {
+        return FieldErrors.TryGetValue(fieldName, out var error) ? error : "";
+    }
+
+    private string GetFieldErrorClass(string fieldName)
+    {
+        return HasFieldError(fieldName) ? "hospital-input-error" : "";
+    }
+
+    private bool ValidateForm()
+    {
+        FieldErrors.Clear();
+        ValidationMessage = "";
+
+        if (Empleado == null)
+        {
+            ValidationMessage = "Datos del empleado no disponibles.";
+            return false;
+        }
+
+        // Validar código
+        if (string.IsNullOrWhiteSpace(Empleado.Codigo))
+        {
+            FieldErrors["Codigo"] = "El campo CODIGO es obligatorio.";
+        }
+
+        // Validar cédula
+        if (string.IsNullOrWhiteSpace(Empleado.Cedula))
+        {
+            FieldErrors["Cedula"] = "El campo CEDULA es obligatorio.";
+        }
+        else if (!System.Text.RegularExpressions.Regex.IsMatch(Empleado.Cedula, @"^\d+$"))
+        {
+            FieldErrors["Cedula"] = "La CEDULA debe contener solo números.";
+        }
+
+        // Validar nombres
+        if (string.IsNullOrWhiteSpace(Empleado.Nombres))
+        {
+            FieldErrors["Nombres"] = "El campo NOMBRES es obligatorio.";
+        }
+
+        // Validar apellidos
+        if (string.IsNullOrWhiteSpace(Empleado.Apellidos))
+        {
+            FieldErrors["Apellidos"] = "El campo APELLIDOS es obligatorio.";
+        }
+
+        // Validar fecha de ingreso
+        if (Empleado.FechaIngreso == default)
+        {
+            FieldErrors["FechaIngreso"] = "El campo FECHA INGRESO es obligatorio.";
+        }
+
+        // Validar formato de teléfono si se proporcionó
+        if (!string.IsNullOrWhiteSpace(Empleado.Telefono))
+        {
+            if (!System.Text.RegularExpressions.Regex.IsMatch(Empleado.Telefono, @"^[\d\s\-\+\(\)]+$"))
+            {
+                FieldErrors["Telefono"] = "El TELEFONO solo puede contener números, guiones, espacios y paréntesis.";
+            }
+        }
+
+        // Validar formato de email si se proporcionó
+        if (!string.IsNullOrWhiteSpace(Empleado.Email))
+        {
+            var emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+            if (!System.Text.RegularExpressions.Regex.IsMatch(Empleado.Email, emailPattern))
+            {
+                FieldErrors["Email"] = "El formato del EMAIL no es válido.";
+            }
+        }
+        
+        // Validar teléfono de emergencia si se proporcionó
+        if (!string.IsNullOrWhiteSpace(Empleado.TelefonoEmergencia))
+        {
+            if (!System.Text.RegularExpressions.Regex.IsMatch(Empleado.TelefonoEmergencia, @"^[\d\s\-\+\(\)]+$"))
+            {
+                FieldErrors["TelefonoEmergencia"] = "El TELEFONO EMERGENCIA solo puede contener números, guiones, espacios y paréntesis.";
+            }
+        }
+
+        // Si hay errores de campo, mostrar el primero en el mensaje general
+        if (FieldErrors.Any())
+        {
+            var firstError = FieldErrors.First();
+            ValidationMessage = $"Campo {firstError.Key}: {firstError.Value}";
+            return false;
+        }
+
+        return true;
+    }
+
+    private Task OnGuardar()
+    {
+        // Primero validar todo el formulario
+        if (!ValidateForm())
+        {
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
+        
+        // Mostrar diálogo de confirmación
+        ConfirmMessage = IsEditing 
+            ? $"¿Confirmar actualización del empleado {Empleado?.Codigo}?"
+            : $"¿Confirmar creación del empleado {Empleado?.Codigo}?";
+        
+        PendingAction = async () => await ExecuteSave();
+        ShowConfirmDialog = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task ExecuteSave()
+    {
+        ShowConfirmDialog = false;
+
+        if (!ValidateForm())
+        {
+            StateHasChanged();
+            return;
+        }
+
+        IsSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            // Guardar foto si se seleccionó una nueva
+            if (fotoFile != null && Empleado != null && Empleado.Id > 0)
+            {
+                using var stream = fotoFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+                var extension = Path.GetExtension(fotoFile.Name);
+                var result = await StorageService.SaveEmpleadoFotoAsync(Empleado.Id, stream, extension);
+                if (result.IsSuccess)
+                {
+                    Empleado.FotoPath = result.Value;
+                }
+            }
+            
+            await OnSave.InvokeAsync();
+            FieldErrors.Clear();
+            ValidationMessage = "";
+            fotoFile = null;
+            fotoPreviewUrl = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar empleado");
+            ValidationMessage = ErrorTranslationService.Translate(ex);
+        }
+        finally
+        {
+            IsSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task OnCancel()
+    {
+        // Mostrar diálogo de confirmación
+        ConfirmMessage = "¿Cancelar operación? Los cambios no guardados se perderán.";
+        PendingAction = async () => await ExecuteCancel();
+        ShowConfirmDialog = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task ExecuteCancel()
+    {
+        ShowConfirmDialog = false;
+        FieldErrors.Clear();
+        ValidationMessage = "";
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task ConfirmAction()
+    {
+        if (PendingAction != null)
+        {
+            await PendingAction.Invoke();
+            PendingAction = null;
+        }
+    }
+
+    private async Task OnSubmit()
+    {
+        await OnGuardar();
+    }
+    
+    // ===== METODOS PARA FOTO =====
+    private async Task OnFotoSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            // Validar tipo de archivo
+            var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
+            if (!allowedTypes.Contains(file.ContentType.ToLower()))
+            {
+                ValidationMessage = "Solo se permiten imágenes (JPG, PNG, GIF, WEBP)";
+                return;
+            }
+            
+            // Validar tamaño (max 5MB)
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                ValidationMessage = "La imagen no puede superar 5MB";
+                return;
+            }
+            
+            fotoFile = file;
+            
+            // Crear preview
+            var buffer = new byte[file.Size];
+            await file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).ReadAsync(buffer);
+            fotoPreviewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+            
+            StateHasChanged();
+        }
+    }
+    
+    private string GetFotoUrl()
+    {
+        if (!string.IsNullOrEmpty(fotoPreviewUrl))
+            return fotoPreviewUrl;
+        
+        if (!string.IsNullOrEmpty(Empleado?.FotoPath))
+            return Empleado.FotoPath;
+        
+        return "";
+    }
+    
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+}

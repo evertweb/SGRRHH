@@ -1,6 +1,7 @@
 @page "/reportes"
 @using SGRRHH.Local.Domain.Entities
 @using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.DTOs
 @using SGRRHH.Local.Shared.Interfaces
 @using SGRRHH.Local.Infrastructure.Services
 @inject IAuthService AuthService
@@ -12,13 +13,13 @@
 @inject ICargoRepository CargoRepository
 @inject ITipoPermisoRepository TipoPermisoRepository
 @inject IReportService ReportService
+@inject IKeyboardShortcutService KeyboardShortcutService
 @inject NavigationManager Navigation
 @inject ILogger<Reportes> Logger
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <PageTitle>Reportes - SGRRHH</PageTitle>
-
-<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
 
 <h1 class="page-title">CENTRO DE REPORTES</h1>
 
@@ -130,6 +131,9 @@
                         <button class="btn-success" @onclick="ExportarExcel" disabled="@isGenerating">
                             EXPORTAR A EXCEL
                         </button>
+                        <button @onclick="ImprimirReporteEmpleados" disabled="@isGenerating">
+                            IMPRIMIR
+                        </button>
                     </div>
                 </div>
             </div>
@@ -201,6 +205,9 @@
                         <button class="btn-success" @onclick="ExportarPermisosExcel" disabled="@isGenerating || !ValidarFechasPermisos()">
                             EXPORTAR A EXCEL
                         </button>
+                        <button @onclick="ImprimirReportePermisos" disabled="@isGenerating || !ValidarFechasPermisos()">
+                            IMPRIMIR
+                        </button>
                     </div>
                 </div>
                 @if (!ValidarFechasPermisos())
@@ -268,6 +275,9 @@
                         </button>
                         <button class="btn-success" @onclick="ExportarVacacionesExcel" disabled="@isGenerating">
                             EXPORTAR A EXCEL
+                        </button>
+                        <button @onclick="ImprimirReporteVacaciones" disabled="@isGenerating">
+                            IMPRIMIR
                         </button>
                     </div>
                 </div>
@@ -343,7 +353,7 @@
                             <option value="">-- Seleccione --</option>
                             @foreach (var emp in empleados.Where(e => e.Estado == EstadoEmpleado.Activo))
                             {
-                                <option value="@emp.Id">@emp.NombreCompleto - @emp.Cedula</option>
+                                <option value="@emp.Id">@emp.NombreCompleto - @NumberFormatHelper.FormatearCedula(emp.Cedula)</option>
                             }
                         </select>
                     </div>
@@ -410,7 +420,7 @@
                         {
                             <tr>
                                 <td>@emp.Codigo</td>
-                                <td>@emp.Cedula</td>
+                                <td>@NumberFormatHelper.FormatearCedula(emp.Cedula)</td>
                                 <td>@emp.NombreCompleto</td>
                                 <td>@(emp.Cargo?.Nombre ?? "-")</td>
                                 <td>@(emp.Departamento?.Nombre ?? "-")</td>
@@ -555,10 +565,16 @@
     }
 }
 
+<!-- Printer Modal para impresión directa de reportes -->
+<PrinterModal IsVisible="mostrarPrinterModal"
+              PdfBytes="bytesParaImprimir"
+              DocumentName="@nombreDocumentoImprimir"
+              OnClose="CerrarPrinterModal"
+              OnPrintComplete="OnPrintComplete" />
+
 @code {
     // Referencias
-    private KeyboardHandler? keyboardHandler;
-    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    private const string PageId = "reportes";
 
     // Enumeración de tipos de reporte
     private enum TipoReporte
@@ -619,6 +635,11 @@
     private List<Empleado> empleadosReporte = new();
     private List<Permiso> permisosReporte = new();
     private List<Vacacion> vacacionesReporte = new();
+    
+    // Estado del Printer
+    private bool mostrarPrinterModal = false;
+    private byte[]? bytesParaImprimir = null;
+    private string? nombreDocumentoImprimir = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -642,11 +663,16 @@
 
     private void ConfigurarAtajosTeclado()
     {
-        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
         {
-            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = Actualizar },
-            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar vista", Action = CerrarVistaPrevia }
-        };
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = Actualizar, Priority = 10 },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar vista", Action = CerrarVistaPrevia, Priority = 10 }
+        });
+    }
+    
+    public void Dispose()
+    {
+        KeyboardShortcutService.ClearPageShortcuts(PageId);
     }
 
     private async Task CargarCatalogos()
@@ -797,6 +823,35 @@
             isGenerating = false;
         }
     }
+    
+    private async Task ImprimirReporteEmpleados()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            await CargarDatosEmpleados();
+
+            if (!empleadosReporte.Any())
+            {
+                errorMessage = "No hay datos para imprimir";
+                return;
+            }
+
+            var pdfBytes = ReportService.GenerarListadoEmpleadosPdf(empleadosReporte);
+            AbrirImprimirReporte(pdfBytes, $"Empleados_{DateTime.Now:yyyyMMdd}.pdf");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al preparar impresión de empleados");
+            errorMessage = $"Error al preparar impresión: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
 
     // ============================================================
     // REPORTE: PERMISOS
@@ -938,6 +993,42 @@
             isGenerating = false;
         }
     }
+    
+    private async Task ImprimirReportePermisos()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            if (!ValidarFechasPermisos())
+            {
+                errorMessage = "Debe seleccionar un rango de fechas válido";
+                return;
+            }
+
+            await CargarDatosPermisos();
+
+            if (!permisosReporte.Any())
+            {
+                errorMessage = "No hay datos para imprimir";
+                return;
+            }
+
+            var pdfBytes = ReportService.GenerarReportePermisosPdf(permisosReporte, 
+                filtroFechaInicio!.Value, filtroFechaFin!.Value);
+            AbrirImprimirReporte(pdfBytes, $"Permisos_{filtroFechaInicio:yyyyMMdd}_{filtroFechaFin:yyyyMMdd}.pdf");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al preparar impresión de permisos");
+            errorMessage = $"Error al preparar impresión: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
 
     // ============================================================
     // REPORTE: VACACIONES
@@ -1050,6 +1141,40 @@
         {
             Logger.LogError(ex, "Error al exportar vacaciones a Excel");
             errorMessage = $"Error al exportar: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task ImprimirReporteVacaciones()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            await CargarDatosVacaciones();
+
+            if (!vacacionesReporte.Any())
+            {
+                errorMessage = "No hay datos para imprimir";
+                return;
+            }
+
+            // Generar PDF
+            var pdfBytes = ReportService.GenerarReporteVacacionesPdf(vacacionesReporte, filtroAnioVacaciones);
+            
+            // Abrir PrinterModal
+            AbrirImprimirReporte(pdfBytes, $"Vacaciones_{filtroAnioVacaciones}.pdf");
+
+            Logger.LogInformation("Impresión de vacaciones iniciada: {Count} registros", vacacionesReporte.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al preparar impresión de vacaciones");
+            errorMessage = $"Error al preparar impresión: {ex.Message}";
         }
         finally
         {
@@ -1317,5 +1442,39 @@
     {
         await CargarCatalogos();
         successMessage = "Catálogos actualizados";
+    }
+    
+    // ============================================================
+    // IMPRESIÓN DIRECTA
+    // ============================================================
+    
+    private void AbrirImprimirReporte(byte[] pdfBytes, string nombreReporte)
+    {
+        bytesParaImprimir = pdfBytes;
+        nombreDocumentoImprimir = nombreReporte;
+        mostrarPrinterModal = true;
+    }
+    
+    private void OnPrintComplete(PrintJobResultDto result)
+    {
+        if (result.Success)
+        {
+            successMessage = $"Reporte enviado a imprimir: {result.PrinterName}";
+        }
+        else
+        {
+            errorMessage = $"Error al imprimir: {result.ErrorMessage}";
+        }
+        
+        mostrarPrinterModal = false;
+        bytesParaImprimir = null;
+        nombreDocumentoImprimir = null;
+    }
+    
+    private void CerrarPrinterModal()
+    {
+        mostrarPrinterModal = false;
+        bytesParaImprimir = null;
+        nombreDocumentoImprimir = null;
     }
 }

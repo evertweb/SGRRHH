@@ -19,9 +19,17 @@ public class TipoPermisoRepository : ITipoPermisoRepository
     public async Task<TipoPermiso> AddAsync(TipoPermiso entity)
     {
         entity.FechaCreacion = DateTime.Now;
-        const string sql = @"INSERT INTO tipos_permiso (nombre, descripcion, color, requiere_aprobacion, requiere_documento, dias_por_defecto, dias_maximos, es_compensable, activo, fecha_creacion)
-VALUES (@Nombre, @Descripcion, @Color, @RequiereAprobacion, @RequiereDocumento, @DiasPorDefecto, @DiasMaximos, @EsCompensable, @Activo, @FechaCreacion);
-SELECT last_insert_rowid();";
+        const string sql = @"INSERT INTO tipos_permiso (
+            nombre, descripcion, color, requiere_aprobacion, requiere_documento, 
+            dias_por_defecto, dias_maximos, es_compensable, activo, fecha_creacion,
+            tipo_resolucion_por_defecto, dias_limite_documento, dias_limite_compensacion,
+            horas_compensar_por_dia, genera_descuento, porcentaje_descuento)
+        VALUES (
+            @Nombre, @Descripcion, @Color, @RequiereAprobacion, @RequiereDocumento, 
+            @DiasPorDefecto, @DiasMaximos, @EsCompensable, @Activo, @FechaCreacion,
+            @TipoResolucionPorDefecto, @DiasLimiteDocumento, @DiasLimiteCompensacion,
+            @HorasCompensarPorDia, @GeneraDescuento, @PorcentajeDescuento);
+        SELECT last_insert_rowid();";
 
         using var connection = _context.CreateConnection();
         entity.Id = await connection.ExecuteScalarAsync<int>(sql, entity);
@@ -41,7 +49,13 @@ SET nombre = @Nombre,
     dias_maximos = @DiasMaximos,
     es_compensable = @EsCompensable,
     activo = @Activo,
-    fecha_modificacion = @FechaModificacion
+    fecha_modificacion = @FechaModificacion,
+    tipo_resolucion_por_defecto = @TipoResolucionPorDefecto,
+    dias_limite_documento = @DiasLimiteDocumento,
+    dias_limite_compensacion = @DiasLimiteCompensacion,
+    horas_compensar_por_dia = @HorasCompensarPorDia,
+    genera_descuento = @GeneraDescuento,
+    porcentaje_descuento = @PorcentajeDescuento
 WHERE id = @Id";
 
         using var connection = _context.CreateConnection();
@@ -50,7 +64,8 @@ WHERE id = @Id";
 
     public async Task DeleteAsync(int id)
     {
-        const string sql = "UPDATE tipos_permiso SET activo = 0, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = @Id";
+        // Hard delete - elimina permanentemente el registro
+        const string sql = "DELETE FROM tipos_permiso WHERE id = @Id";
         using var connection = _context.CreateConnection();
         await connection.ExecuteAsync(sql, new { Id = id });
     }

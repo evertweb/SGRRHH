@@ -1,0 +1,420 @@
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Shared.Interfaces
+@inject IPrintService PrintService
+
+@if (IsVisible)
+{
+    <div class="printer-backdrop" @onclick="HandleBackdropClick" @onclick:stopPropagation="true">
+        <div class="printer-modal" @onclick:stopPropagation="true">
+            <!-- Header -->
+            <div class="printer-header">
+                <span>🖨️ IMPRIMIR DOCUMENTO</span>
+                <button class="printer-close" @onclick="Close" disabled="@isPrinting">✕</button>
+            </div>
+            
+            <!-- Body -->
+            <div class="printer-body">
+                @if (isLoadingPrinters)
+                {
+                    <div class="printer-loading">
+                        <div class="printer-loading-icon">⏳</div>
+                        <div>Buscando impresoras...</div>
+                    </div>
+                }
+                else if (!availablePrinters.Any())
+                {
+                    <div class="printer-empty">
+                        <div class="printer-empty-icon">⚠️</div>
+                        <div class="printer-empty-text">NO HAY IMPRESORAS DISPONIBLES</div>
+                        <button class="printer-btn" @onclick="LoadPrinters">🔄 BUSCAR NUEVAMENTE</button>
+                    </div>
+                }
+                else
+                {
+                    <!-- Opciones de impresión -->
+                    <div class="printer-options">
+                        <div class="printer-option-row">
+                            <span class="printer-label">IMPRESORA:</span>
+                            <select class="printer-select" @bind="selectedPrinterName" disabled="@isPrinting">
+                                @foreach (var printer in availablePrinters)
+                                {
+                                    <option value="@printer.Name">
+                                        @printer.Name @(printer.IsDefault ? "(predeterminada)" : "") 
+                                        @(printer.IsAvailable ? "" : "- No disponible")
+                                    </option>
+                                }
+                            </select>
+                            <button class="printer-btn-small" @onclick="LoadPrinters" disabled="@isPrinting" title="Actualizar lista">🔄</button>
+                        </div>
+                        
+                        <div class="printer-option-group">
+                            <div class="printer-option-row">
+                                <span class="printer-label">COPIAS:</span>
+                                <input type="number" class="printer-input" 
+                                       min="1" max="100" 
+                                       @bind="printOptions.Copies" 
+                                       disabled="@isPrinting" />
+                            </div>
+                            
+                            <div class="printer-option-row">
+                                <span class="printer-label">ORIENTACIÓN:</span>
+                                <select class="printer-select printer-select-small" @bind="printOptions.Orientation" disabled="@isPrinting">
+                                    <option value="@PrintOrientation.Portrait">Vertical</option>
+                                    <option value="@PrintOrientation.Landscape">Horizontal</option>
+                                </select>
+                            </div>
+                            
+                            <div class="printer-option-row">
+                                <span class="printer-label">PAPEL:</span>
+                                <select class="printer-select printer-select-small" @bind="printOptions.PaperSize" disabled="@isPrinting">
+                                    <option value="@PrintPaperSize.Letter">Carta</option>
+                                    <option value="@PrintPaperSize.Legal">Oficio</option>
+                                    <option value="@PrintPaperSize.A4">A4</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="printer-option-group">
+                            <div class="printer-option-row">
+                                <span class="printer-label">CALIDAD:</span>
+                                <select class="printer-select printer-select-small" @bind="printOptions.Quality" disabled="@isPrinting">
+                                    <option value="@PrintQuality.Draft">Borrador</option>
+                                    <option value="@PrintQuality.Normal">Normal</option>
+                                    <option value="@PrintQuality.High">Alta</option>
+                                </select>
+                            </div>
+                            
+                            <div class="printer-option-row">
+                                <span class="printer-label">COLOR:</span>
+                                <select class="printer-select printer-select-small" @bind="printOptions.ColorMode" disabled="@isPrinting">
+                                    <option value="@PrintColorMode.Auto">Automático</option>
+                                    <option value="@PrintColorMode.Color">Color</option>
+                                    <option value="@PrintColorMode.Grayscale">Escala de grises</option>
+                                </select>
+                            </div>
+                            
+                            <div class="printer-option-row">
+                                <label class="printer-checkbox-label">
+                                    <input type="checkbox" @bind="printOptions.FitToPage" disabled="@isPrinting" />
+                                    Ajustar a página
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Vista previa -->
+                    <div class="printer-preview-section">
+                        <div class="printer-preview-label">DOCUMENTO A IMPRIMIR</div>
+                        <div class="printer-preview-container">
+                            @if (previewImage != null)
+                            {
+                                <div class="printer-preview">
+                                    <img src="data:image/png;base64,@Convert.ToBase64String(previewImage)" alt="Vista previa" />
+                                </div>
+                            }
+                            else if (DocumentName != null)
+                            {
+                                <div class="printer-preview-placeholder">
+                                    <div class="printer-preview-icon">📄</div>
+                                    <div class="printer-preview-name">@DocumentName</div>
+                                    @if (PageCount > 0)
+                                    {
+                                        <div class="printer-preview-info">@PageCount página(s)</div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="printer-preview-placeholder">
+                                    <div class="printer-preview-icon">📄</div>
+                                    <div>Documento listo para imprimir</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    
+                    <!-- Progreso -->
+                    @if (isPrinting)
+                    {
+                        <div class="printer-progress">
+                            <div class="printer-progress-text">@progressMessage</div>
+                            <div class="printer-progress-bar">
+                                <div class="printer-progress-fill @(isIndeterminate ? "printer-progress-indeterminate" : "")" 
+                                     style="width: @(progressPercent)%"></div>
+                            </div>
+                        </div>
+                    }
+                    
+                    <!-- Mensajes -->
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="printer-message printer-error">
+                            ⚠️ @errorMessage
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="printer-message printer-success">
+                            ✓ @successMessage
+                        </div>
+                    }
+                }
+            </div>
+            
+            <!-- Footer -->
+            <div class="printer-footer">
+                <div class="printer-footer-left">
+                    @if (ShowDialogButton)
+                    {
+                        <button class="printer-btn printer-btn-secondary" 
+                                @onclick="OpenSystemDialog" 
+                                disabled="@(isPrinting || !HasDocument)">
+                            📋 DIÁLOGO DEL SISTEMA
+                        </button>
+                    }
+                </div>
+                <div class="printer-footer-right">
+                    <button class="printer-btn" @onclick="Close" disabled="@isPrinting">
+                        CANCELAR
+                    </button>
+                    <button class="printer-btn printer-btn-primary" 
+                            @onclick="Print" 
+                            disabled="@(isPrinting || !HasDocument || !availablePrinters.Any())">
+                        @if (isPrinting)
+                        {
+                            <span>IMPRIMIENDO...</span>
+                        }
+                        else
+                        {
+                            <span>🖨️ IMPRIMIR</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<PrintJobResultDto> OnPrintComplete { get; set; }
+    
+    /// <summary>
+    /// Bytes del PDF a imprimir
+    /// </summary>
+    [Parameter] public byte[]? PdfBytes { get; set; }
+    
+    /// <summary>
+    /// Bytes de imagen a imprimir
+    /// </summary>
+    [Parameter] public byte[]? ImageBytes { get; set; }
+    
+    /// <summary>
+    /// Lista de imágenes a imprimir (una por página)
+    /// </summary>
+    [Parameter] public List<byte[]>? ImageList { get; set; }
+    
+    /// <summary>
+    /// Nombre del documento (para mostrar en preview)
+    /// </summary>
+    [Parameter] public string? DocumentName { get; set; }
+    
+    /// <summary>
+    /// Número de páginas del documento
+    /// </summary>
+    [Parameter] public int PageCount { get; set; }
+    
+    /// <summary>
+    /// Imagen de vista previa (opcional)
+    /// </summary>
+    [Parameter] public byte[]? PreviewBytes { get; set; }
+    
+    /// <summary>
+    /// Mostrar botón para abrir diálogo del sistema
+    /// </summary>
+    [Parameter] public bool ShowDialogButton { get; set; } = true;
+    
+    private List<PrinterDeviceDto> availablePrinters = new();
+    private string? selectedPrinterName;
+    private PrintOptionsDto printOptions = new();
+    
+    private bool isLoadingPrinters = false;
+    private bool isPrinting = false;
+    private bool isIndeterminate = false;
+    
+    private string? errorMessage;
+    private string? successMessage;
+    private string progressMessage = "";
+    private int progressPercent = 0;
+    
+    private byte[]? previewImage;
+    
+    private bool HasDocument => PdfBytes != null || ImageBytes != null || (ImageList?.Any() == true);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && !availablePrinters.Any() && !isLoadingPrinters)
+        {
+            await LoadPrinters();
+            
+            // Cargar preview si hay datos
+            previewImage = PreviewBytes;
+        }
+    }
+
+    private async Task LoadPrinters()
+    {
+        isLoadingPrinters = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            var result = await PrintService.GetAvailablePrintersAsync();
+            if (result.IsSuccess && result.Value != null)
+            {
+                availablePrinters = result.Value;
+                
+                // Seleccionar predeterminada
+                var defaultPrinter = availablePrinters.FirstOrDefault(p => p.IsDefault);
+                selectedPrinterName = defaultPrinter?.Name ?? availablePrinters.FirstOrDefault()?.Name;
+            }
+            else
+            {
+                errorMessage = result.Error ?? "No se encontraron impresoras";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al buscar impresoras: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingPrinters = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Print()
+    {
+        if (!HasDocument) return;
+        
+        isPrinting = true;
+        isIndeterminate = true;
+        errorMessage = null;
+        successMessage = null;
+        progressMessage = "Preparando impresión...";
+        progressPercent = 0;
+        StateHasChanged();
+        
+        try
+        {
+            // Configurar opciones
+            printOptions.PrinterName = selectedPrinterName;
+            printOptions.JobName = DocumentName ?? $"Documento_{DateTime.Now:yyyyMMdd_HHmmss}";
+            
+            // Suscribirse a progreso
+            PrintService.PrintProgress += OnPrintProgress;
+            
+            Result<PrintJobResultDto> result;
+            
+            if (PdfBytes != null)
+            {
+                progressMessage = "Imprimiendo PDF...";
+                result = await PrintService.PrintPdfAsync(PdfBytes, printOptions);
+            }
+            else if (ImageList?.Any() == true)
+            {
+                progressMessage = $"Imprimiendo {ImageList.Count} páginas...";
+                result = await PrintService.PrintImagesAsync(ImageList, printOptions);
+            }
+            else if (ImageBytes != null)
+            {
+                progressMessage = "Imprimiendo imagen...";
+                result = await PrintService.PrintImageAsync(ImageBytes, printOptions);
+            }
+            else
+            {
+                result = Result<PrintJobResultDto>.Fail("No hay documento para imprimir");
+            }
+            
+            if (result.IsSuccess && result.Value != null)
+            {
+                successMessage = $"Documento enviado a {result.Value.PrinterName}";
+                await OnPrintComplete.InvokeAsync(result.Value);
+                
+                // Cerrar después de un momento
+                await Task.Delay(1500);
+                await Close();
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Error desconocido al imprimir";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al imprimir: {ex.Message}";
+        }
+        finally
+        {
+            PrintService.PrintProgress -= OnPrintProgress;
+            isPrinting = false;
+            isIndeterminate = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnPrintProgress(object? sender, PrintProgressEventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            progressMessage = e.Message ?? $"Imprimiendo página {e.CurrentPage} de {e.TotalPages}...";
+            progressPercent = (int)(e.Progress * 100);
+            isIndeterminate = e.TotalPages == 0;
+            StateHasChanged();
+        });
+    }
+
+    private async Task OpenSystemDialog()
+    {
+        if (PdfBytes == null) return;
+        
+        try
+        {
+            var result = await PrintService.ShowPrintDialogAsync(PdfBytes);
+            if (result.IsSuccess && result.Value)
+            {
+                successMessage = "Diálogo de impresión abierto";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al abrir diálogo: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+
+    private async Task Close()
+    {
+        if (isPrinting) return;
+        
+        // Limpiar estado
+        errorMessage = null;
+        successMessage = null;
+        progressMessage = "";
+        progressPercent = 0;
+        
+        await OnClose.InvokeAsync();
+    }
+
+    private void HandleBackdropClick()
+    {
+        if (!isPrinting)
+        {
+            _ = Close();
+        }
+    }
+}

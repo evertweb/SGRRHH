@@ -1,4 +1,4 @@
-@page "/control-diario"
+﻿@page "/control-diario"
 @page "/control-diario/{FechaParam}"
 @using SGRRHH.Local.Domain.Entities
 @using SGRRHH.Local.Domain.Enums
@@ -8,6 +8,7 @@
 @inject IEmpleadoRepository EmpleadoRepository
 @inject IDepartamentoRepository DepartamentoRepository
 @inject IActividadRepository ActividadRepository
+@inject ICategoriaActividadRepository CategoriaActividadRepository
 @inject IProyectoRepository ProyectoRepository
 @inject IDetalleActividadRepository DetalleActividadRepository
 @inject NavigationManager Navigation
@@ -16,270 +17,256 @@
 
 <PageTitle>Control Diario - SGRRHH</PageTitle>
 
-<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
-
-<h1 class="page-title">CONTROL DIARIO DE ACTIVIDADES</h1>
-
-@if (errorMessage != null)
-{
-    <div class="error-block">
-        <h3>ERROR</h3>
-        <p>@errorMessage</p>
-        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+<div class="hospital-page">
+    <!-- ENCABEZADO PRINCIPAL -->
+    <div class="hospital-header">
+        <h1>CONTROL DIARIO</h1>
+        <div class="header-info">
+            <span class="fecha-destacada">@fechaSeleccionada.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("es-CO")).ToUpper()</span>
+        </div>
     </div>
-}
 
-@if (successMessage != null)
-{
-    <div class="success-block">
-        <p>@successMessage</p>
-    </div>
-}
+    @if (errorMessage != null)
+    {
+        <div class="hospital-error">
+            ERROR: @errorMessage
+            <button @onclick="() => errorMessage = null">ACEPTAR</button>
+        </div>
+    }
 
-<!-- Header con controles de fecha y acciones -->
-<div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <button @onclick="RetrocederDia" title="Día anterior">◀ ANTERIOR</button>
-        
-        <div style="display: flex; gap: 4px; align-items: center;">
-            <label style="font-weight: bold; margin: 0;">FECHA:</label>
+    @if (successMessage != null)
+    {
+        <div class="hospital-success">
+            @successMessage
+        </div>
+    }
+
+    <!-- BARRA PRINCIPAL DE CONTROLES -->
+    <div class="control-bar-principal">
+        <!-- NAVEGACIÓN DE FECHA - Lo más importante -->
+        <div class="fecha-navegacion">
+            <button @onclick="RetrocederDia" class="fecha-btn" title="Día anterior">◄</button>
             <input type="date" 
-                   id="fechaInput"
                    @bind="fechaSeleccionada" 
                    @bind:after="CambiarFecha"
-                   style="min-width: 150px;" />
+                   class="fecha-input" />
+            <button @onclick="AvanzarDia" class="fecha-btn" title="Día siguiente">►</button>
+            <button @onclick="IrHoy" class="fecha-btn-hoy" title="Ir a hoy">HOY</button>
         </div>
         
-        <button @onclick="AvanzarDia" title="Día siguiente">SIGUIENTE ▶</button>
-        <button @onclick="IrHoy" title="Ir a hoy">HOY (F2)</button>
+        <!-- BÚSQUEDA -->
+        <div class="busqueda-box">
+            <input type="text" 
+                   @bind="searchTerm" 
+                   @bind:event="oninput"
+                   @bind:after="FiltrarRegistros"
+                   @ref="searchInputRef"
+                   placeholder="Buscar empleado... (F2)"
+                   class="busqueda-input" />
+            @if (!string.IsNullOrEmpty(searchTerm))
+            {
+                <button @onclick="LimpiarBusqueda" class="busqueda-clear">✕</button>
+            }
+        </div>
         
-        <span style="margin-left: 8px; padding: 4px 12px; background-color: #F5F5F5; border: 1px solid #808080; font-weight: bold;">
-            @fechaSeleccionada.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"))
-        </span>
+        <!-- ACCIONES PRINCIPALES -->
+        <div class="acciones-principales">
+            <button @onclick="CargarRegistros" class="accion-btn" title="Actualizar (F5)">↻</button>
+            <button @onclick="CrearRegistrosParaTodos" 
+                    class="accion-btn-crear" 
+                    title="Crear registros para empleados sin registro (F3)"
+                    disabled="@(!empleadosSinRegistro.Any())">
+                + CREAR @(empleadosSinRegistro.Any() ? $"({empleadosSinRegistro.Count})" : "")
+            </button>
+        </div>
     </div>
-    
-    <div style="display: flex; gap: 8px;">
-        <button @onclick="CargarRegistros">ACTUALIZAR (F5)</button>
-        @if (registroSeleccionado != null)
+
+    <!-- RESUMEN COMPACTO (solo números importantes) -->
+    <div class="resumen-compacto">
+        <span class="resumen-stat"><strong>@registrosFiltrados.Count()</strong> de @registrosDia.Count() registros</span>
+        <span class="resumen-sep">|</span>
+        <span class="resumen-stat completados">✓ @registrosDia.Count(r => r.Estado == EstadoRegistroDiario.Completado || r.Estado == EstadoRegistroDiario.Aprobado) completados</span>
+        <span class="resumen-sep">|</span>
+        <span class="resumen-stat pendientes">○ @registrosDia.Count(r => r.Estado == EstadoRegistroDiario.Borrador) pendientes</span>
+        <span class="resumen-sep">|</span>
+        <span class="resumen-stat horas">⏱ @registrosDia.Sum(r => r.TotalHoras).ToString("F1")h</span>
+        @if (!string.IsNullOrEmpty(searchTerm))
         {
-            <button @onclick="AgregarActividad">AGREGAR ACTIVIDAD (F3)</button>
+            <span class="resumen-sep">|</span>
+            <span class="filtro-activo">Filtro: "@searchTerm"</span>
         }
-        <button @onclick="AbrirWizard" title="Abrir asistente de registro masivo">🧙 WIZARD</button>
-        <button @onclick="ExportarReporte" disabled="@(!registrosDia.Any())">EXPORTAR</button>
     </div>
-</div>
 
-<!-- Panel de estadísticas del día -->
-<div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
-    <div class="stats-card">
-        <div class="stats-label">Registros del Día</div>
-        <div class="stats-value">@registrosDia.Count()</div>
-        <div class="stats-sublabel">empleados registrados</div>
-    </div>
-    <div class="stats-card">
-        <div class="stats-label">Completados</div>
-        <div class="stats-value">@registrosDia.Count(r => r.Estado == EstadoRegistroDiario.Completado)</div>
-        <div class="stats-sublabel">con actividades</div>
-    </div>
-    <div class="stats-card">
-        <div class="stats-label">Total Horas</div>
-        <div class="stats-value">@registrosDia.Sum(r => r.TotalHoras).ToString("F1")</div>
-        <div class="stats-sublabel">horas registradas</div>
-    </div>
-    <div class="stats-card">
-        <div class="stats-label">Total Actividades</div>
-        <div class="stats-value">@registrosDia.Sum(r => r.DetallesActividades?.Count ?? 0)</div>
-        <div class="stats-sublabel">actividades asignadas</div>
-    </div>
-</div>
-
-<!-- Filtros y búsqueda -->
-<div style="margin-bottom: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-    <input type="text" 
-           id="searchInput"
-           placeholder="Buscar empleado..." 
-           @bind="searchTerm" 
-           @bind:event="oninput"
-           style="min-width: 250px;" />
-    <button @onclick="BuscarEmpleados">BUSCAR</button>
-    @if (!string.IsNullOrEmpty(searchTerm))
-    {
-        <button @onclick="LimpiarBusqueda">LIMPIAR</button>
-    }
-    
-    <select @bind="filtroEstado" @bind:after="FiltrarRegistros">
-        <option value="">Todos los estados</option>
-        <option value="@((int)EstadoRegistroDiario.Borrador)">Borrador</option>
-        <option value="@((int)EstadoRegistroDiario.Completado)">Completado</option>
-        <option value="@((int)EstadoRegistroDiario.Aprobado)">Aprobado</option>
-    </select>
-    
-    <select @bind="filtroDepartamento" @bind:after="FiltrarRegistros">
-        <option value="">Todos los departamentos</option>
-        @foreach (var dept in departamentos)
-        {
-            <option value="@dept.Id">@dept.Nombre</option>
-        }
-    </select>
-    
-    <label style="margin-left: 8px;">
-        <input type="checkbox" @bind="mostrarSoloActivos" @bind:after="FiltrarRegistros" />
-        Solo empleados activos
-    </label>
-</div>
-
-<!-- Información de resultados -->
-<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
-    Mostrando @registrosFiltrados.Count() de @registrosDia.Count() registro(s)
-</div>
-
-<!-- Tabla principal de registros -->
-<div style="overflow-x: auto;">
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 50px;">
-                    <input type="checkbox" 
-                           @onchange="SeleccionarTodos"
-                           checked="@todosMarcados"
-                           title="Seleccionar todos" />
-                </th>
-                <th style="width: 60px;">FOTO</th>
-                <th style="width: 100px;">CÓDIGO</th>
-                <th>EMPLEADO</th>
-                <th>DEPARTAMENTO</th>
-                <th style="width: 100px;">ENTRADA</th>
-                <th style="width: 100px;">SALIDA</th>
-                <th style="width: 80px;">HORAS</th>
-                <th style="width: 100px;">ACTIVIDADES</th>
-                <th style="width: 120px;">ESTADO</th>
-                <th style="width: 200px;">ACCIONES</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (isLoading)
-            {
-                <tr><td colspan="11" class="loading">Cargando registros...</td></tr>
-            }
-            else if (!registrosFiltrados.Any())
-            {
-                <tr><td colspan="11" class="empty-state">
-                    @if (empleadosSinRegistro.Any())
-                    {
-                        <div>
-                            <p>No hay registros para esta fecha.</p>
-                            <button @onclick="CrearRegistrosParaTodos">
-                                CREAR REGISTROS PARA TODOS LOS EMPLEADOS ACTIVOS
-                            </button>
-                        </div>
-                    }
-                    else
-                    {
-                        <span>No hay registros para mostrar</span>
-                    }
-                </td></tr>
-            }
-            else
-            {
-                @foreach (var registro in registrosFiltrados)
+    <!-- Tabla principal -->
+    <div class="hospital-table-container">
+        <table class="hospital-table">
+            <thead>
+                <tr>
+                    <th>CODIGO</th>
+                    <th>NOMBRE COMPLETO</th>
+                    <th>DEPARTAMENTO</th>
+                    <th>FECHA</th>
+                    <th>HORA ENTRADA</th>
+                    <th>HORA SALIDA</th>
+                    <th>TOTAL HORAS</th>
+                    <th>NUM ACTIVIDADES</th>
+                    <th>ESTADO</th>
+                    <th>OBSERVACIONES</th>
+                    <th>FECHA CREACION</th>
+                    <th>ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (isLoading)
                 {
-                    var empleado = registro.Empleado;
-                    var isSelected = registroSeleccionado?.Id == registro.Id;
-                    var cantActividades = registro.DetallesActividades?.Count ?? 0;
-                    
-                    <tr class="@(isSelected ? "selected" : "")"
-                        @onclick="() => SeleccionarRegistro(registro)">
-                        <td @onclick:stopPropagation="true">
-                            <input type="checkbox" 
-                                   @onchange="(e) => ToggleSeleccion(registro, e)"
-                                   checked="@registrosSeleccionados.Contains(registro.Id)" />
-                        </td>
-                        <td>
-                            <img src="@GetFotoUrl(empleado)" 
-                                 class="empleado-foto-mini" 
-                                 onerror="this.src='/images/default-avatar.png'" 
-                                 alt="@empleado?.NombreCompleto" />
-                        </td>
-                        <td>@empleado?.Codigo</td>
-                        <td><strong>@empleado?.NombreCompleto</strong></td>
-                        <td>@(empleado?.Departamento?.Nombre ?? "-")</td>
-                        <td>
-                            @if (editandoHorarios.Contains(registro.Id))
-                            {
-                                <input type="time" 
-                                       value="@FormatTimeSpan(registro.HoraEntrada)"
-                                       @onchange="@(e => { registro.HoraEntrada = ParseTimeSpan(e.Value?.ToString()); _ = GuardarHorario(registro); })"
-                                       style="width: 90px;"
-                                       @onclick:stopPropagation="true" />
-                            }
-                            else
-                            {
-                                <span @onclick="() => EditarHorario(registro)" @onclick:stopPropagation="true" 
-                                      style="cursor: pointer;" title="Click para editar">
-                                    @(registro.HoraEntrada?.ToString(@"hh\:mm") ?? "-")
-                                </span>
-                            }
-                        </td>
-                        <td>
-                            @if (editandoHorarios.Contains(registro.Id))
-                            {
-                                <input type="time" 
-                                       value="@FormatTimeSpan(registro.HoraSalida)"
-                                       @onchange="@(e => { registro.HoraSalida = ParseTimeSpan(e.Value?.ToString()); _ = GuardarHorario(registro); })"
-                                       style="width: 90px;"
-                                       @onclick:stopPropagation="true" />
-                            }
-                            else
-                            {
-                                <span @onclick="() => EditarHorario(registro)" @onclick:stopPropagation="true" 
-                                      style="cursor: pointer;" title="Click para editar">
-                                    @(registro.HoraSalida?.ToString(@"hh\:mm") ?? "-")
-                                </span>
-                            }
-                        </td>
-                        <td style="text-align: center; font-weight: bold;">
-                            @registro.TotalHoras.ToString("F1")
-                        </td>
-                        <td style="text-align: center;">
-                            @if (cantActividades > 0)
-                            {
-                                <span class="badge-completado">@cantActividades</span>
-                            }
-                            else
-                            {
-                                <span style="color: #999;">0</span>
-                            }
-                        </td>
-                        <td>
-                            <span class="badge-@registro.Estado.ToString().ToLower()">
-                                @registro.Estado
-                            </span>
-                        </td>
-                        <td class="actions-cell">
-                            <button @onclick="() => AgregarActividadParaRegistro(registro)" 
-                                    @onclick:stopPropagation="true"
-                                    title="Agregar actividad">
-                                + ACT
+                    <tr><td colspan="12" class="hospital-loading">CARGANDO REGISTROS...</td></tr>
+                }
+                else if (!registrosFiltrados.Any())
+                {
+                    <tr><td colspan="12" class="hospital-empty">
+                        SIN REGISTROS PARA LA FECHA SELECCIONADA
+                        @if (empleadosSinRegistro.Any())
+                        {
+                            <br/>
+                            <button @onclick="CrearRegistrosParaTodos" class="hospital-btn">
+                                CREAR REGISTROS PARA @empleadosSinRegistro.Count EMPLEADOS
                             </button>
-                            <button @onclick="() => VerDetalleRegistro(registro)" 
-                                    @onclick:stopPropagation="true"
-                                    title="Ver detalle">
-                                VER
-                            </button>
-                            @if (cantActividades > 0 && registro.Estado == EstadoRegistroDiario.Borrador)
-                            {
+                        }
+                    </td></tr>
+                }
+                else
+                {
+                    @foreach (var registro in registrosFiltrados)
+                    {
+                        var empleado = registro.Empleado;
+                        var cantActividades = registro.DetallesActividades?.Count ?? 0;
+                        var isSelected = registroSeleccionado?.Id == registro.Id;
+                        
+                        <tr class="@(isSelected ? "selected-row" : "")" @onclick="() => SeleccionarRegistro(registro)">
+                            <td>@empleado?.Codigo</td>
+                            <td>
+                                <a href="javascript:void(0)" 
+                                   @onclick="() => IrAExpediente(empleado?.Id ?? 0)" 
+                                   @onclick:stopPropagation="true"
+                                   class="empleado-link"
+                                   title="Ver expediente de @empleado?.NombreCompleto">
+                                    @empleado?.NombreCompleto
+                                </a>
+                            </td>
+                            <td>@(empleado?.Departamento?.Nombre ?? "-")</td>
+                            <td>@registro.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @if (editandoEntrada == registro.Id)
+                                {
+                                    <input type="time" 
+                                           value="@FormatTimeSpan(registro.HoraEntrada)"
+                                           @onchange="@(e => { registro.HoraEntrada = ParseTimeSpan(e.Value?.ToString()); _ = GuardarHorario(registro); })"
+                                           class="hospital-input-time"
+                                           @onclick:stopPropagation="true" />
+                                }
+                                else
+                                {
+                                    <span @onclick="() => EditarEntrada(registro)" @onclick:stopPropagation="true" class="editable-field">
+                                        @(registro.HoraEntrada?.ToString(@"hh\:mm") ?? "-")
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                @if (editandoSalida == registro.Id)
+                                {
+                                    <input type="time" 
+                                           value="@FormatTimeSpan(registro.HoraSalida)"
+                                           @onchange="@(e => { registro.HoraSalida = ParseTimeSpan(e.Value?.ToString()); _ = GuardarHorario(registro); })"
+                                           class="hospital-input-time"
+                                           @onclick:stopPropagation="true" />
+                                }
+                                else
+                                {
+                                    <span @onclick="() => EditarSalida(registro)" @onclick:stopPropagation="true" class="editable-field">
+                                        @(registro.HoraSalida?.ToString(@"hh\:mm") ?? "-")
+                                    </span>
+                                }
+                            </td>
+                            <td>@registro.TotalHoras.ToString("F1")</td>
+                            <td>@cantActividades</td>
+                            <td>
+                                @if (registro.Estado == EstadoRegistroDiario.Borrador)
+                                {
+                                    <span class="estado-borrador">BORRADOR</span>
+                                }
+                                else if (registro.Estado == EstadoRegistroDiario.Completado)
+                                {
+                                    <span class="estado-completado">COMPLETADO</span>
+                                }
+                                else if (registro.Estado == EstadoRegistroDiario.Aprobado)
+                                {
+                                    <span class="estado-aprobado">APROBADO</span>
+                                }
+                            </td>
+                            <td>@(string.IsNullOrEmpty(registro.Observaciones) ? "-" : (registro.Observaciones.Length > 30 ? registro.Observaciones.Substring(0, 30) + "..." : registro.Observaciones))</td>
+                            <td>@registro.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="acciones-inline">
+                                <button @onclick="() => RegistrarEntradaParaRegistro(registro)" 
+                                        @onclick:stopPropagation="true" 
+                                        class="btn-accion-inline btn-entrada"
+                                        title="Registrar entrada (hora actual)"
+                                        disabled="@(registro.HoraEntrada != null)">
+                                    E
+                                </button>
+                                <button @onclick="() => RegistrarSalidaParaRegistro(registro)" 
+                                        @onclick:stopPropagation="true" 
+                                        class="btn-accion-inline btn-salida"
+                                        title="Registrar salida (hora actual)"
+                                        disabled="@(registro.HoraSalida != null)">
+                                    S
+                                </button>
+                                <button @onclick="() => AgregarActividadParaRegistro(registro)" 
+                                        @onclick:stopPropagation="true" 
+                                        class="btn-accion-inline btn-actividad"
+                                        title="Agregar actividad">
+                                    +
+                                </button>
                                 <button @onclick="() => CompletarRegistro(registro)" 
-                                        @onclick:stopPropagation="true"
-                                        title="Marcar como completado">
+                                        @onclick:stopPropagation="true" 
+                                        class="btn-accion-inline btn-completar"
+                                        title="Marcar como completado"
+                                        disabled="@(!registro.EstaCompleto || registro.Estado == EstadoRegistroDiario.Completado)">
                                     ✓
                                 </button>
-                            }
-                        </td>
-                    </tr>
+                                <button @onclick="() => VerDetalleRegistro(registro)" 
+                                        @onclick:stopPropagation="true" 
+                                        class="btn-accion-inline btn-ver"
+                                        title="Ver detalle completo">
+                                    ⋯
+                                </button>
+                            </td>
+                        </tr>
+                    }
                 }
-            }
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Leyenda de acciones inline -->
+    <div class="leyenda-acciones">
+        <span class="leyenda-titulo">ACCIONES:</span>
+        <span class="leyenda-item"><span class="btn-mini btn-entrada">E</span> = Entrada</span>
+        <span class="leyenda-item"><span class="btn-mini btn-salida">S</span> = Salida</span>
+        <span class="leyenda-item"><span class="btn-mini btn-actividad">+</span> = Agregar Actividad</span>
+        <span class="leyenda-item"><span class="btn-mini btn-completar">✓</span> = Completar</span>
+        <span class="leyenda-item"><span class="btn-mini btn-ver">⋯</span> = Ver Detalle</span>
+    </div>
+    
+    <!-- ENLACES SECUNDARIOS - Discretos al final -->
+    <div class="enlaces-secundarios">
+        <span class="enlaces-label">IR A:</span>
+        <a href="javascript:void(0)" @onclick="IrAlWizard" class="enlace-secundario">Wizard Masivo</a>
+        <span class="enlaces-sep">•</span>
+        <a href="javascript:void(0)" @onclick="IrAReportes" class="enlace-secundario">Reportes</a>
+        <span class="enlaces-sep">•</span>
+        <a href="javascript:void(0)" @onclick="IrAProductividad" class="enlace-secundario">Dashboard Productividad</a>
+        <span class="atajos-teclado">F2=Buscar • F3=Nuevo • F5=Guardar • ESC=Cerrar</span>
+    </div>
 </div>
 
 <!-- Panel de detalle del registro seleccionado -->
@@ -288,373 +275,385 @@
     var empleado = registroSeleccionado.Empleado;
     var detalles = registroSeleccionado.DetallesActividades?.OrderBy(d => d.Orden).ToList() ?? new List<DetalleActividad>();
     
-    <div class="panel" style="margin-top: 24px; border: 2px solid #000;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 style="margin: 0;">
-                DETALLE DE ACTIVIDADES - @empleado?.NombreCompleto
-            </h3>
-            <button @onclick="CerrarDetalle">CERRAR (ESC)</button>
-        </div>
-        
-        <!-- Información del registro -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; padding: 12px; background-color: #F5F5F5; border: 1px solid #808080;">
-            <div>
-                <strong>Código:</strong> @empleado?.Codigo
+    <div class="hospital-modal-overlay">
+        <div class="hospital-modal">
+            <div class="hospital-modal-header">
+                <h2>DETALLE DE REGISTRO</h2>
+                <button @onclick="CerrarDetalle" class="hospital-btn">CERRAR (ESC)</button>
             </div>
-            <div>
-                <strong>Departamento:</strong> @(empleado?.Departamento?.Nombre ?? "-")
+            
+            <div class="hospital-form">
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>CODIGO:</label>
+                        <span>@empleado?.Codigo</span>
+                    </div>
+                    <div class="form-field">
+                        <label>EMPLEADO:</label>
+                        <span>@empleado?.NombreCompleto</span>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>DEPARTAMENTO:</label>
+                        <span>@(empleado?.Departamento?.Nombre ?? "-")</span>
+                    </div>
+                    <div class="form-field">
+                        <label>FECHA:</label>
+                        <span>@registroSeleccionado.Fecha.ToString("dd/MM/yyyy")</span>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>HORA ENTRADA:</label>
+                        <span>@(registroSeleccionado.HoraEntrada?.ToString(@"hh\:mm") ?? "-")</span>
+                    </div>
+                    <div class="form-field">
+                        <label>HORA SALIDA:</label>
+                        <span>@(registroSeleccionado.HoraSalida?.ToString(@"hh\:mm") ?? "-")</span>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>TOTAL HORAS:</label>
+                        <span>@registroSeleccionado.TotalHoras.ToString("F1")</span>
+                    </div>
+                    <div class="form-field">
+                        <label>ESTADO:</label>
+                        <span>@registroSeleccionado.Estado</span>
+                    </div>
+                </div>
+                <div class="form-row-full">
+                    <div class="form-field">
+                        <label>OBSERVACIONES:</label>
+                        @if (editandoObservaciones)
+                        {
+                            <textarea @bind="registroSeleccionado.Observaciones" 
+                                      rows="2" 
+                                      class="hospital-textarea"></textarea>
+                            <button @onclick="GuardarObservaciones" class="hospital-btn">GUARDAR</button>
+                            <button @onclick="() => editandoObservaciones = false" class="hospital-btn">CANCELAR</button>
+                        }
+                        else
+                        {
+                            <div @onclick="() => editandoObservaciones = true" class="observaciones-display">
+                                @if (!string.IsNullOrEmpty(registroSeleccionado.Observaciones))
+                                {
+                                    @registroSeleccionado.Observaciones
+                                }
+                                else
+                                {
+                                    <span class="placeholder-text">CLICK PARA AGREGAR</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
-            <div>
-                <strong>Entrada:</strong> @(registroSeleccionado.HoraEntrada?.ToString(@"hh\:mm") ?? "-")
+
+            <div class="hospital-section">
+                <h3>ACTIVIDADES DEL DIA</h3>
+                <button @onclick="() => AgregarActividadParaRegistro(registroSeleccionado)" class="hospital-btn">
+                    AGREGAR ACTIVIDAD (F3)
+                </button>
             </div>
-            <div>
-                <strong>Salida:</strong> @(registroSeleccionado.HoraSalida?.ToString(@"hh\:mm") ?? "-")
-            </div>
-            <div>
-                <strong>Total Horas:</strong> @registroSeleccionado.TotalHoras.ToString("F1")
-            </div>
-            <div>
-                <strong>Estado:</strong> 
-                <span class="badge-@registroSeleccionado.Estado.ToString().ToLower()">
-                    @registroSeleccionado.Estado
-                </span>
-            </div>
-        </div>
-        
-        <!-- Observaciones del registro -->
-        <div style="margin-bottom: 16px;">
-            <label style="display: block; font-weight: bold; margin-bottom: 4px;">Observaciones del Día:</label>
-            @if (editandoObservaciones)
+
+            @if (!detalles.Any())
             {
-                <div style="display: flex; gap: 8px;">
-                    <textarea @bind="registroSeleccionado.Observaciones" 
-                              rows="2" 
-                              style="flex: 1;"
-                              placeholder="Observaciones generales del día..."></textarea>
-                    <button @onclick="GuardarObservaciones">GUARDAR</button>
-                    <button @onclick="() => editandoObservaciones = false">CANCELAR</button>
+                <div class="hospital-empty">
+                    SIN ACTIVIDADES REGISTRADAS
                 </div>
             }
             else
             {
-                <div style="padding: 8px; background-color: white; border: 1px solid #808080; min-height: 50px; cursor: pointer;"
-                     @onclick="() => editandoObservaciones = true">
-                    @if (!string.IsNullOrEmpty(registroSeleccionado.Observaciones))
-                    {
-                        @registroSeleccionado.Observaciones
-                    }
-                    else
-                    {
-                        <span style="color: #999;">Click para agregar observaciones...</span>
-                    }
-                </div>
+                <table class="hospital-table">
+                    <thead>
+                        <tr>
+                            <th>ORDEN</th>
+                            <th>ACTIVIDAD</th>
+                            <th>PROYECTO</th>
+                            <th>HORA INICIO</th>
+                            <th>HORA FIN</th>
+                            <th>HORAS</th>
+                            <th>CANTIDAD</th>
+                            <th>REND.</th>
+                            <th>DESCRIPCION</th>
+                            <th>ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var detalle in detalles)
+                        {
+                            <tr>
+                                <td>@detalle.Orden</td>
+                                <td>@detalle.Actividad?.Nombre</td>
+                                <td>@(detalle.Proyecto?.Nombre ?? "-")</td>
+                                <td>@(detalle.HoraInicio?.ToString(@"hh\:mm") ?? "-")</td>
+                                <td>@(detalle.HoraFin?.ToString(@"hh\:mm") ?? "-")</td>
+                                <td>@detalle.Horas.ToString("F1")</td>
+                                <td>@(detalle.Cantidad.HasValue ? $"{detalle.Cantidad:F1} {detalle.UnidadMedida}" : "-")</td>
+                                <td class="@GetClasificacionCss(detalle.ClasificacionProductividad)">
+                                    @if (detalle.PorcentajeRendimiento.HasValue)
+                                    {
+                                        <span title="@GetClasificacionTexto(detalle.ClasificacionProductividad)">@detalle.PorcentajeRendimiento?.ToString("F0")%</span>
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                                <td>@(string.IsNullOrEmpty(detalle.Descripcion) ? "-" : (detalle.Descripcion.Length > 50 ? detalle.Descripcion.Substring(0, 50) + "..." : detalle.Descripcion))</td>
+                                <td>
+                                    <button @onclick="() => EditarActividad(detalle)" class="hospital-btn-small">EDITAR</button>
+                                    <button @onclick="() => EliminarActividad(detalle)" class="hospital-btn-small">ELIMINAR</button>
+                                </td>
+                            </tr>
+                        }
+                        <tr class="total-row">
+                            <td colspan="5">TOTAL:</td>
+                            <td>@detalles.Sum(d => d.Horas).ToString("F1")</td>
+                            <td colspan="4"></td>
+                        </tr>
+                    </tbody>
+                </table>
             }
         </div>
-        
-        <!-- Botón para agregar actividad -->
-        <div style="margin-bottom: 12px;">
-            <button @onclick="() => AgregarActividadParaRegistro(registroSeleccionado)">
-                + AGREGAR ACTIVIDAD (F3)
-            </button>
-        </div>
-        
-        <!-- Tabla de actividades -->
-        @if (!detalles.Any())
-        {
-            <div style="padding: 20px; text-align: center; background-color: #F5F5F5; border: 1px solid #808080;">
-                <p style="margin: 0; color: #666;">No hay actividades registradas</p>
-                <button @onclick="() => AgregarActividadParaRegistro(registroSeleccionado)" 
-                        style="margin-top: 8px;">
-                    AGREGAR PRIMERA ACTIVIDAD
-                </button>
-            </div>
-        }
-        else
-        {
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 50px;">ORDEN</th>
-                        <th>ACTIVIDAD</th>
-                        <th>PROYECTO</th>
-                        <th style="width: 100px;">INICIO</th>
-                        <th style="width: 100px;">FIN</th>
-                        <th style="width: 80px;">HORAS</th>
-                        <th>DESCRIPCIÓN</th>
-                        <th style="width: 150px;">ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var detalle in detalles)
-                    {
-                        <tr>
-                            <td style="text-align: center;">@detalle.Orden</td>
-                            <td><strong>@detalle.Actividad?.Nombre</strong></td>
-                            <td>@(detalle.Proyecto?.Nombre ?? "-")</td>
-                            <td>@(detalle.HoraInicio?.ToString(@"hh\:mm") ?? "-")</td>
-                            <td>@(detalle.HoraFin?.ToString(@"hh\:mm") ?? "-")</td>
-                            <td style="text-align: center; font-weight: bold;">@detalle.Horas.ToString("F1")</td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(detalle.Descripcion))
-                                {
-                                    <span title="@detalle.Descripcion">
-                                        @(detalle.Descripcion.Length > 50 
-                                            ? detalle.Descripcion.Substring(0, 50) + "..." 
-                                            : detalle.Descripcion)
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span style="color: #999;">-</span>
-                                }
-                            </td>
-                            <td class="actions-cell">
-                                <button @onclick="() => EditarActividad(detalle)" title="Editar">
-                                    EDITAR
-                                </button>
-                                <button @onclick="() => EliminarActividad(detalle)" title="Eliminar">
-                                    ELIMINAR
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                    <tr style="background-color: #F5F5F5; font-weight: bold;">
-                        <td colspan="5" style="text-align: right; padding-right: 16px;">TOTAL:</td>
-                        <td style="text-align: center;">@detalles.Sum(d => d.Horas).ToString("F1")</td>
-                        <td colspan="2"></td>
-                    </tr>
-                </tbody>
-            </table>
-        }
     </div>
 }
 
 <!-- Modal para agregar/editar actividad -->
-<FormModal @bind-IsVisible="showModalActividad" 
-           Title="@(isEditingActividad ? "EDITAR ACTIVIDAD" : "AGREGAR ACTIVIDAD")"
-           Width="700px"
-           OnSaveClicked="GuardarActividad"
-           OnCancelClicked="CerrarModalActividad"
-           IsSaving="isSaving">
-    
-    @if (actividadEdit != null && registroSeleccionado != null)
-    {
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-            <!-- Columna izquierda -->
-            <div>
-                <div class="form-group required">
-                    <label>Actividad:</label>
-                    <select @bind="actividadEdit.ActividadId" 
-                            @bind:after="OnActividadChanged"
-                            disabled="@isSaving">
-                        <option value="">-- Seleccione --</option>
-                        @foreach (var act in actividades)
-                        {
-                            <option value="@act.Id">@act.Nombre</option>
-                        }
-                    </select>
-                </div>
-                
-                @if (actividadSeleccionadaRequiereProyecto)
-                {
-                    <div class="form-group required">
-                        <label>Proyecto:</label>
-                        <select @bind="actividadEdit.ProyectoId" disabled="@isSaving">
-                            <option value="">-- Seleccione --</option>
-                            @foreach (var proy in proyectos)
+@if (showModalActividad && actividadEdit != null && registroSeleccionado != null)
+{
+    <div class="hospital-modal-overlay">
+        <div class="hospital-modal">
+            <div class="hospital-modal-header">
+                <h2>@(isEditingActividad ? "EDITAR ACTIVIDAD" : "AGREGAR ACTIVIDAD")</h2>
+                <button @onclick="CerrarModalActividad" class="hospital-btn">CANCELAR (ESC)</button>
+            </div>
+
+            <div class="hospital-form">
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>CATEGORÍA:</label>
+                        <select @bind="categoriaFiltroId" @bind:after="FiltrarActividadesPorCategoria"
+                                disabled="@isSaving"
+                                class="hospital-select">
+                            <option value="0">-- TODAS LAS CATEGORÍAS --</option>
+                            @foreach (var cat in categoriasActividad.OrderBy(c => c.Orden))
                             {
-                                <option value="@proy.Id">@proy.Nombre</option>
+                                <option value="@cat.Id" style="color: @cat.ColorHex">@cat.Nombre</option>
                             }
                         </select>
                     </div>
-                }
-                
-                <div class="form-group required">
-                    <label>Horas:</label>
-                    <input type="number" 
-                           @bind="actividadEdit.Horas" 
-                           min="0.25" 
-                           max="24" 
-                           step="0.25"
-                           disabled="@isSaving" />
-                    <small>En formato decimal (ej: 1.5 = 1 hora 30 min)</small>
                 </div>
                 
-                <div class="form-group">
-                    <label>Orden:</label>
-                    <input type="number" 
-                           @bind="actividadEdit.Orden" 
-                           min="1"
-                           disabled="@isSaving" />
-                    <small>Orden de ejecución de la actividad</small>
+                <div class="form-row">
+                    <div class="form-field required">
+                        <label>ACTIVIDAD:</label>
+                        <select @bind="actividadEdit.ActividadId" 
+                                @bind:after="OnActividadChanged"
+                                disabled="@isSaving"
+                                class="hospital-select">
+                            <option value="">-- SELECCIONE --</option>
+                            @foreach (var act in actividadesFiltradas)
+                            {
+                                <option value="@act.Id">
+                                    @act.Codigo - @act.Nombre @(act.EsDestacada ? "★" : "")
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    
+                    @if (actividadSeleccionadaRequiereProyecto)
+                    {
+                        <div class="form-field required">
+                            <label>PROYECTO:</label>
+                            <select @bind="actividadEdit.ProyectoId" 
+                                    disabled="@isSaving"
+                                    class="hospital-select">
+                                <option value="">-- SELECCIONE --</option>
+                                @foreach (var proy in proyectos)
+                                {
+                                    <option value="@proy.Id">@proy.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                    }
                 </div>
-            </div>
-            
-            <!-- Columna derecha -->
-            <div>
-                <div class="form-group">
-                    <label>Hora Inicio:</label>
-                    <input type="time" 
-                           value="@FormatTimeSpan(actividadEdit?.HoraInicio)"
-                           @onchange="@(e => { if (actividadEdit != null) actividadEdit.HoraInicio = ParseTimeSpan(e.Value?.ToString()); CalcularHorasFin(); })"
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>Hora Fin:</label>
-                    <input type="time" 
-                           value="@FormatTimeSpan(actividadEdit?.HoraFin)"
-                           @onchange="@(e => { if (actividadEdit != null) actividadEdit.HoraFin = ParseTimeSpan(e.Value?.ToString()); CalcularHorasDesdeRango(); })"
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>Descripción:</label>
-                    <textarea @bind="actividadEdit.Descripcion" 
-                              rows="4" 
-                              maxlength="500"
-                              placeholder="Describa la actividad realizada..."
-                              disabled="@isSaving"></textarea>
-                    <small>Máximo 500 caracteres</small>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Información del empleado -->
-        <div style="margin-top: 16px; padding: 12px; background-color: #F5F5F5; border: 1px solid #808080;">
-            <strong>Empleado:</strong> @registroSeleccionado.Empleado?.NombreCompleto
-            <span style="margin-left: 16px;">
-                <strong>Fecha:</strong> @fechaSeleccionada.ToString("dd/MM/yyyy")
-            </span>
-            <span style="margin-left: 16px;">
-                <strong>Total horas actuales:</strong> @registroSeleccionado.TotalHoras.ToString("F1")
-            </span>
-        </div>
-    }
-</FormModal>
 
-<!-- Modal de confirmación para eliminar -->
-@if (showConfirmModal)
-{
-    <div class="modal-overlay" @onclick:stopPropagation="true">
-        <div class="modal-box" style="min-width: 450px;">
-            <h3>CONFIRMAR ACCIÓN</h3>
-            <div class="modal-content">
-                <p>@confirmMessage</p>
-                @if (actividadAEliminar != null)
+                @if (actividadSeleccionadaObj?.RequiereCantidad == true)
                 {
-                    <div style="padding: 12px; background-color: #FFF3CD; border: 1px solid #FFC107; margin-top: 12px;">
-                        <strong>Actividad:</strong> @actividadAEliminar.Actividad?.Nombre<br/>
-                        <strong>Horas:</strong> @actividadAEliminar.Horas.ToString("F1")<br/>
-                        @if (!string.IsNullOrEmpty(actividadAEliminar.Descripcion))
+                    <div class="form-row">
+                        <div class="form-field required">
+                            <label>CANTIDAD (@(actividadSeleccionadaObj?.UnidadAbreviatura ?? "und")):</label>
+                            <input type="number" 
+                                   step="0.01"
+                                   @bind="actividadEdit.Cantidad" 
+                                   min="0.01"
+                                   disabled="@isSaving"
+                                   placeholder="Ej: 2.5"
+                                   class="hospital-input" />
+                            @if (actividadSeleccionadaObj?.RendimientoEsperado.HasValue == true)
+                            {
+                                <small class="help-text">
+                                    Rendimiento esperado: @actividadSeleccionadaObj.RendimientoEsperado.Value.ToString("F2") @actividadSeleccionadaObj.UnidadAbreviatura/hora
+                                </small>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="form-row">
+                    <div class="form-field required">
+                        <label>HORAS:</label>
+                        <input type="number" 
+                               @bind="actividadEdit.Horas" 
+                               min="0.25" 
+                               max="24" 
+                               step="0.25"
+                               disabled="@isSaving"
+                               class="hospital-input" />
+                    </div>
+                    <div class="form-field">
+                        <label>ORDEN:</label>
+                        <input type="number" 
+                               @bind="actividadEdit.Orden" 
+                               min="1"
+                               disabled="@isSaving"
+                               class="hospital-input" />
+                    </div>
+                </div>
+
+                @* Preview de productividad *@
+                @if (actividadEdit.Cantidad.HasValue && actividadEdit.Cantidad > 0 && actividadEdit.Horas > 0)
+                {
+                    var rendimientoLogrado = actividadEdit.Cantidad.Value / actividadEdit.Horas;
+                    <div class="productividad-preview">
+                        <strong>RENDIMIENTO LOGRADO:</strong> 
+                        @rendimientoLogrado.ToString("F2") @(actividadSeleccionadaObj?.UnidadAbreviatura ?? "")/hora
+                        
+                        @if (actividadSeleccionadaObj?.RendimientoEsperado > 0)
                         {
-                            <strong>Descripción:</strong> @actividadAEliminar.Descripcion
+                            var porcentaje = (rendimientoLogrado / actividadSeleccionadaObj.RendimientoEsperado.Value) * 100;
+                            <span class="@GetClasificacionCss(porcentaje)">
+                                (@porcentaje.ToString("F0")% del esperado - @GetClasificacionTexto(porcentaje))
+                            </span>
                         }
                     </div>
                 }
+
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>HORA INICIO:</label>
+                        <input type="time" 
+                               value="@FormatTimeSpan(actividadEdit?.HoraInicio)"
+                               @onchange="@(e => { if (actividadEdit != null) actividadEdit.HoraInicio = ParseTimeSpan(e.Value?.ToString()); CalcularHorasFin(); })"
+                               disabled="@isSaving"
+                               class="hospital-input" />
+                    </div>
+                    <div class="form-field">
+                        <label>HORA FIN:</label>
+                        <input type="time" 
+                               value="@FormatTimeSpan(actividadEdit?.HoraFin)"
+                               @onchange="@(e => { if (actividadEdit != null) actividadEdit.HoraFin = ParseTimeSpan(e.Value?.ToString()); CalcularHorasDesdeRango(); })"
+                               disabled="@isSaving"
+                               class="hospital-input" />
+                    </div>
+                </div>
+
+                @if (actividadSeleccionadaObj?.RequiereCantidad == true)
+                {
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>LOTE/SECTOR ESPECÍFICO:</label>
+                            <input type="text" 
+                                   @bind="actividadEdit.LoteEspecifico" 
+                                   maxlength="50"
+                                   disabled="@isSaving"
+                                   placeholder="Ej: Lote 3, Sector Norte"
+                                   class="hospital-input" />
+                        </div>
+                    </div>
+                }
+
+                <div class="form-row-full">
+                    <div class="form-field">
+                        <label>DESCRIPCION:</label>
+                        <textarea @bind="actividadEdit.Descripcion" 
+                                  rows="3" 
+                                  maxlength="500"
+                                  disabled="@isSaving"
+                                  class="hospital-textarea"></textarea>
+                    </div>
+                </div>
+
+                <div class="hospital-info">
+                    EMPLEADO: @registroSeleccionado.Empleado?.NombreCompleto | 
+                    FECHA: @fechaSeleccionada.ToString("dd/MM/yyyy") | 
+                    HORAS ACTUALES: @registroSeleccionado.TotalHoras.ToString("F1")
+                </div>
             </div>
-            <div class="modal-actions">
-                <button @onclick="() => showConfirmModal = false">CANCELAR</button>
-                <button class="btn-danger" @onclick="ConfirmarAccion">CONFIRMAR</button>
+
+            <div class="hospital-modal-actions">
+                <button @onclick="GuardarActividad" class="hospital-btn" disabled="@isSaving">
+                    @(isSaving ? "GUARDANDO..." : "GUARDAR (F5)")
+                </button>
+                <button @onclick="CerrarModalActividad" class="hospital-btn" disabled="@isSaving">
+                    CANCELAR (F8)
+                </button>
             </div>
         </div>
     </div>
 }
 
-<!-- Panel de empleados sin registro (expandible) -->
-@if (empleadosSinRegistro.Any())
+<!-- Modal de confirmación -->
+@if (showConfirmModal)
 {
-    <div class="panel" style="margin-top: 24px; border: 1px solid #FFC107; background-color: #FFF3CD;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h3 style="margin: 0; color: #856404;">
-                ⚠ EMPLEADOS SIN REGISTRO (@empleadosSinRegistro.Count())
-            </h3>
-            <div style="display: flex; gap: 8px;">
-                <button @onclick="CrearRegistrosParaTodos">
-                    CREAR REGISTROS PARA TODOS
-                </button>
-                <button @onclick="() => mostrarEmpleadosSinRegistro = !mostrarEmpleadosSinRegistro">
-                    @(mostrarEmpleadosSinRegistro ? "OCULTAR" : "MOSTRAR")
-                </button>
+    <div class="hospital-modal-overlay">
+        <div class="hospital-modal-small">
+            <div class="hospital-modal-header">
+                <h2>CONFIRMACION REQUERIDA</h2>
+            </div>
+            
+            <div class="hospital-form">
+                <p>@confirmMessage</p>
+                @if (actividadAEliminar != null)
+                {
+                    <div class="hospital-info">
+                        ACTIVIDAD: @actividadAEliminar.Actividad?.Nombre<br/>
+                        HORAS: @actividadAEliminar.Horas.ToString("F1")<br/>
+                        @if (!string.IsNullOrEmpty(actividadAEliminar.Descripcion))
+                        {
+                            <text>DESCRIPCION: @actividadAEliminar.Descripcion</text>
+                        }
+                    </div>
+                }
+            </div>
+            
+            <div class="hospital-modal-actions">
+                <button @onclick="ConfirmarAccion" class="hospital-btn-danger">CONFIRMAR</button>
+                <button @onclick="() => showConfirmModal = false" class="hospital-btn">CANCELAR</button>
             </div>
         </div>
-        
-        @if (mostrarEmpleadosSinRegistro)
-        {
-            <div style="margin-top: 12px;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 60px;">FOTO</th>
-                            <th>CÓDIGO</th>
-                            <th>NOMBRE</th>
-                            <th>DEPARTAMENTO</th>
-                            <th>CARGO</th>
-                            <th style="width: 150px;">ACCIÓN</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var emp in empleadosSinRegistro.Take(50))
-                        {
-                            <tr>
-                                <td>
-                                    <img src="@GetFotoUrl(emp)" 
-                                         class="empleado-foto-mini" 
-                                         onerror="this.src='/images/default-avatar.png'" 
-                                         alt="@emp.NombreCompleto" />
-                                </td>
-                                <td>@emp.Codigo</td>
-                                <td><strong>@emp.NombreCompleto</strong></td>
-                                <td>@(emp.Departamento?.Nombre ?? "-")</td>
-                                <td>@(emp.Cargo?.Nombre ?? "-")</td>
-                                <td class="actions-cell">
-                                    <button @onclick="() => CrearRegistroParaEmpleado(emp)">
-                                        CREAR REGISTRO
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                        @if (empleadosSinRegistro.Count() > 50)
-                        {
-                            <tr>
-                                <td colspan="6" style="text-align: center; padding: 12px; color: #666;">
-                                    ... y @(empleadosSinRegistro.Count() - 50) más
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
     </div>
 }
 
 @code {
-    // ============================================
-    // PARÁMETROS DE RUTA
-    // ============================================
+    // PARAMETROS DE RUTA
     [Parameter] public string? FechaParam { get; set; }
     
-    // ============================================
-    // COMPONENTES Y REFERENCIAS
-    // ============================================
-    private KeyboardHandler? keyboardHandler;
-    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
-    
-    // ============================================
     // COLECCIONES DE DATOS
-    // ============================================
     private List<RegistroDiario> registrosDia = new();
     private List<RegistroDiario> registrosFiltrados = new();
     private List<Empleado> todosEmpleados = new();
     private List<Empleado> empleadosSinRegistro = new();
     private List<Departamento> departamentos = new();
     private List<Actividad> actividades = new();
+    private List<Actividad> actividadesFiltradas = new();
+    private List<CategoriaActividad> categoriasActividad = new();
     private List<Proyecto> proyectos = new();
     
-    // ============================================
-    // ESTADO DE LA PÁGINA
-    // ============================================
+    // ESTADO DE LA PAGINA
     private DateTime fechaSeleccionada = DateTime.Today;
     private RegistroDiario? registroSeleccionado;
     private DetalleActividad? actividadEdit;
@@ -667,56 +666,45 @@
     private bool showConfirmModal = false;
     private bool isEditingActividad = false;
     private bool mostrarDetalle = false;
-    private bool mostrarEmpleadosSinRegistro = false;
     private bool editandoObservaciones = false;
-    private bool todosMarcados = false;
     
-    // ============================================
-    // FILTROS Y BÚSQUEDA
-    // ============================================
+    // EDICION DE HORARIOS
+    private int? editandoEntrada = null;
+    private int? editandoSalida = null;
+    
+    // FILTROS Y BUSQUEDA
     private string searchTerm = string.Empty;
     private string filtroEstado = string.Empty;
     private string filtroDepartamento = string.Empty;
     private bool mostrarSoloActivos = true;
+    private int categoriaFiltroId = 0;
     
-    // ============================================
-    // SELECCIÓN Y EDICIÓN
-    // ============================================
-    private HashSet<int> registrosSeleccionados = new();
-    private HashSet<int> editandoHorarios = new();
-    
-    // ============================================
     // MENSAJES
-    // ============================================
     private string? errorMessage;
     private string? successMessage;
     private string? confirmMessage;
     private Func<Task>? confirmarAccionCallback;
     
-    // ============================================
     // PROPIEDADES CALCULADAS
-    // ============================================
     private bool actividadSeleccionadaRequiereProyecto => 
         actividadSeleccionadaObj?.RequiereProyecto ?? false;
     
-    // ============================================
+    // REFERENCIA AL INPUT DE BÚSQUEDA
+    private ElementReference searchInputRef;
+    
     // CICLO DE VIDA DEL COMPONENTE
-    // ============================================
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Validar autenticación
+            // Validar autenticacion
             if (!AuthService.IsAuthenticated)
             {
                 Navigation.NavigateTo("/login");
                 return;
             }
             
-            // Configurar atajos de teclado
-            ConfigurarAtajos();
-            
-            // Parsear fecha del parámetro si existe
+            // Parsear fecha del parametro si existe
             if (!string.IsNullOrEmpty(FechaParam))
             {
                 if (DateTime.TryParse(FechaParam, out var fecha))
@@ -728,41 +716,54 @@
             // Cargar datos iniciales
             await CargarDatosIniciales();
             
-            Logger.LogInformation("ControlDiario inicializado correctamente para fecha {Fecha}", 
+            Logger.LogInformation("ControlDiario inicializado para fecha {Fecha}", 
                 fechaSeleccionada.ToString("yyyy-MM-dd"));
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al inicializar ControlDiario");
-            errorMessage = $"Error al cargar la página: {ex.Message}";
+            errorMessage = $"ERROR AL CARGAR LA PAGINA: {ex.Message}";
         }
     }
     
+    // ATAJOS DE TECLADO
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && keyboardHandler != null)
+        if (firstRender)
         {
-            await keyboardHandler.InitializeAsync();
+            await JSRuntime.InvokeVoidAsync("eval", 
+                "document.addEventListener('keydown', function(e) {" +
+                "    if (e.key === 'F2') {" +
+                "        e.preventDefault();" +
+                "        var searchInput = document.querySelector('.search-input');" +
+                "        if (searchInput) { searchInput.focus(); searchInput.select(); }" +
+                "    }" +
+                "    if (e.key === 'F3') {" +
+                "        e.preventDefault();" +
+                "        var btnNuevo = document.querySelector('.hospital-btn-primary');" +
+                "        if (btnNuevo && !btnNuevo.disabled) { btnNuevo.click(); }" +
+                "    }" +
+                "    if (e.key === 'F5') {" +
+                "        e.preventDefault();" +
+                "        var btnGuardar = document.querySelector('.hospital-modal-actions .hospital-btn');" +
+                "        if (btnGuardar && !btnGuardar.disabled) { btnGuardar.click(); }" +
+                "        else { var btnActualizar = document.querySelector('button[title*=Actualizar]'); if (btnActualizar) btnActualizar.click(); }" +
+                "    }" +
+                "    if (e.key === 'F8') {" +
+                "        e.preventDefault();" +
+                "        var modales = document.querySelectorAll('.hospital-modal-actions');" +
+                "        if (modales.length > 0) { var btns = modales[modales.length-1].querySelectorAll('.hospital-btn'); if (btns.length > 1) btns[btns.length-1].click(); }" +
+                "    }" +
+                "    if (e.key === 'Escape') {" +
+                "        var modal = document.querySelector('.hospital-modal-overlay');" +
+                "        if (modal) { var btnCerrar = modal.querySelector('.hospital-modal-header .hospital-btn'); if (btnCerrar) btnCerrar.click(); }" +
+                "        else { var searchInput = document.querySelector('.search-input'); if (searchInput && searchInput.value) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input', { bubbles: true })); } }" +
+                "    }" +
+                "});");
         }
     }
     
-    // ============================================
-    // CONFIGURACIÓN DE ATAJOS DE TECLADO
-    // ============================================
-    private void ConfigurarAtajos()
-    {
-        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
-        {
-            new() { Key = "F2", KeyDisplay = "F2", Description = "Ir a Hoy", Action = IrHoy },
-            new() { Key = "F3", KeyDisplay = "F3", Description = "Agregar Actividad", Action = AgregarActividad },
-            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarRegistros },
-            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModales }
-        };
-    }
-    
-    // ============================================
     // CARGA DE DATOS
-    // ============================================
     private async Task CargarDatosIniciales()
     {
         isLoading = true;
@@ -773,23 +774,28 @@
             // Cargar en paralelo los datos maestros
             var empleadosTask = EmpleadoRepository.GetAllActiveAsync();
             var departamentosTask = DepartamentoRepository.GetAllActiveAsync();
-            var actividadesTask = ActividadRepository.GetAllActiveAsync();
+            var actividadesTask = ActividadRepository.GetAllActiveWithCategoriaAsync();
+            var categoriasTask = CategoriaActividadRepository.GetAllActiveAsync();
             var proyectosTask = ProyectoRepository.GetByEstadoAsync(EstadoProyecto.Activo);
             
-            await Task.WhenAll(empleadosTask, departamentosTask, actividadesTask, proyectosTask);
+            await Task.WhenAll(empleadosTask, departamentosTask, actividadesTask, categoriasTask, proyectosTask);
             
             todosEmpleados = (await empleadosTask).ToList();
             departamentos = (await departamentosTask).ToList();
-            actividades = (await actividadesTask).OrderBy(a => a.Orden).ToList();
+            actividades = (await actividadesTask).OrderBy(a => a.Categoria?.Orden ?? 999).ThenBy(a => a.Orden).ToList();
+            categoriasActividad = (await categoriasTask).ToList();
             proyectos = (await proyectosTask).OrderBy(p => p.Nombre).ToList();
             
-            // Cargar registros del día
+            // Inicializar actividades filtradas
+            actividadesFiltradas = actividades.ToList();
+            
+            // Cargar registros del dia
             await CargarRegistros();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al cargar datos iniciales");
-            errorMessage = $"Error al cargar datos: {ex.Message}";
+            errorMessage = $"ERROR AL CARGAR DATOS: {ex.Message}";
         }
         finally
         {
@@ -806,7 +812,7 @@
         
         try
         {
-            // Cargar registros del día con sus relaciones
+            // Cargar registros del dia con sus relaciones
             var registros = await RegistroDiarioRepository.GetByFechaAsync(fechaSeleccionada);
             registrosDia = registros.OrderBy(r => r.Empleado?.NombreCompleto).ToList();
             
@@ -838,7 +844,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al cargar registros");
-            errorMessage = $"Error al cargar registros: {ex.Message}";
+            errorMessage = $"ERROR AL CARGAR REGISTROS: {ex.Message}";
         }
         finally
         {
@@ -847,9 +853,7 @@
         }
     }
     
-    // ============================================
-    // NAVEGACIÓN DE FECHAS
-    // ============================================
+    // NAVEGACION DE FECHAS
     private async Task CambiarFecha()
     {
         await CargarRegistros();
@@ -874,14 +878,11 @@
         await CambiarFecha();
     }
     
-    // ============================================
-    // FILTROS Y BÚSQUEDA
-    // ============================================
+    // FILTROS
     private async Task FiltrarRegistros()
     {
         registrosFiltrados = registrosDia;
         
-        // Filtro por búsqueda
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var termino = searchTerm.ToLower();
@@ -892,20 +893,17 @@
             ).ToList();
         }
         
-        // Filtro por estado
         if (!string.IsNullOrEmpty(filtroEstado) && int.TryParse(filtroEstado, out var estadoInt))
         {
             var estado = (EstadoRegistroDiario)estadoInt;
             registrosFiltrados = registrosFiltrados.Where(r => r.Estado == estado).ToList();
         }
         
-        // Filtro por departamento
         if (!string.IsNullOrEmpty(filtroDepartamento) && int.TryParse(filtroDepartamento, out var deptId))
         {
             registrosFiltrados = registrosFiltrados.Where(r => r.Empleado?.DepartamentoId == deptId).ToList();
         }
         
-        // Filtro por empleados activos
         if (mostrarSoloActivos)
         {
             registrosFiltrados = registrosFiltrados
@@ -917,78 +915,19 @@
         await Task.CompletedTask;
     }
     
-    private async Task BuscarEmpleados()
-    {
-        await FiltrarRegistros();
-    }
-    
-    private async Task LimpiarBusqueda()
-    {
-        searchTerm = string.Empty;
-        await FiltrarRegistros();
-        
-        // Enfocar el input de búsqueda
-        if (keyboardHandler != null)
-        {
-            await keyboardHandler.FocusElementAsync("searchInput");
-        }
-    }
-    
-    // ============================================
-    // SELECCIÓN DE REGISTROS
-    // ============================================
+    // SELECCION DE REGISTROS
     private void SeleccionarRegistro(RegistroDiario registro)
     {
         registroSeleccionado = registro;
-        mostrarDetalle = true;
         StateHasChanged();
     }
     
-    private void ToggleSeleccion(RegistroDiario registro, ChangeEventArgs e)
-    {
-        if (e.Value is bool isChecked)
-        {
-            if (isChecked)
-            {
-                registrosSeleccionados.Add(registro.Id);
-            }
-            else
-            {
-                registrosSeleccionados.Remove(registro.Id);
-            }
-        }
-        
-        todosMarcados = registrosFiltrados.All(r => registrosSeleccionados.Contains(r.Id));
-        StateHasChanged();
-    }
-    
-    private void SeleccionarTodos(ChangeEventArgs e)
-    {
-        if (e.Value is bool isChecked)
-        {
-            if (isChecked)
-            {
-                registrosSeleccionados = registrosFiltrados.Select(r => r.Id).ToHashSet();
-            }
-            else
-            {
-                registrosSeleccionados.Clear();
-            }
-            
-            todosMarcados = isChecked;
-        }
-        
-        StateHasChanged();
-    }
-    
-    // ============================================
-    // CREACIÓN DE REGISTROS
-    // ============================================
+    // CREACION DE REGISTROS
     private async Task CrearRegistrosParaTodos()
     {
         if (!empleadosSinRegistro.Any())
         {
-            errorMessage = "No hay empleados sin registro";
+            errorMessage = "NO HAY EMPLEADOS SIN REGISTRO";
             return;
         }
         
@@ -1015,7 +954,7 @@
                 registrosCreados++;
             }
             
-            successMessage = $"Se crearon {registrosCreados} registros exitosamente";
+            successMessage = $"REGISTROS CREADOS: {registrosCreados}";
             Logger.LogInformation("Creados {Count} registros para fecha {Fecha}", 
                 registrosCreados, fechaSeleccionada.ToString("yyyy-MM-dd"));
             
@@ -1024,14 +963,13 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al crear registros masivos");
-            errorMessage = $"Error al crear registros: {ex.Message}";
+            errorMessage = $"ERROR AL CREAR REGISTROS: {ex.Message}";
         }
         finally
         {
             isSaving = false;
             StateHasChanged();
             
-            // Ocultar mensaje de éxito después de 3 segundos
             if (successMessage != null)
             {
                 await Task.Delay(3000);
@@ -1041,65 +979,18 @@
         }
     }
     
-    private async Task CrearRegistroParaEmpleado(Empleado empleado)
+    // EDICION DE HORARIOS
+    private void EditarEntrada(RegistroDiario registro)
     {
-        isSaving = true;
-        errorMessage = null;
+        editandoEntrada = registro.Id;
+        editandoSalida = null;
         StateHasChanged();
-        
-        try
-        {
-            var nuevoRegistro = new RegistroDiario
-            {
-                Fecha = fechaSeleccionada,
-                EmpleadoId = empleado.Id,
-                Empleado = empleado,
-                Estado = EstadoRegistroDiario.Borrador,
-                FechaCreacion = DateTime.Now,
-                CreadoPorId = AuthService.CurrentUserId
-            };
-            
-            var registroCreado = await RegistroDiarioRepository.AddAsync(nuevoRegistro);
-            
-            successMessage = $"Registro creado para {empleado.NombreCompleto}";
-            Logger.LogInformation("Creado registro {Id} para empleado {EmpleadoId} fecha {Fecha}", 
-                registroCreado.Id, empleado.Id, fechaSeleccionada.ToString("yyyy-MM-dd"));
-            
-            await CargarRegistros();
-            
-            // Seleccionar el nuevo registro
-            registroSeleccionado = registrosDia.FirstOrDefault(r => r.Id == registroCreado.Id);
-            if (registroSeleccionado != null)
-            {
-                mostrarDetalle = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al crear registro para empleado {EmpleadoId}", empleado.Id);
-            errorMessage = $"Error al crear registro: {ex.Message}";
-        }
-        finally
-        {
-            isSaving = false;
-            StateHasChanged();
-            
-            // Ocultar mensaje de éxito después de 3 segundos
-            if (successMessage != null)
-            {
-                await Task.Delay(3000);
-                successMessage = null;
-                StateHasChanged();
-            }
-        }
     }
     
-    // ============================================
-    // EDICIÓN DE HORARIOS
-    // ============================================
-    private void EditarHorario(RegistroDiario registro)
+    private void EditarSalida(RegistroDiario registro)
     {
-        editandoHorarios.Add(registro.Id);
+        editandoSalida = registro.Id;
+        editandoEntrada = null;
         StateHasChanged();
     }
     
@@ -1108,7 +999,8 @@
         try
         {
             await RegistroDiarioRepository.UpdateAsync(registro);
-            editandoHorarios.Remove(registro.Id);
+            editandoEntrada = null;
+            editandoSalida = null;
             
             Logger.LogInformation("Actualizado horario del registro {Id}", registro.Id);
             StateHasChanged();
@@ -1116,14 +1008,60 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al actualizar horario del registro {Id}", registro.Id);
-            errorMessage = $"Error al guardar horario: {ex.Message}";
+            errorMessage = $"ERROR AL GUARDAR HORARIO: {ex.Message}";
             StateHasChanged();
         }
     }
     
-    // ============================================
+    // REGISTRO RAPIDO - Por registro específico (botones inline)
+    private async Task RegistrarEntradaParaRegistro(RegistroDiario registro)
+    {
+        if (registro.HoraEntrada != null) return; // Ya tiene entrada
+        
+        registro.HoraEntrada = DateTime.Now.TimeOfDay;
+        await GuardarHorario(registro);
+        successMessage = $"ENTRADA REGISTRADA: {registro.Empleado?.NombreCompleto}";
+        StateHasChanged();
+        await Task.Delay(2000);
+        successMessage = null;
+        StateHasChanged();
+    }
+    
+    private async Task RegistrarSalidaParaRegistro(RegistroDiario registro)
+    {
+        if (registro.HoraSalida != null) return; // Ya tiene salida
+        
+        registro.HoraSalida = DateTime.Now.TimeOfDay;
+        await GuardarHorario(registro);
+        successMessage = $"SALIDA REGISTRADA: {registro.Empleado?.NombreCompleto}";
+        StateHasChanged();
+        await Task.Delay(2000);
+        successMessage = null;
+        StateHasChanged();
+    }
+    
+    // Métodos legacy (mantener compatibilidad)
+    private async Task RegistrarEntrada()
+    {
+        if (registroSeleccionado == null)
+        {
+            errorMessage = "DEBE SELECCIONAR UN REGISTRO";
+            return;
+        }
+        await RegistrarEntradaParaRegistro(registroSeleccionado);
+    }
+    
+    private async Task RegistrarSalida()
+    {
+        if (registroSeleccionado == null)
+        {
+            errorMessage = "DEBE SELECCIONAR UN REGISTRO";
+            return;
+        }
+        await RegistrarSalidaParaRegistro(registroSeleccionado);
+    }
+    
     // OBSERVACIONES
-    // ============================================
     private async Task GuardarObservaciones()
     {
         if (registroSeleccionado == null) return;
@@ -1139,19 +1077,17 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al actualizar observaciones del registro {Id}", registroSeleccionado.Id);
-            errorMessage = $"Error al guardar observaciones: {ex.Message}";
+            errorMessage = $"ERROR AL GUARDAR OBSERVACIONES: {ex.Message}";
             StateHasChanged();
         }
     }
     
-    // ============================================
-    // GESTIÓN DE ACTIVIDADES
-    // ============================================
+    // GESTION DE ACTIVIDADES
     private async Task AgregarActividad()
     {
         if (registroSeleccionado == null)
         {
-            errorMessage = "Debe seleccionar un registro primero";
+            errorMessage = "DEBE SELECCIONAR UN REGISTRO";
             return;
         }
         
@@ -1177,6 +1113,8 @@
         };
         
         actividadSeleccionadaObj = null;
+        categoriaFiltroId = 0;
+        actividadesFiltradas = actividades.OrderByDescending(a => a.EsDestacada).ThenBy(a => a.Orden).ToList();
         showModalActividad = true;
         StateHasChanged();
         
@@ -1186,9 +1124,9 @@
     private async Task EditarActividad(DetalleActividad detalle)
     {
         isEditingActividad = true;
+        // No copiar Id manualmente - se asigna después para evitar antipatrón
         actividadEdit = new DetalleActividad
         {
-            Id = detalle.Id,
             RegistroDiarioId = detalle.RegistroDiarioId,
             ActividadId = detalle.ActividadId,
             ProyectoId = detalle.ProyectoId,
@@ -1196,10 +1134,16 @@
             Descripcion = detalle.Descripcion,
             HoraInicio = detalle.HoraInicio,
             HoraFin = detalle.HoraFin,
-            Orden = detalle.Orden
+            Orden = detalle.Orden,
+            Cantidad = detalle.Cantidad,
+            UnidadMedida = detalle.UnidadMedida,
+            LoteEspecifico = detalle.LoteEspecifico
         };
+        actividadEdit.Id = detalle.Id;
         
         actividadSeleccionadaObj = actividades.FirstOrDefault(a => a.Id == detalle.ActividadId);
+        categoriaFiltroId = actividadSeleccionadaObj?.CategoriaId ?? 0;
+        FiltrarActividadesPorCategoria();
         showModalActividad = true;
         StateHasChanged();
         
@@ -1210,27 +1154,40 @@
     {
         if (actividadEdit == null || registroSeleccionado == null)
         {
-            errorMessage = "Datos incompletos";
+            errorMessage = "DATOS INCOMPLETOS";
             return;
         }
         
         // Validaciones
         if (actividadEdit.ActividadId <= 0)
         {
-            errorMessage = "Debe seleccionar una actividad";
+            errorMessage = "DEBE SELECCIONAR UNA ACTIVIDAD";
             return;
         }
         
         if (actividadSeleccionadaRequiereProyecto && (actividadEdit.ProyectoId == null || actividadEdit.ProyectoId <= 0))
         {
-            errorMessage = "Esta actividad requiere un proyecto";
+            errorMessage = "ESTA ACTIVIDAD REQUIERE UN PROYECTO";
             return;
         }
         
         if (actividadEdit.Horas <= 0)
         {
-            errorMessage = "Las horas deben ser mayor a 0";
+            errorMessage = "LAS HORAS DEBEN SER MAYOR A 0";
             return;
+        }
+        
+        // Validar cantidad si es requerida
+        if (actividadSeleccionadaObj?.RequiereCantidad == true)
+        {
+            if (!actividadEdit.Cantidad.HasValue || actividadEdit.Cantidad <= 0)
+            {
+                errorMessage = "DEBE INGRESAR LA CANTIDAD REALIZADA";
+                return;
+            }
+            
+            // Copiar unidad de medida de la actividad
+            actividadEdit.UnidadMedida = actividadSeleccionadaObj.UnidadAbreviatura;
         }
         
         isSaving = true;
@@ -1241,32 +1198,25 @@
         {
             if (isEditingActividad)
             {
-                // Actualizar actividad existente
                 await RegistroDiarioRepository.UpdateDetalleAsync(actividadEdit);
-                
                 Logger.LogInformation("Actualizada actividad {Id} del registro {RegistroId}", 
                     actividadEdit.Id, registroSeleccionado.Id);
-                
-                successMessage = "Actividad actualizada exitosamente";
+                successMessage = "ACTIVIDAD ACTUALIZADA";
             }
             else
             {
-                // Crear nueva actividad
                 var nuevaActividad = await RegistroDiarioRepository.AddDetalleAsync(
                     registroSeleccionado.Id, 
                     actividadEdit);
-                
                 Logger.LogInformation("Creada actividad {Id} para registro {RegistroId}", 
                     nuevaActividad.Id, registroSeleccionado.Id);
-                
-                successMessage = "Actividad agregada exitosamente";
+                successMessage = "ACTIVIDAD AGREGADA";
             }
             
             // Recargar el registro con sus detalles actualizados
             var registroActualizado = await RegistroDiarioRepository.GetByIdWithDetallesAsync(registroSeleccionado.Id);
             if (registroActualizado != null)
             {
-                // Actualizar en la lista
                 var index = registrosDia.FindIndex(r => r.Id == registroActualizado.Id);
                 if (index >= 0)
                 {
@@ -1282,14 +1232,13 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al guardar actividad");
-            errorMessage = $"Error al guardar actividad: {ex.Message}";
+            errorMessage = $"ERROR AL GUARDAR ACTIVIDAD: {ex.Message}";
         }
         finally
         {
             isSaving = false;
             StateHasChanged();
             
-            // Ocultar mensaje de éxito después de 3 segundos
             if (successMessage != null)
             {
                 await Task.Delay(3000);
@@ -1302,7 +1251,7 @@
     private async Task EliminarActividad(DetalleActividad detalle)
     {
         actividadAEliminar = detalle;
-        confirmMessage = "¿Está seguro que desea eliminar esta actividad?";
+        confirmMessage = "ESTA SEGURO QUE DESEA ELIMINAR ESTA ACTIVIDAD?";
         confirmarAccionCallback = async () => await ConfirmarEliminarActividad();
         showConfirmModal = true;
         StateHasChanged();
@@ -1344,21 +1293,20 @@
             
             await FiltrarRegistros();
             
-            successMessage = "Actividad eliminada exitosamente";
+            successMessage = "ACTIVIDAD ELIMINADA";
             showConfirmModal = false;
             actividadAEliminar = null;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al eliminar actividad");
-            errorMessage = $"Error al eliminar actividad: {ex.Message}";
+            errorMessage = $"ERROR AL ELIMINAR ACTIVIDAD: {ex.Message}";
         }
         finally
         {
             isSaving = false;
             StateHasChanged();
             
-            // Ocultar mensaje de éxito después de 3 segundos
             if (successMessage != null)
             {
                 await Task.Delay(3000);
@@ -1368,14 +1316,18 @@
         }
     }
     
-    // ============================================
     // CAMBIO DE ESTADO
-    // ============================================
+    private async Task CompletarRegistroSeleccionado()
+    {
+        if (registroSeleccionado == null) return;
+        await CompletarRegistro(registroSeleccionado);
+    }
+    
     private async Task CompletarRegistro(RegistroDiario registro)
     {
         if (!registro.EstaCompleto)
         {
-            errorMessage = "El registro debe tener hora de entrada, salida y al menos una actividad";
+            errorMessage = "EL REGISTRO DEBE TENER HORA DE ENTRADA, SALIDA Y AL MENOS UNA ACTIVIDAD";
             return;
         }
         
@@ -1388,19 +1340,18 @@
             
             Logger.LogInformation("Completado registro {Id}", registro.Id);
             
-            successMessage = $"Registro completado para {registro.Empleado?.NombreCompleto}";
+            successMessage = $"REGISTRO COMPLETADO: {registro.Empleado?.NombreCompleto}";
             await FiltrarRegistros();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al completar registro {Id}", registro.Id);
-            errorMessage = $"Error al completar registro: {ex.Message}";
+            errorMessage = $"ERROR AL COMPLETAR REGISTRO: {ex.Message}";
         }
         finally
         {
             StateHasChanged();
             
-            // Ocultar mensaje de éxito después de 3 segundos
             if (successMessage != null)
             {
                 await Task.Delay(3000);
@@ -1410,16 +1361,13 @@
         }
     }
     
-    // ============================================
     // EVENTOS DE FORMULARIO
-    // ============================================
     private async Task OnActividadChanged()
     {
         if (actividadEdit != null && actividadEdit.ActividadId > 0)
         {
             actividadSeleccionadaObj = actividades.FirstOrDefault(a => a.Id == actividadEdit.ActividadId);
             
-            // Si no requiere proyecto, limpiar el proyecto seleccionado
             if (actividadSeleccionadaObj?.RequiereProyecto == false)
             {
                 actividadEdit.ProyectoId = null;
@@ -1465,9 +1413,7 @@
         await Task.CompletedTask;
     }
     
-    // ============================================
     // DETALLE Y MODALES
-    // ============================================
     private async Task VerDetalleRegistro(RegistroDiario registro)
     {
         registroSeleccionado = registro;
@@ -1479,7 +1425,6 @@
     private async Task CerrarDetalle()
     {
         mostrarDetalle = false;
-        registroSeleccionado = null;
         StateHasChanged();
         await Task.CompletedTask;
     }
@@ -1493,23 +1438,6 @@
         StateHasChanged();
     }
     
-    private async Task CerrarModales()
-    {
-        if (showModalActividad)
-        {
-            CerrarModalActividad();
-        }
-        else if (showConfirmModal)
-        {
-            showConfirmModal = false;
-            StateHasChanged();
-        }
-        else if (mostrarDetalle)
-        {
-            await CerrarDetalle();
-        }
-    }
-    
     private async Task ConfirmarAccion()
     {
         if (confirmarAccionCallback != null)
@@ -1518,66 +1446,119 @@
         }
     }
     
-    // ============================================
-    // EXPORTACIÓN
-    // ============================================
-    private async Task ExportarReporte()
-    {
-        try
-        {
-            // TODO: Implementar exportación a PDF/Excel
-            await JSRuntime.InvokeVoidAsync("alert", 
-                $"Exportar reporte del {fechaSeleccionada:dd/MM/yyyy}\n" +
-                $"Total registros: {registrosDia.Count}\n" +
-                $"Esta funcionalidad estará disponible próximamente.");
-            
-            Logger.LogInformation("Solicitada exportación de reporte para fecha {Fecha}", 
-                fechaSeleccionada.ToString("yyyy-MM-dd"));
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al exportar reporte");
-            errorMessage = $"Error al exportar: {ex.Message}";
-            StateHasChanged();
-        }
-    }
-    
-    // ============================================
-    // WIZARD
-    // ============================================
-    private void AbrirWizard()
+    // NAVEGACIÓN CONTEXTUAL
+    private void IrAlWizard()
     {
         Navigation.NavigateTo("/control-diario-wizard");
     }
     
-    // ============================================
-    // MÉTODOS AUXILIARES
-    // ============================================
-    private string GetFotoUrl(Empleado? empleado)
+    private void IrAReportes()
     {
-        if (empleado == null || string.IsNullOrEmpty(empleado.FotoPath))
-        {
-            return "/images/default-avatar.png";
-        }
-        
-        // Si la ruta ya es una URL completa, devolverla tal cual
-        if (empleado.FotoPath.StartsWith("http://") || empleado.FotoPath.StartsWith("https://"))
-        {
-            return empleado.FotoPath;
-        }
-        
-        // Si es una ruta relativa, agregarle el prefijo
-        return $"/uploads/fotos/{empleado.FotoPath}";
+        Navigation.NavigateTo("/reportes");
     }
     
-    // ============================================
-    // MÉTODOS PARA CONVERSIÓN DE TIEMPO
-    // ============================================
+    private void IrAProductividad()
+    {
+        Navigation.NavigateTo("/dashboard-productividad");
+    }
+    
+    private void IrAExpediente(int empleadoId)
+    {
+        if (empleadoId > 0)
+        {
+            Navigation.NavigateTo($"/empleado-expediente/{empleadoId}");
+        }
+    }
+    
+    // BÚSQUEDA
+    private async Task LimpiarBusqueda()
+    {
+        searchTerm = string.Empty;
+        await FiltrarRegistros();
+    }
+    
+    // METODOS AUXILIARES
     private string FormatTimeSpan(TimeSpan? time) => time?.ToString(@"hh\:mm") ?? "";
     
     private TimeSpan? ParseTimeSpan(string? value)
     {
         if (string.IsNullOrEmpty(value)) return null;
         return TimeSpan.TryParse(value, out var time) ? time : null;
+    }
+    
+    // Filtrar actividades por categoría
+    private void FiltrarActividadesPorCategoria()
+    {
+        if (categoriaFiltroId > 0)
+        {
+            actividadesFiltradas = actividades.Where(a => a.CategoriaId == categoriaFiltroId).ToList();
+        }
+        else
+        {
+            actividadesFiltradas = actividades.ToList();
+        }
+        
+        // Ordenar: destacadas primero, luego por orden
+        actividadesFiltradas = actividadesFiltradas
+            .OrderByDescending(a => a.EsDestacada)
+            .ThenBy(a => a.Orden)
+            .ThenBy(a => a.Nombre)
+            .ToList();
+        
+        StateHasChanged();
+    }
+    
+    // Obtener clasificación CSS según clasificación de productividad (string)
+    private string GetClasificacionCss(string clasificacion)
+    {
+        return clasificacion switch
+        {
+            "EXCELENTE" => "productividad-excelente",
+            "ÓPTIMO" => "productividad-optimo",
+            "ACEPTABLE" => "productividad-aceptable",
+            "BAJO" => "productividad-bajo",
+            "CRÍTICO" => "productividad-critico",
+            _ => ""
+        };
+    }
+    
+    // Obtener clasificación CSS según porcentaje de productividad (decimal)
+    private string GetClasificacionCss(decimal porcentaje)
+    {
+        return porcentaje switch
+        {
+            >= 120 => "productividad-excelente",
+            >= 100 => "productividad-optimo",
+            >= 80 => "productividad-aceptable",
+            >= 60 => "productividad-bajo",
+            _ => "productividad-critico"
+        };
+    }
+    
+    // Obtener texto de clasificación según clasificación de productividad (string)
+    private string GetClasificacionTexto(string clasificacion)
+    {
+        return clasificacion switch
+        {
+            "EXCELENTE" => "Supera el rendimiento esperado",
+            "ÓPTIMO" => "Alcanza el rendimiento esperado",
+            "ACEPTABLE" => "Rendimiento aceptable",
+            "BAJO" => "Rendimiento por debajo de lo esperado",
+            "CRÍTICO" => "Rendimiento muy bajo",
+            _ => "Sin datos de rendimiento"
+        };
+    }
+    
+    // Obtener texto de clasificación según porcentaje de productividad (decimal)
+    private string GetClasificacionTexto(decimal porcentaje)
+    {
+        return porcentaje switch
+        {
+            >= 120 => "EXCELENTE",
+            >= 100 => "ÓPTIMO",
+            >= 80 => "ACEPTABLE",
+            >= 60 => "BAJO",
+            _ => "CRÍTICO"
+        };
     }
 }

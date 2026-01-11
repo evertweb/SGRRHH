@@ -1,174 +1,175 @@
-@page "/documentos"
+﻿@page "/documentos"
 @page "/documentos/{EmpleadoIdParam:int}"
 @using SGRRHH.Local.Domain.Entities
 @using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.DTOs
 @using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Server.Components.Shared
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.JSInterop
 @inject IDocumentoEmpleadoRepository DocumentoRepo
 @inject IEmpleadoRepository EmpleadoRepo
 @inject ILocalStorageService StorageService
 @inject IAuthService AuthService
+@inject IKeyboardShortcutService KeyboardShortcutService
 @inject IJSRuntime JS
 @inject ILogger<Documentos> Logger
+@implements IDisposable
 
 <PageTitle>Documentos - SGRRHH</PageTitle>
 
-<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
-
-<div class="page-title">📄 GESTIÓN DE DOCUMENTOS</div>
+<div class="page-header">
+    <div class="page-title">DOCUMENTOS</div>
+    <div class="page-info">
+        <span>USUARIO: @(AuthService.CurrentUser?.NombreCompleto ?? "N/A")</span>
+        <span>ROL: @(AuthService.IsAdmin ? "ADMINISTRADOR" : "CONSULTA")</span>
+    </div>
+</div>
 
 @if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="error-block">
-        <h3>⚠️ ERROR</h3>
-        <p>@errorMessage</p>
+    <div class="error-message">
+        <div class="error-title">ERROR</div>
+        <div class="error-content">@errorMessage</div>
     </div>
 }
 
 @if (!string.IsNullOrEmpty(successMessage))
 {
-    <div class="success-block">
-        ✓ @successMessage
+    <div class="success-message">
+        <div class="success-content">@successMessage</div>
     </div>
 }
 
-<div class="toolbar">
-    <div class="toolbar-group">
-        <label>EMPLEADO:</label>
-        <select @bind="selectedEmpleadoId" @bind:after="LoadDocumentos">
-            <option value="0">-- Seleccionar Empleado --</option>
+<div class="control-bar">
+    <div class="control-group">
+        <label class="control-label">EMPLEADO:</label>
+        <select @bind="selectedEmpleadoId" @bind:after="LoadDocumentos" class="control-input">
+            <option value="0">SELECCIONAR EMPLEADO</option>
             @foreach (var emp in empleados)
             {
-                <option value="@emp.Codigo - @emp.NombreCompleto">@emp.Codigo - @emp.NombreCompleto</option>
+                <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
             }
         </select>
-        
-        <button @onclick="LoadDocumentos" disabled="@isLoading">
-            @(isLoading ? "CARGANDO..." : "ACTUALIZAR [F5]")
+    </div>
+    
+    <div class="control-actions">
+        <button @onclick="LoadDocumentos" disabled="@isLoading" class="btn-action">
+            @(isLoading ? "CARGANDO..." : "ACTUALIZAR")
         </button>
-
+        
         @if (selectedEmpleadoId > 0 && AuthService.IsAdmin)
         {
-            <button class="btn-success" @onclick="ShowUploadModal">
-                + SUBIR DOCUMENTO
-            </button>
+            <button @onclick="ShowScannerModal" class="btn-action">ESCANEAR</button>
+            <button @onclick="ShowUploadModal" class="btn-action">SUBIR DOCUMENTO</button>
         }
     </div>
 </div>
 
-@* Contenido principal *@
 @if (selectedEmpleadoId == 0)
 {
-    <div class="empty-state">
-        <div class="icon">📄</div>
-        <div class="message">GESTIÓN DE DOCUMENTOS</div>
-        <div class="hint">Seleccione un empleado para ver sus documentos</div>
+    <div class="status-message">
+        <div>SISTEMA DE GESTION DE DOCUMENTOS</div>
+        <div>Seleccione un empleado para ver documentos registrados</div>
     </div>
 }
 else if (isLoading)
 {
-    <div class="loading">⏳ Cargando documentos...</div>
+    <div class="status-message">
+        <div>CARGANDO REGISTROS...</div>
+    </div>
 }
 else if (!documentos.Any())
 {
-    <div class="empty-state">
-        <div class="icon">📄</div>
-        <div class="message">No hay documentos registrados para este empleado</div>
+    <div class="status-message">
+        <div>SIN DOCUMENTOS REGISTRADOS</div>
+        <div>No existen documentos para el empleado seleccionado</div>
         @if (AuthService.IsAdmin)
         {
-            <button class="btn-success" @onclick="ShowUploadModal">
-                + SUBIR PRIMER DOCUMENTO
-            </button>
+            <button @onclick="ShowScannerModal" class="btn-action">ESCANEAR</button>
+            <button @onclick="ShowUploadModal" class="btn-action">SUBIR DOCUMENTO</button>
         }
     </div>
 }
 else
 {
-    <table>
+    <table class="data-table">
         <thead>
             <tr>
+                <th>ID</th>
                 <th>TIPO</th>
                 <th>NOMBRE</th>
-                <th style="width: 100px;">EMISIÓN</th>
-                <th style="width: 100px;">VENCIMIENTO</th>
-                <th style="width: 80px;">ESTADO</th>
-                <th style="width: 150px;">ACCIONES</th>
+                <th>DESCRIPCION</th>
+                <th>ARCHIVO ORIGINAL</th>
+                <th>TAMAÑO</th>
+                <th>FECHA EMISION</th>
+                <th>FECHA VENCIMIENTO</th>
+                <th>ESTADO</th>
+                <th>SUBIDO POR</th>
+                <th>FECHA CREACION</th>
+                <th>ACCIONES</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var doc in documentos)
             {
-                <tr class="@(!doc.EstaVigente ? "row-expired" : "") @(selectedDocumento?.Id == doc.Id ? "selected" : "")"
+                <tr class="@(selectedDocumento?.Id == doc.Id ? "row-selected" : "") @(!doc.EstaVigente ? "row-warning" : "")"
                     @onclick="() => SelectDocumento(doc)">
+                    <td>@doc.Id</td>
+                    <td>@GetTipoNombre(doc.TipoDocumento)</td>
+                    <td>@doc.Nombre</td>
+                    <td>@(doc.Descripcion ?? "-")</td>
+                    <td>@doc.NombreArchivoOriginal</td>
+                    <td>@FormatFileSize(doc.TamanoArchivo)</td>
+                    <td>@(doc.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")</td>
+                    <td>@(doc.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")</td>
                     <td>
-                        <strong>@GetTipoNombre(doc.TipoDocumento)</strong>
-                    </td>
-                    <td>
-                        <strong>@doc.Nombre</strong><br/>
-                        <small style="color: #666;">@doc.NombreArchivoOriginal</small>
-                    </td>
-                    <td class="text-center">
-                        @(doc.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")
-                    </td>
-                    <td class="text-center">
-                        @(doc.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")
-                    </td>
-                    <td class="text-center">
                         @if (doc.EstaVigente)
                         {
-                            <span class="badge badge-vigente">VIGENTE</span>
+                            <span>VIGENTE</span>
                         }
                         else
                         {
-                            <span class="badge badge-vencido">VENCIDO</span>
+                            <span class="text-error">VENCIDO</span>
                         }
                     </td>
-                    <td class="table-actions">
+                    <td>@(doc.SubidoPorNombre ?? "-")</td>
+                    <td>@doc.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="actions-cell">
                         @if (!string.IsNullOrEmpty(doc.ArchivoPath))
                         {
-                            <button @onclick="() => DescargarDocumento(doc)" @onclick:stopPropagation="true">
-                                VER
-                            </button>
+                            <button @onclick="() => PrevisualizarDocumento(doc)" @onclick:stopPropagation="true" class="btn-small">VER</button>
+                            <button @onclick="() => DescargarDocumento(doc)" @onclick:stopPropagation="true" class="btn-small">DESCARGAR</button>
                         }
                         @if (AuthService.IsAdmin)
                         {
-                            <button class="btn-danger" @onclick="() => ConfirmarEliminar(doc)" @onclick:stopPropagation="true">
-                                ELIMINAR
-                            </button>
+                            <button @onclick="() => ConfirmarEliminar(doc)" @onclick:stopPropagation="true" class="btn-small btn-danger">ELIMINAR</button>
                         }
                     </td>
                 </tr>
             }
         </tbody>
     </table>
-    <div class="results-info">
-        <strong>Total: @documentos.Count()</strong> documentos
+    
+    <div class="table-footer">
+        <div>TOTAL REGISTROS: @documentos.Count()</div>
         @if (selectedDocumento != null)
         {
-            <span style="margin-left: 16px; color: #0000AA;">
-                | Seleccionado: @selectedDocumento.Nombre
-            </span>
+            <div>SELECCIONADO: @selectedDocumento.Nombre (ID: @selectedDocumento.Id)</div>
         }
     </div>
 }
 
-@* Modal de Subir Documento *@
 @if (showUploadModal)
 {
-    <div class="modal-overlay">
-        <div class="modal-box" style="width: 600px;">
-            <!-- Header -->
-            <div class="modal-header">
-                <span>📄 SUBIR DOCUMENTO</span>
-                <button @onclick="CloseUploadModal" class="btn-close">✕</button>
-            </div>
-
-            <!-- Body -->
-            <div class="modal-content">
-                <div class="form-group">
-                    <label>TIPO DE DOCUMENTO</label>
-                    <select @bind="uploadTipo">
+    <div class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-title">SUBIR DOCUMENTO</div>
+            
+            <div class="form-container">
+                <div class="form-field">
+                    <label class="field-label">TIPO DE DOCUMENTO:</label>
+                    <select @bind="uploadTipo" class="field-input">
                         @foreach (TipoDocumentoEmpleado tipo in Enum.GetValues<TipoDocumentoEmpleado>())
                         {
                             <option value="@tipo">@GetTipoNombre(tipo)</option>
@@ -176,83 +177,127 @@ else
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label>NOMBRE DEL DOCUMENTO</label>
-                    <input type="text" @bind="uploadNombre" 
-                           placeholder="Nombre descriptivo del documento" />
+                <div class="form-field">
+                    <label class="field-label">NOMBRE DEL DOCUMENTO:</label>
+                    <input type="text" @bind="uploadNombre" class="field-input" />
                 </div>
 
-                <div class="form-group">
-                    <label>DESCRIPCIÓN (OPCIONAL)</label>
-                    <input type="text" @bind="uploadDescripcion" 
-                           placeholder="Descripción adicional" />
+                <div class="form-field">
+                    <label class="field-label">DESCRIPCION (OPCIONAL):</label>
+                    <input type="text" @bind="uploadDescripcion" class="field-input" />
                 </div>
 
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>FECHA DE EMISIÓN</label>
-                        <input type="date" @bind="uploadFechaEmision" />
+                    <div class="form-field">
+                        <label class="field-label">FECHA DE EMISION:</label>
+                        <input type="date" @bind="uploadFechaEmision" class="field-input" />
                     </div>
 
-                    <div class="form-group">
-                        <label>FECHA DE VENCIMIENTO</label>
-                        <input type="date" @bind="uploadFechaVencimiento" />
+                    <div class="form-field">
+                        <label class="field-label">FECHA DE VENCIMIENTO:</label>
+                        <input type="date" @bind="uploadFechaVencimiento" class="field-input" />
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>ARCHIVO (PDF, WORD, IMÁGENES - MÁX. 10MB)</label>
-                    <InputFile OnChange="OnFileSelected" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+                <div class="form-field">
+                    <label class="field-label">ARCHIVO (PDF, WORD, IMAGENES - MAX 10MB):</label>
+                    <InputFile OnChange="OnFileSelected" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" class="field-input" />
                     @if (!string.IsNullOrEmpty(selectedFileName))
                     {
-                        <small style="color: #006600; display: block; margin-top: 4px;">
-                            ✓ Archivo seleccionado: @selectedFileName (@FormatFileSize(selectedFileBytes?.Length ?? 0))
-                        </small>
+                        <div class="field-info">
+                            ARCHIVO: @selectedFileName | TAMAÑO: @FormatFileSize(selectedFileBytes?.Length ?? 0)
+                        </div>
                     }
                 </div>
             </div>
 
-            <!-- Footer -->
             <div class="modal-actions">
-                <button @onclick="CloseUploadModal">CANCELAR [ESC]</button>
-                <button class="btn-success" @onclick="UploadDocument" disabled="@isUploading">
-                    @(isUploading ? "SUBIENDO..." : "SUBIR DOCUMENTO")
+                <button @onclick="CloseUploadModal" class="btn-action">CANCELAR [ESC]</button>
+                <button @onclick="UploadDocument" disabled="@isUploading" class="btn-action">
+                    @(isUploading ? "SUBIENDO..." : "GUARDAR [F5]")
                 </button>
             </div>
         </div>
     </div>
 }
 
-@* Modal de Confirmación de Eliminación *@
 @if (showConfirmModal)
 {
-    <div class="modal-overlay">
-        <div class="modal-box" style="width: 400px;">
-            <div class="modal-header modal-header-danger">
-                <span>⚠️ CONFIRMAR ELIMINACIÓN</span>
+    <div class="modal-backdrop">
+        <div class="modal-container modal-confirm">
+            <div class="modal-title">CONFIRMAR ELIMINACION</div>
+            
+            <div class="confirm-content">
+                <div>Se eliminara el documento:</div>
+                <div class="confirm-detail">@documentoAEliminar?.Nombre</div>
+                <div class="confirm-warning">Esta accion no puede deshacerse.</div>
             </div>
-            <div class="modal-content text-center">
-                <p style="margin-bottom: 16px;">
-                    ¿Está seguro que desea eliminar el documento<br/>
-                    <strong>@documentoAEliminar?.Nombre</strong>?
-                </p>
-                <p class="text-danger" style="margin-bottom: 20px;">
-                    Esta acción no se puede deshacer.
-                </p>
-            </div>
+
             <div class="modal-actions">
-                <button @onclick="CancelarEliminar">CANCELAR</button>
-                <button class="btn-danger" @onclick="EliminarDocumento">SÍ, ELIMINAR</button>
+                <button @onclick="CancelarEliminar" class="btn-action">CANCELAR</button>
+                <button @onclick="EliminarDocumento" class="btn-action btn-danger">ELIMINAR</button>
             </div>
         </div>
     </div>
 }
 
+@if (showPreviewModal && previewDocumento != null)
+{
+    <div class="modal-backdrop" @onclick="CerrarPreview">
+        <div class="modal-preview" @onclick:stopPropagation="true">
+            <div class="modal-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>@previewDocumento.Nombre</span>
+                <button @onclick="CerrarPreview" class="btn-action">CERRAR (ESC)</button>
+            </div>
+            
+            <div class="preview-body">
+                @if (previewBytes != null)
+                {
+                    @if (IsImageMime(previewDocumento.TipoMime))
+                    {
+                        <img src="data:@previewDocumento.TipoMime;base64,@Convert.ToBase64String(previewBytes)" 
+                             alt="Vista previa" style="max-width: 100%; max-height: 70vh; object-fit: contain;" />
+                    }
+                    else if (previewDocumento.TipoMime == "application/pdf")
+                    {
+                        <iframe src="data:application/pdf;base64,@Convert.ToBase64String(previewBytes)" 
+                                style="width: 100%; height: 70vh; border: none;"></iframe>
+                    }
+                    else
+                    {
+                        <div class="no-preview">
+                            <p>TIPO DE ARCHIVO: @previewDocumento.TipoMime</p>
+                            <p>NO SE PUEDE PREVISUALIZAR ESTE TIPO DE ARCHIVO</p>
+                            <button @onclick="() => DescargarDocumento(previewDocumento)" class="btn-action">DESCARGAR ARCHIVO</button>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="no-preview">CARGANDO ARCHIVO...</div>
+                }
+            </div>
+            
+            <div class="modal-actions">
+                <span style="font-size: 11px;">Tamaño: @FormatFileSize(previewDocumento.TamanoArchivo)</span>
+                <div>
+                    <button @onclick="() => DescargarDocumento(previewDocumento)" class="btn-action">DESCARGAR</button>
+                    <button @onclick="CerrarPreview" class="btn-action">CERRAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal de Escáner *@
+<ScannerModal @bind-IsVisible="showScannerModal"
+              OnScanComplete="OnScanComplete"
+              AllowMultiplePages="false" />
+
 @code {
     [Parameter] public int EmpleadoIdParam { get; set; }
 
-    private KeyboardHandler? keyboardHandler;
-    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    private const string PageId = "documentos";
 
     private List<Empleado> empleados = new();
     private List<DocumentoEmpleado> documentos = new();
@@ -278,15 +323,23 @@ else
     private bool showConfirmModal = false;
     private DocumentoEmpleado? documentoAEliminar;
 
+    // Previsualización de documentos
+    private bool showPreviewModal = false;
+    private DocumentoEmpleado? previewDocumento;
+    private byte[]? previewBytes;
+
+    // Scanner Modal
+    private bool showScannerModal = false;
+
     protected override async Task OnInitializedAsync()
     {
-        // Configurar atajos de teclado
-        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        // Registrar atajos de teclado para esta página
+        KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
         {
-            new() { Key = "F3", KeyDisplay = "F3", Description = "Subir Documento", Action = () => { if (selectedEmpleadoId > 0 && AuthService.IsAdmin) ShowUploadModal(); return Task.CompletedTask; } },
-            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = LoadDocumentos },
-            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = () => { if (showUploadModal) CloseUploadModal(); else if (showConfirmModal) CancelarEliminar(); return Task.CompletedTask; } }
-        };
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Subir Documento", Action = () => { if (selectedEmpleadoId > 0 && AuthService.IsAdmin) ShowUploadModal(); return Task.CompletedTask; }, Priority = 10 },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = LoadDocumentos, Priority = 10 },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = () => { if (showPreviewModal) CerrarPreview(); else if (showUploadModal) CloseUploadModal(); else if (showConfirmModal) CancelarEliminar(); return Task.CompletedTask; }, Priority = 10 }
+        });
 
         try
         {
@@ -300,8 +353,13 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error cargando empleados");
-            errorMessage = $"Error cargando empleados: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
         }
+    }
+
+    public void Dispose()
+    {
+        KeyboardShortcutService.ClearPageShortcuts(PageId);
     }
 
     private async Task LoadDocumentos()
@@ -327,7 +385,7 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error cargando documentos del empleado {EmpleadoId}", selectedEmpleadoId);
-            errorMessage = $"Error cargando documentos: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
             documentos.Clear();
         }
         finally
@@ -412,7 +470,7 @@ else
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error seleccionando archivo");
-                errorMessage = $"Error al seleccionar archivo: {ex.Message}";
+                errorMessage = ErrorTranslationService.Translate(ex);
                 selectedFileName = "";
                 selectedFileBytes = null;
             }
@@ -421,15 +479,28 @@ else
 
     private async Task UploadDocument()
     {
+        // Validaciones estrictas
         if (string.IsNullOrWhiteSpace(uploadNombre))
         {
-            errorMessage = "Debe ingresar un nombre para el documento";
+            errorMessage = "ERROR: Campo NOMBRE DEL DOCUMENTO es obligatorio";
             return;
         }
         
         if (selectedFileBytes == null || selectedFileBytes.Length == 0)
         {
-            errorMessage = "Debe seleccionar un archivo";
+            errorMessage = "ERROR: Debe seleccionar un archivo";
+            return;
+        }
+
+        if (selectedFileBytes.Length > 10 * 1024 * 1024)
+        {
+            errorMessage = "ERROR: El archivo excede el tamaño máximo de 10MB";
+            return;
+        }
+
+        if (uploadFechaVencimiento.HasValue && uploadFechaEmision.HasValue && uploadFechaVencimiento < uploadFechaEmision)
+        {
+            errorMessage = "ERROR: FECHA DE VENCIMIENTO no puede ser anterior a FECHA DE EMISION";
             return;
         }
 
@@ -439,7 +510,6 @@ else
         
         try
         {
-            // Guardar archivo en almacenamiento local
             var tipoDocumentoStr = GetTipoNombre(uploadTipo);
             var storageResult = await StorageService.SaveDocumentoEmpleadoAsync(
                 selectedEmpleadoId,
@@ -450,11 +520,10 @@ else
 
             if (!storageResult.IsSuccess)
             {
-                errorMessage = $"Error al guardar archivo: {storageResult.ErrorMessage}";
+                errorMessage = $"ERROR: Fallo al guardar archivo - {storageResult.ErrorMessage}";
                 return;
             }
 
-            // Crear registro en base de datos
             var documento = new DocumentoEmpleado
             {
                 EmpleadoId = selectedEmpleadoId,
@@ -477,7 +546,7 @@ else
             
             Logger.LogInformation("Documento subido: {Nombre} para empleado {EmpleadoId}", uploadNombre, selectedEmpleadoId);
             
-            successMessage = $"Documento '{uploadNombre}' subido exitosamente";
+            successMessage = $"Registro guardado correctamente. Documento ID: {documento.Id}";
             showUploadModal = false;
             await LoadDocumentos();
             await ClearSuccessMessage();
@@ -485,7 +554,7 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error subiendo documento");
-            errorMessage = $"Error al subir documento: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
         }
         finally
         {
@@ -498,7 +567,7 @@ else
     {
         if (string.IsNullOrEmpty(doc.ArchivoPath))
         {
-            errorMessage = "El documento no tiene un archivo asociado";
+            errorMessage = "ERROR: Documento sin archivo asociado";
             return;
         }
 
@@ -507,11 +576,10 @@ else
             var bytes = await StorageService.GetFileAsync(doc.ArchivoPath);
             if (bytes == null || bytes.Length == 0)
             {
-                errorMessage = "No se pudo leer el archivo del documento";
+                errorMessage = "ERROR: No se pudo leer el archivo del documento";
                 return;
             }
 
-            // Descargar archivo usando JavaScript
             var fileName = doc.NombreArchivoOriginal;
             var mimeType = doc.TipoMime;
             
@@ -522,8 +590,55 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error descargando documento {Id}", doc.Id);
-            errorMessage = $"Error al descargar documento: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
         }
+    }
+
+    private async Task PrevisualizarDocumento(DocumentoEmpleado doc)
+    {
+        if (string.IsNullOrEmpty(doc.ArchivoPath))
+        {
+            errorMessage = "ERROR: Documento sin archivo asociado";
+            return;
+        }
+
+        try
+        {
+            previewDocumento = doc;
+            previewBytes = null;
+            showPreviewModal = true;
+            StateHasChanged();
+
+            var bytes = await StorageService.GetFileAsync(doc.ArchivoPath);
+            if (bytes == null || bytes.Length == 0)
+            {
+                errorMessage = "ERROR: No se pudo leer el archivo del documento";
+                CerrarPreview();
+                return;
+            }
+
+            previewBytes = bytes;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error previsualizando documento {Id}", doc.Id);
+            errorMessage = ErrorTranslationService.Translate(ex);
+            CerrarPreview();
+        }
+    }
+
+    private void CerrarPreview()
+    {
+        showPreviewModal = false;
+        previewDocumento = null;
+        previewBytes = null;
+    }
+
+    private bool IsImageMime(string? mime)
+    {
+        if (string.IsNullOrEmpty(mime)) return false;
+        return mime.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
     }
 
     private void ConfirmarEliminar(DocumentoEmpleado doc)
@@ -544,18 +659,16 @@ else
 
         try
         {
-            // Eliminar archivo físico
             if (!string.IsNullOrEmpty(documentoAEliminar.ArchivoPath))
             {
                 await StorageService.DeleteDocumentoEmpleadoAsync(documentoAEliminar.Id);
             }
 
-            // Eliminar registro de base de datos
             await DocumentoRepo.DeleteAsync(documentoAEliminar.Id);
             
             Logger.LogInformation("Documento eliminado: {Nombre} (ID: {Id})", documentoAEliminar.Nombre, documentoAEliminar.Id);
             
-            successMessage = $"Documento '{documentoAEliminar.Nombre}' eliminado correctamente";
+            successMessage = $"Operacion completada. Documento ID {documentoAEliminar.Id} eliminado";
             showConfirmModal = false;
             documentoAEliminar = null;
             
@@ -565,7 +678,7 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error eliminando documento {Id}", documentoAEliminar.Id);
-            errorMessage = $"Error al eliminar documento: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
             showConfirmModal = false;
         }
     }
@@ -588,5 +701,51 @@ else
         await Task.Delay(4000);
         successMessage = null;
         StateHasChanged();
+    }
+
+    // ========================================
+    // SCANNER METHODS
+    // ========================================
+    
+    private void ShowScannerModal()
+    {
+        showScannerModal = true;
+    }
+
+    private async Task OnScanComplete(List<ScannedPageDto> scannedPages)
+    {
+        if (scannedPages == null || scannedPages.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var scannedPage = scannedPages[0];
+            
+            // Pre-llenar el modal de subida con la imagen escaneada
+            selectedFileBytes = scannedPage.ImageBytes;
+            selectedFileMime = scannedPage.MimeType;
+            selectedFileName = $"Escaneado_{DateTime.Now:yyyyMMdd_HHmmss}.jpg";
+            
+            // Configurar valores por defecto
+            uploadTipo = TipoDocumentoEmpleado.Otro;
+            uploadNombre = $"Documento escaneado {DateTime.Now:dd/MM/yyyy HH:mm}";
+            uploadDescripcion = $"Escaneado el {DateTime.Now:dd/MM/yyyy} a las {DateTime.Now:HH:mm}";
+            uploadFechaEmision = DateTime.Today;
+            uploadFechaVencimiento = null;
+            
+            // Cerrar escáner y abrir modal de subida
+            showScannerModal = false;
+            showUploadModal = true;
+            
+            successMessage = $"Documento escaneado correctamente ({FormatFileSize(scannedPage.ImageBytes.Length)}). Complete los datos para guardarlo.";
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error procesando documento escaneado");
+            errorMessage = $"Error al procesar documento escaneado: {ex.Message}";
+        }
     }
 }

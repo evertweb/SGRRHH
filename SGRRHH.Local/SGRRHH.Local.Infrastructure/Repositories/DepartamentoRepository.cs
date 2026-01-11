@@ -45,7 +45,8 @@ WHERE id = @Id";
 
     public async Task DeleteAsync(int id)
     {
-        const string sql = "UPDATE departamentos SET activo = 0, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = @Id";
+        // Hard delete - elimina permanentemente el registro
+        const string sql = "DELETE FROM departamentos WHERE id = @Id";
         using var connection = _context.CreateConnection();
         await connection.ExecuteAsync(sql, new { Id = id });
     }
@@ -133,16 +134,28 @@ WHERE id = @Id";
 
     public async Task<string> GetNextCodigoAsync()
     {
-        const string sql = "SELECT codigo FROM departamentos ORDER BY id DESC LIMIT 1";
+        // Buscar el número más alto usado en códigos DP-X
+        const string sql = @"
+            SELECT codigo FROM departamentos 
+            WHERE codigo LIKE 'DP-%' 
+            ORDER BY CAST(SUBSTR(codigo, 4) AS INTEGER) DESC 
+            LIMIT 1";
         using var connection = _context.CreateConnection();
         var last = await connection.QuerySingleOrDefaultAsync<string>(sql);
+        
         if (string.IsNullOrWhiteSpace(last))
         {
-            return "DEP-001";
+            return "DP-1";
         }
 
-        var numeric = int.TryParse(last.Split('-').LastOrDefault(), out var number) ? number + 1 : 1;
-        return $"DEP-{numeric:000}";
+        // Extraer el número después de "DP-"
+        var numPart = last.Substring(3);
+        if (int.TryParse(numPart, out var number))
+        {
+            return $"DP-{number + 1}";
+        }
+        
+        return "DP-1";
     }
 
     public async Task<bool> HasEmpleadosAsync(int id)

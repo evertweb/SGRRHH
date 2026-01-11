@@ -1,84 +1,209 @@
+﻿@using SGRRHH.Local.Domain.DTOs
 @inject INotificationService NotificationService
+@inject NavigationManager Navigation
 @implements IDisposable
 
-<div class="notification-bell-container">
-    <button class="notification-bell" @onclick="ToggleDropdown" title="Notificaciones">
-        <span class="bell-icon">🔔</span>
+<div class="notification-bell-wrapper">
+    <button class="notification-bell-btn @(isLoading ? "loading" : "")" 
+            @onclick="ToggleDropdown" 
+            @onclick:stopPropagation="true"
+            title="Notificaciones">
+        <span class="bell-icon">
+            @if (NotificationService.UnreadCount > 0)
+            {
+                <svg class="bell-svg bell-animated" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+            }
+            else
+            {
+                <svg class="bell-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+            }
+        </span>
         @if (NotificationService.UnreadCount > 0)
         {
-            <span class="notification-badge">@(NotificationService.UnreadCount > 9 ? "9+" : NotificationService.UnreadCount.ToString())</span>
+            <span class="notification-badge @(NotificationService.Resumen?.Urgentes > 0 ? "urgent" : "")">
+                @FormatCount(NotificationService.UnreadCount)
+            </span>
         }
     </button>
     
     @if (showDropdown)
     {
-        <div class="notification-dropdown">
-            <div class="notification-header">
-                <span>Notificaciones</span>
+        <div class="notification-overlay" @onclick="CloseDropdown"></div>
+        <div class="notification-panel">
+            <!-- Header -->
+            <div class="notification-panel-header">
+                <div class="header-title">
+                    <span class="header-icon">🔔</span>
+                    <span>Notificaciones</span>
+                    @if (NotificationService.UnreadCount > 0)
+                    {
+                        <span class="header-count">@NotificationService.UnreadCount</span>
+                    }
+                </div>
                 @if (NotificationService.UnreadCount > 0)
                 {
-                    <button class="mark-all-read" @onclick="MarkAllAsRead">Marcar todas leídas</button>
+                    <button class="btn-mark-all" @onclick="MarkAllAsRead" title="Marcar todas como leídas">
+                        <span>✓✓</span>
+                    </button>
                 }
             </div>
             
+            <!-- Resumen rápido -->
+            @if (NotificationService.Resumen != null && NotificationService.UnreadCount > 0)
+            {
+                <div class="notification-summary">
+                    @if (NotificationService.Resumen.Urgentes > 0)
+                    {
+                        <span class="summary-tag urgent">🚨 @NotificationService.Resumen.Urgentes urgente(s)</span>
+                    }
+                    @if (NotificationService.Resumen.Permisos > 0)
+                    {
+                        <span class="summary-tag permisos">📋 @NotificationService.Resumen.Permisos permiso(s)</span>
+                    }
+                    @if (NotificationService.Resumen.Vacaciones > 0)
+                    {
+                        <span class="summary-tag vacaciones">🏖️ @NotificationService.Resumen.Vacaciones vacación(es)</span>
+                    }
+                </div>
+            }
+            
+            <!-- Lista de notificaciones -->
             <div class="notification-list">
-                @if (!NotificationService.UnreadNotifications.Any())
+                @if (isLoading)
+                {
+                    <div class="notification-loading">
+                        <span class="loading-spinner"></span>
+                        <span>Cargando...</span>
+                    </div>
+                }
+                else if (!notificaciones.Any())
                 {
                     <div class="notification-empty">
-                        No hay notificaciones nuevas
+                        <span class="empty-icon">✨</span>
+                        <span class="empty-text">¡Todo al día!</span>
+                        <span class="empty-subtext">No hay notificaciones pendientes</span>
                     </div>
                 }
                 else
                 {
-                    @foreach (var notification in NotificationService.UnreadNotifications.Take(10))
+                    @foreach (var notif in notificaciones)
                     {
-                        <div class="notification-item notification-@notification.Type.ToString().ToLower()" 
-                             @onclick="() => HandleNotificationClick(notification)">
-                            <div class="notification-icon">
-                                @GetNotificationIcon(notification.Type)
+                        <div class="notification-item @notif.CssClass @(notif.EsUrgente ? "urgent" : "")" 
+                             @onclick="() => HandleNotificationClick(notif)"
+                             title="@notif.Mensaje">
+                            <div class="notification-icon-wrapper">
+                                <span class="notification-icon">@notif.Icono</span>
+                                @if (notif.EsUrgente)
+                                {
+                                    <span class="urgent-indicator"></span>
+                                }
                             </div>
                             <div class="notification-content">
-                                <strong>@notification.Title</strong>
-                                <span>@notification.Message</span>
-                                <small>@GetTimeAgo(notification.CreatedAt)</small>
+                                <div class="notification-title">@notif.Titulo</div>
+                                <div class="notification-message">@TruncateMessage(notif.Mensaje)</div>
+                                <div class="notification-meta">
+                                    <span class="notification-time">@notif.TiempoRelativo</span>
+                                    <span class="notification-category">@notif.Categoria</span>
+                                </div>
                             </div>
+                            <button class="notification-dismiss" @onclick="() => DismissNotification(notif)" @onclick:stopPropagation="true" title="Marcar como leída">
+                                ✕
+                            </button>
                         </div>
                     }
                 }
             </div>
+            
+            <!-- Footer -->
+            @if (notificaciones.Count > 5)
+            {
+                <div class="notification-panel-footer">
+                    <span class="footer-text">Mostrando últimas @notificaciones.Count notificaciones</span>
+                </div>
+            }
         </div>
     }
 </div>
 
 @code {
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-    
     private bool showDropdown = false;
+    private bool isLoading = false;
+    private List<NotificacionDto> notificaciones = new();
     
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         NotificationService.OnNotification += HandleNewNotification;
+        NotificationService.OnCountChanged += HandleCountChanged;
+        
+        // Inicializar servicio
+        await NotificationService.InitializeAsync();
     }
     
     private void HandleNewNotification(object? sender, NotificationEventArgs args)
     {
+        InvokeAsync(async () =>
+        {
+            if (showDropdown)
+            {
+                await LoadNotificaciones();
+            }
+            StateHasChanged();
+        });
+    }
+    
+    private void HandleCountChanged(object? sender, EventArgs args)
+    {
         InvokeAsync(StateHasChanged);
     }
     
-    private void ToggleDropdown()
+    private async Task ToggleDropdown()
     {
         showDropdown = !showDropdown;
+        
+        if (showDropdown)
+        {
+            await LoadNotificaciones();
+        }
     }
     
-    private void MarkAllAsRead()
+    private void CloseDropdown()
     {
-        NotificationService.MarkAllAsRead();
+        showDropdown = false;
+    }
+    
+    private async Task LoadNotificaciones()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            notificaciones = await NotificationService.GetNotificacionesAsync(15);
+            await NotificationService.GetResumenAsync();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task MarkAllAsRead()
+    {
+        await NotificationService.MarkAllAsReadAsync();
+        notificaciones.Clear();
         StateHasChanged();
     }
     
-    private void HandleNotificationClick(AppNotification notification)
+    private async Task HandleNotificationClick(NotificacionDto notification)
     {
-        NotificationService.MarkAsRead(notification.Id);
+        await NotificationService.MarkAsReadAsync(notification.Id);
         showDropdown = false;
         
         if (!string.IsNullOrEmpty(notification.Link))
@@ -87,179 +212,28 @@
         }
     }
     
-    private string GetNotificationIcon(NotificationType type)
+    private async Task DismissNotification(NotificacionDto notification)
     {
-        return type switch
-        {
-            NotificationType.Success => "✓",
-            NotificationType.Error => "✕",
-            NotificationType.Warning => "⚠",
-            NotificationType.Info => "ℹ",
-            NotificationType.PermisoNuevo => "📋",
-            NotificationType.PermisoAprobado => "✓",
-            NotificationType.PermisoRechazado => "✕",
-            NotificationType.VacacionNueva => "🏖",
-            NotificationType.VacacionAprobada => "✓",
-            NotificationType.Sistema => "⚙",
-            _ => "📌"
-        };
+        await NotificationService.MarkAsReadAsync(notification.Id);
+        notificaciones.Remove(notification);
+        StateHasChanged();
     }
     
-    private string GetTimeAgo(DateTime dateTime)
+    private string FormatCount(int count)
     {
-        var diff = DateTime.Now - dateTime;
-        
-        if (diff.TotalMinutes < 1)
-            return "Ahora mismo";
-        if (diff.TotalMinutes < 60)
-            return $"Hace {(int)diff.TotalMinutes} min";
-        if (diff.TotalHours < 24)
-            return $"Hace {(int)diff.TotalHours} hora(s)";
-        
-        return dateTime.ToString("dd/MM HH:mm");
+        return count > 99 ? "99+" : count.ToString();
+    }
+    
+    private string TruncateMessage(string message)
+    {
+        return message.Length > 60 ? message[..57] + "..." : message;
     }
     
     public void Dispose()
     {
         NotificationService.OnNotification -= HandleNewNotification;
+        NotificationService.OnCountChanged -= HandleCountChanged;
     }
 }
 
-<style>
-    .notification-bell-container {
-        position: relative;
-        display: inline-block;
-    }
 
-    .notification-bell {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 4px 8px;
-        position: relative;
-        font-size: 16px;
-    }
-
-    .notification-bell:hover {
-        background-color: #E0E0E0;
-    }
-
-    .bell-icon {
-        font-size: 18px;
-    }
-
-    .notification-badge {
-        position: absolute;
-        top: 0;
-        right: 0;
-        background-color: #CC0000;
-        color: white;
-        padding: 2px 5px;
-        font-size: 10px;
-        font-weight: bold;
-        min-width: 14px;
-        text-align: center;
-    }
-
-    .notification-dropdown {
-        position: absolute;
-        top: 100%;
-        right: 0;
-        background-color: #FFFFFF;
-        border: 2px solid #000000;
-        min-width: 320px;
-        max-width: 400px;
-        z-index: 1000;
-    }
-
-    .notification-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 12px;
-        background-color: #E0E0E0;
-        border-bottom: 1px solid #808080;
-        font-weight: bold;
-        font-size: 12px;
-    }
-
-    .mark-all-read {
-        background: none;
-        border: none;
-        color: #0066CC;
-        cursor: pointer;
-        font-size: 10px;
-        text-decoration: underline;
-    }
-
-    .notification-list {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-
-    .notification-empty {
-        padding: 24px;
-        text-align: center;
-        color: #808080;
-        font-style: italic;
-        font-size: 12px;
-    }
-
-    .notification-item {
-        display: flex;
-        gap: 12px;
-        padding: 10px 12px;
-        border-bottom: 1px solid #E0E0E0;
-        cursor: pointer;
-        font-size: 11px;
-    }
-
-    .notification-item:hover {
-        background-color: #F5F5F5;
-    }
-
-    .notification-icon {
-        font-size: 18px;
-        flex-shrink: 0;
-    }
-
-    .notification-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .notification-content strong {
-        font-size: 11px;
-    }
-
-    .notification-content span {
-        color: #666;
-    }
-
-    .notification-content small {
-        color: #999;
-        font-size: 10px;
-    }
-
-    .notification-permisonuevo .notification-icon,
-    .notification-vacacionnueva .notification-icon {
-        color: #FF9800;
-    }
-
-    .notification-success .notification-icon,
-    .notification-permisoaprobado .notification-icon,
-    .notification-vacacionaprobada .notification-icon {
-        color: #4CAF50;
-    }
-
-    .notification-error .notification-icon,
-    .notification-permisorechazado .notification-icon {
-        color: #F44336;
-    }
-
-    .notification-warning .notification-icon {
-        color: #FFC107;
-    }
-</style>

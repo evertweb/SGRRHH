@@ -1,46 +1,65 @@
+﻿@implements IAsyncDisposable
+
 @if (IsVisible)
 {
-    <div class="modal-overlay" @onclick="OnBackdropClick">
-        <div class="modal-box" @onclick:stopPropagation="true" style="min-width: @Width;">
+    <div class="hospital-modal-overlay" @onclick="OnBackdropClick">
+        <div class="hospital-modal-box @GetModalSizeClass()" @onclick:stopPropagation="true">
+            
+            @* HEADER - Título del modal *@
             @if (!string.IsNullOrEmpty(Title))
             {
-                <h3>@Title</h3>
+                <div class="hospital-modal-header">
+                    @Title
+                </div>
             }
             
-            <!-- Barra de atajos del formulario -->
-            <div class="keyboard-hint-bar">
-                <span><kbd>F9</kbd> Guardar</span>
-                <span><kbd>ESC</kbd> Cancelar</span>
-                <span><kbd>Enter</kbd> Siguiente campo</span>
-                @if (AdditionalHints != null)
-                {
-                    @AdditionalHints
-                }
-            </div>
-            
-            <div class="modal-content">
+            @* BODY - Contenido del formulario *@
+            <div class="hospital-modal-body">
                 @ChildContent
             </div>
             
-            <div class="modal-actions">
-                @if (ShowCancelButton)
-                {
-                    <button @onclick="OnCancel">CANCELAR (ESC)</button>
-                }
-                @if (ShowSaveButton)
-                {
-                    <button class="btn-primary" @onclick="OnSave" disabled="@IsSaving">
-                        @if (IsSaving)
-                        {
-                            <span>GUARDANDO...</span>
-                        }
-                        else
-                        {
-                            <span>GUARDAR (F9)</span>
-                        }
-                    </button>
-                }
+            @* FOOTER - Atajos de teclado y botones *@
+            <div class="hospital-modal-footer">
+                <div class="hospital-modal-shortcuts">
+                    @if (ShowSaveButton)
+                    {
+                        <span>F5=GUARDAR</span>
+                    }
+                    @if (ShowCancelButton)
+                    {
+                        <span>F8=CANCELAR</span>
+                    }
+                    <span>ESC=SALIR</span>
+                    <span>TAB=NAVEGAR</span>
+                    @if (AdditionalHints != null)
+                    {
+                        @AdditionalHints
+                    }
+                </div>
+                
+                <div class="hospital-modal-actions">
+                    @if (ShowCancelButton)
+                    {
+                        <button type="button" class="hospital-btn hospital-btn-cancel" @onclick="OnCancel" disabled="@IsSaving">
+                            CANCELAR
+                        </button>
+                    }
+                    @if (ShowSaveButton)
+                    {
+                        <button type="button" class="hospital-btn hospital-btn-save" @onclick="OnSave" disabled="@IsSaving">
+                            @if (IsSaving)
+                            {
+                                <span>GUARDANDO...</span>
+                            }
+                            else
+                            {
+                                <span>GUARDAR</span>
+                            }
+                        </button>
+                    }
+                </div>
             </div>
+            
         </div>
     </div>
 }
@@ -49,7 +68,6 @@
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
     [Parameter] public string? Title { get; set; }
-    [Parameter] public string Width { get; set; } = "500px";
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public RenderFragment? AdditionalHints { get; set; }
     [Parameter] public EventCallback OnSaveClicked { get; set; }
@@ -58,21 +76,66 @@
     [Parameter] public bool ShowCancelButton { get; set; } = true;
     [Parameter] public bool IsSaving { get; set; }
     [Parameter] public bool CloseOnBackdropClick { get; set; } = false;
+    [Parameter] public string ModalSize { get; set; } = "medium"; // small, medium, large, xlarge
+    
+    private DotNetObjectReference<FormModal>? dotNetRef;
+    private bool wasVisible = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Inicializar cuando el modal se hace visible
+        if (IsVisible && !wasVisible)
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("hospitalModal.init", dotNetRef);
+        }
+        // Limpiar cuando el modal se cierra
+        else if (!IsVisible && wasVisible)
+        {
+            await DisposeJsAsync();
+        }
+        
+        wasVisible = IsVisible;
+    }
+    
+    [JSInvokable]
+    public async Task OnKeyboardSave()
+    {
+        if (!IsSaving && ShowSaveButton)
+        {
+            await OnSave();
+        }
+    }
+    
+    [JSInvokable]
+    public async Task OnKeyboardCancel()
+    {
+        if (!IsSaving)
+        {
+            await OnCancel();
+        }
+    }
 
     private async Task OnSave()
     {
-        await OnSaveClicked.InvokeAsync();
+        if (!IsSaving)
+        {
+            await OnSaveClicked.InvokeAsync();
+        }
     }
 
     private async Task OnCancel()
     {
-        await OnCancelClicked.InvokeAsync();
-        await Close();
+        if (!IsSaving)
+        {
+            await OnCancelClicked.InvokeAsync();
+            await Close();
+        }
     }
 
     private async Task OnBackdropClick()
     {
-        if (CloseOnBackdropClick)
+        if (CloseOnBackdropClick && !IsSaving)
         {
             await Close();
         }
@@ -82,6 +145,7 @@
     {
         IsVisible = false;
         await IsVisibleChanged.InvokeAsync(false);
+        await DisposeJsAsync();
     }
 
     public async Task Open()
@@ -89,4 +153,37 @@
         IsVisible = true;
         await IsVisibleChanged.InvokeAsync(true);
     }
+    
+    private async Task DisposeJsAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("hospitalModal.dispose");
+        }
+        catch
+        {
+            // Ignorar errores durante dispose (puede que el JS ya no esté disponible)
+        }
+        
+        dotNetRef?.Dispose();
+        dotNetRef = null;
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeJsAsync();
+    }
+    
+    private string GetModalSizeClass()
+    {
+        return ModalSize?.ToLower() switch
+        {
+            "small" => "modal-size-small",
+            "large" => "modal-size-large",
+            "xlarge" => "modal-size-xlarge",
+            _ => "modal-size-medium"
+        };
+    }
+    
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 }

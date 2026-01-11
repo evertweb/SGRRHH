@@ -1,505 +1,511 @@
 @page "/configuracion"
 @using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Interfaces
 @using SGRRHH.Local.Shared.Interfaces
 @using Microsoft.AspNetCore.Components.Forms
 @inject IAuthService AuthService
 @inject IConfiguracionRepository ConfiguracionRepository
+@inject IDatabaseMaintenanceService DatabaseMaintenanceService
 @inject NavigationManager Navigation
 @inject ILogger<Configuracion> Logger
 @inject IJSRuntime JSRuntime
 @inject IWebHostEnvironment Environment
 
-<PageTitle>Configuración - SGRRHH</PageTitle>
+<PageTitle>CONFIGURACION - SGRRHH</PageTitle>
 
-<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
-
-<h1 class="page-title">CONFIGURACIÓN DEL SISTEMA</h1>
-
-@if (!AuthService.IsAdmin)
-{
-    <div class="error-block">
-        <h3>ACCESO DENEGADO</h3>
-        <p>Esta página solo está disponible para administradores.</p>
-        <button @onclick="@(() => Navigation.NavigateTo("/empleados"))">VOLVER</button>
-    </div>
-    return;
-}
-
-@if (errorMessage != null)
-{
-    <div class="error-block">
-        <h3>ERROR</h3>
-        <p>@errorMessage</p>
-        <button @onclick="() => errorMessage = null">ACEPTAR</button>
-    </div>
-}
-
-@if (successMessage != null)
-{
-    <div class="success-block">
-        <p>@successMessage</p>
-    </div>
-}
-
-<!-- Tabs de configuración -->
-<div class="tabs-container">
-    <div class="tabs-header">
-        <button class="tab-button @(tabActivo == "empresa" ? "active" : "")" 
-                @onclick='() => CambiarTab("empresa")'>
-            DATOS DE LA EMPRESA
-        </button>
-        <button class="tab-button @(tabActivo == "sistema" ? "active" : "")" 
-                @onclick='() => CambiarTab("sistema")'>
-            CONFIGURACIÓN DEL SISTEMA
-        </button>
-        <button class="tab-button @(tabActivo == "backup" ? "active" : "")" 
-                @onclick='() => CambiarTab("backup")'>
-            BACKUP/RESTORE
-        </button>
-    </div>
-</div>
-
-<!-- TAB: DATOS DE LA EMPRESA -->
-@if (tabActivo == "empresa")
-{
-    <div class="panel">
-        <div class="panel-header">
-            INFORMACIÓN DE LA EMPRESA
-            <button class="btn-primary" @onclick="GuardarEmpresa" disabled="@isSaving">
-                @if (isSaving)
-                {
-                    <span>GUARDANDO...</span>
-                }
-                else
-                {
-                    <span>GUARDAR CAMBIOS (F9)</span>
-                }
-            </button>
-        </div>
-        <div class="panel-body">
-            <div class="grid-2">
-                <!-- Datos de la empresa -->
-                <div>
-                    <div class="form-group required">
-                        <label>NOMBRE DE LA EMPRESA</label>
-                        <input type="text" @bind="empresaNombre" 
-                               placeholder="Ej: FORESTECH S.A." />
-                    </div>
-
-                    <div class="form-group">
-                        <label>RUC</label>
-                        <input type="text" @bind="empresaRuc" 
-                               placeholder="Ej: 1234567890001" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>DIRECCIÓN</label>
-                        <textarea @bind="empresaDireccion" 
-                                  rows="3"
-                                  placeholder="Dirección completa de la empresa"></textarea>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>TELÉFONO</label>
-                            <input type="tel" @bind="empresaTelefono" 
-                                   placeholder="Ej: 02-1234567" />
-                        </div>
-
-                        <div class="form-group">
-                            <label>EMAIL</label>
-                            <input type="email" @bind="empresaEmail" 
-                                   placeholder="info@empresa.com" />
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>SITIO WEB</label>
-                        <input type="url" @bind="empresaWeb" 
-                               placeholder="https://www.empresa.com" />
-                    </div>
-                </div>
-
-                <!-- Logo de la empresa -->
-                <div>
-                    <div class="form-group">
-                        <label>LOGO DE LA EMPRESA</label>
-                        
-                        @if (!string.IsNullOrEmpty(empresaLogo))
-                        {
-                            <div class="logo-preview">
-                                <img src="@empresaLogo" alt="Logo empresa" />
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="logo-placeholder">
-                                <span>Sin logo</span>
-                            </div>
-                        }
-
-                        <InputFile OnChange="OnLogoSelected" accept="image/*" />
-                        <small>Tamaño recomendado: 300x300px. Formatos: PNG, JPG</small>
-
-                        @if (!string.IsNullOrEmpty(empresaLogo))
-                        {
-                            <button class="btn-danger" @onclick="EliminarLogo">
-                                ELIMINAR LOGO
-                            </button>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-<!-- TAB: CONFIGURACIÓN DEL SISTEMA -->
-@if (tabActivo == "sistema")
-{
-    <div class="panel">
-        <div class="panel-header">
-            CONFIGURACIONES DEL SISTEMA
-            <div class="toolbar-group">
-                <button @onclick="NuevaConfiguracion">NUEVA CONFIGURACIÓN</button>
-                <button @onclick="CargarConfiguraciones">ACTUALIZAR</button>
-            </div>
-        </div>
-        <div class="panel-body">
-            <!-- Filtro por categoría -->
-            <div class="toolbar">
-                <div class="form-group">
-                    <label>FILTRAR POR CATEGORÍA</label>
-                    <select @bind="categoriaFiltro" @bind:after="FiltrarConfiguraciones">
-                        <option value="">Todas las categorías</option>
-                        <option value="General">General</option>
-                        <option value="Permisos">Permisos</option>
-                        <option value="Vacaciones">Vacaciones</option>
-                        <option value="Contratos">Contratos</option>
-                        <option value="Reportes">Reportes</option>
-                        <option value="Email">Email</option>
-                        <option value="Sistema">Sistema</option>
-                    </select>
-                </div>
-            </div>
-
-            @if (isLoading)
-            {
-                <div class="loading">Cargando configuraciones...</div>
-            }
-            else if (!configuracionesFiltradas.Any())
-            {
-                <div class="empty-state">
-                    <div class="icon">⚙️</div>
-                    <div class="message">No hay configuraciones para mostrar</div>
-                </div>
-            }
-            else
-            {
-                <table>
-                    <thead>
-                        <tr>
-                            <th>CATEGORÍA</th>
-                            <th>CLAVE</th>
-                            <th>VALOR</th>
-                            <th>DESCRIPCIÓN</th>
-                            <th>ACCIONES</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var config in configuracionesFiltradas)
-                        {
-                            <tr class="@(selectedConfiguracion?.Id == config.Id ? "selected" : "")"
-                                @onclick="() => selectedConfiguracion = config">
-                                <td>
-                                    <span class="badge badge-@GetCategoriaBadge(config.Categoria)">
-                                        @config.Categoria.ToUpper()
-                                    </span>
-                                </td>
-                                <td><strong>@config.Clave</strong></td>
-                                <td>
-                                    @if (config.Valor.Length > 50)
-                                    {
-                                        <span title="@config.Valor">@(config.Valor.Substring(0, 50))...</span>
-                                    }
-                                    else
-                                    {
-                                        <span>@config.Valor</span>
-                                    }
-                                </td>
-                                <td>@(config.Descripcion ?? "-")</td>
-                                <td class="table-actions">
-                                    <button @onclick="() => EditarConfiguracion(config)" @onclick:stopPropagation="true">
-                                        EDITAR
-                                    </button>
-                                    <button class="btn-danger" @onclick="() => EliminarConfiguracion(config)" @onclick:stopPropagation="true">
-                                        ELIMINAR
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-        </div>
-    </div>
-}
-
-<!-- TAB: BACKUP/RESTORE -->
-@if (tabActivo == "backup")
-{
-    <div class="grid-2">
-        <!-- Panel de Backup -->
-        <div class="panel">
-            <div class="panel-header">CREAR BACKUP</div>
-            <div class="panel-body">
-                <p class="help-text">
-                    Genere una copia de seguridad completa de la base de datos. 
-                    El archivo se descargará automáticamente.
-                </p>
-
-                <div class="form-group">
-                    <label>NOMBRE DEL BACKUP</label>
-                    <input type="text" @bind="backupNombre" 
-                           placeholder="backup_@DateTime.Now.ToString("yyyyMMdd_HHmmss")" />
-                    <small>Si no especifica, se usará: backup_YYYYMMDD_HHMMSS.db</small>
-                </div>
-
-                <div class="form-group">
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="chkLogs" @bind="incluirLogs" />
-                        <label for="chkLogs">Incluir logs de auditoría</label>
-                    </div>
-                </div>
-
-                <button class="btn-success btn-block" @onclick="CrearBackup" disabled="@isBackingUp">
-                    @if (isBackingUp)
-                    {
-                        <span>CREANDO BACKUP...</span>
-                    }
-                    else
-                    {
-                        <span>CREAR BACKUP</span>
-                    }
-                </button>
-
-                @if (ultimoBackup != null)
-                {
-                    <div class="info-box success">
-                        <label>ÚLTIMO BACKUP:</label>
-                        <div>@ultimoBackup.Value.ToString("dd/MM/yyyy HH:mm")</div>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <!-- Panel de Restore -->
-        <div class="panel">
-            <div class="panel-header modal-header-danger">RESTAURAR BACKUP</div>
-            <div class="panel-body">
-                <p class="help-text">
-                    Restaure la base de datos desde un archivo de backup. 
-                    <strong class="text-danger">¡ADVERTENCIA!</strong> Esto reemplazará todos los datos actuales.
-                </p>
-
-                <div class="form-group">
-                    <label>ARCHIVO DE BACKUP</label>
-                    <InputFile OnChange="OnBackupFileSelected" accept=".db,.sqlite" />
-                    <small>Seleccione un archivo .db o .sqlite</small>
-                </div>
-
-                @if (backupFileSelected != null)
-                {
-                    <div class="info-box">
-                        <strong>Archivo seleccionado:</strong>
-                        <div class="text-success">@backupFileSelected.Name</div>
-                        <small>Tamaño: @(backupFileSelected.Size / 1024) KB</small>
-                    </div>
-                }
-
-                <button class="btn-danger btn-block" @onclick="MostrarConfirmacionRestore" 
-                        disabled="@(isRestoring || backupFileSelected == null)">
-                    @if (isRestoring)
-                    {
-                        <span>RESTAURANDO...</span>
-                    }
-                    else
-                    {
-                        <span>RESTAURAR BACKUP</span>
-                    }
-                </button>
-
-                <div class="alert alert-warning">
-                    <strong>⚠️ PRECAUCIÓN</strong>
-                    <p>La restauración reemplazará TODOS los datos actuales. 
-                    Se recomienda crear un backup antes de restaurar.</p>
-                </div>
-            </div>
+<div class="page-container">
+    <div class="page-header">
+        <h1>CONFIGURACION DEL SISTEMA</h1>
+        <div class="shortcut-bar">
+            F5=GUARDAR | ESC=SALIR
         </div>
     </div>
 
-    <!-- Información del sistema -->
-    <div class="panel">
-        <div class="panel-header">INFORMACIÓN DEL SISTEMA</div>
-        <div class="panel-body">
-            <div class="stats-grid">
-                <div class="stats-card">
-                    <h3>VERSIÓN DEL SISTEMA</h3>
-                    <div class="value">@versionSistema</div>
-                </div>
-                <div class="stats-card">
-                    <h3>BASE DE DATOS</h3>
-                    <div class="value">SQLite</div>
-                    @if (tamanoDb > 0)
-                    {
-                        <div class="label">@(tamanoDb / 1024 / 1024) MB</div>
-                    }
-                </div>
-                <div class="stats-card">
-                    <h3>RUTA DE DATOS</h3>
-                    <div class="label" title="@rutaDatos">@rutaDatos</div>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-<!-- Modal de Configuración (Nuevo/Editar) -->
-<FormModal @bind-IsVisible="showModal" 
-           Title="@(isEditing ? "EDITAR CONFIGURACIÓN" : "NUEVA CONFIGURACIÓN")"
-           Width="600px"
-           OnSaveClicked="GuardarConfiguracion"
-           OnCancelClicked="CerrarModal"
-           IsSaving="isSaving">
-    
-    <div class="form-row">
-        <div class="form-group required">
-            <label>CATEGORÍA</label>
-            <select @bind="configuracionEdit.Categoria">
-                <option value="General">General</option>
-                <option value="Permisos">Permisos</option>
-                <option value="Vacaciones">Vacaciones</option>
-                <option value="Contratos">Contratos</option>
-                <option value="Reportes">Reportes</option>
-                <option value="Email">Email</option>
-                <option value="Sistema">Sistema</option>
-            </select>
-        </div>
-
-        <div class="form-group required">
-            <label>CLAVE</label>
-            <input type="text" @bind="configuracionEdit.Clave" 
-                   disabled="@isEditing"
-                   placeholder="ej: dias_vacaciones_anual" />
-            @if (isEditing)
-            {
-                <small>La clave no se puede modificar</small>
-            }
-        </div>
-    </div>
-
-    <div class="form-group required">
-        <label>VALOR</label>
-        <textarea @bind="configuracionEdit.Valor" 
-                  rows="3"
-                  placeholder="Valor de la configuración"></textarea>
-    </div>
-
-    <div class="form-group">
-        <label>DESCRIPCIÓN</label>
-        <textarea @bind="configuracionEdit.Descripcion" 
-                  rows="2"
-                  placeholder="Descripción de para qué sirve esta configuración"></textarea>
-    </div>
-</FormModal>
-
-<!-- Modal de Confirmación de Restore -->
-<FormModal @bind-IsVisible="showRestoreConfirmModal" 
-           Title="⚠️ CONFIRMAR RESTAURACIÓN"
-           Width="500px"
-           OnSaveClicked="RestaurarBackup"
-           OnCancelClicked="() => showRestoreConfirmModal = false"
-           IsSaving="isRestoring">
-    
-    <div class="alert alert-error">
-        <strong>⚠️ ADVERTENCIA CRÍTICA</strong>
-    </div>
-
-    <p>
-        Está a punto de restaurar la base de datos desde el archivo:
-    </p>
-    
-    @if (backupFileSelected != null)
+    @if (!AuthService.IsAdmin)
     {
-        <div class="info-box">
-            <strong>@backupFileSelected.Name</strong>
+        <div class="error-message">
+            ERROR: ACCESO DENEGADO
+            <br>
+            Esta operacion requiere permisos de administrador.
+            <br><br>
+            <button class="btn-secondary" @onclick="@(() => Navigation.NavigateTo("/empleados"))">VOLVER</button>
+        </div>
+        return;
+    }
+
+    @if (errorMessage != null)
+    {
+        <div class="error-message">
+            ERROR: @errorMessage
+            <br><br>
+            <button class="btn-secondary" @onclick="() => errorMessage = null">ACEPTAR</button>
         </div>
     }
 
-    <p class="text-danger">
-        Esta acción reemplazará <strong>TODOS</strong> los datos actuales del sistema, incluyendo:
-    </p>
-
-    <ul>
-        <li>Todos los empleados y sus datos</li>
-        <li>Permisos y vacaciones</li>
-        <li>Usuarios y configuraciones</li>
-        <li>Registros de actividad</li>
-    </ul>
-
-    <p>
-        <strong>¿Está completamente seguro que desea continuar?</strong>
-    </p>
-
-    <div class="form-group">
-        <div class="checkbox-wrapper">
-            <input type="checkbox" id="chkConfirm" @bind="confirmarRestore" />
-            <label for="chkConfirm" class="text-danger">SÍ, entiendo que esta acción no se puede deshacer</label>
+    @if (successMessage != null)
+    {
+        <div class="success-message">
+            @successMessage
         </div>
+    }
+
+    @if (showConfirmacion)
+    {
+        <div class="confirmation-dialog">
+            <div class="confirmation-content">
+                <h3>CONFIRMAR OPERACION</h3>
+                <p>¿Guardar cambios en configuracion del sistema?</p>
+                <div class="button-group">
+                    <button class="btn-primary" @onclick="ConfirmarGuardado">SI - GUARDAR</button>
+                    <button class="btn-secondary" @onclick="CancelarGuardado">NO - CANCELAR</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="section-selector">
+        <button class="section-button @(seccionActiva == "sistema" ? "active" : "")" 
+                @onclick='() => CambiarSeccion("sistema")'>
+            [SISTEMA]
+        </button>
+        <button class="section-button @(seccionActiva == "notificaciones" ? "active" : "")" 
+                @onclick='() => CambiarSeccion("notificaciones")'>
+            [NOTIFICACIONES]
+        </button>
+        <button class="section-button @(seccionActiva == "respaldos" ? "active" : "")" 
+                @onclick='() => CambiarSeccion("respaldos")'>
+            [RESPALDOS]
+        </button>
+        <button class="section-button @(seccionActiva == "seguridad" ? "active" : "")" 
+                @onclick='() => CambiarSeccion("seguridad")'>
+            [SEGURIDAD]
+        </button>
+        <button class="section-button @(seccionActiva == "mantenimiento" ? "active" : "")" 
+                @onclick='() => CambiarSeccion("mantenimiento")'>
+            [MANTENIMIENTO]
+        </button>
     </div>
-</FormModal>
+
+    @* SECCION: SISTEMA *@
+    @if (seccionActiva == "sistema")
+    {
+        <div class="form-section">
+            <h2>PARAMETROS DEL SISTEMA</h2>
+            
+            <div class="form-row">
+                <label>NOMBRE DE LA EMPRESA:</label>
+                <input type="text" @bind="empresaNombre" />
+            </div>
+
+            <div class="form-row">
+                <label>RUC/IDENTIFICACION:</label>
+                <input type="text" @bind="empresaRuc" />
+            </div>
+
+            <div class="form-row">
+                <label>DIRECCION:</label>
+                <input type="text" @bind="empresaDireccion" />
+            </div>
+
+            <div class="form-row">
+                <label>TELEFONO:</label>
+                <input type="text" @bind="empresaTelefono" />
+            </div>
+
+            <div class="form-row">
+                <label>EMAIL:</label>
+                <input type="text" @bind="empresaEmail" />
+            </div>
+
+            <div class="form-row">
+                <label>DIAS HABILES SEMANA:</label>
+                <input type="number" @bind="diasHabilesSemana" min="1" max="7" />
+            </div>
+
+            <div class="form-row">
+                <label>HORAS LABORALES DIA:</label>
+                <input type="number" @bind="horasLaboralesDia" min="1" max="24" step="0.5" />
+            </div>
+
+            <div class="form-row">
+                <label>FORMATO FECHA:</label>
+                <select @bind="formatoFecha">
+                    <option value="dd/MM/yyyy">DD/MM/AAAA</option>
+                    <option value="MM/dd/yyyy">MM/DD/AAAA</option>
+                    <option value="yyyy-MM-dd">AAAA-MM-DD</option>
+                </select>
+            </div>
+        </div>
+    }
+
+    @* SECCION: NOTIFICACIONES *@
+    @if (seccionActiva == "notificaciones")
+    {
+        <div class="form-section">
+            <h2>CONFIGURACION DE NOTIFICACIONES</h2>
+            
+            <div class="form-row">
+                <label>SERVIDOR SMTP:</label>
+                <input type="text" @bind="smtpServidor" />
+            </div>
+
+            <div class="form-row">
+                <label>PUERTO SMTP:</label>
+                <input type="number" @bind="smtpPuerto" min="1" max="65535" />
+            </div>
+
+            <div class="form-row">
+                <label>USUARIO SMTP:</label>
+                <input type="text" @bind="smtpUsuario" />
+            </div>
+
+            <div class="form-row">
+                <label>CONTRASENA SMTP:</label>
+                <input type="password" @bind="smtpContrasena" />
+            </div>
+
+            <div class="form-row">
+                <label>REMITENTE EMAIL:</label>
+                <input type="text" @bind="emailRemitente" />
+            </div>
+
+            <div class="form-row">
+                <label>HABILITAR SSL:</label>
+                <select @bind="smtpSsl">
+                    <option value="true">SI</option>
+                    <option value="false">NO</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>NOTIFICAR VENCIMIENTOS:</label>
+                <select @bind="notificarVencimientos">
+                    <option value="true">SI</option>
+                    <option value="false">NO</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>DIAS ANTICIPACION:</label>
+                <input type="number" @bind="diasAnticipacion" min="1" max="90" />
+            </div>
+        </div>
+    }
+
+    @* SECCION: RESPALDOS *@
+    @if (seccionActiva == "respaldos")
+    {
+        <div class="form-section">
+            <h2>CONFIGURACION DE RESPALDOS</h2>
+            
+            <div class="form-row">
+                <label>RUTA RESPALDOS:</label>
+                <input type="text" @bind="rutaRespaldos" disabled />
+            </div>
+
+            <div class="form-row">
+                <label>RESPALDO AUTOMATICO:</label>
+                <select @bind="respaldoAutomatico">
+                    <option value="true">SI</option>
+                    <option value="false">NO</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>FRECUENCIA (DIAS):</label>
+                <input type="number" @bind="frecuenciaRespaldo" min="1" max="365" />
+            </div>
+
+            <div class="form-row">
+                <label>RETENER RESPALDOS (DIAS):</label>
+                <input type="number" @bind="retencionRespaldos" min="7" max="3650" />
+            </div>
+
+            <div class="form-row">
+                <label>ULTIMO RESPALDO:</label>
+                <input type="text" value="@(ultimoBackup?.ToString("dd/MM/yyyy HH:mm") ?? "NUNCA")" disabled />
+            </div>
+
+            <div class="form-row">
+                <label>TAMANO BASE DATOS:</label>
+                <input type="text" value="@((tamanoDb / 1024 / 1024).ToString("N2")) MB" disabled />
+            </div>
+
+            <div class="button-section">
+                <button class="btn-primary" @onclick="CrearRespaldoManual" disabled="@isBackingUp">
+                    @if (isBackingUp)
+                    {
+                        <span>PROCESANDO...</span>
+                    }
+                    else
+                    {
+                        <span>CREAR RESPALDO AHORA</span>
+                    }
+                </button>
+            </div>
+        </div>
+    }
+
+    @* SECCION: SEGURIDAD *@
+    @if (seccionActiva == "seguridad")
+    {
+        <div class="form-section">
+            <h2>PARAMETROS DE SEGURIDAD</h2>
+            
+            <div class="form-row">
+                <label>TIEMPO SESION (MINUTOS):</label>
+                <input type="number" @bind="tiempoSesion" min="5" max="480" />
+            </div>
+
+            <div class="form-row">
+                <label>INTENTOS LOGIN MAXIMOS:</label>
+                <input type="number" @bind="intentosLoginMax" min="3" max="10" />
+            </div>
+
+            <div class="form-row">
+                <label>BLOQUEO USUARIO (MINUTOS):</label>
+                <input type="number" @bind="tiempoBloqueo" min="5" max="60" />
+            </div>
+
+            <div class="form-row">
+                <label>LONGITUD MINIMA PASSWORD:</label>
+                <input type="number" @bind="longitudPassword" min="6" max="20" />
+            </div>
+
+            <div class="form-row">
+                <label>REQUERIR MAYUSCULAS:</label>
+                <select @bind="requerirMayusculas">
+                    <option value="true">SI</option>
+                    <option value="false">NO</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>REQUERIR NUMEROS:</label>
+                <select @bind="requerirNumeros">
+                    <option value="true">SI</option>
+                    <option value="false">NO</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>CADUCIDAD PASSWORD (DIAS):</label>
+                <input type="number" @bind="caducidadPassword" min="0" max="365" />
+            </div>
+
+            <div class="form-row">
+                <label>AUDITAR OPERACIONES:</label>
+                <select @bind="auditarOperaciones">
+                    <option value="true">SI</option>
+                    <option value="false">NO</option>
+                </select>
+            </div>
+        </div>
+    }
+
+    @* SECCION: MANTENIMIENTO *@
+    @if (seccionActiva == "mantenimiento")
+    {
+        <div class="form-section">
+            <h2>MANTENIMIENTO DE BASE DE DATOS</h2>
+            
+            @if (dbStats != null)
+            {
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">@((dbStats.TamanoBytes / 1024.0 / 1024.0).ToString("N2")) MB</div>
+                        <div class="stat-label">TAMAÑO DB</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">@dbStats.TotalUsuarios</div>
+                        <div class="stat-label">USUARIOS</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">@dbStats.TotalEmpleados</div>
+                        <div class="stat-label">EMPLEADOS</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">@dbStats.TotalRegistros</div>
+                        <div class="stat-label">TOTAL REGISTROS</div>
+                    </div>
+                </div>
+            }
+
+            <div class="maintenance-section">
+                <h3>LIMPIAR BASE DE DATOS</h3>
+                <p class="description">
+                    Elimina todos los datos (empleados, permisos, vacaciones, etc.) 
+                    <strong>EXCEPTO LOS USUARIOS</strong>. Los usuarios actuales se preservan.
+                </p>
+                <button class="btn-warning" @onclick="MostrarConfirmacionLimpieza" disabled="@isProcessing">
+                    @if (isProcessing && operacionActual == "limpieza")
+                    {
+                        <span>PROCESANDO...</span>
+                    }
+                    else
+                    {
+                        <span>LIMPIAR DATOS (PRESERVAR USUARIOS)</span>
+                    }
+                </button>
+            </div>
+
+            <div class="maintenance-section danger-zone">
+                <h3>⚠️ ZONA PELIGROSA - RESET PARA DISTRIBUCIÓN</h3>
+                <p class="description warning-text">
+                    <strong>ATENCION:</strong> Esta opción elimina <strong>TODO</strong> incluyendo usuarios
+                    y crea un usuario administrador por defecto:
+                </p>
+                <div class="credentials-box">
+                    <div><strong>Usuario:</strong> admin</div>
+                    <div><strong>Contraseña:</strong> Admin123!</div>
+                </div>
+                <p class="description warning-text">
+                    Use esta opción solo cuando prepare la aplicación para distribuir a un nuevo cliente.
+                </p>
+                <button class="btn-danger" @onclick="MostrarConfirmacionReset" disabled="@isProcessing">
+                    @if (isProcessing && operacionActual == "reset")
+                    {
+                        <span>PROCESANDO...</span>
+                    }
+                    else
+                    {
+                        <span>RESET COMPLETO PARA DISTRIBUCIÓN</span>
+                    }
+                </button>
+            </div>
+
+            @if (resultadoMantenimiento != null)
+            {
+                <div class="@(resultadoMantenimiento.Exitoso ? "success-box" : "error-box")">
+                    @if (resultadoMantenimiento.Exitoso)
+                    {
+                        <h4>✓ OPERACIÓN COMPLETADA</h4>
+                        <p>Registros eliminados: @resultadoMantenimiento.TotalRegistrosEliminados</p>
+                        <p>Tablas afectadas: @resultadoMantenimiento.TablasLimpiadas</p>
+                        <p>Usuarios activos: @resultadoMantenimiento.UsuariosPreservados</p>
+                    }
+                    else
+                    {
+                        <h4>✗ ERROR EN LA OPERACIÓN</h4>
+                        <p>@resultadoMantenimiento.MensajeError</p>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @* DIALOGO CONFIRMACION LIMPIEZA *@
+    @if (showConfirmacionLimpieza)
+    {
+        <div class="confirmation-dialog">
+            <div class="confirmation-content">
+                <h3>⚠️ CONFIRMAR LIMPIEZA</h3>
+                <p>Esta operación eliminará <strong>TODOS</strong> los datos excepto usuarios.</p>
+                <p>Esta acción <strong>NO SE PUEDE DESHACER</strong>.</p>
+                <p>¿Está seguro de continuar?</p>
+                <div class="button-group">
+                    <button class="btn-warning" @onclick="EjecutarLimpieza">SI - LIMPIAR DATOS</button>
+                    <button class="btn-secondary" @onclick="() => showConfirmacionLimpieza = false">NO - CANCELAR</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* DIALOGO CONFIRMACION RESET *@
+    @if (showConfirmacionReset)
+    {
+        <div class="confirmation-dialog">
+            <div class="confirmation-content danger">
+                <h3>⚠️ CONFIRMAR RESET COMPLETO</h3>
+                <p><strong>¡ATENCIÓN! Esta operación:</strong></p>
+                <ul>
+                    <li>Eliminará TODOS los datos incluyendo USUARIOS</li>
+                    <li>Creará un usuario admin por defecto (admin / Admin123!)</li>
+                    <li>NO SE PUEDE DESHACER</li>
+                </ul>
+                <p>Para confirmar, escriba <strong>RESET</strong>:</p>
+                <input type="text" @bind="confirmacionResetTexto" placeholder="Escriba RESET" />
+                <div class="button-group">
+                    <button class="btn-danger" @onclick="EjecutarReset" 
+                            disabled="@(confirmacionResetTexto != "RESET")">
+                        CONFIRMAR RESET
+                    </button>
+                    <button class="btn-secondary" @onclick="CancelarReset">CANCELAR</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="button-bar">
+        <button class="btn-primary" @onclick="SolicitarGuardado" disabled="@isSaving">
+            @if (isSaving)
+            {
+                <span>GUARDANDO...</span>
+            }
+            else
+            {
+                <span>GUARDAR CONFIGURACION (F5)</span>
+            }
+        </button>
+        <button class="btn-secondary" @onclick="Salir">SALIR (ESC)</button>
+    </div>
+
+</div>
 
 @code {
-    private KeyboardHandler? keyboardHandler;
-    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    private string seccionActiva = "sistema";
+    private bool showConfirmacion;
     
-    private string tabActivo = "empresa";
-    
-    // Datos de la empresa
+    // SISTEMA
     private string empresaNombre = string.Empty;
     private string empresaRuc = string.Empty;
     private string empresaDireccion = string.Empty;
     private string empresaTelefono = string.Empty;
     private string empresaEmail = string.Empty;
-    private string empresaWeb = string.Empty;
-    private string empresaLogo = string.Empty;
-    private IBrowserFile? logoFile;
+    private int diasHabilesSemana = 5;
+    private decimal horasLaboralesDia = 8;
+    private string formatoFecha = "dd/MM/yyyy";
     
-    // Configuraciones del sistema
-    private List<ConfiguracionSistema> configuraciones = new();
-    private List<ConfiguracionSistema> configuracionesFiltradas = new();
-    private ConfiguracionSistema? selectedConfiguracion;
-    private ConfiguracionSistema configuracionEdit = new();
-    private string categoriaFiltro = string.Empty;
+    // NOTIFICACIONES
+    private string smtpServidor = string.Empty;
+    private int smtpPuerto = 587;
+    private string smtpUsuario = string.Empty;
+    private string smtpContrasena = string.Empty;
+    private string emailRemitente = string.Empty;
+    private string smtpSsl = "true";
+    private string notificarVencimientos = "true";
+    private int diasAnticipacion = 15;
     
-    // Backup/Restore
-    private string backupNombre = string.Empty;
-    private bool incluirLogs = true;
+    // MANTENIMIENTO
+    private DatabaseStats? dbStats;
+    private DatabaseCleanupResult? resultadoMantenimiento;
+    private bool showConfirmacionLimpieza;
+    private bool showConfirmacionReset;
+    private string confirmacionResetTexto = string.Empty;
+    private bool isProcessing;
+    private string operacionActual = string.Empty;
+    
+    // RESPALDOS
+    private string rutaRespaldos = string.Empty;
+    private string respaldoAutomatico = "false";
+    private int frecuenciaRespaldo = 7;
+    private int retencionRespaldos = 90;
     private DateTime? ultimoBackup;
-    private IBrowserFile? backupFileSelected;
-    private bool confirmarRestore;
-    private string versionSistema = "1.0.0";
     private long tamanoDb;
-    private string rutaDatos = string.Empty;
+    
+    // SEGURIDAD
+    private int tiempoSesion = 60;
+    private int intentosLoginMax = 3;
+    private int tiempoBloqueo = 15;
+    private int longitudPassword = 8;
+    private string requerirMayusculas = "true";
+    private string requerirNumeros = "true";
+    private int caducidadPassword = 90;
+    private string auditarOperaciones = "true";
     
     // Estados
-    private bool isLoading;
     private bool isSaving;
     private bool isBackingUp;
-    private bool isRestoring;
-    private bool showModal;
-    private bool showRestoreConfirmModal;
-    private bool isEditing;
     private string? errorMessage;
     private string? successMessage;
     
@@ -513,352 +519,230 @@
         
         if (!AuthService.IsAdmin)
         {
-            Logger.LogWarning("Usuario {User} intentó acceder a /configuracion sin permisos de admin", 
+            Logger.LogWarning("Usuario {User} intento acceder a configuracion sin permisos", 
                 AuthService.CurrentUser?.Username);
             return;
         }
         
-        // Configurar atajos de teclado
-        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
-        {
-            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarConfiguraciones },
-            new() { Key = "F9", KeyDisplay = "F9", Description = "Guardar", Action = GuardarSegunTab },
-            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModalAsync }
-        };
-        
-        await CargarDatosEmpresa();
-        await CargarConfiguraciones();
+        await CargarConfiguracion();
         await CargarInfoSistema();
     }
     
-    private void CambiarTab(string tab)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        tabActivo = tab;
-        errorMessage = null;
-        successMessage = null;
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("addKeyboardHandler", DotNetObjectReference.Create(this));
+        }
+    }
+
+    [JSInvokable]
+    public async Task HandleKeyPress(string key)
+    {
+        if (key == "F5")
+        {
+            SolicitarGuardado();
+        }
+        else if (key == "Escape")
+        {
+            Salir();
+        }
+        
+        StateHasChanged();
     }
     
-    #region DATOS DE LA EMPRESA
+    private void CambiarSeccion(string seccion)
+    {
+        seccionActiva = seccion;
+        errorMessage = null;
+        successMessage = null;
+        resultadoMantenimiento = null;
+        
+        // Cargar estadísticas si entramos a mantenimiento
+        if (seccion == "mantenimiento")
+        {
+            _ = CargarEstadisticasDb();
+        }
+    }
     
-    private async Task CargarDatosEmpresa()
+    private async Task CargarEstadisticasDb()
     {
         try
         {
-            empresaNombre = await GetConfigValueAsync("empresa_nombre", "MI EMPRESA S.A.");
+            dbStats = await DatabaseMaintenanceService.ObtenerEstadisticasAsync();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar estadísticas de base de datos");
+        }
+    }
+    
+    private void MostrarConfirmacionLimpieza()
+    {
+        resultadoMantenimiento = null;
+        showConfirmacionLimpieza = true;
+    }
+    
+    private void MostrarConfirmacionReset()
+    {
+        resultadoMantenimiento = null;
+        confirmacionResetTexto = string.Empty;
+        showConfirmacionReset = true;
+    }
+    
+    private void CancelarReset()
+    {
+        showConfirmacionReset = false;
+        confirmacionResetTexto = string.Empty;
+    }
+    
+    private async Task EjecutarLimpieza()
+    {
+        showConfirmacionLimpieza = false;
+        isProcessing = true;
+        operacionActual = "limpieza";
+        StateHasChanged();
+        
+        try
+        {
+            Logger.LogWarning("Usuario {User} iniciando limpieza de base de datos", 
+                AuthService.CurrentUser?.Username);
+            
+            resultadoMantenimiento = await DatabaseMaintenanceService.LimpiarBaseDatosAsync();
+            
+            if (resultadoMantenimiento.Exitoso)
+            {
+                Logger.LogWarning("Limpieza completada por {User}: {Registros} registros eliminados", 
+                    AuthService.CurrentUser?.Username, resultadoMantenimiento.TotalRegistrosEliminados);
+            }
+            
+            // Actualizar estadísticas
+            await CargarEstadisticasDb();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error durante limpieza de base de datos");
+            resultadoMantenimiento = new DatabaseCleanupResult
+            {
+                Exitoso = false,
+                MensajeError = ex.Message
+            };
+        }
+        finally
+        {
+            isProcessing = false;
+            operacionActual = string.Empty;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task EjecutarReset()
+    {
+        if (confirmacionResetTexto != "RESET") return;
+        
+        showConfirmacionReset = false;
+        isProcessing = true;
+        operacionActual = "reset";
+        StateHasChanged();
+        
+        try
+        {
+            Logger.LogCritical("Usuario {User} iniciando RESET COMPLETO de base de datos", 
+                AuthService.CurrentUser?.Username);
+            
+            resultadoMantenimiento = await DatabaseMaintenanceService.ResetearParaDistribucionAsync();
+            
+            if (resultadoMantenimiento.Exitoso)
+            {
+                Logger.LogCritical("RESET COMPLETO por {User}: DB lista para distribución", 
+                    AuthService.CurrentUser?.Username);
+                
+                // Después del reset, cerrar sesión porque el usuario actual ya no existe
+                successMessage = "Base de datos reseteada. Será redirigido al login. Usuario: admin / Password: Admin123!";
+                StateHasChanged();
+                
+                await Task.Delay(3000);
+                await AuthService.LogoutAsync();
+                Navigation.NavigateTo("/login", forceLoad: true);
+                return;
+            }
+            
+            // Actualizar estadísticas
+            await CargarEstadisticasDb();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error durante reset de base de datos");
+            resultadoMantenimiento = new DatabaseCleanupResult
+            {
+                Exitoso = false,
+                MensajeError = ex.Message
+            };
+        }
+        finally
+        {
+            isProcessing = false;
+            operacionActual = string.Empty;
+            confirmacionResetTexto = string.Empty;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CargarConfiguracion()
+    {
+        try
+        {
+            // SISTEMA
+            empresaNombre = await GetConfigValueAsync("empresa_nombre", "MI EMPRESA");
             empresaRuc = await GetConfigValueAsync("empresa_ruc", "");
             empresaDireccion = await GetConfigValueAsync("empresa_direccion", "");
             empresaTelefono = await GetConfigValueAsync("empresa_telefono", "");
             empresaEmail = await GetConfigValueAsync("empresa_email", "");
-            empresaWeb = await GetConfigValueAsync("empresa_web", "");
-            empresaLogo = await GetConfigValueAsync("empresa_logo", "");
+            diasHabilesSemana = int.Parse(await GetConfigValueAsync("dias_habiles_semana", "5"));
+            horasLaboralesDia = decimal.Parse(await GetConfigValueAsync("horas_laborales_dia", "8"));
+            formatoFecha = await GetConfigValueAsync("formato_fecha", "dd/MM/yyyy");
             
-            Logger.LogInformation("Datos de empresa cargados");
+            // NOTIFICACIONES
+            smtpServidor = await GetConfigValueAsync("smtp_servidor", "");
+            smtpPuerto = int.Parse(await GetConfigValueAsync("smtp_puerto", "587"));
+            smtpUsuario = await GetConfigValueAsync("smtp_usuario", "");
+            smtpContrasena = await GetConfigValueAsync("smtp_contrasena", "");
+            emailRemitente = await GetConfigValueAsync("email_remitente", "");
+            smtpSsl = await GetConfigValueAsync("smtp_ssl", "true");
+            notificarVencimientos = await GetConfigValueAsync("notificar_vencimientos", "true");
+            diasAnticipacion = int.Parse(await GetConfigValueAsync("dias_anticipacion", "15"));
+            
+            // RESPALDOS
+            rutaRespaldos = Path.Combine(Environment.ContentRootPath, "Backups");
+            respaldoAutomatico = await GetConfigValueAsync("respaldo_automatico", "false");
+            frecuenciaRespaldo = int.Parse(await GetConfigValueAsync("frecuencia_respaldo", "7"));
+            retencionRespaldos = int.Parse(await GetConfigValueAsync("retencion_respaldos", "90"));
+            
+            // SEGURIDAD
+            tiempoSesion = int.Parse(await GetConfigValueAsync("tiempo_sesion", "60"));
+            intentosLoginMax = int.Parse(await GetConfigValueAsync("intentos_login_max", "3"));
+            tiempoBloqueo = int.Parse(await GetConfigValueAsync("tiempo_bloqueo", "15"));
+            longitudPassword = int.Parse(await GetConfigValueAsync("longitud_password", "8"));
+            requerirMayusculas = await GetConfigValueAsync("requerir_mayusculas", "true");
+            requerirNumeros = await GetConfigValueAsync("requerir_numeros", "true");
+            caducidadPassword = int.Parse(await GetConfigValueAsync("caducidad_password", "90"));
+            auditarOperaciones = await GetConfigValueAsync("auditar_operaciones", "true");
+            
+            Logger.LogInformation("Configuracion cargada correctamente");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error al cargar datos de empresa");
-            errorMessage = "Error al cargar datos de la empresa: " + ex.Message;
+            Logger.LogError(ex, "Error al cargar configuracion");
+            errorMessage = "Error al cargar configuracion: " + ex.Message;
         }
     }
-    
-    private async Task GuardarEmpresa()
-    {
-        try
-        {
-            isSaving = true;
-            errorMessage = null;
-            StateHasChanged();
-            
-            if (string.IsNullOrWhiteSpace(empresaNombre))
-            {
-                errorMessage = "El nombre de la empresa es requerido";
-                return;
-            }
-            
-            // Guardar logo si se seleccionó uno nuevo
-            if (logoFile != null)
-            {
-                empresaLogo = await GuardarLogoAsync(logoFile);
-            }
-            
-            // Guardar todas las configuraciones
-            await SetConfigValueAsync("empresa_nombre", empresaNombre, "Nombre de la empresa", "Empresa");
-            await SetConfigValueAsync("empresa_ruc", empresaRuc, "RUC de la empresa", "Empresa");
-            await SetConfigValueAsync("empresa_direccion", empresaDireccion, "Dirección de la empresa", "Empresa");
-            await SetConfigValueAsync("empresa_telefono", empresaTelefono, "Teléfono de la empresa", "Empresa");
-            await SetConfigValueAsync("empresa_email", empresaEmail, "Email de la empresa", "Empresa");
-            await SetConfigValueAsync("empresa_web", empresaWeb, "Sitio web de la empresa", "Empresa");
-            await SetConfigValueAsync("empresa_logo", empresaLogo, "Logo de la empresa", "Empresa");
-            
-            Logger.LogInformation("Datos de empresa guardados por {User}", AuthService.CurrentUser?.Username);
-            successMessage = "Datos de la empresa guardados correctamente";
-            logoFile = null;
-            
-            // Limpiar mensaje después de 3 segundos
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(3000);
-                successMessage = null;
-                await InvokeAsync(StateHasChanged);
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al guardar datos de empresa");
-            errorMessage = "Error al guardar: " + ex.Message;
-        }
-        finally
-        {
-            isSaving = false;
-            StateHasChanged();
-        }
-    }
-    
-    private async Task OnLogoSelected(InputFileChangeEventArgs e)
-    {
-        logoFile = e.File;
-        
-        // Mostrar preview
-        var buffer = new byte[logoFile.Size];
-        await logoFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).ReadAsync(buffer);
-        empresaLogo = $"data:{logoFile.ContentType};base64,{Convert.ToBase64String(buffer)}";
-        
-        StateHasChanged();
-    }
-    
-    private async Task<string> GuardarLogoAsync(IBrowserFile file)
-    {
-        try
-        {
-            var uploadsPath = Path.Combine(Environment.WebRootPath, "uploads", "empresa");
-            Directory.CreateDirectory(uploadsPath);
-            
-            var fileName = $"logo_{DateTime.Now:yyyyMMddHHmmss}{Path.GetExtension(file.Name)}";
-            var filePath = Path.Combine(uploadsPath, fileName);
-            
-            await using var fileStream = new FileStream(filePath, FileMode.Create);
-            await file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(fileStream);
-            
-            return $"/uploads/empresa/{fileName}";
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al guardar logo");
-            throw;
-        }
-    }
-    
-    private async Task EliminarLogo()
-    {
-        try
-        {
-            // Eliminar archivo físico si existe
-            if (!string.IsNullOrEmpty(empresaLogo) && empresaLogo.StartsWith("/uploads/"))
-            {
-                var filePath = Path.Combine(Environment.WebRootPath, empresaLogo.TrimStart('/'));
-                if (File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
-            }
-            
-            empresaLogo = string.Empty;
-            logoFile = null;
-            await SetConfigValueAsync("empresa_logo", "", "Logo de la empresa", "Empresa");
-            
-            successMessage = "Logo eliminado correctamente";
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al eliminar logo");
-            errorMessage = "Error al eliminar logo: " + ex.Message;
-        }
-    }
-    
-    #endregion
-    
-    #region CONFIGURACIONES DEL SISTEMA
-    
-    private async Task CargarConfiguraciones()
-    {
-        try
-        {
-            isLoading = true;
-            StateHasChanged();
-            
-            configuraciones = (await ConfiguracionRepository.GetAllAsync()).ToList();
-            await FiltrarConfiguraciones();
-            
-            Logger.LogInformation("Configuraciones cargadas: {Count}", configuraciones.Count);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al cargar configuraciones");
-            errorMessage = "Error al cargar configuraciones: " + ex.Message;
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
-    
-    private async Task FiltrarConfiguraciones()
-    {
-        var filtered = configuraciones.AsEnumerable();
-        
-        if (!string.IsNullOrEmpty(categoriaFiltro))
-        {
-            filtered = filtered.Where(c => c.Categoria == categoriaFiltro);
-        }
-        
-        configuracionesFiltradas = filtered
-            .OrderBy(c => c.Categoria)
-            .ThenBy(c => c.Clave)
-            .ToList();
-        
-        StateHasChanged();
-        await Task.CompletedTask;
-    }
-    
-    private void NuevaConfiguracion()
-    {
-        configuracionEdit = new ConfiguracionSistema
-        {
-            Categoria = "General",
-            Activo = true
-        };
-        
-        isEditing = false;
-        showModal = true;
-    }
-    
-    private void EditarConfiguracion(ConfiguracionSistema config)
-    {
-        configuracionEdit = new ConfiguracionSistema
-        {
-            Id = config.Id,
-            Clave = config.Clave,
-            Valor = config.Valor,
-            Descripcion = config.Descripcion,
-            Categoria = config.Categoria,
-            Activo = config.Activo
-        };
-        
-        isEditing = true;
-        showModal = true;
-    }
-    
-    private async Task GuardarConfiguracion()
-    {
-        try
-        {
-            isSaving = true;
-            errorMessage = null;
-            StateHasChanged();
-            
-            // Validaciones
-            if (string.IsNullOrWhiteSpace(configuracionEdit.Clave))
-            {
-                errorMessage = "La clave es requerida";
-                return;
-            }
-            
-            if (string.IsNullOrWhiteSpace(configuracionEdit.Valor))
-            {
-                errorMessage = "El valor es requerido";
-                return;
-            }
-            
-            // Verificar clave única
-            if (!isEditing && await ConfiguracionRepository.ExistsClaveAsync(configuracionEdit.Clave))
-            {
-                errorMessage = $"Ya existe una configuración con la clave '{configuracionEdit.Clave}'";
-                return;
-            }
-            
-            // Guardar
-            if (isEditing)
-            {
-                await ConfiguracionRepository.UpdateAsync(configuracionEdit);
-                Logger.LogInformation("Configuración actualizada: {Clave}", configuracionEdit.Clave);
-                successMessage = "Configuración actualizada correctamente";
-            }
-            else
-            {
-                await ConfiguracionRepository.AddAsync(configuracionEdit);
-                Logger.LogInformation("Configuración creada: {Clave}", configuracionEdit.Clave);
-                successMessage = "Configuración creada correctamente";
-            }
-            
-            await CargarConfiguraciones();
-            CerrarModal();
-            
-            // Limpiar mensaje después de 3 segundos
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(3000);
-                successMessage = null;
-                await InvokeAsync(StateHasChanged);
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al guardar configuración");
-            errorMessage = "Error al guardar: " + ex.Message;
-        }
-        finally
-        {
-            isSaving = false;
-            StateHasChanged();
-        }
-    }
-    
-    private async Task EliminarConfiguracion(ConfiguracionSistema config)
-    {
-        try
-        {
-            var confirmado = await JSRuntime.InvokeAsync<bool>("confirm", 
-                $"¿Está seguro que desea eliminar la configuración '{config.Clave}'?");
-            
-            if (!confirmado) return;
-            
-            await ConfiguracionRepository.DeleteAsync(config.Id);
-            
-            Logger.LogInformation("Configuración eliminada: {Clave} por {User}", 
-                config.Clave, AuthService.CurrentUser?.Username);
-            
-            successMessage = "Configuración eliminada correctamente";
-            await CargarConfiguraciones();
-            
-            // Limpiar mensaje después de 3 segundos
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(3000);
-                successMessage = null;
-                await InvokeAsync(StateHasChanged);
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al eliminar configuración {Id}", config.Id);
-            errorMessage = "Error al eliminar: " + ex.Message;
-        }
-    }
-    
-    #endregion
-    
-    #region BACKUP/RESTORE
     
     private async Task CargarInfoSistema()
     {
         try
         {
-            versionSistema = await GetConfigValueAsync("version_sistema", "1.0.0");
-            rutaDatos = Path.Combine(Environment.ContentRootPath, "Data");
-            
-            var dbPath = Path.Combine(rutaDatos, "sgrrhh.db");
+            var dbPath = Path.Combine(Environment.ContentRootPath, "Data", "sgrrhh.db");
             if (File.Exists(dbPath))
             {
                 var fileInfo = new FileInfo(dbPath);
@@ -873,11 +757,110 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error al cargar info del sistema");
+            Logger.LogError(ex, "Error al cargar informacion del sistema");
         }
     }
     
-    private async Task CrearBackup()
+    private void SolicitarGuardado()
+    {
+        if (isSaving) return;
+        showConfirmacion = true;
+    }
+    
+    private async Task ConfirmarGuardado()
+    {
+        showConfirmacion = false;
+        await GuardarConfiguracion();
+    }
+    
+    private void CancelarGuardado()
+    {
+        showConfirmacion = false;
+    }
+    
+    private async Task GuardarConfiguracion()
+    {
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+            successMessage = null;
+            StateHasChanged();
+            
+            // Validaciones
+            if (string.IsNullOrWhiteSpace(empresaNombre))
+            {
+                errorMessage = "El nombre de la empresa es obligatorio";
+                return;
+            }
+            
+            if (diasHabilesSemana < 1 || diasHabilesSemana > 7)
+            {
+                errorMessage = "Dias habiles debe estar entre 1 y 7";
+                return;
+            }
+            
+            if (horasLaboralesDia < 1 || horasLaboralesDia > 24)
+            {
+                errorMessage = "Horas laborales debe estar entre 1 y 24";
+                return;
+            }
+            
+            // SISTEMA
+            await SetConfigValueAsync("empresa_nombre", empresaNombre, "Sistema");
+            await SetConfigValueAsync("empresa_ruc", empresaRuc, "Sistema");
+            await SetConfigValueAsync("empresa_direccion", empresaDireccion, "Sistema");
+            await SetConfigValueAsync("empresa_telefono", empresaTelefono, "Sistema");
+            await SetConfigValueAsync("empresa_email", empresaEmail, "Sistema");
+            await SetConfigValueAsync("dias_habiles_semana", diasHabilesSemana.ToString(), "Sistema");
+            await SetConfigValueAsync("horas_laborales_dia", horasLaboralesDia.ToString(), "Sistema");
+            await SetConfigValueAsync("formato_fecha", formatoFecha, "Sistema");
+            
+            // NOTIFICACIONES
+            await SetConfigValueAsync("smtp_servidor", smtpServidor, "Notificaciones");
+            await SetConfigValueAsync("smtp_puerto", smtpPuerto.ToString(), "Notificaciones");
+            await SetConfigValueAsync("smtp_usuario", smtpUsuario, "Notificaciones");
+            await SetConfigValueAsync("smtp_contrasena", smtpContrasena, "Notificaciones");
+            await SetConfigValueAsync("email_remitente", emailRemitente, "Notificaciones");
+            await SetConfigValueAsync("smtp_ssl", smtpSsl, "Notificaciones");
+            await SetConfigValueAsync("notificar_vencimientos", notificarVencimientos, "Notificaciones");
+            await SetConfigValueAsync("dias_anticipacion", diasAnticipacion.ToString(), "Notificaciones");
+            
+            // RESPALDOS
+            await SetConfigValueAsync("respaldo_automatico", respaldoAutomatico, "Respaldos");
+            await SetConfigValueAsync("frecuencia_respaldo", frecuenciaRespaldo.ToString(), "Respaldos");
+            await SetConfigValueAsync("retencion_respaldos", retencionRespaldos.ToString(), "Respaldos");
+            
+            // SEGURIDAD
+            await SetConfigValueAsync("tiempo_sesion", tiempoSesion.ToString(), "Seguridad");
+            await SetConfigValueAsync("intentos_login_max", intentosLoginMax.ToString(), "Seguridad");
+            await SetConfigValueAsync("tiempo_bloqueo", tiempoBloqueo.ToString(), "Seguridad");
+            await SetConfigValueAsync("longitud_password", longitudPassword.ToString(), "Seguridad");
+            await SetConfigValueAsync("requerir_mayusculas", requerirMayusculas, "Seguridad");
+            await SetConfigValueAsync("requerir_numeros", requerirNumeros, "Seguridad");
+            await SetConfigValueAsync("caducidad_password", caducidadPassword.ToString(), "Seguridad");
+            await SetConfigValueAsync("auditar_operaciones", auditarOperaciones, "Seguridad");
+            
+            Logger.LogInformation("Configuracion guardada por usuario {User}", AuthService.CurrentUser?.Username);
+            successMessage = "Configuracion guardada correctamente";
+            
+            await Task.Delay(2000);
+            successMessage = null;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar configuracion");
+            errorMessage = "Error al guardar configuracion: " + ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CrearRespaldoManual()
     {
         try
         {
@@ -885,52 +868,35 @@
             errorMessage = null;
             StateHasChanged();
             
-            var nombreArchivo = string.IsNullOrWhiteSpace(backupNombre)
-                ? $"backup_{DateTime.Now:yyyyMMdd_HHmmss}.db"
-                : backupNombre;
-            
-            if (!nombreArchivo.EndsWith(".db"))
-            {
-                nombreArchivo += ".db";
-            }
-            
+            var nombreArchivo = $"respaldo_{DateTime.Now:yyyyMMdd_HHmmss}.db";
             var backupsPath = Path.Combine(Environment.ContentRootPath, "Backups");
             Directory.CreateDirectory(backupsPath);
             
             var dbPath = Path.Combine(Environment.ContentRootPath, "Data", "sgrrhh.db");
             var backupPath = Path.Combine(backupsPath, nombreArchivo);
             
-            // Copiar archivo de base de datos
             File.Copy(dbPath, backupPath, true);
             
-            Logger.LogInformation("Backup creado: {File} por {User}", 
+            Logger.LogInformation("Respaldo manual creado: {File} por {User}", 
                 nombreArchivo, AuthService.CurrentUser?.Username);
             
-            // Actualizar fecha de último backup
             ultimoBackup = DateTime.Now;
-            await SetConfigValueAsync("ultimo_backup", ultimoBackup.Value.ToString("O"), 
-                "Fecha del último backup realizado", "Sistema");
+            await SetConfigValueAsync("ultimo_backup", ultimoBackup.Value.ToString("O"), "Sistema");
             
-            successMessage = $"Backup creado correctamente: {nombreArchivo}";
-            backupNombre = string.Empty;
+            successMessage = $"Respaldo creado: {nombreArchivo}";
             
-            // Descargar el archivo
             var bytes = await File.ReadAllBytesAsync(backupPath);
             var base64 = Convert.ToBase64String(bytes);
             await JSRuntime.InvokeVoidAsync("downloadFile", nombreArchivo, base64);
             
-            // Limpiar mensaje después de 3 segundos
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(3000);
-                successMessage = null;
-                await InvokeAsync(StateHasChanged);
-            });
+            await Task.Delay(3000);
+            successMessage = null;
+            StateHasChanged();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error al crear backup");
-            errorMessage = "Error al crear backup: " + ex.Message;
+            Logger.LogError(ex, "Error al crear respaldo");
+            errorMessage = "Error al crear respaldo: " + ex.Message;
         }
         finally
         {
@@ -939,76 +905,10 @@
         }
     }
     
-    private void OnBackupFileSelected(InputFileChangeEventArgs e)
+    private void Salir()
     {
-        backupFileSelected = e.File;
-        confirmarRestore = false;
+        Navigation.NavigateTo("/empleados");
     }
-    
-    private void MostrarConfirmacionRestore()
-    {
-        if (backupFileSelected == null)
-        {
-            errorMessage = "Debe seleccionar un archivo de backup";
-            return;
-        }
-        
-        confirmarRestore = false;
-        showRestoreConfirmModal = true;
-    }
-    
-    private async Task RestaurarBackup()
-    {
-        if (backupFileSelected == null || !confirmarRestore)
-        {
-            errorMessage = "Debe confirmar la restauración";
-            return;
-        }
-        
-        try
-        {
-            isRestoring = true;
-            errorMessage = null;
-            StateHasChanged();
-            
-            var dbPath = Path.Combine(Environment.ContentRootPath, "Data", "sgrrhh.db");
-            
-            // Crear backup de seguridad antes de restaurar
-            var backupSeguridad = Path.Combine(Environment.ContentRootPath, "Backups", 
-                $"pre_restore_{DateTime.Now:yyyyMMdd_HHmmss}.db");
-            Directory.CreateDirectory(Path.GetDirectoryName(backupSeguridad)!);
-            File.Copy(dbPath, backupSeguridad, true);
-            
-            // Restaurar desde el archivo seleccionado
-            await using var fileStream = new FileStream(dbPath, FileMode.Create);
-            await backupFileSelected.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024).CopyToAsync(fileStream);
-            
-            Logger.LogWarning("Base de datos restaurada desde {File} por {User}", 
-                backupFileSelected.Name, AuthService.CurrentUser?.Username);
-            
-            successMessage = "Base de datos restaurada correctamente. La aplicación se recargará...";
-            StateHasChanged();
-            
-            // Recargar la aplicación después de 2 segundos
-            await Task.Delay(2000);
-            await JSRuntime.InvokeVoidAsync("location.reload");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al restaurar backup");
-            errorMessage = "Error al restaurar backup: " + ex.Message;
-        }
-        finally
-        {
-            isRestoring = false;
-            showRestoreConfirmModal = false;
-            StateHasChanged();
-        }
-    }
-    
-    #endregion
-    
-    #region HELPERS
     
     private async Task<string> GetConfigValueAsync(string clave, string defaultValue = "")
     {
@@ -1023,7 +923,7 @@
         }
     }
     
-    private async Task SetConfigValueAsync(string clave, string valor, string descripcion, string categoria)
+    private async Task SetConfigValueAsync(string clave, string valor, string categoria)
     {
         try
         {
@@ -1032,7 +932,6 @@
             if (config != null)
             {
                 config.Valor = valor;
-                config.Descripcion = descripcion;
                 config.Categoria = categoria;
                 await ConfiguracionRepository.UpdateAsync(config);
             }
@@ -1042,7 +941,6 @@
                 {
                     Clave = clave,
                     Valor = valor,
-                    Descripcion = descripcion,
                     Categoria = categoria,
                     Activo = true
                 };
@@ -1051,47 +949,8 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error al guardar config {Clave}", clave);
+            Logger.LogError(ex, "Error al guardar configuracion {Clave}", clave);
             throw;
         }
     }
-    
-    private string GetCategoriaBadge(string categoria) => categoria.ToLower() switch
-    {
-        "general" => "default",
-        "permisos" => "warning",
-        "vacaciones" => "info",
-        "contratos" => "success",
-        "reportes" => "secondary",
-        "email" => "primary",
-        "sistema" => "admin",
-        _ => "default"
-    };
-    
-    private async Task GuardarSegunTab()
-    {
-        if (tabActivo == "empresa")
-        {
-            await GuardarEmpresa();
-        }
-        else if (showModal)
-        {
-            await GuardarConfiguracion();
-        }
-    }
-    
-    private void CerrarModal()
-    {
-        showModal = false;
-        showRestoreConfirmModal = false;
-        StateHasChanged();
-    }
-    
-    private Task CerrarModalAsync()
-    {
-        CerrarModal();
-        return Task.CompletedTask;
-    }
-    
-    #endregion
 }

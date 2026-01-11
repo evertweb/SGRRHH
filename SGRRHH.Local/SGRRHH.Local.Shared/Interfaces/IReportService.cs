@@ -34,6 +34,9 @@ public interface IReportService
     
     Task<Result<byte[]>> GenerarReporteAsistenciaAsync(ReporteAsistenciaOptions options);
     
+    // Reportes de Incapacidades
+    Task<Result<byte[]>> GenerarReporteCobroIncapacidadesExcel(int año, int mes);
+    
     // Utilidades
     byte[] GenerarPdfDesdeHtml(string html);
 }

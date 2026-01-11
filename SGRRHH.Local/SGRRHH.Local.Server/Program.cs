@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using QuestPDF.Infrastructure;
+using SGRRHH.Local.Domain.Interfaces;
 using SGRRHH.Local.Infrastructure.Data;
 using SGRRHH.Local.Infrastructure.Repositories;
 using SGRRHH.Local.Infrastructure.Services;
@@ -33,13 +34,32 @@ builder.Services.AddScoped<IDepartamentoRepository, DepartamentoRepository>();
 builder.Services.AddScoped<ICargoRepository, CargoRepository>();
 builder.Services.AddScoped<ITipoPermisoRepository, TipoPermisoRepository>();
 builder.Services.AddScoped<IProyectoRepository, ProyectoRepository>();
+builder.Services.AddScoped<IEspecieForestalRepository, EspecieForestalRepository>();
 builder.Services.AddScoped<IActividadRepository, ActividadRepository>();
+builder.Services.AddScoped<ICategoriaActividadRepository, CategoriaActividadRepository>();
 builder.Services.AddScoped<IProyectoEmpleadoRepository, ProyectoEmpleadoRepository>();
 builder.Services.AddScoped<IRegistroDiarioRepository, RegistroDiarioRepository>();
 builder.Services.AddScoped<IDetalleActividadRepository, DetalleActividadRepository>();
 builder.Services.AddScoped<IDocumentoEmpleadoRepository, DocumentoEmpleadoRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
+
+// Repositorios Fase 2 - Prestaciones, Nómina, Configuración Legal
+builder.Services.AddScoped<IPrestacionRepository, PrestacionRepository>();
+builder.Services.AddScoped<IFestivoColombiaRepository, FestivoColombiaRepository>();
+builder.Services.AddScoped<IConfiguracionLegalRepository, ConfiguracionLegalRepository>();
+builder.Services.AddScoped<INominaRepository, NominaRepository>();
+
+// Repositorios Sistema de Seguimiento de Permisos
+builder.Services.AddScoped<ISeguimientoPermisoRepository, SeguimientoPermisoRepository>();
+builder.Services.AddScoped<ICompensacionHorasRepository, CompensacionHorasRepository>();
+
+// Repositorios Sistema de Incapacidades
+builder.Services.AddScoped<ISeguimientoIncapacidadRepository, SeguimientoIncapacidadRepository>();
+builder.Services.AddScoped<IIncapacidadRepository, IncapacidadRepository>();
+
+// Repositorio de Notificaciones
+builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
 
 // Authentication service
 builder.Services.AddScoped<IAuthService, LocalAuthService>();
@@ -53,10 +73,31 @@ builder.Services.AddScoped<IExportService, ExportService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 
+// Servicios Fase 2 - Liquidación, Nómina, Validación (CST Colombia)
+builder.Services.AddScoped<ILiquidacionService, LiquidacionService>();
+builder.Services.AddScoped<INominaService, NominaService>();
+builder.Services.AddScoped<IValidacionService, ValidacionService>();
+
+// Servicio de Alertas de Permisos
+builder.Services.AddScoped<IAlertaPermisoService, AlertaPermisoService>();
+
+// Servicio de Reportes de Productividad Silvicultural
+builder.Services.AddScoped<IReporteProductividadService, ReporteProductividadService>();
+
+// Servicio de Escaneo de Documentos (NAPS2.Sdk)
+builder.Services.AddScoped<IScannerService, ScannerService>();
+
+// Servicio de Impresión de Documentos
+builder.Services.AddScoped<IPrintService, PrintService>();
+
 // Cache y Session services
 builder.Services.AddScoped<ICatalogCacheService, CatalogCacheService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IKeyboardShortcutService, KeyboardShortcutService>();
+
+// Database Maintenance service
+builder.Services.AddScoped<IDatabaseMaintenanceService, DatabaseMaintenanceService>();
 
 // Background services
 builder.Services.AddHostedService<BackupSchedulerService>();

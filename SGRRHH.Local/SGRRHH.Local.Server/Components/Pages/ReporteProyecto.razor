@@ -1,0 +1,493 @@
+@page "/reporte-proyecto/{ProyectoId:int}"
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Shared.Interfaces
+@inject IReporteProductividadService ReporteService
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<ReporteProyecto> Logger
+
+<PageTitle>Reporte de Proyecto - SGRRHH</PageTitle>
+
+<h1 class="page-title">REPORTE DE PRODUCTIVIDAD DEL PROYECTO</h1>
+
+<!-- Navegación -->
+<div class="breadcrumb">
+    <a href="/dashboard-productividad">Dashboard</a> &raquo; 
+    <span>Reporte de Proyecto @(reporte?.Codigo ?? "")</span>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="error-block">
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">CERRAR</button>
+    </div>
+}
+
+<!-- Filtros de período -->
+<div class="panel">
+    <div class="panel-header">PERÍODO DE ANÁLISIS</div>
+    <div class="panel-body">
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <label>DESDE:</label>
+                <input type="date" @bind="fechaInicio" />
+            </div>
+            <div class="toolbar-group">
+                <label>HASTA:</label>
+                <input type="date" @bind="fechaFin" />
+            </div>
+            <div class="toolbar-group">
+                <button class="btn-primary" @onclick="CargarReporte" disabled="@isLoading">
+                    @(isLoading ? "CARGANDO..." : "APLICAR")
+                </button>
+                <button @onclick="VolverAlDashboard">VOLVER</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="empty-state">
+        <div class="icon">⏳</div>
+        <div class="message">CARGANDO REPORTE DEL PROYECTO...</div>
+    </div>
+}
+else if (reporte != null && reporte.ProyectoId > 0)
+{
+    <!-- Información del proyecto -->
+    <div class="panel">
+        <div class="panel-header">INFORMACIÓN DEL PROYECTO</div>
+        <div class="panel-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>CÓDIGO:</label>
+                    <span><strong>@reporte.Codigo</strong></span>
+                </div>
+                <div class="info-item">
+                    <label>NOMBRE:</label>
+                    <span>@reporte.Nombre</span>
+                </div>
+                <div class="info-item">
+                    <label>TIPO:</label>
+                    <span>@(reporte.TipoProyecto ?? "-")</span>
+                </div>
+                <div class="info-item">
+                    <label>ESPECIE:</label>
+                    <span>@(reporte.Especie ?? "-")</span>
+                </div>
+                <div class="info-item">
+                    <label>PREDIO/LOTE:</label>
+                    <span>@(reporte.Predio ?? "-") / @(reporte.Lote ?? "-")</span>
+                </div>
+                <div class="info-item">
+                    <label>ÁREA:</label>
+                    <span><strong>@(reporte.AreaHectareas?.ToString("N2") ?? "-") ha</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs del proyecto -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">⏱️</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@reporte.TotalHoras.ToString("N0")</span>
+                <span class="kpi-label">HORAS TOTALES</span>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@reporte.TotalJornales</span>
+                <span class="kpi-label">JORNALES</span>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">📆</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@reporte.TotalDiasTrabajados</span>
+                <span class="kpi-label">DÍAS TRABAJADOS</span>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">🌲</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@(reporte.HorasPorHectarea?.ToString("N1") ?? "-")</span>
+                <span class="kpi-label">HORAS / HA</span>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-icon">💼</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@(reporte.JornalesPorHectarea?.ToString("N1") ?? "-")</span>
+                <span class="kpi-label">JORNALES / HA</span>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">👥</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@reporte.PorEmpleado.Count</span>
+                <span class="kpi-label">EMPLEADOS</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs de detalle -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="tab-buttons">
+                <button class="@(tabActivo == "categoria" ? "active" : "")" @onclick='() => tabActivo = "categoria"'>
+                    POR CATEGORÍA
+                </button>
+                <button class="@(tabActivo == "actividad" ? "active" : "")" @onclick='() => tabActivo = "actividad"'>
+                    POR ACTIVIDAD
+                </button>
+                <button class="@(tabActivo == "empleado" ? "active" : "")" @onclick='() => tabActivo = "empleado"'>
+                    POR EMPLEADO
+                </button>
+                <button class="@(tabActivo == "diario" ? "active" : "")" @onclick='() => tabActivo = "diario"'>
+                    POR DÍA
+                </button>
+            </div>
+        </div>
+        <div class="panel-body">
+            @if (tabActivo == "categoria")
+            {
+                <h3>DISTRIBUCIÓN POR CATEGORÍA DE ACTIVIDAD</h3>
+                @if (reporte.PorCategoria.Any())
+                {
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>CATEGORÍA</th>
+                                <th class="text-right">HORAS</th>
+                                <th class="text-right">%</th>
+                                <th class="text-center">ACTIVIDADES</th>
+                                <th>GRÁFICO</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cat in reporte.PorCategoria)
+                            {
+                                <tr>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(cat.ColorHex))
+                                        {
+                                            <span class="color-dot" style="background-color: @cat.ColorHex;"></span>
+                                        }
+                                        @cat.Categoria
+                                    </td>
+                                    <td class="text-right">@cat.Horas.ToString("N1")</td>
+                                    <td class="text-right">@cat.PorcentajeHoras.ToString("N1")%</td>
+                                    <td class="text-center">@cat.CantidadActividades</td>
+                                    <td>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: @cat.PorcentajeHoras%; background-color: @(cat.ColorHex ?? "#666");"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td><strong>TOTAL</strong></td>
+                                <td class="text-right"><strong>@reporte.PorCategoria.Sum(c => c.Horas).ToString("N1")</strong></td>
+                                <td class="text-right"><strong>100%</strong></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="message">No hay datos de categorías</div>
+                    </div>
+                }
+            }
+
+            @if (tabActivo == "actividad")
+            {
+                <h3>DETALLE POR ACTIVIDAD</h3>
+                @if (reporte.PorActividad.Any())
+                {
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>CÓDIGO</th>
+                                <th>ACTIVIDAD</th>
+                                <th>CATEGORÍA</th>
+                                <th class="text-right">HORAS</th>
+                                <th class="text-right">CANTIDAD</th>
+                                <th>UNIDAD</th>
+                                <th class="text-right">REND. LOGRADO</th>
+                                <th class="text-right">REND. ESPERADO</th>
+                                <th class="text-center">% REND.</th>
+                                <th class="text-center">CLASIF.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var act in reporte.PorActividad)
+                            {
+                                <tr>
+                                    <td><strong>@act.Codigo</strong></td>
+                                    <td>@act.Nombre</td>
+                                    <td>@(act.Categoria ?? "-")</td>
+                                    <td class="text-right">@act.Horas.ToString("N1")</td>
+                                    <td class="text-right">@(act.Cantidad?.ToString("N1") ?? "-")</td>
+                                    <td>@(act.UnidadMedida ?? "-")</td>
+                                    <td class="text-right">@(act.RendimientoLogrado?.ToString("N2") ?? "-")</td>
+                                    <td class="text-right">@(act.RendimientoEsperado?.ToString("N2") ?? "-")</td>
+                                    <td class="text-center">
+                                        @if (act.PorcentajeRendimiento.HasValue)
+                                        {
+                                            <span class="badge @GetBadgeClaseRendimiento(act.PorcentajeRendimiento.Value)">
+                                                @act.PorcentajeRendimiento.Value.ToString("N0")%
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span>-</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (!string.IsNullOrEmpty(act.ClasificacionRendimiento))
+                                        {
+                                            <span class="badge @GetBadgeClaseTexto(act.ClasificacionRendimiento)">
+                                                @act.ClasificacionRendimiento
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span>-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="message">No hay datos de actividades</div>
+                    </div>
+                }
+            }
+
+            @if (tabActivo == "empleado")
+            {
+                <h3>PRODUCTIVIDAD POR EMPLEADO</h3>
+                @if (reporte.PorEmpleado.Any())
+                {
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>CÓDIGO</th>
+                                <th>EMPLEADO</th>
+                                <th>CARGO</th>
+                                <th class="text-right">HORAS</th>
+                                <th class="text-right">JORNALES</th>
+                                <th class="text-right">DÍAS TRAB.</th>
+                                <th class="text-right">PROM. HORAS/DÍA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var emp in reporte.PorEmpleado)
+                            {
+                                <tr>
+                                    <td><strong>@emp.Codigo</strong></td>
+                                    <td>@emp.Nombre</td>
+                                    <td>@(emp.Cargo ?? "-")</td>
+                                    <td class="text-right">@emp.Horas.ToString("N1")</td>
+                                    <td class="text-right">@emp.Jornales</td>
+                                    <td class="text-right">@emp.DiasTrabajados</td>
+                                    <td class="text-right">@emp.PromedioHorasDia.ToString("N1")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3"><strong>TOTALES</strong></td>
+                                <td class="text-right"><strong>@reporte.PorEmpleado.Sum(e => e.Horas).ToString("N1")</strong></td>
+                                <td class="text-right"><strong>@reporte.PorEmpleado.Sum(e => e.Jornales)</strong></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="message">No hay datos de empleados</div>
+                    </div>
+                }
+            }
+
+            @if (tabActivo == "diario")
+            {
+                <h3>PRODUCTIVIDAD DIARIA</h3>
+                @if (reporte.PorDia.Any())
+                {
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>FECHA</th>
+                                <th>DÍA</th>
+                                <th class="text-right">HORAS</th>
+                                <th class="text-right">EMPLEADOS</th>
+                                <th class="text-right">CANTIDAD</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var dia in reporte.PorDia)
+                            {
+                                <tr>
+                                    <td>@dia.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>@dia.Fecha.ToString("dddd", new System.Globalization.CultureInfo("es-ES")).ToUpper()</td>
+                                    <td class="text-right">@dia.Horas.ToString("N1")</td>
+                                    <td class="text-right">@dia.Empleados</td>
+                                    <td class="text-right">@(dia.Cantidad?.ToString("N1") ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2"><strong>TOTALES</strong></td>
+                                <td class="text-right"><strong>@reporte.PorDia.Sum(d => d.Horas).ToString("N1")</strong></td>
+                                <td></td>
+                                <td class="text-right"><strong>@(reporte.PorDia.Sum(d => d.Cantidad ?? 0).ToString("N1"))</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="message">No hay datos diarios</div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="empty-state">
+        <div class="icon">📊</div>
+        <div class="message">No se encontró el proyecto o no tiene datos</div>
+        <button @onclick="VolverAlDashboard">VOLVER AL DASHBOARD</button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int ProyectoId { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "inicio")]
+    public string? InicioQuery { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "fin")]
+    public string? FinQuery { get; set; }
+
+    private ReporteProyectoDetalle? reporte;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private DateTime fechaInicio;
+    private DateTime fechaFin;
+    private string tabActivo = "categoria";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        // Parsear fechas de query string o usar valores por defecto
+        if (!string.IsNullOrEmpty(InicioQuery) && DateTime.TryParse(InicioQuery, out var inicio))
+        {
+            fechaInicio = inicio;
+        }
+        else
+        {
+            fechaInicio = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        }
+
+        if (!string.IsNullOrEmpty(FinQuery) && DateTime.TryParse(FinQuery, out var fin))
+        {
+            fechaFin = fin;
+        }
+        else
+        {
+            fechaFin = DateTime.Today;
+        }
+
+        await CargarReporte();
+    }
+
+    private async Task CargarReporte()
+    {
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            reporte = await ReporteService.GetReporteProyectoAsync(ProyectoId, fechaInicio, fechaFin);
+            Logger.LogInformation("Reporte cargado para proyecto {ProyectoId}: {Horas} horas", 
+                ProyectoId, reporte.TotalHoras);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar reporte del proyecto {ProyectoId}", ProyectoId);
+            errorMessage = $"Error al cargar reporte: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void VolverAlDashboard()
+    {
+        Navigation.NavigateTo("/dashboard-productividad");
+    }
+
+    private string GetBadgeClaseRendimiento(decimal porcentaje)
+    {
+        return porcentaje switch
+        {
+            >= 120 => "badge-excelente",
+            >= 100 => "badge-optimo",
+            >= 80 => "badge-aceptable",
+            >= 60 => "badge-bajo",
+            _ => "badge-critico"
+        };
+    }
+
+    private string GetBadgeClaseTexto(string clasificacion)
+    {
+        return clasificacion switch
+        {
+            "EXCELENTE" => "badge-excelente",
+            "ÓPTIMO" => "badge-optimo",
+            "ACEPTABLE" => "badge-aceptable",
+            "BAJO" => "badge-bajo",
+            "CRÍTICO" => "badge-critico",
+            _ => ""
+        };
+    }
+}

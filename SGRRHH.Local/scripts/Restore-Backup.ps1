@@ -71,7 +71,7 @@ if ($RestoreApp) {
     if ($startNow -eq "S" -or $startNow -eq "s") {
         Start-Process -FilePath (Join-Path $productionPath "SGRRHH.Local.Server.exe") -WorkingDirectory $productionPath
         Start-Sleep -Seconds 2
-        Start-Process "https://localhost:5001"
+        Start-Process "https://localhost:5003"
     }
     
     exit 0
@@ -161,7 +161,7 @@ if ($restoredHash -eq $backupHash) {
     if ($startNow -eq "S" -or $startNow -eq "s") {
         Start-Process -FilePath (Join-Path $productionPath "SGRRHH.Local.Server.exe") -WorkingDirectory $productionPath
         Start-Sleep -Seconds 2
-        Start-Process "https://localhost:5001"
+        Start-Process "https://localhost:5003"
     }
 } else {
     Write-Host ""

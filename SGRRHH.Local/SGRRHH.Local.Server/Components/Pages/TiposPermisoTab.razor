@@ -1,22 +1,25 @@
-@using SGRRHH.Local.Domain.Entities
+﻿@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
 @using SGRRHH.Local.Shared.Interfaces
 @inject ITipoPermisoRepository TipoPermisoRepository
+@inject ICatalogCacheService CatalogCache
 @inject ILogger<TiposPermisoTab> Logger
+@inject IJSRuntime JSRuntime
 
-<!-- Header con controles -->
-<div class="toolbar">
-    <div class="toolbar-group">
-        <button @onclick="Nuevo">NUEVO (F3)</button>
-        <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+<!-- Toolbar -->
+<div class="hospital-toolbar">
+    <div class="hospital-toolbar-group">
+        <button @onclick="Nuevo">NUEVO</button>
+        <button @onclick="CargarDatos">ACTUALIZAR</button>
         @if (selectedItem != null)
         {
-            <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
+            <button @onclick="EditarSeleccionado">EDITAR</button>
+            <button @onclick="() => ConfirmarEliminar(selectedItem)">ELIMINAR</button>
         }
     </div>
-    <div class="toolbar-group">
-        <input type="text" placeholder="Buscar..." 
-               @bind="searchTerm" @bind:event="oninput" />
-        <button @onclick="Buscar">BUSCAR</button>
+    <div class="hospital-toolbar-group">
+        <input type="text" placeholder="BUSCAR..." 
+               @bind="searchTerm" @bind:event="oninput" @bind:after="Buscar" />
         @if (!string.IsNullOrEmpty(searchTerm))
         {
             <button @onclick="LimpiarBusqueda">LIMPIAR</button>
@@ -25,26 +28,27 @@
 </div>
 
 <!-- Tabla -->
-<table>
+<table class="hospital-table">
     <thead>
         <tr>
-            <th style="width: 60px;">COLOR</th>
+            <th class="text-center">COLOR</th>
             <th>NOMBRE</th>
             <th>DESCRIPCIÓN</th>
-            <th style="width: 100px;">DÍAS DEFECTO</th>
-            <th style="width: 100px;">DÍAS MÁXIMOS</th>
-            <th style="width: 120px;">APROBACIÓN</th>
-            <th style="width: 150px;">ACCIONES</th>
+            <th class="text-center">DÍAS</th>
+            <th class="text-center">RESOLUCIÓN</th>
+            <th class="text-center">REQ. DOC</th>
+            <th class="text-center">COMPENSABLE</th>
+            <th>ACCIONES</th>
         </tr>
     </thead>
     <tbody>
         @if (isLoading)
         {
-            <tr><td colspan="7" class="loading">Cargando tipos de permiso...</td></tr>
+            <tr><td colspan="8" class="loading">CARGANDO TIPOS DE PERMISO...</td></tr>
         }
         else if (!itemsFiltrados.Any())
         {
-            <tr><td colspan="7" class="empty-state">No hay tipos de permiso para mostrar</td></tr>
+            <tr><td colspan="8" class="empty-state">NO HAY TIPOS DE PERMISO PARA MOSTRAR</td></tr>
         }
         else
         {
@@ -53,14 +57,28 @@
                 <tr class="@(selectedItem?.Id == item.Id ? "selected" : "")"
                     @onclick="() => SelectItem(item)">
                     <td class="text-center">
-                        <div class="color-swatch" style="background-color: @item.Color;"></div>
+                        <div class="color-swatch" ></div>
                     </td>
                     <td><strong>@item.Nombre</strong></td>
                     <td>@(item.Descripcion ?? "-")</td>
                     <td class="text-center">@item.DiasPorDefecto</td>
-                    <td class="text-center">@(item.DiasMaximos == 0 ? "Sin límite" : item.DiasMaximos.ToString())</td>
-                    <td style="text-align: center;">
-                        @if (item.RequiereAprobacion)
+                    <td class="text-center">
+                        <span class="badge @GetResolucionBadgeClass(item.TipoResolucionPorDefecto)">
+                            @GetResolucionTexto(item.TipoResolucionPorDefecto)
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        @if (item.RequiereDocumento)
+                        {
+                            <span class="badge badge-activo">SÍ</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-inactivo">NO</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        @if (item.EsCompensable)
                         {
                             <span class="badge badge-activo">SÍ</span>
                         }
@@ -86,87 +104,174 @@
 <!-- Modal de edición -->
 <FormModal @bind-IsVisible="showModal" 
            Title="@(isEditing ? $"EDITAR TIPO DE PERMISO - {editItem?.Nombre}" : "NUEVO TIPO DE PERMISO")"
-           Width="650px"
            OnSaveClicked="Guardar"
            OnCancelClicked="CerrarModal"
            IsSaving="isSaving">
     
     @if (editItem != null)
     {
-        <div class="grid-2">
-            <div>
-                <div class="form-group required">
-                    <label>NOMBRE</label>
-                    <input type="text" @bind="editItem.Nombre" maxlength="100" 
-                           disabled="@isSaving" />
+        <!-- SECCIÓN: INFORMACIÓN BÁSICA -->
+        <div style="margin-bottom: 24px;">
+            <h4 style="color: #004085; font-size: 14px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E0E0E0;">
+                📋 INFORMACIÓN BÁSICA
+            </h4>
+            <div class="hospital-grid-2">
+                <div class="hospital-form-group required">
+                    <label>NOMBRE DEL TIPO DE PERMISO</label>
+                    <input type="text" id="nombreInput" @bind="editItem.Nombre" maxlength="100" 
+                           disabled="@isSaving" style="width: 100%;" />
+                    <small>Ej: Permiso médico, Calamidad doméstica, Diligencia personal</small>
                 </div>
                 
-                <div class="form-group">
-                    <label>COLOR</label>
+                <div class="hospital-form-group">
+                    <label>COLOR IDENTIFICADOR</label>
                     <input type="color" @bind="editItem.Color" 
-                           disabled="@isSaving" />
-                    <small>Color para identificación visual</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>DÍAS POR DEFECTO</label>
-                    <input type="number" @bind="editItem.DiasPorDefecto" min="1" 
-                           disabled="@isSaving" />
-                    <small>Días sugeridos al crear permiso</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>DÍAS MÁXIMOS</label>
-                    <input type="number" @bind="editItem.DiasMaximos" min="0" 
-                           disabled="@isSaving" />
-                    <small>0 = Sin límite</small>
+                           disabled="@isSaving" style="width: 100%; height: 40px;" />
+                    <small>Color para identificar visualmente en reportes y calendario</small>
                 </div>
             </div>
             
-            <div>
-                <div class="form-group">
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="reqAprobacion" @bind="editItem.RequiereAprobacion" 
-                               disabled="@isSaving" />
-                        <label for="reqAprobacion">REQUIERE APROBACIÓN</label>
-                    </div>
-                    <small>Si está marcado, el permiso debe ser aprobado</small>
+            <div class="hospital-form-group">
+                <label>DESCRIPCIÓN</label>
+                <textarea @bind="editItem.Descripcion" rows="3" 
+                         disabled="@isSaving" 
+                         maxlength="500" style="width: 100%;"></textarea>
+                <small>Descripción detallada del tipo de permiso (opcional)</small>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN: CONFIGURACIÓN DE TIEMPO -->
+        <div style="margin-bottom: 24px;">
+            <h4 style="color: #004085; font-size: 14px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E0E0E0;">
+                ⏱️ CONFIGURACIÓN DE TIEMPO
+            </h4>
+            <div class="hospital-grid-2">
+                <div class="hospital-form-group">
+                    <label>DURACIÓN ESTÁNDAR (DÍAS)</label>
+                    <input type="number" @bind="editItem.DiasPorDefecto" min="1" 
+                           disabled="@isSaving" style="width: 100%;" />
+                    <small>Cantidad de días sugerida. Ej: Permiso médico = 1 día</small>
                 </div>
                 
-                <div class="form-group">
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="reqDocumento" @bind="editItem.RequiereDocumento" 
-                               disabled="@isSaving" />
-                        <label for="reqDocumento">REQUIERE DOCUMENTO</label>
-                    </div>
-                    <small>Si está marcado, se debe adjuntar un documento</small>
-                </div>
-                
-                <div class="form-group">
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="esCompensable" @bind="editItem.EsCompensable" 
-                               disabled="@isSaving" />
-                        <label for="esCompensable">ES COMPENSABLE</label>
-                    </div>
-                    <small>Si está marcado, los días pueden compensarse</small>
-                </div>
-                
-                <div class="form-group">
-                    <div class="checkbox-wrapper">
-                        <input type="checkbox" id="activoTipo" @bind="editItem.Activo" 
-                               disabled="@isSaving" />
-                        <label for="activoTipo">ACTIVO</label>
-                    </div>
-                    <small>Solo los tipos activos pueden usarse</small>
+                <div class="hospital-form-group">
+                    <label>DURACIÓN MÁXIMA PERMITIDA</label>
+                    <input type="number" @bind="editItem.DiasMaximos" min="0" 
+                           disabled="@isSaving" style="width: 100%;" />
+                    <small>Límite de días. 0 = Sin límite (Ej: Incapacidad médica)</small>
                 </div>
             </div>
         </div>
         
-        <div class="form-group">
-            <label>DESCRIPCIÓN</label>
-            <textarea @bind="editItem.Descripcion" rows="3" 
-                     disabled="@isSaving" 
-                     maxlength="500"></textarea>
+        <!-- SECCIÓN: REQUISITOS Y CONDICIONES -->
+        <div style="margin-bottom: 16px;">
+            <h4 style="color: #004085; font-size: 14px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E0E0E0;">
+                ✓ REQUISITOS Y CONDICIONES
+            </h4>
+            
+            <div class="hospital-grid-2">
+                <div>
+                    <div class="hospital-form-group">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="reqAprobacion" @bind="editItem.RequiereAprobacion" 
+                                   disabled="@isSaving" />
+                            <label for="reqAprobacion">REQUIERE AUTORIZACIÓN</label>
+                        </div>
+                        <small style="display: block; margin-top: 4px;">Debe ser aprobado por supervisor o jefe directo</small>
+                    </div>
+                    
+                    <div class="hospital-form-group">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="reqDocumento" @bind="editItem.RequiereDocumento" 
+                                   disabled="@isSaving" />
+                            <label for="reqDocumento">EXIGE SOPORTE DOCUMENTAL</label>
+                        </div>
+                        <small style="display: block; margin-top: 4px;">Requiere adjuntar certificado médico, citación judicial, etc.</small>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="hospital-form-group">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="esCompensable" @bind="editItem.EsCompensable" 
+                                   disabled="@isSaving" />
+                            <label for="esCompensable">PERMITE COMPENSACIÓN</label>
+                        </div>
+                        <small style="display: block; margin-top: 4px;">El tiempo puede recuperarse trabajando horas extra</small>
+                    </div>
+                    
+                    <div class="hospital-form-group">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="activoTipo" @bind="editItem.Activo" 
+                                   disabled="@isSaving" />
+                            <label for="activoTipo">ACTIVO</label>
+                        </div>
+                        <small style="display: block; margin-top: 4px;">Solo tipos activos aparecen al crear nuevos permisos</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN: CONFIGURACIÓN DE SEGUIMIENTO (NUEVA) -->
+        <div style="margin-bottom: 16px;">
+            <h4 style="color: #004085; font-size: 14px; font-weight: 600; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #E0E0E0;">
+                📋 CONFIGURACIÓN DE SEGUIMIENTO
+            </h4>
+            
+            <div class="hospital-form-group required">
+                <label>TIPO DE RESOLUCIÓN POR DEFECTO</label>
+                <select @bind="editItem.TipoResolucionPorDefecto" disabled="@isSaving" style="width: 100%;">
+                    <option value="@TipoResolucionPermiso.Remunerado">REMUNERADO - No se descuenta</option>
+                    <option value="@TipoResolucionPermiso.Descontado">DESCONTADO - Se descuenta en nómina</option>
+                    <option value="@TipoResolucionPermiso.Compensado">COMPENSADO - Se recupera con horas extra</option>
+                </select>
+                <small>Tipo de resolución sugerido al aprobar permisos de este tipo</small>
+            </div>
+            
+            <div class="hospital-grid-2">
+                <div class="hospital-form-group">
+                    <label>DÍAS LÍMITE PARA ENTREGAR DOCUMENTO</label>
+                    <input type="number" @bind="editItem.DiasLimiteDocumento" min="0" max="90"
+                           disabled="@isSaving" style="width: 100%;" />
+                    <small>0 = Sin límite. Días después de aprobar para entregar soporte</small>
+                </div>
+                
+                <div class="hospital-form-group">
+                    <label>DÍAS LÍMITE PARA COMPENSAR</label>
+                    <input type="number" @bind="editItem.DiasLimiteCompensacion" min="0" max="180"
+                           disabled="@isSaving" style="width: 100%;" />
+                    <small>0 = Sin límite. Días para completar horas de compensación</small>
+                </div>
+            </div>
+            
+            <div class="hospital-grid-2">
+                <div class="hospital-form-group">
+                    <label>HORAS A COMPENSAR POR DÍA</label>
+                    <input type="number" @bind="editItem.HorasCompensarPorDia" min="1" max="12"
+                           disabled="@isSaving" style="width: 100%;" />
+                    <small>Horas que debe trabajar extra por cada día de permiso</small>
+                </div>
+                
+                <div>
+                    <div class="hospital-form-group">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="generaDescuento" @bind="editItem.GeneraDescuento" 
+                                   disabled="@isSaving" />
+                            <label for="generaDescuento">GENERA DESCUENTO AUTOMÁTICO</label>
+                        </div>
+                        <small style="display: block; margin-top: 4px;">Calcular descuento automáticamente al aprobar</small>
+                    </div>
+                    
+                    @if (editItem.GeneraDescuento)
+                    {
+                        <div class="hospital-form-group">
+                            <label>% DEL SALARIO DIARIO</label>
+                            <input type="number" @bind="editItem.PorcentajeDescuento" min="0" max="100" step="0.01"
+                                   disabled="@isSaving" style="width: 100%;" />
+                            <small>Porcentaje del salario diario a descontar</small>
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
     }
 </FormModal>
@@ -174,14 +279,15 @@
 <!-- Modal de confirmación de eliminación -->
 <FormModal @bind-IsVisible="showConfirmModal"
            Title="CONFIRMAR ELIMINACIÓN"
-           Width="400px"
            OnSaveClicked="EliminarConfirmado"
            OnCancelClicked="() => showConfirmModal = false"
            IsSaving="isSaving">
-    <p>¿Está seguro que desea eliminar el tipo de permiso <strong>@itemToDelete?.Nombre</strong>?</p>
-    <p class="text-danger">
-        <strong>Advertencia:</strong> Esta acción no se puede deshacer.
-    </p>
+    <div style="padding: 16px;">
+        <p style="margin-bottom: 12px;">¿CONFIRMA LA ELIMINACIÓN DEL TIPO DE PERMISO <strong>@itemToDelete?.Nombre</strong>?</p>
+        <p style="color: #CC0000; font-weight: 600;">
+            ADVERTENCIA: ESTA ACCIÓN NO SE PUEDE DESHACER.
+        </p>
+    </div>
 </FormModal>
 
 @code {
@@ -272,18 +378,22 @@
             EsCompensable = false,
             DiasPorDefecto = 1,
             DiasMaximos = 0,
+            TipoResolucionPorDefecto = TipoResolucionPermiso.Remunerado,
+            DiasLimiteDocumento = 7,
+            DiasLimiteCompensacion = 30,
+            HorasCompensarPorDia = 8,
+            GeneraDescuento = false,
             FechaCreacion = DateTime.Now
         };
         isEditing = false;
         showModal = true;
         StateHasChanged();
     }
-    
+
     private void Editar(TipoPermiso item)
     {
         editItem = new TipoPermiso
         {
-            Id = item.Id,
             Nombre = item.Nombre,
             Descripcion = item.Descripcion,
             Color = item.Color,
@@ -293,9 +403,17 @@
             DiasMaximos = item.DiasMaximos,
             EsCompensable = item.EsCompensable,
             Activo = item.Activo,
+            TipoResolucionPorDefecto = item.TipoResolucionPorDefecto,
+            DiasLimiteDocumento = item.DiasLimiteDocumento,
+            DiasLimiteCompensacion = item.DiasLimiteCompensacion,
+            HorasCompensarPorDia = item.HorasCompensarPorDia,
+            GeneraDescuento = item.GeneraDescuento,
+            PorcentajeDescuento = item.PorcentajeDescuento,
             FechaCreacion = item.FechaCreacion,
             FechaModificacion = DateTime.Now
         };
+        // Guardar el Id original para actualización
+        editItem.Id = item.Id;
         isEditing = true;
         showModal = true;
         StateHasChanged();
@@ -313,10 +431,20 @@
     {
         if (editItem == null) return;
         
+        // Limpiar errores previos
+        await JSRuntime.InvokeVoidAsync("clearAllFieldErrors");
+        
         // Validaciones
         if (string.IsNullOrWhiteSpace(editItem.Nombre))
         {
-            await SetError("El nombre es requerido");
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "nombreInput", "EL NOMBRE ES REQUERIDO");
+            return;
+        }
+        
+        // Validar nombre duplicado
+        if (await TipoPermisoRepository.ExisteNombreAsync(editItem.Nombre, isEditing ? editItem.Id : null))
+        {
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "nombreInput", $"YA EXISTE UN TIPO DE PERMISO CON EL NOMBRE '{editItem.Nombre}'");
             return;
         }
         
@@ -328,17 +456,34 @@
             if (isEditing)
             {
                 await TipoPermisoRepository.UpdateAsync(editItem);
+                
+                var itemIndex = items.FindIndex(t => t.Id == editItem.Id);
+                if (itemIndex >= 0)
+                {
+                    var reloaded = await TipoPermisoRepository.GetByIdAsync(editItem.Id);
+                    if (reloaded != null) items[itemIndex] = reloaded;
+                }
+                
                 await SetSuccess($"Tipo de permiso '{editItem.Nombre}' actualizado correctamente");
                 Logger.LogInformation($"Tipo de permiso actualizado: {editItem.Nombre}");
             }
             else
             {
-                await TipoPermisoRepository.AddAsync(editItem);
+                var newItem = await TipoPermisoRepository.AddAsync(editItem);
+                
+                var reloaded = await TipoPermisoRepository.GetByIdAsync(newItem.Id);
+                if (reloaded != null)
+                {
+                    items.Add(reloaded);
+                    items = items.OrderBy(t => t.Nombre).ToList();
+                }
+                
                 await SetSuccess($"Tipo de permiso '{editItem.Nombre}' creado correctamente");
                 Logger.LogInformation($"Tipo de permiso creado: {editItem.Nombre}");
             }
             
-            await CargarDatos();
+            CatalogCache.InvalidateCache(CatalogType.TiposPermiso);
+            Buscar();
             CerrarModal();
         }
         catch (Exception ex)
@@ -370,6 +515,10 @@
         try
         {
             await TipoPermisoRepository.DeleteAsync(itemToDelete.Id);
+            
+            items.RemoveAll(t => t.Id == itemToDelete.Id);
+            CatalogCache.InvalidateCache(CatalogType.TiposPermiso);
+            
             await SetSuccess($"Tipo de permiso '{itemToDelete.Nombre}' eliminado correctamente");
             Logger.LogInformation($"Tipo de permiso eliminado: {itemToDelete.Nombre}");
             
@@ -407,8 +556,28 @@
         SuccessMessage = message;
         await SuccessMessageChanged.InvokeAsync(message);
         
+        // Auto-hide después de 3 segundos
         await Task.Delay(3000);
-        SuccessMessage = null;
-        await SuccessMessageChanged.InvokeAsync(null);
+        if (SuccessMessage == message)
+        {
+            SuccessMessage = null;
+            await SuccessMessageChanged.InvokeAsync(null);
+        }
     }
+    
+    private string GetResolucionTexto(TipoResolucionPermiso tipo) => tipo switch
+    {
+        TipoResolucionPermiso.Remunerado => "REMUNERADO",
+        TipoResolucionPermiso.Descontado => "DESCONTADO",
+        TipoResolucionPermiso.Compensado => "COMPENSADO",
+        _ => "PENDIENTE"
+    };
+    
+    private string GetResolucionBadgeClass(TipoResolucionPermiso tipo) => tipo switch
+    {
+        TipoResolucionPermiso.Remunerado => "badge-success",
+        TipoResolucionPermiso.Descontado => "badge-danger",
+        TipoResolucionPermiso.Compensado => "badge-warning",
+        _ => "badge-secondary"
+    };
 }

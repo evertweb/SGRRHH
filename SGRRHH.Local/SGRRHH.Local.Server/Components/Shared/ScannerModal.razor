@@ -1,0 +1,607 @@
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Shared.Interfaces
+@using QuestPDF.Fluent
+@using QuestPDF.Helpers
+@inject IScannerService ScannerService
+
+@if (IsVisible)
+{
+    <div class="scanner-backdrop" @onclick="OnBackdropClick" @onkeydown="HandleKeyPress" tabindex="-1">
+        <div class="scanner-modal @(AllowMultiplePages ? "scanner-modal-wide" : "")" @onclick:stopPropagation="true">
+            <div class="scanner-header">
+                <span>@(Titulo ?? (AllowMultiplePages ? "ESCANEO MULTIPLE DE DOCUMENTOS" : "ESCANER DE DOCUMENTOS"))</span>
+                <button class="scanner-close" @onclick="Cerrar" disabled="@isScanning">X</button>
+            </div>
+            
+            <div class="scanner-body">
+                @* Panel de Opciones *@
+                <div class="scanner-options">
+                    <div class="scanner-option-row">
+                        <label class="scanner-label">ESCANER:</label>
+                        <select @bind="selectedDeviceId" class="scanner-select" disabled="@isScanning">
+                            @if (scanners.Count == 0)
+                            {
+                                <option value="">-- SIN ESCANERES --</option>
+                            }
+                            else
+                            {
+                                @foreach (var scanner in scanners)
+                                {
+                                    <option value="@scanner.Id">@scanner.Name (@scanner.Driver)</option>
+                                }
+                            }
+                        </select>
+                        <button class="scanner-btn-small" @onclick="RefreshScanners" disabled="@isScanning" title="Actualizar lista">
+                            ↻
+                        </button>
+                    </div>
+                    
+                    <div class="scanner-option-group">
+                        <div class="scanner-option-row">
+                            <label class="scanner-label">DPI:</label>
+                            <select @bind="scanOptions.Dpi" class="scanner-select" disabled="@isScanning">
+                                <option value="150">150 (Rápido)</option>
+                                <option value="200">200 (Normal)</option>
+                                <option value="300">300 (Alta calidad)</option>
+                                <option value="600">600 (Muy alta)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="scanner-option-row">
+                            <label class="scanner-label">COLOR:</label>
+                            <select @bind="scanOptions.ColorMode" class="scanner-select" disabled="@isScanning">
+                                <option value="@ScanColorMode.Color">Color</option>
+                                <option value="@ScanColorMode.Grayscale">Escala de grises</option>
+                                <option value="@ScanColorMode.BlackWhite">Blanco y negro</option>
+                            </select>
+                        </div>
+                        
+                        <div class="scanner-option-row">
+                            <label class="scanner-label">FUENTE:</label>
+                            <select @bind="scanOptions.Source" class="scanner-select" disabled="@isScanning">
+                                <option value="@ScanSource.Flatbed">Cama plana</option>
+                                <option value="@ScanSource.Feeder">Alimentador</option>
+                                <option value="@ScanSource.Auto">Automático</option>
+                            </select>
+                        </div>
+                        
+                        @if (AllowMultiplePages)
+                        {
+                            <div class="scanner-option-row">
+                                <label class="scanner-label">SALIDA:</label>
+                                <select @bind="outputFormat" class="scanner-select" disabled="@isScanning">
+                                    <option value="images">Imágenes separadas</option>
+                                    <option value="pdf">PDF combinado</option>
+                                </select>
+                            </div>
+                        }
+                    </div>
+                </div>
+                
+                @* Contenedor Principal con miniaturas y preview *@
+                <div class="scanner-main-container">
+                    @* Miniaturas (solo en modo batch) *@
+                    @if (AllowMultiplePages && scannedPages.Count > 0)
+                    {
+                        <div class="scanner-thumbnails">
+                            <div class="scanner-thumbnails-header">
+                                PAGINAS (@scannedPages.Count)
+                            </div>
+                            <div class="scanner-thumbnails-list">
+                                @for (int i = 0; i < scannedPages.Count; i++)
+                                {
+                                    var index = i;
+                                    <div class="scanner-thumbnail @(previewIndex == index ? "scanner-thumbnail-selected" : "")" 
+                                         @onclick="() => SelectPage(index)">
+                                        <div class="scanner-thumbnail-number">@(index + 1)</div>
+                                        <img src="data:@scannedPages[index].MimeType;base64,@Convert.ToBase64String(scannedPages[index].ImageBytes)" 
+                                             alt="Página @(index + 1)" />
+                                        <button class="scanner-thumbnail-delete" 
+                                                @onclick="() => DeletePage(index)" 
+                                                @onclick:stopPropagation="true"
+                                                title="Eliminar página">×</button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    
+                    @* Vista Previa *@
+                    <div class="scanner-preview-container">
+                        @if (isScanning)
+                        {
+                            <div class="scanner-progress">
+                                <div class="scanner-progress-text">@progressStatus</div>
+                                <div class="scanner-progress-bar">
+                                    <div class="scanner-progress-fill" style="width: @(progressPercent * 100)%"></div>
+                                </div>
+                                <div class="scanner-progress-page">Página @currentPage</div>
+                            </div>
+                        }
+                        else if (isGeneratingPdf)
+                        {
+                            <div class="scanner-progress">
+                                <div class="scanner-progress-text">GENERANDO PDF...</div>
+                                <div class="scanner-progress-bar">
+                                    <div class="scanner-progress-fill scanner-progress-indeterminate"></div>
+                                </div>
+                                <div class="scanner-progress-page">Combinando @scannedPages.Count página(s)</div>
+                            </div>
+                        }
+                        else if (scannedPages.Count > 0)
+                        {
+                            <div class="scanner-preview">
+                                <div class="scanner-preview-nav">
+                                    <button class="scanner-btn-nav" @onclick="PreviousPage" disabled="@(previewIndex <= 0)">◀</button>
+                                    <span>PAGINA @(previewIndex + 1) DE @scannedPages.Count</span>
+                                    <button class="scanner-btn-nav" @onclick="NextPage" disabled="@(previewIndex >= scannedPages.Count - 1)">▶</button>
+                                </div>
+                                <div class="scanner-preview-image">
+                                    <img src="data:@scannedPages[previewIndex].MimeType;base64,@Convert.ToBase64String(scannedPages[previewIndex].ImageBytes)" 
+                                         alt="Página escaneada" />
+                                </div>
+                                <div class="scanner-preview-info">
+                                    @scannedPages[previewIndex].Width x @scannedPages[previewIndex].Height px | 
+                                    @FormatFileSize(scannedPages[previewIndex].ImageBytes.Length) |
+                                    Escaneado: @scannedPages[previewIndex].ScannedAt.ToString("HH:mm:ss")
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="scanner-placeholder">
+                                <div class="scanner-placeholder-icon">📄</div>
+                                <div class="scanner-placeholder-text">COLOQUE EL DOCUMENTO EN EL ESCANER</div>
+                                <div class="scanner-placeholder-hint">
+                                    @if (AllowMultiplePages)
+                                    {
+                                        <span>PRESIONE "ESCANEAR" PARA CADA PAGINA</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Y PRESIONE "ESCANEAR"</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                
+                @* Mensajes *@
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="scanner-message scanner-error">@errorMessage</div>
+                }
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="scanner-message scanner-success">@successMessage</div>
+                }
+            </div>
+            
+            <div class="scanner-footer">
+                <div class="scanner-footer-left">
+                    @if (scannedPages.Count > 0)
+                    {
+                        <button class="scanner-btn scanner-btn-secondary" @onclick="ClearPages" disabled="@(isScanning || isGeneratingPdf)">
+                            LIMPIAR TODO
+                        </button>
+                        <span class="scanner-footer-info">
+                            @scannedPages.Count pág. | @FormatFileSize(scannedPages.Sum(p => p.ImageBytes.Length))
+                        </span>
+                    }
+                </div>
+                <div class="scanner-footer-right">
+                    @if (isScanning || isGeneratingPdf)
+                    {
+                        <button class="scanner-btn scanner-btn-danger" @onclick="CancelScan" disabled="@isGeneratingPdf">
+                            CANCELAR
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="scanner-btn" @onclick="Cerrar">
+                            CERRAR [ESC]
+                        </button>
+                        <button class="scanner-btn scanner-btn-primary" @onclick="StartScan" disabled="@(scanners.Count == 0)">
+                            @if (AllowMultiplePages && scannedPages.Count > 0)
+                            {
+                                <span>+ ESCANEAR [F5]</span>
+                            }
+                            else
+                            {
+                                <span>ESCANEAR [F5]</span>
+                            }
+                        </button>
+                        @if (scannedPages.Count > 0)
+                        {
+                            @if (AllowMultiplePages && outputFormat == "pdf")
+                            {
+                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsPdf">
+                                    GENERAR PDF (@scannedPages.Count)
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmScan">
+                                    ACEPTAR (@scannedPages.Count)
+                                </button>
+                            }
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+    
+    /// <summary>
+    /// Se dispara cuando el usuario confirma las páginas escaneadas (modo imágenes).
+    /// Retorna la lista de páginas escaneadas.
+    /// </summary>
+    [Parameter] public EventCallback<List<ScannedPageDto>> OnScanComplete { get; set; }
+    
+    /// <summary>
+    /// Se dispara cuando el usuario genera un PDF combinado.
+    /// Retorna los bytes del PDF.
+    /// </summary>
+    [Parameter] public EventCallback<byte[]> OnPdfGenerated { get; set; }
+    
+    /// <summary>
+    /// Se dispara cuando se cancela el modal sin confirmar.
+    /// </summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+    
+    /// <summary>
+    /// Permite escaneo de múltiples páginas (batch).
+    /// Si es false, solo escanea una página y cierra automáticamente.
+    /// </summary>
+    [Parameter] public bool AllowMultiplePages { get; set; } = false;
+    
+    /// <summary>
+    /// Texto personalizado para el título del modal.
+    /// </summary>
+    [Parameter] public string? Titulo { get; set; }
+
+    // Estado interno
+    private List<ScannerDeviceDto> scanners = new();
+    private List<ScannedPageDto> scannedPages = new();
+    private ScanOptionsDto scanOptions = new() { Dpi = 200 };
+    private string? selectedDeviceId;
+    private string outputFormat = "images"; // "images" o "pdf"
+    
+    private bool isScanning = false;
+    private bool isGeneratingPdf = false;
+    private bool isLoadingScanners = false;
+    private int previewIndex = 0;
+    private int currentPage = 0;
+    private double progressPercent = 0;
+    private string progressStatus = "";
+    
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible && scanners.Count == 0 && !isLoadingScanners)
+        {
+            await RefreshScanners();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        ScannerService.ScanProgress += OnScanProgress;
+    }
+
+    private void OnScanProgress(object? sender, ScanProgressEventArgs e)
+    {
+        InvokeAsync(() =>
+        {
+            currentPage = e.CurrentPage;
+            progressPercent = e.Progress;
+            progressStatus = e.Status;
+            
+            if (e.HasError)
+            {
+                errorMessage = e.ErrorMessage;
+            }
+            
+            StateHasChanged();
+        });
+    }
+
+    private async Task RefreshScanners()
+    {
+        isLoadingScanners = true;
+        errorMessage = null;
+        
+        try
+        {
+            var result = await ScannerService.GetAvailableScannersAsync();
+            if (result.IsSuccess && result.Value != null)
+            {
+                scanners = result.Value;
+                if (scanners.Count > 0 && string.IsNullOrEmpty(selectedDeviceId))
+                {
+                    selectedDeviceId = scanners[0].Id;
+                }
+                
+                if (scanners.Count == 0)
+                {
+                    errorMessage = "No se encontraron escáneres. Verifique que el escáner esté conectado y encendido.";
+                }
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Error al buscar escáneres";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingScanners = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StartScan()
+    {
+        if (isScanning) return;
+        
+        isScanning = true;
+        errorMessage = null;
+        successMessage = null;
+        
+        try
+        {
+            scanOptions.DeviceId = selectedDeviceId;
+            
+            // Siempre escanea una página a la vez (el usuario puede agregar más en modo batch)
+            var result = await ScannerService.ScanSinglePageAsync(scanOptions);
+            if (result.IsSuccess && result.Value != null)
+            {
+                var doc = result.Value;
+                scannedPages.Add(new ScannedPageDto
+                {
+                    ImageBytes = doc.ImageBytes,
+                    MimeType = doc.MimeType,
+                    Width = doc.Width,
+                    Height = doc.Height,
+                    Dpi = doc.Dpi,
+                    ScannedAt = doc.ScannedAt,
+                    PageNumber = scannedPages.Count + 1
+                });
+                previewIndex = scannedPages.Count - 1;
+                
+                if (AllowMultiplePages)
+                {
+                    successMessage = $"Página {scannedPages.Count} escaneada. Puede continuar escaneando más páginas.";
+                }
+                else
+                {
+                    successMessage = "Página escaneada correctamente";
+                }
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Error al escanear";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            successMessage = "Escaneo cancelado";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isScanning = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CancelScan()
+    {
+        ScannerService.CancelCurrentScan();
+    }
+
+    private async Task ConfirmScan()
+    {
+        if (scannedPages.Count == 0) return;
+        
+        // Renumerar páginas
+        for (int i = 0; i < scannedPages.Count; i++)
+        {
+            scannedPages[i].PageNumber = i + 1;
+        }
+        
+        await OnScanComplete.InvokeAsync(new List<ScannedPageDto>(scannedPages));
+        await Cerrar();
+    }
+
+    private async Task ConfirmAsPdf()
+    {
+        if (scannedPages.Count == 0) return;
+        
+        isGeneratingPdf = true;
+        errorMessage = null;
+        StateHasChanged();
+        
+        try
+        {
+            // Generar PDF combinando todas las páginas
+            var pdfBytes = await GeneratePdfFromPagesAsync();
+            
+            if (pdfBytes != null && pdfBytes.Length > 0)
+            {
+                await OnPdfGenerated.InvokeAsync(pdfBytes);
+                await Cerrar();
+            }
+            else
+            {
+                errorMessage = "Error al generar el PDF";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error generando PDF: {ex.Message}";
+        }
+        finally
+        {
+            isGeneratingPdf = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<byte[]?> GeneratePdfFromPagesAsync()
+    {
+        // Usar QuestPDF para generar el PDF
+        return await Task.Run(() =>
+        {
+            try
+            {
+                using var ms = new MemoryStream();
+                
+                QuestPDF.Fluent.Document.Create(container =>
+                {
+                    foreach (var page in scannedPages)
+                    {
+                        container.Page(pageDescriptor =>
+                        {
+                            pageDescriptor.Size(QuestPDF.Helpers.PageSizes.Letter);
+                            pageDescriptor.Margin(0);
+                            
+                            pageDescriptor.Content().Image(page.ImageBytes)
+                                .FitArea();
+                        });
+                    }
+                }).GeneratePdf(ms);
+                
+                return ms.ToArray();
+            }
+            catch
+            {
+                return null;
+            }
+        });
+    }
+
+    private void SelectPage(int index)
+    {
+        if (index >= 0 && index < scannedPages.Count)
+        {
+            previewIndex = index;
+        }
+    }
+
+    private void DeletePage(int index)
+    {
+        if (index >= 0 && index < scannedPages.Count)
+        {
+            scannedPages.RemoveAt(index);
+            
+            // Renumerar páginas
+            for (int i = 0; i < scannedPages.Count; i++)
+            {
+                scannedPages[i].PageNumber = i + 1;
+            }
+            
+            // Ajustar preview index
+            if (previewIndex >= scannedPages.Count)
+            {
+                previewIndex = Math.Max(0, scannedPages.Count - 1);
+            }
+            
+            successMessage = $"Página eliminada. Quedan {scannedPages.Count} página(s).";
+        }
+    }
+
+    private void ClearPages()
+    {
+        scannedPages.Clear();
+        previewIndex = 0;
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private void PreviousPage()
+    {
+        if (previewIndex > 0) previewIndex--;
+    }
+
+    private void NextPage()
+    {
+        if (previewIndex < scannedPages.Count - 1) previewIndex++;
+    }
+
+    private async Task OnBackdropClick()
+    {
+        if (!isScanning && !isGeneratingPdf)
+        {
+            await Cerrar();
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (isScanning || isGeneratingPdf) return;
+        
+        switch (e.Key)
+        {
+            case "Escape":
+                await Cerrar();
+                break;
+            case "F5":
+                await StartScan();
+                break;
+            case "ArrowLeft":
+                PreviousPage();
+                break;
+            case "ArrowRight":
+                NextPage();
+                break;
+            case "Delete":
+                if (scannedPages.Count > 0)
+                {
+                    DeletePage(previewIndex);
+                }
+                break;
+        }
+    }
+
+    private async Task Cerrar()
+    {
+        if (isScanning || isGeneratingPdf) return;
+        
+        scannedPages.Clear();
+        previewIndex = 0;
+        errorMessage = null;
+        successMessage = null;
+        outputFormat = "images";
+        
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(false);
+        await OnCancel.InvokeAsync();
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F2} MB";
+    }
+
+    public void Dispose()
+    {
+        ScannerService.ScanProgress -= OnScanProgress;
+    }
+}

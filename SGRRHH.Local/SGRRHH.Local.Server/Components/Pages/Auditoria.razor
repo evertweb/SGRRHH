@@ -3,256 +3,258 @@
 @using SGRRHH.Local.Shared.Interfaces
 @inject IAuditService AuditService
 @inject IAuthService AuthService
+@inject IKeyboardShortcutService KeyboardShortcutService
 @inject NavigationManager Navigation
 @inject ILogger<Auditoria> Logger
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <PageTitle>Auditoría - SGRRHH</PageTitle>
 
-<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
-
-<h1 class="page-title">AUDITORÍA DEL SISTEMA</h1>
-
-@if (!AuthService.IsAdmin)
-{
-    <div class="error-block">
-        <h3>ACCESO DENEGADO</h3>
-        <p>Esta página solo está disponible para administradores.</p>
-        <button @onclick="@(() => Navigation.NavigateTo("/empleados"))">VOLVER</button>
+<div class="page-container">
+    <div class="page-header">
+        <h1>AUDITORÍA DEL SISTEMA</h1>
     </div>
-    return;
-}
 
-@if (errorMessage != null)
-{
-    <div class="error-block">
-        <h3>ERROR</h3>
-        <p>@errorMessage</p>
-        <button @onclick="() => errorMessage = null">ACEPTAR</button>
-    </div>
-}
+    @if (!AuthService.IsAdmin)
+    {
+        <div class="error-panel">
+            <div class="error-content">
+                <div class="error-title">ACCESO DENEGADO</div>
+                <div class="error-message">Esta funcionalidad requiere permisos de administrador.</div>
+                <div class="button-row">
+                    <button class="btn-secondary" @onclick="@(() => Navigation.NavigateTo("/empleados"))">VOLVER</button>
+                </div>
+            </div>
+        </div>
+        return;
+    }
 
-<!-- Panel de Filtros -->
-<div class="panel">
-    <div class="panel-header">FILTROS DE BÚSQUEDA</div>
-    <div class="panel-body">
-        <div class="grid-4">
-            <div class="form-group">
-                <label>FECHA INICIO</label>
-                <input type="date" @bind="fechaInicio" />
+    @if (errorMessage != null)
+    {
+        <div class="error-panel">
+            <div class="error-content">
+                <div class="error-title">ERROR</div>
+                <div class="error-message">@errorMessage</div>
+                <div class="button-row">
+                    <button class="btn-secondary" @onclick="() => errorMessage = null">ACEPTAR</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="section-container">
+        <div class="section-header">
+            FILTROS DE BÚSQUEDA
+        </div>
+
+        <div class="filter-row">
+            <div class="filter-group">
+                <label class="field-label">FECHA INICIO:</label>
+                <input type="date" class="field-input" @bind="fechaInicio" />
             </div>
 
-            <div class="form-group">
-                <label>FECHA FIN</label>
-                <input type="date" @bind="fechaFin" />
+            <div class="filter-group">
+                <label class="field-label">FECHA FIN:</label>
+                <input type="date" class="field-input" @bind="fechaFin" />
             </div>
 
-            <div class="form-group">
-                <label>ENTIDAD</label>
-                <select @bind="entidadFiltro">
-                    <option value="">Todas</option>
-                    <option value="Empleado">Empleado</option>
-                    <option value="Usuario">Usuario</option>
-                    <option value="Permiso">Permiso</option>
-                    <option value="Vacacion">Vacación</option>
-                    <option value="Contrato">Contrato</option>
-                    <option value="Configuracion">Configuración</option>
+            <div class="filter-group">
+                <label class="field-label">USUARIO:</label>
+                <input type="text" class="field-input" @bind="usuarioFiltro" placeholder="" />
+            </div>
+
+            <div class="filter-group">
+                <label class="field-label">MÓDULO:</label>
+                <select class="field-input" @bind="entidadFiltro">
+                    <option value="">TODOS</option>
+                    <option value="Empleado">EMPLEADO</option>
+                    <option value="Usuario">USUARIO</option>
+                    <option value="Permiso">PERMISO</option>
+                    <option value="Vacacion">VACACIÓN</option>
+                    <option value="Contrato">CONTRATO</option>
+                    <option value="Configuracion">CONFIGURACIÓN</option>
                 </select>
             </div>
 
-            <div class="form-group">
-                <label>ACCIÓN</label>
-                <select @bind="accionFiltro">
-                    <option value="">Todas</option>
-                    <option value="Crear">Crear</option>
-                    <option value="Actualizar">Actualizar</option>
-                    <option value="Eliminar">Eliminar</option>
-                    <option value="Login">Login</option>
-                    <option value="Logout">Logout</option>
-                    <option value="Backup">Backup</option>
-                    <option value="Restore">Restore</option>
+            <div class="filter-group">
+                <label class="field-label">ACCIÓN:</label>
+                <select class="field-input" @bind="accionFiltro">
+                    <option value="">TODAS</option>
+                    <option value="Crear">CREAR</option>
+                    <option value="Actualizar">ACTUALIZAR</option>
+                    <option value="Eliminar">ELIMINAR</option>
+                    <option value="Login">LOGIN</option>
+                    <option value="Logout">LOGOUT</option>
+                    <option value="Backup">BACKUP</option>
+                    <option value="Restore">RESTORE</option>
                 </select>
             </div>
         </div>
 
-        <div class="toolbar">
-            <div class="toolbar-group">
-                <button class="btn-primary" @onclick="BuscarLogs" disabled="@isLoading">
-                    @if (isLoading)
-                    {
-                        <span>BUSCANDO...</span>
-                    }
-                    else
-                    {
-                        <span>BUSCAR (F4)</span>
-                    }
-                </button>
-
-                <button @onclick="LimpiarFiltros" disabled="@isLoading">
-                    LIMPIAR FILTROS
-                </button>
-
-                <button @onclick="CargarRecientes" disabled="@isLoading">
-                    VER ÚLTIMOS 100
-                </button>
-            </div>
+        <div class="button-row">
+            <button class="btn-primary" @onclick="BuscarLogs" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span>PROCESANDO...</span>
+                }
+                else
+                {
+                    <span>BUSCAR</span>
+                }
+            </button>
+            <button class="btn-secondary" @onclick="LimpiarFiltros" disabled="@isLoading">LIMPIAR</button>
+            <button class="btn-secondary" @onclick="CargarRecientes" disabled="@isLoading">RECIENTES</button>
         </div>
     </div>
-</div>
 
-<!-- Panel de Resultados -->
-<div class="panel">
-    <div class="panel-header">
-        REGISTROS DE AUDITORÍA
-        <span class="results-info">Total: @logs.Count registros</span>
-    </div>
-    <div class="panel-body">
+    <div class="section-container">
+        <div class="section-header">
+            REGISTRO DE AUDITORÍA (@logs.Count REGISTROS)
+        </div>
+
         @if (isLoading)
         {
-            <div class="loading">Cargando logs de auditoría...</div>
+            <div class="status-message">
+                CARGANDO REGISTROS...
+            </div>
         }
         else if (!logs.Any())
         {
-            <div class="empty-state">
-                <div class="icon">📋</div>
-                <div class="message">No hay registros de auditoría para mostrar</div>
+            <div class="status-message">
+                SIN REGISTROS PARA MOSTRAR
             </div>
         }
         else
         {
-            <table>
-                <thead>
-                    <tr>
-                        <th>FECHA/HORA</th>
-                        <th>USUARIO</th>
-                        <th>ACCIÓN</th>
-                        <th>ENTIDAD</th>
-                        <th>ID</th>
-                        <th>DESCRIPCIÓN</th>
-                        <th>ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var log in logs)
-                    {
-                        <tr class="@(selectedLog?.Id == log.Id ? "selected" : "")"
-                            @onclick="() => selectedLog = log">
-                            <td>
-                                <div>@log.FechaHora.ToString("dd/MM/yyyy")</div>
-                                <small>@log.FechaHora.ToString("HH:mm:ss")</small>
-                            </td>
-                            <td>
-                                <strong>@log.UsuarioNombre</strong>
-                            </td>
-                            <td>
-                                <span class="badge badge-@GetAccionBadge(log.Accion)">
-                                    @log.Accion.ToUpper()
-                                </span>
-                            </td>
-                            <td>@log.Entidad</td>
-                            <td>
-                                @if (log.EntidadId.HasValue)
-                                {
-                                    <span>#@log.EntidadId</span>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">-</span>
-                                }
-                            </td>
-                            <td>
-                                @if (log.Descripcion.Length > 80)
-                                {
-                                    <span title="@log.Descripcion">@(log.Descripcion.Substring(0, 80))...</span>
-                                }
-                                else
-                                {
-                                    <span>@log.Descripcion</span>
-                                }
-                            </td>
-                            <td class="table-actions">
-                                <button @onclick="() => VerDetalles(log)" @onclick:stopPropagation="true">
-                                    VER
-                                </button>
-                            </td>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>HORA</th>
+                            <th>USUARIO</th>
+                            <th>ACCIÓN</th>
+                            <th>MÓDULO</th>
+                            <th>RESULTADO</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>VER</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in logs)
+                        {
+                            <tr class="@(selectedLog?.Id == log.Id ? "row-selected" : "")"
+                                @onclick="() => selectedLog = log">
+                                <td>@log.FechaHora.ToString("dd/MM/yyyy")</td>
+                                <td>@log.FechaHora.ToString("HH:mm:ss")</td>
+                                <td>@log.UsuarioNombre</td>
+                                <td>@log.Accion.ToUpper()</td>
+                                <td>@log.Entidad</td>
+                                <td class="@GetResultadoClass(log.Accion)">@GetResultadoTexto(log.Accion)</td>
+                                <td class="col-descripcion">
+                                    @if (log.Descripcion.Length > 60)
+                                    {
+                                        <text>@(log.Descripcion.Substring(0, 60))...</text>
+                                    }
+                                    else
+                                    {
+                                        @log.Descripcion
+                                    }
+                                </td>
+                                <td>
+                                    <button class="btn-table" @onclick="() => VerDetalles(log)" @onclick:stopPropagation="true">
+                                        VER
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 </div>
 
-<!-- Modal de Detalles -->
-<FormModal @bind-IsVisible="showDetallesModal" 
-           Title="DETALLES DE AUDITORÍA"
-           Width="700px"
-           OnCancelClicked="CerrarDetalles"
-           ShowSaveButton="false">
-    
-    @if (selectedLog != null)
-    {
-        <div class="audit-details">
-            <!-- Información básica -->
-            <div class="detail-section">
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>FECHA/HORA</label>
-                        <div class="detail-value">
-                            @selectedLog.FechaHora.ToString("dd/MM/yyyy HH:mm:ss")
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>USUARIO</label>
-                        <div class="detail-value">@selectedLog.UsuarioNombre</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>ACCIÓN</label>
-                        <div class="detail-value">
-                            <span class="badge badge-@GetAccionBadge(selectedLog.Accion)">
-                                @selectedLog.Accion.ToUpper()
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>ENTIDAD</label>
-                        <div class="detail-value">
-                            @selectedLog.Entidad
-                            @if (selectedLog.EntidadId.HasValue)
-                            {
-                                <span class="text-success"> #@selectedLog.EntidadId</span>
-                            }
-                        </div>
-                    </div>
-                </div>
+@if (showDetallesModal)
+{
+    <div class="modal-overlay" @onclick="CerrarDetalles">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                DETALLE DE REGISTRO DE AUDITORÍA
             </div>
 
-            <!-- Descripción -->
-            <div class="form-group">
-                <label>DESCRIPCIÓN</label>
-                <div class="detail-value detail-box">
-                    @selectedLog.Descripcion
-                </div>
-            </div>
-
-            <!-- Datos adicionales -->
-            @if (!string.IsNullOrEmpty(selectedLog.DatosAdicionales))
+            @if (selectedLog != null)
             {
-                <div class="form-group">
-                    <label>DATOS ADICIONALES (JSON)</label>
-                    <pre class="code-block">@FormatJson(selectedLog.DatosAdicionales)</pre>
+                <div class="modal-body">
+                    <div class="detail-row">
+                        <div class="detail-field">
+                            <label class="field-label">FECHA:</label>
+                            <div class="field-value">@selectedLog.FechaHora.ToString("dd/MM/yyyy")</div>
+                        </div>
+                        <div class="detail-field">
+                            <label class="field-label">HORA:</label>
+                            <div class="field-value">@selectedLog.FechaHora.ToString("HH:mm:ss")</div>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-field">
+                            <label class="field-label">USUARIO:</label>
+                            <div class="field-value">@selectedLog.UsuarioNombre</div>
+                        </div>
+                        <div class="detail-field">
+                            <label class="field-label">ACCIÓN:</label>
+                            <div class="field-value">@selectedLog.Accion.ToUpper()</div>
+                        </div>
+                    </div>
+
+                    <div class="detail-row">
+                        <div class="detail-field">
+                            <label class="field-label">MÓDULO:</label>
+                            <div class="field-value">@selectedLog.Entidad</div>
+                        </div>
+                        <div class="detail-field">
+                            <label class="field-label">ID REGISTRO:</label>
+                            <div class="field-value">
+                                @if (selectedLog.EntidadId.HasValue)
+                                {
+                                    <span>@selectedLog.EntidadId</span>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-full">
+                        <label class="field-label">DESCRIPCIÓN:</label>
+                        <div class="field-value-box">
+                            @selectedLog.Descripcion
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(selectedLog.DatosAdicionales))
+                    {
+                        <div class="detail-full">
+                            <label class="field-label">DATOS TÉCNICOS:</label>
+                            <pre class="field-value-code">@FormatJson(selectedLog.DatosAdicionales)</pre>
+                        </div>
+                    }
                 </div>
             }
+
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CerrarDetalles">CERRAR</button>
+            </div>
         </div>
-    }
-</FormModal>
+    </div>
+}
 
 @code {
-    private KeyboardHandler? keyboardHandler;
-    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    private const string PageId = "auditoria";
     
     private List<AuditLog> logs = new();
     private AuditLog? selectedLog;
@@ -260,6 +262,7 @@
     // Filtros
     private DateTime? fechaInicio;
     private DateTime? fechaFin;
+    private string usuarioFiltro = string.Empty;
     private string entidadFiltro = string.Empty;
     private string accionFiltro = string.Empty;
     
@@ -283,16 +286,21 @@
             return;
         }
         
-        // Configurar atajos de teclado
-        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        // Registrar atajos de teclado para esta página
+        KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
         {
-            new() { Key = "F4", KeyDisplay = "F4", Description = "Buscar", Action = BuscarLogs },
-            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarRecientes },
-            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarDetalles }
-        };
+            new() { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = BuscarLogs, Priority = 10 },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarRecientes, Priority = 10 },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarDetalles, Priority = 10 }
+        });
         
         // Cargar logs recientes por defecto
         await CargarRecientes();
+    }
+    
+    public void Dispose()
+    {
+        KeyboardShortcutService.ClearPageShortcuts(PageId);
     }
     
     private async Task BuscarLogs()
@@ -311,7 +319,19 @@
                 Accion = string.IsNullOrEmpty(accionFiltro) ? null : accionFiltro
             };
             
-            logs = (await AuditService.SearchAsync(options)).ToList();
+            var allLogs = (await AuditService.SearchAsync(options)).ToList();
+            
+            // Filtro de usuario en cliente si está especificado
+            if (!string.IsNullOrEmpty(usuarioFiltro))
+            {
+                logs = allLogs
+                    .Where(l => l.UsuarioNombre.Contains(usuarioFiltro, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+            else
+            {
+                logs = allLogs;
+            }
             
             Logger.LogInformation("Búsqueda de auditoría realizada: {Count} resultados", logs.Count);
         }
@@ -355,6 +375,7 @@
     {
         fechaInicio = null;
         fechaFin = null;
+        usuarioFiltro = string.Empty;
         entidadFiltro = string.Empty;
         accionFiltro = string.Empty;
         StateHasChanged();
@@ -373,16 +394,23 @@
         return Task.CompletedTask;
     }
     
-    private string GetAccionBadge(string accion) => accion.ToLower() switch
+    private string GetResultadoTexto(string accion) => accion.ToLower() switch
     {
-        "crear" => "success",
-        "actualizar" => "warning",
-        "eliminar" => "danger",
-        "login" => "info",
-        "logout" => "secondary",
-        "backup" => "admin",
-        "restore" => "danger",
-        _ => "default"
+        "crear" => "OK",
+        "actualizar" => "OK",
+        "eliminar" => "OK",
+        "login" => "OK",
+        "logout" => "OK",
+        "backup" => "OK",
+        "restore" => "OK",
+        _ => "OK"
+    };
+    
+    private string GetResultadoClass(string accion) => accion.ToLower() switch
+    {
+        "eliminar" => "resultado-error",
+        "restore" => "resultado-error",
+        _ => "resultado-ok"
     };
     
     private string FormatJson(string json)

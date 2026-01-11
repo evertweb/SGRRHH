@@ -1,0 +1,433 @@
+/* ========================================
+   PRINTER MODAL - Estilo Hospitalario
+   ======================================== */
+
+.printer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.printer-modal {
+    background-color: #fff;
+    border: 3px solid #000;
+    width: 600px;
+    max-width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Courier New', monospace;
+}
+
+.printer-header {
+    background-color: #000;
+    color: #fff;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.printer-close {
+    background: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+.printer-close:hover:not(:disabled) {
+    background-color: #fff;
+    color: #000;
+}
+
+.printer-close:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   BODY
+   ======================================== */
+.printer-body {
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ========================================
+   LOADING & EMPTY
+   ======================================== */
+.printer-loading,
+.printer-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    gap: 12px;
+    color: #666;
+}
+
+.printer-loading-icon,
+.printer-empty-icon {
+    font-size: 48px;
+}
+
+.printer-empty-text {
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* ========================================
+   OPTIONS
+   ======================================== */
+.printer-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #ccc;
+}
+
+.printer-option-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.printer-option-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.printer-label {
+    font-weight: bold;
+    font-size: 11px;
+    min-width: 80px;
+    letter-spacing: 0.5px;
+}
+
+.printer-select {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 6px 8px;
+    border: 1px solid #000;
+    background-color: #fff;
+    min-width: 150px;
+}
+
+.printer-select-small {
+    min-width: 100px;
+    flex: 0;
+}
+
+.printer-select:focus {
+    outline: 2px solid #000;
+    outline-offset: 0;
+}
+
+.printer-select:disabled {
+    background-color: #e0e0e0;
+    color: #666;
+}
+
+.printer-input {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 6px 8px;
+    border: 1px solid #000;
+    background-color: #fff;
+    width: 60px;
+    text-align: center;
+}
+
+.printer-input:focus {
+    outline: 2px solid #000;
+    outline-offset: 0;
+}
+
+.printer-input:disabled {
+    background-color: #e0e0e0;
+    color: #666;
+}
+
+.printer-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.printer-checkbox-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.printer-btn-small {
+    background-color: #fff;
+    border: 1px solid #000;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+}
+
+.printer-btn-small:hover:not(:disabled) {
+    background-color: #000;
+    color: #fff;
+}
+
+.printer-btn-small:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   PREVIEW SECTION
+   ======================================== */
+.printer-preview-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.printer-preview-label {
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    color: #666;
+}
+
+.printer-preview-container {
+    border: 2px dashed #ccc;
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f9f9f9;
+}
+
+.printer-preview {
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.printer-preview img {
+    max-width: 200px;
+    max-height: 150px;
+    object-fit: contain;
+    border: 1px solid #ccc;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.printer-preview-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    padding: 20px;
+}
+
+.printer-preview-icon {
+    font-size: 48px;
+}
+
+.printer-preview-name {
+    font-size: 13px;
+    font-weight: bold;
+    color: #333;
+    max-width: 300px;
+    text-align: center;
+    word-break: break-word;
+}
+
+.printer-preview-info {
+    font-size: 11px;
+    color: #888;
+}
+
+/* ========================================
+   PROGRESS
+   ======================================== */
+.printer-progress {
+    text-align: center;
+    padding: 16px;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+}
+
+.printer-progress-text {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+}
+
+.printer-progress-bar {
+    width: 100%;
+    height: 16px;
+    border: 2px solid #000;
+    background-color: #fff;
+    overflow: hidden;
+}
+
+.printer-progress-fill {
+    height: 100%;
+    background-color: #000;
+    transition: width 0.3s ease;
+}
+
+.printer-progress-indeterminate {
+    width: 30% !important;
+    animation: printer-indeterminate 1.5s infinite ease-in-out;
+}
+
+@keyframes printer-indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+}
+
+/* ========================================
+   MESSAGES
+   ======================================== */
+.printer-message {
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.printer-error {
+    background-color: #ffebee;
+    border: 1px solid #c62828;
+    color: #c62828;
+}
+
+.printer-success {
+    background-color: #e8f5e9;
+    border: 1px solid #2e7d32;
+    color: #2e7d32;
+}
+
+/* ========================================
+   FOOTER
+   ======================================== */
+.printer-footer {
+    padding: 12px 16px;
+    border-top: 2px solid #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f5f5f5;
+}
+
+.printer-footer-left,
+.printer-footer-right {
+    display: flex;
+    gap: 8px;
+}
+
+.printer-btn {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 8px 16px;
+    border: 2px solid #000;
+    background-color: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    transition: all 0.15s ease;
+}
+
+.printer-btn:hover:not(:disabled) {
+    background-color: #000;
+    color: #fff;
+}
+
+.printer-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.printer-btn-primary {
+    background-color: #1976d2;
+    color: #fff;
+    border-color: #1976d2;
+}
+
+.printer-btn-primary:hover:not(:disabled) {
+    background-color: #1565c0;
+    border-color: #1565c0;
+}
+
+.printer-btn-secondary {
+    background-color: #757575;
+    color: #fff;
+    border-color: #757575;
+}
+
+.printer-btn-secondary:hover:not(:disabled) {
+    background-color: #616161;
+    border-color: #616161;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 600px) {
+    .printer-modal {
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border: none;
+    }
+    
+    .printer-option-group {
+        flex-direction: column;
+    }
+    
+    .printer-option-row {
+        flex-wrap: wrap;
+    }
+    
+    .printer-select {
+        min-width: 100%;
+    }
+    
+    .printer-footer {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .printer-footer-left,
+    .printer-footer-right {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}

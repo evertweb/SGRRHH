@@ -8,7 +8,7 @@
 
 param(
     [int]$HttpPort = 5000,
-    [int]$HttpsPort = 5001,
+    [int]$HttpsPort = 5003,
     [switch]$Remove
 )
 

@@ -1,9 +1,9 @@
-using SGRRHH.Local.Domain.Enums;
+using SGRRHH.Local.Domain.DTOs;
 
 namespace SGRRHH.Local.Shared.Interfaces;
 
 /// <summary>
-/// Interfaz para el servicio de notificaciones en tiempo real
+/// Interfaz para el servicio de notificaciones con persistencia
 /// </summary>
 public interface INotificationService
 {
@@ -13,62 +13,90 @@ public interface INotificationService
     event EventHandler<NotificationEventArgs>? OnNotification;
     
     /// <summary>
-    /// Lista de notificaciones no leídas
+    /// Evento para actualizar el contador en la UI
     /// </summary>
-    List<AppNotification> UnreadNotifications { get; }
+    event EventHandler? OnCountChanged;
     
     /// <summary>
-    /// Cantidad de notificaciones no leídas
+    /// Cantidad de notificaciones no leídas (en caché)
     /// </summary>
     int UnreadCount { get; }
     
     /// <summary>
-    /// Envía una notificación
+    /// Resumen de notificaciones (en caché)
     /// </summary>
-    Task SendNotificationAsync(string title, string message, NotificationType type, string? link = null);
+    NotificacionResumenDto? Resumen { get; }
+    
+    /// <summary>
+    /// Inicializa el servicio cargando datos del usuario actual
+    /// </summary>
+    Task InitializeAsync();
+    
+    /// <summary>
+    /// Obtiene las notificaciones no leídas del usuario actual
+    /// </summary>
+    Task<List<NotificacionDto>> GetNotificacionesAsync(int limite = 20);
+    
+    /// <summary>
+    /// Obtiene el resumen actualizado
+    /// </summary>
+    Task<NotificacionResumenDto> GetResumenAsync();
+    
+    /// <summary>
+    /// Envía una notificación (persiste en BD)
+    /// </summary>
+    Task<int> SendNotificationAsync(CrearNotificacionDto dto);
+    
+    /// <summary>
+    /// Envía una notificación simple (compatible con versión anterior)
+    /// </summary>
+    Task SendNotificationAsync(string titulo, string mensaje, string tipo, string? link = null);
+    
+    /// <summary>
+    /// Notifica sobre un nuevo permiso pendiente
+    /// </summary>
+    Task NotificarPermisoNuevoAsync(int permisoId, string empleadoNombre, string tipoPermiso);
+    
+    /// <summary>
+    /// Notifica sobre una nueva solicitud de vacaciones
+    /// </summary>
+    Task NotificarVacacionNuevaAsync(int vacacionId, string empleadoNombre, int diasSolicitados);
+    
+    /// <summary>
+    /// Notifica sobre una nueva incapacidad
+    /// </summary>
+    Task NotificarIncapacidadNuevaAsync(int incapacidadId, string empleadoNombre, string tipoIncapacidad);
     
     /// <summary>
     /// Marca una notificación como leída
     /// </summary>
-    void MarkAsRead(int notificationId);
+    Task MarkAsReadAsync(int notificationId);
     
     /// <summary>
     /// Marca todas las notificaciones como leídas
     /// </summary>
-    void MarkAllAsRead();
+    Task MarkAllAsReadAsync();
+    
+    /// <summary>
+    /// Refresca el contador y resumen desde la BD
+    /// </summary>
+    Task RefreshAsync();
     
     /// <summary>
     /// Verifica si hay notificaciones nuevas (permisos pendientes, etc.)
     /// </summary>
     Task CheckForNewNotificationsAsync();
+    
+    /// <summary>
+    /// Limpia notificaciones antiguas (mantenimiento)
+    /// </summary>
+    Task LimpiarAntiguasAsync(int diasAntiguedad = 30);
 }
 
+/// <summary>
+/// Argumentos del evento de nueva notificación
+/// </summary>
 public class NotificationEventArgs : EventArgs
 {
-    public AppNotification Notification { get; set; } = new();
-}
-
-public class AppNotification
-{
-    public int Id { get; set; }
-    public string Title { get; set; } = "";
-    public string Message { get; set; } = "";
-    public NotificationType Type { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public bool IsRead { get; set; }
-    public string? Link { get; set; }
-}
-
-public enum NotificationType
-{
-    Info,
-    Success,
-    Warning,
-    Error,
-    PermisoNuevo,
-    PermisoAprobado,
-    PermisoRechazado,
-    VacacionNueva,
-    VacacionAprobada,
-    Sistema
+    public NotificacionDto Notificacion { get; set; } = new();
 }

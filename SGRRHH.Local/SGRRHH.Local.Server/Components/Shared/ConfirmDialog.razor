@@ -1,48 +1,31 @@
-@if (IsVisible)
+﻿@if (IsVisible)
 {
-    <div class="modal-backdrop" @onclick="OnBackdropClick">
-        <div class="confirm-dialog" @onclick:stopPropagation="true">
-            <div class="confirm-header">
-                <h3>@Titulo</h3>
-                @if (MostrarBotonCerrar)
+    <div class="confirm-backdrop" @onclick="OnBackdropClick" @onkeydown="HandleKeyPress" tabindex="-1">
+        <div class="confirm-dialog @TipoClase" @onclick:stopPropagation="true">
+            <div class="confirm-mensaje">
+                @if (!string.IsNullOrEmpty(Mensaje))
                 {
-                    <button class="btn-close" @onclick="Cancelar">✕</button>
+                    <pre>@Mensaje</pre>
+                }
+                @if (ChildContent != null)
+                {
+                    @ChildContent
                 }
             </div>
             
-            <div class="confirm-body">
-                @if (!string.IsNullOrEmpty(Icono))
-                {
-                    <div class="confirm-icon @TipoClase">@Icono</div>
-                }
-                <div class="confirm-mensaje">
-                    @if (!string.IsNullOrEmpty(Mensaje))
-                    {
-                        <p>@Mensaje</p>
-                    }
-                    @if (ChildContent != null)
-                    {
-                        @ChildContent
-                    }
-                </div>
-            </div>
-            
-            <div class="confirm-footer">
-                @if (MostrarBotonCancelar)
-                {
-                    <button class="btn-secondary" @onclick="Cancelar" disabled="@IsProcessing">
-                        @TextoCancelar
-                    </button>
-                }
-                <button class="btn-primary @TipoClase" @onclick="Confirmar" disabled="@IsProcessing">
+            <div class="confirm-acciones">
+                <button class="confirm-btn confirm-btn-si" @onclick="Confirmar" disabled="@IsProcessing" autofocus>
                     @if (IsProcessing)
                     {
-                        <span>Procesando...</span>
+                        <span>PROCESANDO</span>
                     }
                     else
                     {
                         <span>@TextoConfirmar</span>
                     }
+                </button>
+                <button class="confirm-btn confirm-btn-no" @onclick="Cancelar" disabled="@IsProcessing">
+                    @TextoCancelar
                 </button>
             </div>
         </div>
@@ -52,15 +35,10 @@
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
-    [Parameter] public string Titulo { get; set; } = "Confirmar Acción";
-    [Parameter] public string Mensaje { get; set; } = "¿Está seguro que desea realizar esta acción?";
-    [Parameter] public string TextoConfirmar { get; set; } = "CONFIRMAR";
-    [Parameter] public string TextoCancelar { get; set; } = "CANCELAR";
-    [Parameter] public string Tipo { get; set; } = "info"; // info, warning, danger, success
-    [Parameter] public string Icono { get; set; } = "?";
-    [Parameter] public bool MostrarBotonCancelar { get; set; } = true;
-    [Parameter] public bool MostrarBotonCerrar { get; set; } = true;
-    [Parameter] public bool CerrarAlClickFuera { get; set; } = true;
+    [Parameter] public string Mensaje { get; set; } = "CONFIRMAR OPERACION";
+    [Parameter] public string TextoConfirmar { get; set; } = "SI";
+    [Parameter] public string TextoCancelar { get; set; } = "NO";
+    [Parameter] public string Tipo { get; set; } = "info";
     [Parameter] public EventCallback OnConfirm { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -69,26 +47,11 @@
 
     private string TipoClase => Tipo.ToLower() switch
     {
-        "warning" => "tipo-warning",
-        "danger" => "tipo-danger",
-        "success" => "tipo-success",
-        _ => "tipo-info"
+        "warning" => "confirm-tipo-warning",
+        "danger" => "confirm-tipo-danger",
+        "success" => "confirm-tipo-success",
+        _ => "confirm-tipo-info"
     };
-
-    protected override void OnParametersSet()
-    {
-        // Establecer icono por defecto según tipo
-        if (string.IsNullOrEmpty(Icono) || Icono == "?")
-        {
-            Icono = Tipo.ToLower() switch
-            {
-                "warning" => "⚠",
-                "danger" => "✕",
-                "success" => "✓",
-                _ => "?"
-            };
-        }
-    }
 
     private async Task Confirmar()
     {
@@ -118,9 +81,23 @@
 
     private async Task OnBackdropClick()
     {
-        if (CerrarAlClickFuera && !IsProcessing)
+        if (!IsProcessing)
         {
             await Cancelar();
+        }
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (IsProcessing) return;
+
+        if (e.Key == "Escape")
+        {
+            await Cancelar();
+        }
+        else if (e.Key == "Enter")
+        {
+            await Confirmar();
         }
     }
 
@@ -129,167 +106,6 @@
         IsVisible = false;
         await IsVisibleChanged.InvokeAsync(false);
     }
-
-    // Métodos estáticos de ayuda para uso común
-    public static ConfirmDialog Create(string titulo, string mensaje, string tipo = "info")
-    {
-        var dialog = new ConfirmDialog
-        {
-            Titulo = titulo,
-            Mensaje = mensaje,
-            Tipo = tipo
-        };
-        return dialog;
-    }
 }
 
-<style>
-    .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-    }
 
-    .confirm-dialog {
-        background: #FFFFFF;
-        border: 2px solid #000000;
-        min-width: 400px;
-        max-width: 600px;
-    }
-
-    .confirm-header {
-        padding: 16px 20px;
-        border-bottom: 2px solid #000000;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #E0E0E0;
-    }
-
-    .confirm-header h3 {
-        margin: 0;
-        font-size: 16px;
-        color: #000000;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .btn-close {
-        background: none;
-        border: none;
-        color: #666666;
-        font-size: 20px;
-        cursor: pointer;
-        padding: 0;
-        line-height: 1;
-        width: 24px;
-        height: 24px;
-    }
-
-    .btn-close:hover {
-        color: #000000;
-    }
-
-    .confirm-body {
-        padding: 24px 20px;
-        display: flex;
-        gap: 20px;
-        align-items: flex-start;
-    }
-
-    .confirm-icon {
-        font-size: 48px;
-        line-height: 1;
-        flex-shrink: 0;
-    }
-
-    .confirm-icon.tipo-info { color: #0066CC; }
-    .confirm-icon.tipo-warning { color: #CC9900; }
-    .confirm-icon.tipo-danger { color: #CC0000; }
-    .confirm-icon.tipo-success { color: #006600; }
-
-    .confirm-mensaje {
-        flex: 1;
-        color: #333333;
-        line-height: 1.6;
-    }
-
-    .confirm-mensaje p {
-        margin: 0 0 12px 0;
-    }
-
-    .confirm-footer {
-        padding: 16px 20px;
-        border-top: 1px solid #CCCCCC;
-        display: flex;
-        gap: 12px;
-        justify-content: flex-end;
-        background: #F0F0F0;
-    }
-
-    .confirm-footer button {
-        padding: 10px 24px;
-        font-size: 12px;
-        font-weight: bold;
-        letter-spacing: 1px;
-        cursor: pointer;
-        text-transform: uppercase;
-        min-width: 100px;
-        border: 2px solid;
-    }
-
-    .confirm-footer button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .btn-secondary {
-        background: #E0E0E0;
-        border-color: #808080;
-        color: #333333;
-    }
-
-    .btn-secondary:hover:not(:disabled) {
-        border-color: #000000;
-        background: #D0D0D0;
-    }
-
-    .btn-primary {
-        border: 2px solid;
-    }
-
-    .btn-primary.tipo-info {
-        background: #CCE5FF;
-        border-color: #0066CC;
-        color: #0066CC;
-    }
-
-    .btn-primary.tipo-warning {
-        background: #FFFFCC;
-        border-color: #CC9900;
-        color: #996600;
-    }
-
-    .btn-primary.tipo-danger {
-        background: #FFCCCC;
-        border-color: #CC0000;
-        color: #CC0000;
-    }
-
-    .btn-primary.tipo-success {
-        background: #CCFFCC;
-        border-color: #006600;
-        color: #006600;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-        opacity: 0.9;
-    }
-</style>

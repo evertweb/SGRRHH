@@ -1,4 +1,4 @@
-@page "/vacaciones"
+﻿@page "/vacaciones"
 @page "/vacaciones/{VacacionIdParam:int?}"
 @using SGRRHH.Local.Domain.DTOs
 @using SGRRHH.Local.Domain.Entities
@@ -14,342 +14,1027 @@
 
 <PageTitle>Vacaciones - SGRRHH</PageTitle>
 
-<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
-
-<h1 class="page-title">GESTIÓN DE VACACIONES</h1>
-
-@if (errorMessage != null)
-{
-    <div class="error-block">
-        <h3>ERROR</h3>
-        <p>@errorMessage</p>
-        <button @onclick="() => errorMessage = null">ACEPTAR</button>
-    </div>
-}
-
-@if (successMessage != null)
-{
-    <div class="success-block">
-        <p>@successMessage</p>
-    </div>
-}
-
-<!-- Panel de Resumen de Vacaciones (cuando hay empleado seleccionado) -->
-@if (!string.IsNullOrEmpty(filtroEmpleadoId) && int.TryParse(filtroEmpleadoId, out int empId) && empId > 0 && resumenVacaciones != null)
-{
-    <ResumenVacacionesPanel Resumen="@resumenVacaciones" />
-}
-
-<!-- Toolbar -->
-<div class="toolbar">
-    <div class="toolbar-group">
-        <button class="btn-primary" @onclick="NuevaVacacion">NUEVA (F3)</button>
-        <button @onclick="CargarVacaciones">ACTUALIZAR (F5)</button>
-        @if (selectedVacacion != null)
-        {
-            <button @onclick="EditarSeleccionado">VER DETALLE (F4)</button>
-            
-            @if (selectedVacacion.Estado == EstadoVacacion.Pendiente && AuthService.IsAprobador)
-            {
-                <button class="btn-success" @onclick="AprobarSeleccionado">APROBAR (F6)</button>
-                <button class="btn-danger" @onclick="RechazarSeleccionado">RECHAZAR (F7)</button>
-            }
-        }
-    </div>
+<style>
+    /* === SISTEMA HOSPITALARIO - VACACIONES === */
     
-    <div class="toolbar-separator"></div>
-    
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Buscar... (F2)" 
-               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
-        <button @onclick="Buscar">BUSCAR</button>
-        @if (!string.IsNullOrEmpty(searchTerm))
-        {
-            <button @onclick="LimpiarBusqueda">LIMPIAR</button>
-        }
-        <select @bind="filtroEstado" @bind:after="Filtrar">
-            <option value="">Todos los estados</option>
-            <option value="@((int)EstadoVacacion.Pendiente)">Pendientes</option>
-            <option value="@((int)EstadoVacacion.Aprobada)">Aprobadas</option>
-            <option value="@((int)EstadoVacacion.Rechazada)">Rechazadas</option>
-            <option value="@((int)EstadoVacacion.Programada)">Programadas</option>
-            <option value="@((int)EstadoVacacion.Disfrutada)">Disfrutadas</option>
-            <option value="@((int)EstadoVacacion.Cancelada)">Canceladas</option>
-        </select>
-        <select @bind="filtroEmpleadoId" @bind:after="Filtrar">
-            <option value="">Todos los empleados</option>
-            @foreach (var emp in todosEmpleados)
-            {
-                <option value="@emp.Id">@emp.NombreCompleto</option>
-            }
-        </select>
-        <select @bind="filtroPeriodo" @bind:after="Filtrar">
-            <option value="">Todos los períodos</option>
-            @for (int year = DateTime.Now.Year; year >= DateTime.Now.Year - 5; year--)
-            {
-                <option value="@year">@year</option>
-            }
-        </select>
-    </div>
-</div>
-
-<!-- Información de resultados -->
-<div class="results-info">
-    Mostrando @vacaciones.Count() de @totalVacaciones vacación(es)
-    @if (AuthService.IsAprobador && vacacionesPendientes > 0)
-    {
-        <span class="text-warning" style="font-weight: bold;"> | @vacacionesPendientes pendientes de aprobación</span>
+    body, * {
+        font-family: 'Courier New', monospace;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
-</div>
+    
+    .vacacion-container {
+        width: 100%;
+        min-width: 1024px;
+        max-width: 1920px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+    }
+    
+    .vacacion-header {
+        border-bottom: 2px solid black;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .vacacion-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin: 0;
+        text-align: left;
+    }
+    
+    .vacacion-info {
+        font-size: 12px;
+        margin-top: 5px;
+        color: #000;
+    }
+    
+    /* === BLOQUES DE ERROR/CONFIRMACIÓN === */
+    
+    .error-box {
+        border: 3px solid red;
+        background: white;
+        padding: 15px;
+        margin: 20px 0;
+    }
+    
+    .error-title {
+        color: red;
+        font-size: 14px;
+        font-weight: bold;
+        margin: 0 0 10px 0;
+    }
+    
+    .error-text {
+        color: black;
+        font-size: 12px;
+        margin: 0 0 15px 0;
+    }
+    
+    .success-box {
+        border: 2px solid green;
+        background: white;
+        padding: 10px;
+        margin: 20px 0;
+        color: black;
+        font-size: 12px;
+    }
+    
+    /* === TECLAS DE FUNCIÓN === */
+    
+    .teclas-funcion {
+        border: 1px solid black;
+        background: white;
+        padding: 8px;
+        margin-bottom: 15px;
+        font-size: 11px;
+    }
+    
+    .tecla {
+        display: inline-block;
+        margin-right: 15px;
+    }
+    
+    /* === CONTROLES === */
+    
+    .controles-principales {
+        border: 1px solid black;
+        padding: 10px;
+        margin-bottom: 15px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .controles-filtros {
+        border: 1px solid black;
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .filtro-grupo {
+        margin-bottom: 10px;
+    }
+    
+    .filtro-label {
+        display: inline-block;
+        width: 150px;
+        font-size: 12px;
+    }
+    
+    .btn {
+        background: white;
+        border: 2px solid black;
+        padding: 8px 16px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        cursor: pointer;
+        text-transform: uppercase;
+    }
+    
+    .btn:hover {
+        background: #f0f0f0;
+    }
+    
+    .btn:disabled {
+        background: #e0e0e0;
+        border-color: #999;
+        cursor: not-allowed;
+        color: #666;
+    }
+    
+    .btn-aprobar {
+        border-color: green;
+    }
+    
+    .btn-rechazar {
+        border-color: red;
+    }
+    
+    .input-text {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        border: 1px solid black;
+        padding: 6px;
+        background: white;
+    }
+    
+    .input-text:disabled {
+        background: #e0e0e0;
+    }
+    
+    .select {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        border: 1px solid black;
+        padding: 6px;
+        background: white;
+    }
+    
+    /* === INFORMACIÓN DE RESULTADOS === */
+    
+    .info-resultados {
+        border: 1px solid black;
+        padding: 8px;
+        margin-bottom: 15px;
+        font-size: 12px;
+        background: white;
+    }
+    
+    .info-pendientes {
+        color: black;
+        background: yellow;
+        padding: 2px 6px;
+        margin-left: 10px;
+    }
+    
+    /* === LAYOUT CON PANEL LATERAL === */
+    
+    .contenido-principal {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    /* === TABLA === */
+    
+    .tabla-vacaciones {
+        width: 100%;
+        border-collapse: collapse;
+        border: 2px solid black;
+    }
+    
+    .tabla-vacaciones th {
+        background: white;
+        border: 1px solid black;
+        padding: 8px;
+        text-align: left;
+        font-size: 11px;
+        font-weight: bold;
+    }
+    
+    .tabla-vacaciones td {
+        border: 1px solid black;
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+    
+    .tabla-vacaciones tbody tr {
+        cursor: pointer;
+    }
+    
+    .tabla-vacaciones tbody tr:hover {
+        background: #f5f5f5;
+    }
+    
+    .tabla-vacaciones tbody tr.fila-seleccionada {
+        background: #d0d0d0;
+    }
+    
+    .td-centro {
+        text-align: center;
+    }
+    
+    /* === ESTADOS === */
+    
+    .estado-pendiente {
+        background: yellow;
+        color: black;
+        padding: 2px 6px;
+        display: inline-block;
+    }
+    
+    .estado-aprobada {
+        background: green;
+        color: white;
+        padding: 2px 6px;
+        display: inline-block;
+    }
+    
+    .estado-rechazada {
+        background: red;
+        color: white;
+        padding: 2px 6px;
+        display: inline-block;
+    }
+    
+    .estado-programada {
+        background: blue;
+        color: white;
+        padding: 2px 6px;
+        display: inline-block;
+    }
+    
+    .estado-disfrutada {
+        background: #808080;
+        color: white;
+        padding: 2px 6px;
+        display: inline-block;
+    }
+    
+    .estado-cancelada {
+        background: #808080;
+        color: white;
+        padding: 2px 6px;
+        display: inline-block;
+    }
+    
+    /* === PANEL LATERAL === */
+    
+    .panel-lateral {
+        border: 2px solid black;
+        padding: 15px;
+        background: white;
+    }
+    
+    .panel-titulo {
+        font-size: 12px;
+        font-weight: bold;
+        border-bottom: 1px solid black;
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+    }
+    
+    .panel-seccion {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 15px;
+    }
+    
+    .panel-seccion:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .panel-label {
+        font-size: 11px;
+        font-weight: bold;
+        display: block;
+        margin-bottom: 3px;
+    }
+    
+    .panel-valor {
+        font-size: 14px;
+        display: block;
+        margin-bottom: 10px;
+    }
+    
+    .panel-aviso {
+        border: 1px solid #ccc;
+        background: #f5f5f5;
+        padding: 8px;
+        font-size: 10px;
+        margin-top: 10px;
+    }
+    
+    /* === LOADING/EMPTY === */
+    
+    .loading-cell {
+        text-align: center;
+        padding: 40px;
+        font-size: 12px;
+    }
+    
+    .empty-cell {
+        text-align: center;
+        padding: 40px;
+        font-size: 12px;
+        color: #666;
+    }
+    
+    /* === MODAL === */
+    
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+    
+    .modal-box {
+        background: white;
+        border: 3px solid black;
+        width: 90%;
+        max-width: 900px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        background: black;
+        color: white;
+        padding: 12px;
+        font-size: 13px;
+        font-weight: bold;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .modal-footer {
+        border-top: 2px solid black;
+        padding: 15px;
+        text-align: right;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+    
+    /* === FORMULARIO === */
+    
+    .formulario-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
+    .formulario-seccion {
+        border: 1px solid black;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .seccion-titulo {
+        font-weight: bold;
+        font-size: 12px;
+        margin-bottom: 15px;
+        border-bottom: 1px solid black;
+        padding-bottom: 5px;
+    }
+    
+    .campo-form {
+        margin-bottom: 15px;
+    }
+    
+    .campo-label {
+        display: block;
+        font-size: 11px;
+        font-weight: bold;
+        margin-bottom: 4px;
+    }
+    
+    .campo-requerido::after {
+        content: " *";
+        color: red;
+    }
+    
+    .campo-input {
+        width: 100%;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        border: 1px solid black;
+        padding: 6px;
+        background: white;
+    }
+    
+    .campo-input:disabled {
+        background: #e0e0e0;
+        color: #666;
+    }
+    
+    .campo-textarea {
+        width: 100%;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        border: 1px solid black;
+        padding: 6px;
+        background: white;
+        resize: vertical;
+    }
+    
+    .campo-textarea:disabled {
+        background: #e0e0e0;
+        color: #666;
+    }
+    
+    .campo-ayuda {
+        font-size: 10px;
+        color: #666;
+        margin-top: 3px;
+    }
+    
+    /* === ALERTA DÍAS DISPONIBLES === */
+    
+    .alerta-dias {
+        border: 2px solid black;
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .alerta-dias-titulo {
+        font-size: 11px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .alerta-dias-valor {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .alerta-dias-suficiente {
+        border-color: green;
+    }
+    
+    .alerta-dias-insuficiente {
+        border-color: red;
+    }
+    
+    .alerta-dias-advertencia {
+        font-size: 10px;
+        color: red;
+        margin-top: 5px;
+    }
+    
+    /* === HISTORIAL === */
+    
+    .historial-box {
+        border: 1px solid black;
+        padding: 10px;
+        margin-top: 15px;
+    }
+    
+    .historial-titulo {
+        font-size: 11px;
+        font-weight: bold;
+        margin-bottom: 8px;
+        border-bottom: 1px solid black;
+        padding-bottom: 5px;
+    }
+    
+    .historial-item {
+        font-size: 10px;
+        margin-bottom: 5px;
+        padding: 5px;
+        border-bottom: 1px dotted #ccc;
+    }
+    
+    .historial-item:last-child {
+        border-bottom: none;
+    }
+    
+    /* === BLOQUE DE APROBACIÓN === */
+    
+    .bloque-aprobacion {
+        border: 2px solid black;
+        padding: 15px;
+        margin-top: 20px;
+        background: #f9f9f9;
+    }
+    
+    .bloque-aprobacion-titulo {
+        font-weight: bold;
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .bloque-aprobacion-botones {
+        display: flex;
+        gap: 10px;
+    }
+    
+    /* === DIÁLOGO CONFIRMACIÓN === */
+    
+    .dialogo-confirmacion {
+        border: 3px solid black;
+        background: white;
+        padding: 20px;
+        width: 500px;
+    }
+    
+    .dialogo-titulo {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        border-bottom: 2px solid black;
+        padding-bottom: 8px;
+    }
+    
+    .dialogo-contenido {
+        margin-bottom: 20px;
+    }
+    
+    .dialogo-botones {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+</style>
 
-<!-- Tabla de vacaciones -->
-<div style="overflow-x: auto;">
-    <table>
-        <thead>
-            <tr>
-                <th>EMPLEADO</th>
-                <th style="width: 80px;">PERÍODO</th>
-                <th style="width: 100px;">FECHA INICIO</th>
-                <th style="width: 100px;">FECHA FIN</th>
-                <th style="width: 60px;">DÍAS</th>
-                <th style="width: 120px;">ESTADO</th>
-                <th style="width: 100px;">SOLICITADO</th>
-                <th style="width: 150px;">ACCIONES</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (isLoading)
+<div class="vacacion-container">
+    <!-- CABECERA -->
+    <div class="vacacion-header">
+        <h1 class="vacacion-title">SISTEMA DE GESTION DE VACACIONES</h1>
+        <div class="vacacion-info">
+            USUARIO: @(AuthService.CurrentUser?.NombreCompleto ?? "N/A") | 
+            ROL: @(AuthService.IsAprobador ? "APROBADOR" : "OPERADOR") | 
+            FECHA: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+        </div>
+    </div>
+    
+    <!-- ERRORES -->
+    @if (errorMessage != null)
+    {
+        <div class="error-box">
+            <h3 class="error-title">ERROR DEL SISTEMA</h3>
+            <p class="error-text">@errorMessage</p>
+            <button class="btn" @onclick="() => errorMessage = null">ACEPTAR</button>
+        </div>
+    }
+    
+    <!-- CONFIRMACIONES -->
+    @if (successMessage != null)
+    {
+        <div class="success-box">
+            @successMessage
+        </div>
+    }
+    
+    <!-- TECLAS DE FUNCIÓN -->
+    <div class="teclas-funcion">
+        <span class="tecla">F2=BUSCAR</span>
+        <span class="tecla">F3=NUEVO</span>
+        <span class="tecla">F4=DETALLE</span>
+        <span class="tecla">F5=ACTUALIZAR</span>
+        @if (AuthService.IsAprobador)
+        {
+            <span class="tecla">F6=APROBAR</span>
+            <span class="tecla">F7=RECHAZAR</span>
+        }
+        <span class="tecla">ESC=CERRAR</span>
+        <span class="tecla">TAB=NAVEGAR</span>
+    </div>
+    
+    <!-- CONTROLES PRINCIPALES -->
+    <div class="controles-principales">
+        <button class="btn" @onclick="NuevaVacacion">NUEVO</button>
+        <button class="btn" @onclick="CargarVacaciones">ACTUALIZAR</button>
+        <button class="btn" @onclick="EditarSeleccionado" disabled="@(selectedVacacion == null)">VER DETALLE</button>
+        @if (AuthService.IsAprobador)
+        {
+            <button class="btn btn-aprobar" @onclick="AprobarSeleccionado" 
+                    disabled="@(selectedVacacion?.Estado != EstadoVacacion.Pendiente)">
+                APROBAR
+            </button>
+            <button class="btn btn-rechazar" @onclick="RechazarSeleccionado" 
+                    disabled="@(selectedVacacion?.Estado != EstadoVacacion.Pendiente)">
+                RECHAZAR
+            </button>
+        }
+    </div>
+    
+    <!-- FILTROS -->
+    <div class="controles-filtros">
+        <div class="filtro-grupo">
+            <label class="filtro-label">BUSCAR:</label>
+            <input type="text" id="searchInput" class="input-text" style="width: 300px;"
+                   @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+            <button class="btn" @onclick="Buscar">BUSCAR</button>
+            @if (!string.IsNullOrEmpty(searchTerm))
             {
-                <tr><td colspan="8" class="loading">Cargando vacaciones...</td></tr>
+                <button class="btn" @onclick="LimpiarBusqueda">LIMPIAR</button>
             }
-            else if (!vacaciones.Any())
+        </div>
+        
+        <div class="filtro-grupo">
+            <label class="filtro-label">ESTADO:</label>
+            <select class="select" @bind="filtroEstado" @bind:after="Filtrar" style="width: 200px;">
+                <option value="">TODOS</option>
+                <option value="@((int)EstadoVacacion.Pendiente)">PENDIENTE</option>
+                <option value="@((int)EstadoVacacion.Aprobada)">APROBADA</option>
+                <option value="@((int)EstadoVacacion.Rechazada)">RECHAZADA</option>
+                <option value="@((int)EstadoVacacion.Programada)">PROGRAMADA</option>
+                <option value="@((int)EstadoVacacion.Disfrutada)">DISFRUTADA</option>
+                <option value="@((int)EstadoVacacion.Cancelada)">CANCELADA</option>
+            </select>
+        </div>
+        
+        <div class="filtro-grupo">
+            <label class="filtro-label">EMPLEADO:</label>
+            <select class="select" @bind="filtroEmpleadoId" @bind:after="Filtrar" style="width: 300px;">
+                <option value="">TODOS</option>
+                @foreach (var emp in todosEmpleados)
+                {
+                    <option value="@emp.Id">@emp.NombreCompleto</option>
+                }
+            </select>
+        </div>
+        
+        <div class="filtro-grupo">
+            <label class="filtro-label">PERIODO:</label>
+            <select class="select" @bind="filtroPeriodo" @bind:after="Filtrar" style="width: 150px;">
+                <option value="">TODOS</option>
+                @for (int year = DateTime.Now.Year; year >= DateTime.Now.Year - 5; year--)
+                {
+                    <option value="@year">@year</option>
+                }
+            </select>
+        </div>
+    </div>
+    
+    <!-- INFORMACIÓN DE RESULTADOS -->
+    <div class="info-resultados">
+        REGISTROS: @vacaciones.Count() DE @totalVacaciones
+        @if (AuthService.IsAprobador && vacacionesPendientes > 0)
+        {
+            <span class="info-pendientes">PENDIENTES DE APROBACION: @vacacionesPendientes</span>
+        }
+    </div>
+    
+    <!-- CONTENIDO PRINCIPAL CON PANEL LATERAL -->
+    <div class="contenido-principal">
+        <!-- TABLA DE VACACIONES -->
+        <div>
+            <table class="tabla-vacaciones">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>EMPLEADO</th>
+                        <th>CEDULA</th>
+                        <th>PERIODO</th>
+                        <th>FECHA INICIO</th>
+                        <th>FECHA FIN</th>
+                        <th>DIAS</th>
+                        <th>ESTADO</th>
+                        <th>FECHA SOLICITUD</th>
+                        <th>SOLICITADO POR</th>
+                        <th>APROBADO POR</th>
+                        <th>F. APROBACION</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (isLoading)
+                    {
+                        <tr><td colspan="12" class="loading-cell">CARGANDO DATOS...</td></tr>
+                    }
+                    else if (!vacaciones.Any())
+                    {
+                        <tr><td colspan="12" class="empty-cell">NO HAY REGISTROS PARA MOSTRAR</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var vac in vacaciones)
+                        {
+                            <tr class="@(selectedVacacion?.Id == vac.Id ? "fila-seleccionada" : "")"
+                                @onclick="() => SelectVacacion(vac)">
+                                <td class="td-centro">@vac.Id</td>
+                                <td>@(vac.Empleado?.NombreCompleto ?? "N/A")</td>
+                                <td>@(vac.Empleado?.Cedula ?? "N/A")</td>
+                                <td class="td-centro">@vac.PeriodoCorrespondiente</td>
+                                <td>@vac.FechaInicio.ToString("dd/MM/yyyy")</td>
+                                <td>@vac.FechaFin.ToString("dd/MM/yyyy")</td>
+                                <td class="td-centro">@vac.DiasTomados</td>
+                                <td>
+                                    <span class="estado-@(vac.Estado.ToString().ToLower())">
+                                        @GetEstadoTexto(vac.Estado)
+                                    </span>
+                                </td>
+                                <td>@vac.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                                <td>@(vac.SolicitadoPor?.NombreCompleto ?? "N/A")</td>
+                                <td>@(vac.AprobadoPor?.NombreCompleto ?? "N/A")</td>
+                                <td>@(vac.FechaAprobacion?.ToString("dd/MM/yyyy") ?? "-")</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- PANEL LATERAL -->
+        <div class="panel-lateral">
+            <div class="panel-titulo">RESUMEN TEXTUAL</div>
+            
+            @if (!string.IsNullOrEmpty(filtroEmpleadoId) && int.TryParse(filtroEmpleadoId, out int empId) && empId > 0 && resumenVacaciones != null)
             {
-                <tr><td colspan="8" class="empty-state">No hay vacaciones para mostrar</td></tr>
+                <div class="panel-seccion">
+                    <span class="panel-label">EMPLEADO:</span>
+                    <span class="panel-valor">@resumenVacaciones.NombreEmpleado</span>
+                    
+                    <span class="panel-label">CEDULA:</span>
+                    <span class="panel-valor">@resumenVacaciones.CedulaEmpleado</span>
+                </div>
+                
+                <div class="panel-seccion">
+                    <span class="panel-label">DIAS DISPONIBLES:</span>
+                    <span class="panel-valor">@resumenVacaciones.TotalDiasDisponibles</span>
+                    
+                    <span class="panel-label">DIAS USADOS:</span>
+                    <span class="panel-valor">@resumenVacaciones.DiasUsados</span>
+                    
+                    <span class="panel-label">DIAS RESTANTES:</span>
+                    <span class="panel-valor">@resumenVacaciones.DiasRestantes</span>
+                </div>
+                
+                <div class="panel-seccion">
+                    <span class="panel-label">ANTIGÜEDAD:</span>
+                    <span class="panel-valor">@resumenVacaciones.AntiguedadAnios AÑOS</span>
+                    
+                    <span class="panel-label">PERIODO ACTUAL:</span>
+                    <span class="panel-valor">@DateTime.Now.Year</span>
+                </div>
+                
+                @if (resumenVacaciones.UltimaVacacion != null)
+                {
+                    <div class="panel-seccion">
+                        <span class="panel-label">ULTIMA VACACION:</span>
+                        <span class="panel-valor">
+                            @resumenVacaciones.UltimaVacacion.FechaInicio.ToString("dd/MM/yyyy") - 
+                            @resumenVacaciones.UltimaVacacion.FechaFin.ToString("dd/MM/yyyy")
+                        </span>
+                        <span class="panel-valor">@resumenVacaciones.UltimaVacacion.DiasTomados DIAS</span>
+                    </div>
+                }
+                
+                <div class="panel-aviso">
+                    NOTA: Los calculos se basan en 15 dias base mas 1 dia adicional cada 5 años de antigüedad.
+                </div>
             }
             else
             {
-                @foreach (var vac in vacaciones)
-                {
-                    <tr class="@(selectedVacacion?.Id == vac.Id ? "selected" : "")"
-                        @onclick="() => SelectVacacion(vac)">
-                        <td><strong>@(vac.Empleado?.NombreCompleto ?? "N/A")</strong></td>
-                        <td style="text-align: center;">@vac.PeriodoCorrespondiente</td>
-                        <td>@vac.FechaInicio.ToString("dd/MM/yyyy")</td>
-                        <td>@vac.FechaFin.ToString("dd/MM/yyyy")</td>
-                        <td style="text-align: center;">@vac.DiasTomados</td>
-                        <td>
-                            <span class="badge badge-@vac.Estado.ToString().ToLower()">
-                                @GetEstadoTexto(vac.Estado)
-                            </span>
-                        </td>
-                        <td style="font-size: 11px;">@vac.FechaSolicitud.ToString("dd/MM/yyyy")</td>
-                        <td class="table-actions">
-                            <button @onclick="() => VerDetalle(vac)" @onclick:stopPropagation="true">
-                                VER
-                            </button>
-                            @if (vac.Estado == EstadoVacacion.Pendiente || vac.Estado == EstadoVacacion.Aprobada)
-                            {
-                                <button @onclick="() => EditarVacacion(vac)" @onclick:stopPropagation="true">
-                                    EDITAR
-                                </button>
-                            }
-                        </td>
-                    </tr>
-                }
-            }
-        </tbody>
-    </table>
-</div>
-
-<!-- Modal de Vacación (Nuevo/Editar) -->
-<FormModal @bind-IsVisible="showModal" 
-           Title="@(isEditing ? $"DETALLE DE VACACIÓN - {vacacionEdit.Empleado?.NombreCompleto ?? ""}" : "NUEVA SOLICITUD DE VACACIÓN")"
-           Width="800px"
-           OnSaveClicked="Guardar"
-           OnCancelClicked="CerrarModal"
-           IsSaving="isSaving"
-           ShowSaveButton="@(!isViewing)"
-           CloseOnBackdropClick="false">
-    
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-        <!-- Columna izquierda -->
-        <div>
-            <div class="form-group required">
-                <label>Empleado:</label>
-                @if (isEditing || isViewing)
-                {
-                    <input type="text" value="@(vacacionEdit.Empleado?.NombreCompleto ?? "")" disabled />
-                }
-                else
-                {
-                    <select @bind="vacacionEdit.EmpleadoId" @bind:after="OnEmpleadoChanged" required>
-                        <option value="0">-- Seleccione empleado --</option>
-                        @foreach (var emp in empleadosActivos)
-                        {
-                            <option value="@emp.Id">@emp.NombreCompleto - @emp.Cedula</option>
-                        }
-                    </select>
-                }
-            </div>
-            
-            @if (vacacionEdit.EmpleadoId > 0 && diasDisponibles.HasValue)
-            {
-                <div class="@(diasDisponibles.Value > 0 ? "alert alert-success" : "alert alert-error")">
-                    <div style="font-size: 12px; margin-bottom: 4px;">DÍAS DISPONIBLES EN @DateTime.Now.Year</div>
-                    <div style="font-size: 24px; font-weight: bold;">
-                        @diasDisponibles.Value días
-                    </div>
-                    @if (diasDisponibles.Value <= 0)
-                    {
-                        <div style="font-size: 11px; margin-top: 4px;">
-                            No hay días de vacaciones disponibles para este año
-                        </div>
-                    }
+                <div class="empty-cell">
+                    SELECCIONE UN EMPLEADO EN LOS FILTROS PARA VER EL RESUMEN
                 </div>
-            }
-            
-            <div class="form-group required">
-                <label>Período Correspondiente:</label>
-                <input type="number" @bind="vacacionEdit.PeriodoCorrespondiente" 
-                       disabled="@isViewing" required 
-                       min="@(DateTime.Now.Year - 10)" 
-                       max="@DateTime.Now.Year" />
-                <small style="color: #666;">Año al que corresponden estas vacaciones</small>
-            </div>
-            
-            <div class="form-group required">
-                <label>Fecha Inicio:</label>
-                <input type="date" @bind="vacacionEdit.FechaInicio" 
-                       @bind:after="CalcularDias"
-                       disabled="@isViewing" required />
-            </div>
-            
-            <div class="form-group required">
-                <label>Fecha Fin:</label>
-                <input type="date" @bind="vacacionEdit.FechaFin" 
-                       @bind:after="CalcularDias"
-                       disabled="@isViewing" required />
-            </div>
-            
-            <div class="form-group">
-                <label>Días a Tomar:</label>
-                <input type="number" @bind="vacacionEdit.DiasTomados" 
-                       disabled 
-                       style="background-color: #F5F5F5; font-weight: bold; font-size: 18px;" />
-            </div>
-        </div>
-        
-        <!-- Columna derecha -->
-        <div>
-            <div class="form-group">
-                <label>Observaciones:</label>
-                <textarea @bind="vacacionEdit.Observaciones" rows="4"
-                          disabled="@isViewing"
-                          placeholder="Información adicional o comentarios (opcional)"></textarea>
-            </div>
-            
-            @if (isEditing || isViewing)
-            {
-                <div class="form-group">
-                    <label>ESTADO</label>
-                    <div style="padding: 8px; background-color: #F5F5F5; border: 1px solid #808080;">
-                        <span class="badge badge-@vacacionEdit.Estado.ToString().ToLower()">
-                            @GetEstadoTexto(vacacionEdit.Estado)
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label>Fecha de Solicitud:</label>
-                    <input type="text" value="@vacacionEdit.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")" disabled />
-                </div>
-                
-                <div class="form-group">
-                    <label>Solicitado por:</label>
-                    <input type="text" value="@(vacacionEdit.SolicitadoPor?.NombreCompleto ?? "")" disabled />
-                </div>
-                
-                @if (vacacionEdit.AprobadoPor != null)
-                {
-                    <div class="form-group">
-                        <label>@(vacacionEdit.Estado == EstadoVacacion.Aprobada ? "Aprobado" : "Rechazado") por:</label>
-                        <input type="text" value="@vacacionEdit.AprobadoPor.NombreCompleto" disabled />
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Fecha de @(vacacionEdit.Estado == EstadoVacacion.Aprobada ? "Aprobación" : "Rechazo"):</label>
-                        <input type="text" value="@vacacionEdit.FechaAprobacion?.ToString("dd/MM/yyyy HH:mm")" disabled />
-                    </div>
-                }
-                
-                @if (!string.IsNullOrEmpty(vacacionEdit.MotivoRechazo))
-                {
-                    <div class="form-group">
-                        <label>Motivo del Rechazo:</label>
-                        <textarea value="@vacacionEdit.MotivoRechazo" rows="3" disabled></textarea>
-                    </div>
-                }
-            }
-            
-            <!-- Historial de vacaciones del empleado -->
-            @if (isEditing || isViewing)
-            {
-                @if (historialVacaciones.Any())
-                {
-                    <div class="info-box" style="margin-top: 16px;">
-                        <strong style="font-size: 12px;">HISTORIAL DE VACACIONES</strong>
-                        <div style="max-height: 200px; overflow-y: auto; margin-top: 8px;">
-                            @foreach (var hist in historialVacaciones.OrderByDescending(v => v.FechaInicio))
-                            {
-                                <div style="padding: 6px; background-color: white; margin-bottom: 4px; font-size: 11px; border-left: 3px solid @GetEstadoColor(hist.Estado);">
-                                    <strong>@hist.PeriodoCorrespondiente:</strong> 
-                                    @hist.FechaInicio.ToString("dd/MM/yyyy") - @hist.FechaFin.ToString("dd/MM/yyyy")
-                                    (@hist.DiasTomados días) - 
-                                    <span style="color: @GetEstadoColor(hist.Estado);">@hist.Estado</span>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
             }
         </div>
     </div>
-    
-    @if ((isEditing || isViewing) && selectedVacacion?.Estado == EstadoVacacion.Pendiente && AuthService.IsAprobador)
-    {
-        <div style="margin-top: 16px; padding: 16px; background-color: #FFF9C4; border: 1px solid #FBC02D;">
-            <strong>ACCIONES DE APROBACIÓN:</strong>
-            <div style="display: flex; gap: 8px; margin-top: 8px;">
-                <button @onclick="AprobarVacacion" style="background-color: #4CAF50; color: white; flex: 1;">
-                    ✓ APROBAR VACACIÓN
-                </button>
-                <button @onclick="() => showRechazarDialog = true" style="background-color: #F44336; color: white; flex: 1;">
-                    ✗ RECHAZAR VACACIÓN
-                </button>
+</div>
+
+<!-- MODAL -->
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal-box" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                @if (isEditing)
+                {
+                    <text>DETALLE DE VACACION - @(vacacionEdit.Empleado?.NombreCompleto ?? "")</text>
+                }
+                else
+                {
+                    <text>NUEVA SOLICITUD DE VACACION</text>
+                }
+            </div>
+            
+            <div class="modal-body">
+                <div class="formulario-grid">
+                    <!-- COLUMNA IZQUIERDA -->
+                    <div>
+                        <div class="formulario-seccion">
+                            <div class="seccion-titulo">DATOS PRINCIPALES</div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">EMPLEADO</label>
+                                @if (isEditing || isViewing)
+                                {
+                                    <input type="text" class="campo-input" 
+                                           value="@(vacacionEdit.Empleado?.NombreCompleto ?? "")" disabled />
+                                }
+                                else
+                                {
+                                    <select class="campo-input" @bind="vacacionEdit.EmpleadoId" @bind:after="OnEmpleadoChanged">
+                                        <option value="0">SELECCIONE EMPLEADO</option>
+                                        @foreach (var emp in empleadosActivos)
+                                        {
+                                            <option value="@emp.Id">@emp.NombreCompleto - @NumberFormatHelper.FormatearCedula(emp.Cedula)</option>
+                                        }
+                                    </select>
+                                }
+                            </div>
+                            
+                            @if (vacacionEdit.EmpleadoId > 0 && diasDisponibles.HasValue)
+                            {
+                                <div class="alerta-dias @(diasDisponibles.Value > 0 ? "alerta-dias-suficiente" : "alerta-dias-insuficiente")">
+                                    <div class="alerta-dias-titulo">DIAS DISPONIBLES EN @DateTime.Now.Year</div>
+                                    <div class="alerta-dias-valor">@diasDisponibles.Value DIAS</div>
+                                    @if (diasDisponibles.Value <= 0)
+                                    {
+                                        <div class="alerta-dias-advertencia">
+                                            NO HAY DIAS DE VACACIONES DISPONIBLES PARA ESTE AÑO
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">PERIODO CORRESPONDIENTE</label>
+                                <input type="number" class="campo-input" 
+                                       @bind="vacacionEdit.PeriodoCorrespondiente" 
+                                       disabled="@isViewing"
+                                       min="@(DateTime.Now.Year - 10)" 
+                                       max="@DateTime.Now.Year" />
+                                <div class="campo-ayuda">Año al que corresponden estas vacaciones</div>
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">FECHA INICIO</label>
+                                <input type="date" class="campo-input" 
+                                       @bind="vacacionEdit.FechaInicio" 
+                                       @bind:after="CalcularDias"
+                                       disabled="@isViewing" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">FECHA FIN</label>
+                                <input type="date" class="campo-input" 
+                                       @bind="vacacionEdit.FechaFin" 
+                                       @bind:after="CalcularDias"
+                                       disabled="@isViewing" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label">DIAS A TOMAR</label>
+                                <input type="number" class="campo-input" 
+                                       @bind="vacacionEdit.DiasTomados" disabled />
+                                <div class="campo-ayuda">Calculado automaticamente (dias habiles)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- COLUMNA DERECHA -->
+                    <div>
+                        <div class="formulario-seccion">
+                            <div class="seccion-titulo">INFORMACION ADICIONAL</div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label">OBSERVACIONES</label>
+                                <textarea class="campo-textarea" rows="4"
+                                          @bind="vacacionEdit.Observaciones"
+                                          disabled="@isViewing"></textarea>
+                            </div>
+                            
+                            @if (isEditing || isViewing)
+                            {
+                                <div class="campo-form">
+                                    <label class="campo-label">ESTADO</label>
+                                    <div>
+                                        <span class="estado-@(vacacionEdit.Estado.ToString().ToLower())">
+                                            @GetEstadoTexto(vacacionEdit.Estado)
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="campo-form">
+                                    <label class="campo-label">FECHA SOLICITUD</label>
+                                    <input type="text" class="campo-input" 
+                                           value="@vacacionEdit.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")" disabled />
+                                </div>
+                                
+                                <div class="campo-form">
+                                    <label class="campo-label">SOLICITADO POR</label>
+                                    <input type="text" class="campo-input" 
+                                           value="@(vacacionEdit.SolicitadoPor?.NombreCompleto ?? "N/A")" disabled />
+                                </div>
+                                
+                                @if (vacacionEdit.AprobadoPor != null)
+                                {
+                                    <div class="campo-form">
+                                        <label class="campo-label">@(vacacionEdit.Estado == EstadoVacacion.Aprobada ? "APROBADO POR" : "RECHAZADO POR")</label>
+                                        <input type="text" class="campo-input" 
+                                               value="@vacacionEdit.AprobadoPor.NombreCompleto" disabled />
+                                    </div>
+                                    
+                                    <div class="campo-form">
+                                        <label class="campo-label">FECHA @(vacacionEdit.Estado == EstadoVacacion.Aprobada ? "APROBACION" : "RECHAZO")</label>
+                                        <input type="text" class="campo-input" 
+                                               value="@vacacionEdit.FechaAprobacion?.ToString("dd/MM/yyyy HH:mm")" disabled />
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(vacacionEdit.MotivoRechazo))
+                                {
+                                    <div class="campo-form">
+                                        <label class="campo-label">MOTIVO RECHAZO</label>
+                                        <textarea class="campo-textarea" rows="3" 
+                                                  value="@vacacionEdit.MotivoRechazo" disabled></textarea>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        
+                        <!-- HISTORIAL -->
+                        @if (isEditing || isViewing)
+                        {
+                            @if (historialVacaciones.Any())
+                            {
+                                <div class="historial-box">
+                                    <div class="historial-titulo">HISTORIAL DE VACACIONES</div>
+                                    @foreach (var hist in historialVacaciones.OrderByDescending(v => v.FechaInicio))
+                                    {
+                                        <div class="historial-item">
+                                            <strong>@hist.PeriodoCorrespondiente:</strong> 
+                                            @hist.FechaInicio.ToString("dd/MM/yyyy") - @hist.FechaFin.ToString("dd/MM/yyyy")
+                                            (@hist.DiasTomados DIAS) - @hist.Estado
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+                
+                <!-- BLOQUE APROBACION -->
+                @if ((isEditing || isViewing) && selectedVacacion?.Estado == EstadoVacacion.Pendiente && AuthService.IsAprobador)
+                {
+                    <div class="bloque-aprobacion">
+                        <div class="bloque-aprobacion-titulo">ACCIONES DE APROBACION</div>
+                        <div class="bloque-aprobacion-botones">
+                            <button class="btn btn-aprobar" @onclick="AprobarVacacion">
+                                APROBAR VACACION
+                            </button>
+                            <button class="btn btn-rechazar" @onclick="() => showRechazarDialog = true">
+                                RECHAZAR VACACION
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn" @onclick="CerrarModal">CANCELAR</button>
+                @if (!isViewing)
+                {
+                    <button class="btn" @onclick="Guardar" disabled="@isSaving">
+                        @(isSaving ? "GUARDANDO..." : "GUARDAR")
+                    </button>
+                }
             </div>
         </div>
-    }
-</FormModal>
+    </div>
+}
 
-<!-- Dialog de Rechazo -->
+<!-- DIALOGO RECHAZO -->
 @if (showRechazarDialog)
 {
     <div class="modal-overlay" @onclick="() => showRechazarDialog = false">
-        <div class="modal-box" @onclick:stopPropagation="true" style="max-width: 500px;">
-            <h3>RECHAZAR VACACIÓN</h3>
+        <div class="dialogo-confirmacion" @onclick:stopPropagation="true">
+            <div class="dialogo-titulo">RECHAZAR VACACION</div>
             
-            <div class="form-group required">
-                <label>Motivo del rechazo:</label>
-                <textarea @bind="motivoRechazo" rows="4" 
-                          placeholder="Explique por qué se rechaza esta solicitud de vacación..."
-                          required></textarea>
+            <div class="dialogo-contenido">
+                <div class="campo-form">
+                    <label class="campo-label campo-requerido">MOTIVO DEL RECHAZO</label>
+                    <textarea class="campo-textarea" rows="4" 
+                              @bind="motivoRechazo"></textarea>
+                    <div class="campo-ayuda">Explique por que se rechaza esta solicitud</div>
+                </div>
             </div>
             
-            <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
-                <button @onclick="() => showRechazarDialog = false">CANCELAR</button>
-                <button @onclick="ConfirmarRechazo" 
-                        disabled="@(string.IsNullOrWhiteSpace(motivoRechazo))"
-                        style="background-color: #F44336; color: white;">
+            <div class="dialogo-botones">
+                <button class="btn" @onclick="() => showRechazarDialog = false">CANCELAR</button>
+                <button class="btn btn-rechazar" @onclick="ConfirmarRechazo" 
+                        disabled="@(string.IsNullOrWhiteSpace(motivoRechazo))">
                     CONFIRMAR RECHAZO
                 </button>
             </div>
@@ -359,12 +1044,6 @@
 
 @code {
     [Parameter] public int? VacacionIdParam { get; set; }
-    
-    // Referencias
-    private KeyboardHandler? keyboardHandler;
-    
-    // Atajos de teclado
-    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
     
     // Estado de UI
     private bool isLoading = true;
@@ -410,7 +1089,6 @@
             return;
         }
         
-        ConfigurarAtajos();
         await CargarDatosIniciales();
     }
     
@@ -420,20 +1098,6 @@
         {
             await CargarVacacionParam();
         }
-    }
-    
-    private void ConfigurarAtajos()
-    {
-        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
-        {
-            new() { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = FocusBusqueda },
-            new() { Key = "F3", KeyDisplay = "F3", Description = "Nueva", Action = NuevaVacacion },
-            new() { Key = "F4", KeyDisplay = "F4", Description = "Ver Detalle", Action = EditarSeleccionado },
-            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarVacaciones },
-            new() { Key = "F6", KeyDisplay = "F6", Description = "Aprobar", Action = AprobarSeleccionado, ShowInBar = AuthService.IsAprobador },
-            new() { Key = "F7", KeyDisplay = "F7", Description = "Rechazar", Action = RechazarSeleccionado, ShowInBar = AuthService.IsAprobador },
-            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModal }
-        };
     }
     
     private async Task CargarDatosIniciales()
@@ -456,7 +1120,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al cargar datos iniciales");
-            errorMessage = $"Error al cargar datos: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
         }
         finally
         {
@@ -487,7 +1151,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al cargar vacaciones");
-            errorMessage = $"Error al cargar vacaciones: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
         }
         finally
         {
@@ -509,7 +1173,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, $"Error al cargar vacación {VacacionIdParam}");
-            errorMessage = $"Error al cargar vacación: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
         }
     }
     
@@ -648,9 +1312,9 @@
     private async Task EditarVacacion(Vacacion vacacion)
     {
         selectedVacacion = vacacion;
+        // No copiar Id manualmente - se asigna después para evitar antipatrón
         vacacionEdit = new Vacacion
         {
-            Id = vacacion.Id,
             EmpleadoId = vacacion.EmpleadoId,
             Empleado = vacacion.Empleado,
             FechaInicio = vacacion.FechaInicio,
@@ -667,6 +1331,7 @@
             FechaAprobacion = vacacion.FechaAprobacion,
             MotivoRechazo = vacacion.MotivoRechazo
         };
+        vacacionEdit.Id = vacacion.Id;
         
         isEditing = true;
         isViewing = false;
@@ -774,7 +1439,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al guardar vacación");
-            errorMessage = $"Error al guardar: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
         }
         finally
         {
@@ -843,7 +1508,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al aprobar vacación");
-            errorMessage = $"Error al aprobar: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
         }
         finally
         {
@@ -884,7 +1549,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al rechazar vacación");
-            errorMessage = $"Error al rechazar: {ex.Message}";
+            errorMessage = ErrorTranslationService.Translate(ex);
         }
         finally
         {

@@ -1,68 +1,71 @@
-@typeparam TItem
+﻿@typeparam TItem
 @inject IJSRuntime JSRuntime
 
-<div class="datatable-container" id="@TableId" tabindex="0" @onkeydown="HandleKeyDown">
-    <table>
-        <thead>
-            <tr>
-                @HeaderTemplate
-            </tr>
-        </thead>
-        <tbody>
-            @if (IsLoading)
-            {
+<div class="hospital-datatable" id="@TableId" tabindex="0" @onkeydown="HandleKeyDown">
+    <div class="datatable-wrapper">
+        <table class="hospital-table">
+            <thead>
                 <tr>
-                    <td colspan="100" class="loading">
-                        Cargando...
-                    </td>
+                    @HeaderTemplate
                 </tr>
-            }
-            else if (Items == null || !Items.Any())
-            {
-                <tr>
-                    <td colspan="100" class="empty-state">
-                        @(EmptyMessage ?? "No hay registros para mostrar")
-                    </td>
-                </tr>
-            }
-            else
-            {
-                @foreach (var item in Items)
+            </thead>
+            <tbody>
+                @if (IsLoading)
                 {
-                    <tr class="@(IsSelected(item) ? "selected" : "")"
-                        @onclick="() => SelectItem(item)"
-                        @ondblclick="() => OnDoubleClick.InvokeAsync(item)">
-                        @RowTemplate?.Invoke(item)
+                    <tr>
+                        <td colspan="100" class="loading-state">
+                            CARGANDO DATOS...
+                        </td>
                     </tr>
                 }
-            }
-        </tbody>
-    </table>
+                else if (Items == null || !Items.Any())
+                {
+                    <tr>
+                        <td colspan="100" class="empty-state">
+                            @(EmptyMessage ?? "SIN REGISTROS")
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Items)
+                    {
+                        <tr class="@(IsSelected(item) ? "row-selected" : "row-normal")"
+                            @onclick="() => SelectItem(item)"
+                            @ondblclick="() => OnDoubleClick.InvokeAsync(item)">
+                            @RowTemplate?.Invoke(item)
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
 
     @if (ShowPagination && TotalPages > 1)
     {
         <div class="datatable-pagination">
-            <span class="pagination-info">
-                Mostrando @(((CurrentPage - 1) * PageSize) + 1) - @(Math.Min(CurrentPage * PageSize, TotalItems)) de @TotalItems registros
-            </span>
+            <div class="pagination-info">
+                REGISTROS: @(((CurrentPage - 1) * PageSize) + 1) - @(Math.Min(CurrentPage * PageSize, TotalItems)) DE @TotalItems
+            </div>
             <div class="pagination-controls">
-                <button @onclick="FirstPage" disabled="@(CurrentPage <= 1)" title="Primera página">⏮</button>
-                <button @onclick="PreviousPage" disabled="@(CurrentPage <= 1)" title="Anterior">←</button>
-                <span class="pagination-pages">
-                    Página 
+                <button class="pagination-btn" @onclick="FirstPage" disabled="@(CurrentPage <= 1)">PRIMERA</button>
+                <button class="pagination-btn" @onclick="PreviousPage" disabled="@(CurrentPage <= 1)">ANTERIOR</button>
+                <span class="pagination-page">
+                    PAGINA 
                     <input type="number" min="1" max="@TotalPages" value="@CurrentPage" 
-                           @onchange="OnPageInputChange" style="width: 50px; text-align: center;" />
-                    de @TotalPages
+                           @onchange="OnPageInputChange" class="pagination-input" />
+                    DE @TotalPages
                 </span>
-                <button @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)" title="Siguiente">→</button>
-                <button @onclick="LastPage" disabled="@(CurrentPage >= TotalPages)" title="Última página">⏭</button>
+                <button class="pagination-btn" @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">SIGUIENTE</button>
+                <button class="pagination-btn" @onclick="LastPage" disabled="@(CurrentPage >= TotalPages)">ULTIMA</button>
             </div>
             <div class="pagination-size">
-                <select @bind="PageSize" @bind:after="OnPageSizeChanged">
-                    <option value="10">10 por pág.</option>
-                    <option value="20">20 por pág.</option>
-                    <option value="50">50 por pág.</option>
-                    <option value="100">100 por pág.</option>
+                <span class="pagination-size-label">REGISTROS/PAGINA:</span>
+                <select @bind="PageSize" @bind:after="OnPageSizeChanged" class="pagination-select">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
                 </select>
             </div>
         </div>
@@ -70,11 +73,11 @@
     
     @if (ShowKeyboardHints)
     {
-        <div class="datatable-hints">
-            <span><kbd>↑↓</kbd> Navegar</span>
-            <span><kbd>Enter</kbd> Abrir</span>
-            <span><kbd>Home</kbd> Inicio</span>
-            <span><kbd>End</kbd> Fin</span>
+        <div class="datatable-keyboard">
+            <span class="keyboard-hint"><kbd>↑↓</kbd> NAVEGAR</span>
+            <span class="keyboard-hint"><kbd>ENTER</kbd> ABRIR</span>
+            <span class="keyboard-hint"><kbd>HOME</kbd> INICIO</span>
+            <span class="keyboard-hint"><kbd>END</kbd> FIN</span>
         </div>
     }
 </div>
@@ -313,101 +316,4 @@
     }
 }
 
-<style>
-    .datatable-container {
-        outline: none;
-    }
-    
-    .datatable-container:focus {
-        outline: 2px solid var(--color-text);
-        outline-offset: 2px;
-    }
 
-    .datatable-pagination {
-        margin-top: var(--spacing-md);
-        padding: var(--spacing-sm) var(--spacing-md);
-        background-color: var(--color-nav);
-        border: 1px solid var(--color-border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: var(--spacing-sm);
-        font-size: var(--font-size-sm);
-    }
-
-    .pagination-info {
-        color: #666;
-        font-family: var(--font-family);
-    }
-
-    .pagination-controls {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-xs);
-    }
-
-    .pagination-controls button {
-        padding: var(--spacing-xs) var(--spacing-sm);
-        font-size: var(--font-size-xs);
-        min-width: 28px;
-        font-family: var(--font-family);
-    }
-
-    .pagination-pages {
-        margin: 0 var(--spacing-sm);
-        font-family: var(--font-family);
-    }
-
-    .pagination-pages input {
-        margin: 0 var(--spacing-xs);
-        padding: 2px var(--spacing-xs);
-        font-size: var(--font-size-xs);
-        border: 1px solid var(--color-border);
-        font-family: var(--font-family);
-    }
-
-    .pagination-size select {
-        padding: var(--spacing-xs) var(--spacing-sm);
-        font-size: var(--font-size-xs);
-        border: 1px solid var(--color-border);
-        font-family: var(--font-family);
-    }
-
-    .datatable-hints {
-        margin-top: var(--spacing-sm);
-        padding: var(--spacing-xs) var(--spacing-sm);
-        background-color: var(--color-panel);
-        border: 1px solid var(--color-border-light);
-        font-size: var(--font-size-xs);
-        color: #666;
-        display: flex;
-        gap: var(--spacing-lg);
-        flex-wrap: wrap;
-        font-family: var(--font-family);
-    }
-
-    .datatable-hints kbd {
-        background-color: var(--color-text);
-        color: var(--color-bg);
-        padding: 1px var(--spacing-xs);
-        font-family: var(--font-family);
-        font-size: var(--font-size-xs);
-    }
-
-    .loading {
-        text-align: center;
-        padding: var(--spacing-xl);
-        color: #666666;
-        font-style: italic;
-        font-family: var(--font-family);
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: var(--spacing-xxl);
-        color: #999999;
-        font-style: italic;
-        font-family: var(--font-family);
-    }
-</style>

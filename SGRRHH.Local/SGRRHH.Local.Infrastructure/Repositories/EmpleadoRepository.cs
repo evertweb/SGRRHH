@@ -21,20 +21,66 @@ public class EmpleadoRepository : IEmpleadoRepository
     public async Task<Empleado> AddAsync(Empleado entity)
     {
         entity.FechaCreacion = DateTime.Now;
+        entity.Activo = true;
+        
         const string sql = @"INSERT INTO empleados (
     codigo, cedula, nombres, apellidos, fecha_nacimiento, genero, estado_civil, direccion, telefono, telefono_emergencia,
-    contacto_emergencia, email, foto_path, fecha_ingreso, fecha_retiro, estado, tipo_contrato, cargo_id, departamento_id,
-    supervisor_id, observaciones, numero_cuenta, banco, nivel_educacion, eps, arl, afp, salario_base, creado_por_id,
-    fecha_solicitud, aprobado_por_id, fecha_aprobacion, motivo_rechazo, activo, fecha_creacion)
+    contacto_emergencia, email, foto_path, fecha_ingreso, fecha_retiro, estado, cargo_id, departamento_id,
+    supervisor_id, observaciones, numero_cuenta, banco, nivel_educacion, 
+    eps, codigo_eps, arl, codigo_arl, clase_riesgo_arl, afp, codigo_afp, caja_compensacion, codigo_caja_compensacion,
+    salario_base, creado_por_id, fecha_solicitud, aprobado_por_id, fecha_aprobacion, motivo_rechazo, activo, fecha_creacion)
 VALUES (
     @Codigo, @Cedula, @Nombres, @Apellidos, @FechaNacimiento, @Genero, @EstadoCivil, @Direccion, @Telefono, @TelefonoEmergencia,
-    @ContactoEmergencia, @Email, @FotoPath, @FechaIngreso, @FechaRetiro, @Estado, @TipoContrato, @CargoId, @DepartamentoId,
-    @SupervisorId, @Observaciones, @NumeroCuenta, @Banco, @NivelEducacion, @EPS, @ARL, @AFP, @SalarioBase, @CreadoPorId,
-    @FechaSolicitud, @AprobadoPorId, @FechaAprobacion, @MotivoRechazo, @Activo, @FechaCreacion);
+    @ContactoEmergencia, @Email, @FotoPath, @FechaIngreso, @FechaRetiro, @Estado, @CargoId, @DepartamentoId,
+    @SupervisorId, @Observaciones, @NumeroCuenta, @Banco, @NivelEducacion, 
+    @EPS, @CodigoEPS, @ARL, @CodigoARL, @ClaseRiesgoARL, @AFP, @CodigoAFP, @CajaCompensacion, @CodigoCajaCompensacion,
+    @SalarioBase, @CreadoPorId, @FechaSolicitud, @AprobadoPorId, @FechaAprobacion, @MotivoRechazo, @Activo, @FechaCreacion);
 SELECT last_insert_rowid();";
 
         using var connection = _context.CreateConnection();
-        entity.Id = await connection.ExecuteScalarAsync<int>(sql, entity);
+        entity.Id = await connection.ExecuteScalarAsync<int>(sql, new
+        {
+            entity.Codigo,
+            entity.Cedula,
+            entity.Nombres,
+            entity.Apellidos,
+            entity.FechaNacimiento,
+            Genero = (int?)entity.Genero,
+            EstadoCivil = (int?)entity.EstadoCivil,
+            entity.Direccion,
+            entity.Telefono,
+            entity.TelefonoEmergencia,
+            entity.ContactoEmergencia,
+            entity.Email,
+            entity.FotoPath,
+            entity.FechaIngreso,
+            entity.FechaRetiro,
+            Estado = (int)entity.Estado,
+            entity.CargoId,
+            entity.DepartamentoId,
+            entity.SupervisorId,
+            entity.Observaciones,
+            entity.NumeroCuenta,
+            entity.Banco,
+            NivelEducacion = (int?)entity.NivelEducacion,
+            entity.EPS,
+            entity.CodigoEPS,
+            entity.ARL,
+            entity.CodigoARL,
+            entity.ClaseRiesgoARL,
+            entity.AFP,
+            entity.CodigoAFP,
+            entity.CajaCompensacion,
+            entity.CodigoCajaCompensacion,
+            entity.SalarioBase,
+            entity.CreadoPorId,
+            entity.FechaSolicitud,
+            entity.AprobadoPorId,
+            entity.FechaAprobacion,
+            entity.MotivoRechazo,
+            entity.Activo,
+            entity.FechaCreacion
+        });
         return entity;
     }
 
@@ -62,7 +108,6 @@ SET codigo = @Codigo,
     fecha_ingreso = @FechaIngreso,
     fecha_retiro = @FechaRetiro,
     estado = @Estado,
-    tipo_contrato = @TipoContrato,
     cargo_id = @CargoId,
     departamento_id = @DepartamentoId,
     supervisor_id = @SupervisorId,
@@ -71,8 +116,14 @@ SET codigo = @Codigo,
     banco = @Banco,
     nivel_educacion = @NivelEducacion,
     eps = @EPS,
+    codigo_eps = @CodigoEPS,
     arl = @ARL,
+    codigo_arl = @CodigoARL,
+    clase_riesgo_arl = @ClaseRiesgoARL,
     afp = @AFP,
+    codigo_afp = @CodigoAFP,
+    caja_compensacion = @CajaCompensacion,
+    codigo_caja_compensacion = @CodigoCajaCompensacion,
     salario_base = @SalarioBase,
     creado_por_id = @CreadoPorId,
     fecha_solicitud = @FechaSolicitud,
@@ -91,8 +142,8 @@ WHERE id = @Id
             entity.Nombres,
             entity.Apellidos,
             entity.FechaNacimiento,
-            entity.Genero,
-            entity.EstadoCivil,
+            Genero = (int?)entity.Genero,
+            EstadoCivil = (int?)entity.EstadoCivil,
             entity.Direccion,
             entity.Telefono,
             entity.TelefonoEmergencia,
@@ -101,18 +152,23 @@ WHERE id = @Id
             entity.FotoPath,
             entity.FechaIngreso,
             entity.FechaRetiro,
-            entity.Estado,
-            entity.TipoContrato,
+            Estado = (int)entity.Estado,
             entity.CargoId,
             entity.DepartamentoId,
             entity.SupervisorId,
             entity.Observaciones,
             entity.NumeroCuenta,
             entity.Banco,
-            entity.NivelEducacion,
+            NivelEducacion = (int?)entity.NivelEducacion,
             entity.EPS,
+            entity.CodigoEPS,
             entity.ARL,
+            entity.CodigoARL,
+            entity.ClaseRiesgoARL,
             entity.AFP,
+            entity.CodigoAFP,
+            entity.CajaCompensacion,
+            entity.CodigoCajaCompensacion,
             entity.SalarioBase,
             entity.CreadoPorId,
             entity.FechaSolicitud,
@@ -146,7 +202,8 @@ WHERE id = @Id
 
     public async Task DeleteAsync(int id)
     {
-        const string sql = "UPDATE empleados SET activo = 0, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = @Id";
+        // Hard delete - elimina permanentemente el registro
+        const string sql = "DELETE FROM empleados WHERE id = @Id";
         using var connection = _context.CreateConnection();
         await connection.ExecuteAsync(sql, new { Id = id });
     }

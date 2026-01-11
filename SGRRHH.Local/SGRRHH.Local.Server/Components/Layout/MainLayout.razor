@@ -3,9 +3,10 @@
 @inject IAuthService AuthService
 @inject ISessionService SessionService
 @inject INotificationService NotificationService
+@inject IKeyboardShortcutService KeyboardShortcutService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
-@implements IDisposable
+@implements IAsyncDisposable
 
 @if (!AuthService.IsAuthenticated)
 {
@@ -25,19 +26,11 @@ else
         </div>
     }
 
-    <!-- MARCA DE AGUA -->
-    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                width: 400px; height: 400px; 
-                background-image: url('/images/logo-watermark.svg'); 
-                background-size: contain; background-repeat: no-repeat; 
-                background-position: center; opacity: 0.08; 
-                z-index: 9999; pointer-events: none;"></div>
-
     <div class="main-container">
         <!-- Header del Sistema -->
         <header class="system-header">
             <span class="title">SGRRHH LOCAL v1.0</span>
-            <span class="info" style="display: flex; align-items: center; gap: 12px;">
+            <span class="info" >
                 @if (AuthService.IsAprobador)
                 {
                     <NotificationBell />
@@ -50,63 +43,67 @@ else
             </span>
         </header>
 
-        <!-- Menú de Navegación Textual -->
+        <!-- Menú de Navegación con Dropdowns -->
         <nav class="nav-menu">
-            <!-- PERSONAL -->
-            <span class="nav-group">
-                <span class="nav-group-label">PERSONAL</span>
-                <NavLink href="/empleados">EMPLEADOS</NavLink>
-                <NavLink href="/contratos">CONTRATOS</NavLink>
-                <NavLink href="/documentos">DOCUMENTOS</NavLink>
-            </span>
+            <!-- HOME -->
+            <NavLink href="/home" class="nav-dropdown-toggle" style="text-decoration:none;">INICIO</NavLink>
             
-            <span class="nav-separator"></span>
+            <!-- PERSONAL -->
+            <div class="nav-dropdown @(activeDropdown == "personal" ? "open" : "")">
+                <button type="button" class="nav-dropdown-toggle" @onclick="TogglePersonal" @onclick:stopPropagation="true">PERSONAL ▼</button>
+                <div class="nav-dropdown-content">
+                    <a href="/empleados">EMPLEADOS</a>
+                    <a href="/contratos">CONTRATOS</a>
+                    <a href="/documentos">DOCUMENTOS</a>
+                </div>
+            </div>
             
             <!-- SOLICITUDES -->
-            <span class="nav-group">
-                <span class="nav-group-label">SOLICITUDES</span>
-                <NavLink href="/permisos">PERMISOS</NavLink>
-                <NavLink href="/vacaciones">VACACIONES</NavLink>
-            </span>
+            <div class="nav-dropdown @(activeDropdown == "solicitudes" ? "open" : "")">
+                <button type="button" class="nav-dropdown-toggle" @onclick="ToggleSolicitudes" @onclick:stopPropagation="true">SOLICITUDES ▼</button>
+                <div class="nav-dropdown-content">
+                    <a href="/permisos">PERMISOS</a>
+                    <a href="/vacaciones">VACACIONES</a>
+                    <a href="/incapacidades">INCAPACIDADES</a>
+                    <hr class="dropdown-divider" />
+                    <a href="/seguimiento-permisos">SEGUIMIENTO</a>
+                </div>
+            </div>
             
-            <span class="nav-separator"></span>
+            <!-- NÓMINA -->
+            <div class="nav-dropdown @(activeDropdown == "nomina" ? "open" : "")">
+                <button type="button" class="nav-dropdown-toggle" @onclick="ToggleNomina" @onclick:stopPropagation="true">NÓMINA ▼</button>
+                <div class="nav-dropdown-content">
+                    <a href="/nomina">NÓMINA</a>
+                    <a href="/prestaciones">PRESTACIONES</a>
+                </div>
+            </div>
             
-            <!-- CONTROL DIARIO -->
-            <span class="nav-group">
-                <span class="nav-group-label">ASISTENCIA</span>
-                <NavLink href="/control-diario">CONTROL</NavLink>
-                <NavLink href="/control-diario-wizard">WIZARD</NavLink>
-            </span>
+            <!-- CONTROL -->
+            <div class="nav-dropdown @(activeDropdown == "control" ? "open" : "")">
+                <button type="button" class="nav-dropdown-toggle" @onclick="ToggleControl" @onclick:stopPropagation="true">CONTROL ▼</button>
+                <div class="nav-dropdown-content">
+                    <a href="/control-diario">CONTROL DIARIO</a>
+                    <a href="/control-diario-wizard">WIZARD</a>
+                    <hr class="dropdown-divider" />
+                    <a href="/dashboard-productividad">PRODUCTIVIDAD</a>
+                    <a href="/reportes">REPORTES</a>
+                    <a href="/auditoria">AUDITORÍA</a>
+                </div>
+            </div>
             
-            <span class="nav-separator"></span>
-            
-            <!-- REPORTES (visible para todos) -->
-            <span class="nav-group">
-                <span class="nav-group-label">INFORMES</span>
-                <NavLink href="/reportes">REPORTES</NavLink>
-            </span>
-            
-            @if (AuthService.IsAdmin || AuthService.IsAprobador)
-            {
-                <span class="nav-separator"></span>
-                <span class="nav-group">
-                    <span class="nav-group-label">SUPERVISIÓN</span>
-                    <NavLink href="/auditoria">AUDITORÍA</NavLink>
-                </span>
-            }
-            
-            @if (AuthService.IsAdmin)
-            {
-                <span class="nav-separator admin-separator"></span>
-                
-                <!-- ADMINISTRACIÓN -->
-                <span class="nav-group admin-group">
-                    <span class="nav-group-label">ADMIN</span>
-                    <NavLink href="/catalogos">CATÁLOGOS</NavLink>
-                    <NavLink href="/usuarios">USUARIOS</NavLink>
-                    <NavLink href="/configuracion">CONFIG</NavLink>
-                </span>
-            }
+            <!-- ADMIN -->
+            <div class="nav-dropdown nav-dropdown-admin @(activeDropdown == "admin" ? "open" : "")">
+                <button type="button" class="nav-dropdown-toggle" @onclick="ToggleAdmin" @onclick:stopPropagation="true">ADMIN ▼</button>
+                <div class="nav-dropdown-content">
+                    <a href="/catalogos">CATÁLOGOS</a>
+                    <a href="/festivos">FESTIVOS</a>
+                    <a href="/usuarios">USUARIOS</a>
+                    <hr class="dropdown-divider" />
+                    <a href="/configuracion">CONFIG</a>
+                    <a href="/configuracion-legal">LEGAL</a>
+                </div>
+            </div>
             
             <span class="nav-spacer"></span>
             <button class="btn btn-logout" @onclick="Logout">
@@ -123,10 +120,29 @@ else
         <main class="work-area">
             @Body
         </main>
+        
+        <!-- Barra de atajos de teclado -->
+        <!-- Barra de atajos de teclado dinámica -->
+        <div class="keyboard-shortcut-bar">
+            @if (_shortcuts.Any())
+            {
+                @foreach (var shortcut in _shortcuts.Where(s => s.ShowInBar).Take(8))
+                {
+                    <span class="shortcut-item"><kbd>@shortcut.KeyDisplay</kbd> @shortcut.Description</span>
+                }
+            }
+            else
+            {
+                <span class="shortcut-item"><kbd>F2</kbd> Buscar</span>
+                <span class="shortcut-item"><kbd>F3</kbd> Nuevo</span>
+                <span class="shortcut-item"><kbd>F5</kbd> Actualizar</span>
+                <span class="shortcut-item"><kbd>ESC</kbd> Cerrar</span>
+            }
+            <span class="shortcut-item shortcut-indicator">
+                <kbd>TAB</kbd> Siguiente
+            </span>
+        </div>
     </div>
-
-    <!-- Espacio para la barra de atajos (fija abajo) -->
-    <div style="height: 50px;"></div>
 }
 
 <div id="blazor-error-ui">
@@ -141,12 +157,40 @@ else
     private int sessionRemainingMinutes = 5;
     private DotNetObjectReference<MainLayout>? _dotNetRef;
     private Timer? _notificationTimer;
+    private string? activeDropdown = null;
+    private List<KeyboardShortcutDto> _shortcuts = new();
+    private bool _keyboardInitialized = false;
+    
+    private void TogglePersonal() => ToggleDropdown("personal");
+    private void ToggleSolicitudes() => ToggleDropdown("solicitudes");
+    private void ToggleNomina() => ToggleDropdown("nomina");
+    private void ToggleControl() => ToggleDropdown("control");
+    private void ToggleAdmin() => ToggleDropdown("admin");
+    
+    private void ToggleDropdown(string dropdown)
+    {
+        if (activeDropdown == dropdown)
+        {
+            activeDropdown = null;
+        }
+        else
+        {
+            activeDropdown = dropdown;
+        }
+    }
+    
+    private void CloseAllDropdowns()
+    {
+        activeDropdown = null;
+    }
     
     protected override async Task OnInitializedAsync()
     {
         AuthService.OnAuthStateChanged += OnAuthChanged;
         SessionService.OnSessionExpiring += OnSessionExpiring;
         SessionService.OnSessionExpired += OnSessionExpired;
+        Navigation.LocationChanged += OnLocationChanged;
+        KeyboardShortcutService.OnShortcutsChanged += OnShortcutsChanged;
         
         // Iniciar verificación de notificaciones cada 2 minutos
         _notificationTimer = new Timer(async _ =>
@@ -154,6 +198,21 @@ else
             await NotificationService.CheckForNewNotificationsAsync();
             await InvokeAsync(StateHasChanged);
         }, null, TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(2));
+        
+        // Cargar atajos iniciales
+        _shortcuts = KeyboardShortcutService.CurrentShortcuts;
+    }
+    
+    private void OnShortcutsChanged(object? sender, EventArgs e)
+    {
+        _shortcuts = KeyboardShortcutService.CurrentShortcuts;
+        InvokeAsync(StateHasChanged);
+    }
+    
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        activeDropdown = null;
+        InvokeAsync(StateHasChanged);
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -163,7 +222,53 @@ else
             // Configurar registro de actividad de sesión
             _dotNetRef = DotNetObjectReference.Create(this);
             await JSRuntime.InvokeVoidAsync("setupSessionActivity", _dotNetRef);
+            
+            // Inicializar el KeyboardHandler global
+            await InitializeKeyboardHandler();
         }
+    }
+    
+    private async Task InitializeKeyboardHandler()
+    {
+        if (_keyboardInitialized) return;
+        
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("KeyboardHandler.initialize", _dotNetRef);
+            _keyboardInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error inicializando KeyboardHandler: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// Método invocado desde JavaScript cuando se presiona una tecla
+    /// </summary>
+    [JSInvokable]
+    public async Task OnKeyPressed(KeyboardEventData e)
+    {
+        try
+        {
+            await KeyboardShortcutService.ExecuteShortcutAsync(e.Key, e.CtrlKey, e.AltKey, e.ShiftKey);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error ejecutando shortcut: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// DTO para eventos de teclado desde JavaScript
+    /// </summary>
+    public class KeyboardEventData
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
+        public bool CtrlKey { get; set; }
+        public bool AltKey { get; set; }
+        public bool ShiftKey { get; set; }
     }
 
     private void OnAuthChanged(object? sender, Usuario? user)
@@ -209,15 +314,8 @@ else
 
     private string GetRolDisplay()
     {
-        if (AuthService.CurrentUser == null) return "";
-        
-        return AuthService.CurrentUser.Rol switch
-        {
-            RolUsuario.Administrador => "Admin",
-            RolUsuario.Aprobador => "Aprobador",
-            RolUsuario.Operador => "Operador",
-            _ => "Usuario"
-        };
+        // Sistema de roles temporalmente deshabilitado - todos son Admin
+        return "Admin";
     }
 
     private string GetBreadcrumb()
@@ -236,62 +334,49 @@ else
     
     private string GetDefaultPageName()
     {
-        if (AuthService.CurrentUser == null) return "INICIO";
-        
-        return AuthService.CurrentUser.Rol switch
-        {
-            RolUsuario.Administrador => "USUARIOS",
-            RolUsuario.Aprobador => "EMPLEADOS",
-            RolUsuario.Operador => "CONTROL DIARIO",
-            _ => "EMPLEADOS"
-        };
+        // Sistema de roles temporalmente deshabilitado
+        return "INICIO";
     }
 
     private async Task Logout()
     {
+        // Limpiar sesión de localStorage
+        await ClearSessionAsync();
         await SessionService.EndSessionAsync();
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("/login");
     }
+    
+    private async Task ClearSessionAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("removeLocalStorage", "sgrrhh_session_user_id");
+        }
+        catch
+        {
+            // Ignorar errores de localStorage
+        }
+    }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         AuthService.OnAuthStateChanged -= OnAuthChanged;
         SessionService.OnSessionExpiring -= OnSessionExpiring;
         SessionService.OnSessionExpired -= OnSessionExpired;
+        Navigation.LocationChanged -= OnLocationChanged;
+        KeyboardShortcutService.OnShortcutsChanged -= OnShortcutsChanged;
         _notificationTimer?.Dispose();
         
         if (_dotNetRef != null)
         {
-            _ = JSRuntime.InvokeVoidAsync("removeSessionActivity");
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("removeSessionActivity");
+                await JSRuntime.InvokeVoidAsync("KeyboardHandler.dispose");
+            }
+            catch { }
             _dotNetRef.Dispose();
         }
     }
 }
-
-<style>
-    .session-warning-bar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        background-color: #FFC107;
-        color: #000;
-        padding: 8px 16px;
-        text-align: center;
-        z-index: 10000;
-        font-weight: bold;
-        font-size: 12px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 16px;
-    }
-    
-    .session-warning-bar button {
-        padding: 4px 12px;
-        font-size: 11px;
-        font-weight: bold;
-    }
-</style>
-

@@ -1,0 +1,137 @@
+/* ============================================
+   CONFIRM DIALOG - ESTILO HOSPITALARIO
+   ============================================ */
+
+/* Fondo bloqueante */
+.confirm-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Contenedor del diálogo */
+.confirm-dialog {
+    background-color: #ffffff;
+    border: 2px solid #000000;
+    width: 480px;
+    min-height: 160px;
+    padding: 0;
+    font-family: 'Courier New', Courier, monospace;
+    box-shadow: none;
+}
+
+/* Área del mensaje */
+.confirm-mensaje {
+    padding: 24px;
+    border-bottom: 1px solid #000000;
+    background-color: #ffffff;
+}
+
+.confirm-mensaje pre {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    color: #000000;
+    margin: 0;
+    padding: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+/* Área de acciones */
+.confirm-acciones {
+    padding: 16px 24px;
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    background-color: #ffffff;
+}
+
+/* Botones base */
+.confirm-btn {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 10px 32px;
+    border: 2px solid #000000;
+    background-color: #ffffff;
+    color: #000000;
+    cursor: pointer;
+    min-width: 120px;
+    text-align: center;
+}
+
+.confirm-btn:hover:not(:disabled) {
+    background-color: #f0f0f0;
+}
+
+.confirm-btn:disabled {
+    background-color: #e0e0e0;
+    color: #808080;
+    cursor: not-allowed;
+    border-color: #808080;
+}
+
+/* Botón SÍ */
+.confirm-btn-si {
+    /* Por defecto, sin color especial */
+}
+
+/* Botón NO */
+.confirm-btn-no {
+    /* Por defecto, sin color especial */
+}
+
+/* ============================================
+   TIPOS DE DIÁLOGO (SOLO COLOR DE BORDE)
+   ============================================ */
+
+/* Info: sin color especial */
+.confirm-tipo-info {
+    border-color: #000000;
+}
+
+/* Advertencia: borde amarillo */
+.confirm-tipo-warning {
+    border-color: #FFA500;
+}
+
+.confirm-tipo-warning .confirm-mensaje {
+    border-bottom-color: #FFA500;
+}
+
+/* Peligro: borde rojo */
+.confirm-tipo-danger {
+    border-color: #FF0000;
+}
+
+.confirm-tipo-danger .confirm-mensaje {
+    border-bottom-color: #FF0000;
+}
+
+/* Éxito: borde verde */
+.confirm-tipo-success {
+    border-color: #008000;
+}
+
+.confirm-tipo-success .confirm-mensaje {
+    border-bottom-color: #008000;
+}
+
+/* ============================================
+   RESPONSIVE MÍNIMO
+   ============================================ */
+
+@media (max-width: 560px) {
+    .confirm-dialog {
+        width: 90vw;
+        min-width: 320px;
+    }
+}

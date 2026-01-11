@@ -1,7 +1,8 @@
-@page "/control-diario-wizard"
+﻿@page "/control-diario-wizard"
 @using SGRRHH.Local.Domain.Entities
 @using SGRRHH.Local.Domain.Enums
 @using SGRRHH.Local.Shared.Interfaces
+@using Microsoft.JSInterop
 @inject IAuthService AuthService
 @inject IRegistroDiarioRepository RegistroDiarioRepository
 @inject IEmpleadoRepository EmpleadoRepository
@@ -10,330 +11,340 @@
 @inject IProyectoRepository ProyectoRepository
 @inject NavigationManager Navigation
 @inject ILogger<ControlDiarioWizard> Logger
+@inject IJSRuntime JSRuntime
 
-<PageTitle>Control Diario - Wizard - SGRRHH</PageTitle>
+<PageTitle>SGRRHH - WIZARD REGISTRO MASIVO</PageTitle>
 
 <style>
-/* Wizard Container */
-.wizard-container {
-    max-width: 1200px;
-    margin: 20px auto;
-    background-color: #FFFFFF;
-    border: 2px solid #000000;
-    padding: 0;
-}
+    /* SISTEMA HOSPITALARIO - ESTILO WIZARD */
+    * {
+        font-family: 'Courier New', monospace;
+        box-sizing: border-box;
+    }
 
-.wizard-header {
-    background-color: #000080;
-    color: #FFFFFF;
-    padding: 16px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid #000000;
-}
+    body {
+        background: #ffffff;
+        color: #000000;
+        margin: 0;
+        padding: 0;
+    }
 
-.wizard-header h2 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: bold;
-}
+    .wizard-container {
+        width: 100%;
+        min-width: 1024px;
+        max-width: 1280px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid #000000;
+    }
 
-.wizard-content {
-    padding: 24px;
-    min-height: 500px;
-    max-height: 70vh;
-    overflow-y: auto;
-}
+    .wizard-header {
+        background: #ffffff;
+        border-bottom: 2px solid #000000;
+        padding: 12px 20px;
+    }
 
-.wizard-footer {
-    padding: 16px 24px;
-    border-top: 2px solid #000000;
-    background-color: #F5F5F5;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+    .wizard-header h1 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
 
-/* Section Styling */
-.wizard-section {
-    margin-bottom: 32px;
-}
+    .wizard-step-indicator {
+        background: #f5f5f5;
+        border: 1px solid #000000;
+        border-left: none;
+        border-right: none;
+        padding: 8px 20px;
+        font-size: 14px;
+        font-weight: bold;
+    }
 
-.wizard-section h3 {
-    margin: 0 0 12px 0;
-    padding: 8px 12px;
-    background-color: #000080;
-    color: #FFFFFF;
-    font-size: 16px;
-    font-weight: bold;
-}
+    .wizard-body {
+        padding: 20px;
+        min-height: 400px;
+    }
 
-.wizard-section > p {
-    margin: 0 0 12px 0;
-    color: #333333;
-    font-size: 14px;
-}
+    .wizard-section {
+        display: none;
+    }
 
-/* Employee List */
-.employee-list {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #808080;
-    padding: 8px;
-    background-color: #FFFFFF;
-}
+    .wizard-section.active {
+        display: block;
+    }
 
-.employee-checkbox {
-    display: flex;
-    align-items: center;
-    padding: 8px;
-    cursor: pointer;
-    border-bottom: 1px solid #E0E0E0;
-    gap: 8px;
-}
+    .wizard-section h2 {
+        margin: 0 0 20px 0;
+        font-size: 14px;
+        font-weight: bold;
+        text-transform: uppercase;
+        border-bottom: 1px solid #000000;
+        padding-bottom: 8px;
+    }
 
-.employee-checkbox:hover {
-    background-color: #F0F0F0;
-}
+    .form-row {
+        margin-bottom: 16px;
+    }
 
-.employee-checkbox input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-}
+    .form-row label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 13px;
+        font-weight: bold;
+    }
 
-.employee-checkbox span {
-    font-weight: bold;
-    color: #000000;
-}
+    .form-row input[type="date"],
+    .form-row input[type="time"],
+    .form-row input[type="number"],
+    .form-row input[type="text"],
+    .form-row select {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #000000;
+        background: #ffffff;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+    }
 
-.employee-checkbox small {
-    color: #666666;
-    margin-left: 4px;
-}
+    .form-row input:disabled,
+    .form-row select:disabled {
+        background: #e0e0e0;
+        color: #666666;
+    }
 
-.selection-summary {
-    margin-top: 8px;
-    padding: 8px;
-    background-color: #E8F4F8;
-    border: 1px solid #4CAF50;
-    font-weight: bold;
-    color: #2E7D32;
-    text-align: center;
-}
+    .form-row-inline {
+        display: flex;
+        gap: 20px;
+    }
 
-/* Time Inputs */
-.time-inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-}
+    .form-row-inline > div {
+        flex: 1;
+    }
 
-.time-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
+    .employee-list {
+        border: 1px solid #000000;
+        background: #ffffff;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-bottom: 16px;
+    }
 
-.time-group label {
-    font-weight: bold;
-    color: #000000;
-}
+    .employee-item {
+        padding: 6px 12px;
+        border-bottom: 1px solid #cccccc;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-.time-group input[type="time"] {
-    padding: 8px;
-    border: 1px solid #808080;
-    font-size: 14px;
-}
+    .employee-item:last-child {
+        border-bottom: none;
+    }
 
-/* Form Groups */
-.form-group {
-    margin-bottom: 16px;
-}
+    .employee-item input[type="checkbox"] {
+        margin: 0;
+    }
 
-.form-group label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 4px;
-    color: #000000;
-}
+    .employee-item label {
+        margin: 0;
+        font-size: 13px;
+        cursor: pointer;
+        user-select: none;
+    }
 
-.form-group select,
-.form-group input[type="text"],
-.form-group input[type="number"],
-.form-group input[type="date"] {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #808080;
-    font-size: 14px;
-}
+    .selection-controls {
+        margin-bottom: 16px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
 
-.form-group small {
-    display: block;
-    margin-top: 4px;
-    color: #666666;
-    font-size: 12px;
-}
+    .selection-summary {
+        padding: 8px;
+        background: #f5f5f5;
+        border: 1px solid #000000;
+        font-size: 13px;
+        font-weight: bold;
+    }
 
-/* Review Table */
-.review-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 16px 0;
-    background-color: #F5F5F5;
-}
+    .review-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #000000;
+        margin-bottom: 16px;
+    }
 
-.review-table td {
-    padding: 12px;
-    border: 1px solid #808080;
-}
+    .review-table th,
+    .review-table td {
+        border: 1px solid #000000;
+        padding: 8px 12px;
+        text-align: left;
+        font-size: 13px;
+    }
 
-.review-table td:first-child {
-    width: 150px;
-    font-weight: bold;
-    background-color: #E0E0E0;
-    color: #000000;
-}
+    .review-table th {
+        background: #f5f5f5;
+        font-weight: bold;
+    }
 
-/* Alert Messages */
-.alert {
-    padding: 12px;
-    margin: 16px 0;
-    border: 2px solid;
-    border-radius: 4px;
-    font-weight: bold;
-}
+    .employee-detail-list {
+        max-height: 150px;
+        overflow-y: auto;
+        font-size: 12px;
+        padding: 4px 0;
+    }
 
-.alert-error {
-    background-color: #FFEBEE;
-    border-color: #F44336;
-    color: #C62828;
-}
+    .wizard-buttons {
+        border-top: 2px solid #000000;
+        padding: 12px 20px;
+        background: #ffffff;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+    }
 
-.alert-success {
-    background-color: #E8F5E9;
-    border-color: #4CAF50;
-    color: #2E7D32;
-}
+    .wizard-buttons-left,
+    .wizard-buttons-right {
+        display: flex;
+        gap: 8px;
+    }
 
-/* Buttons */
-button {
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: bold;
-    border: 2px solid #000000;
-    background-color: #C0C0C0;
-    color: #000000;
-    cursor: pointer;
-    min-width: 100px;
-}
+    .btn {
+        padding: 8px 16px;
+        border: 1px solid #000000;
+        background: #ffffff;
+        color: #000000;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+        text-transform: uppercase;
+    }
 
-button:hover:not(:disabled) {
-    background-color: #A0A0A0;
-}
+    .btn:hover:not(:disabled) {
+        background: #f0f0f0;
+    }
 
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
+    .btn:disabled {
+        background: #e0e0e0;
+        color: #666666;
+        cursor: not-allowed;
+    }
 
-button.btn-success {
-    background-color: #4CAF50;
-    color: #FFFFFF;
-}
+    .btn-primary {
+        background: #000000;
+        color: #ffffff;
+    }
 
-button.btn-success:hover:not(:disabled) {
-    background-color: #45A049;
-}
+    .btn-primary:hover:not(:disabled) {
+        background: #333333;
+    }
 
-button.btn-cancel {
-    background-color: #F44336;
-    color: #FFFFFF;
-}
+    .message-box {
+        padding: 12px;
+        border: 2px solid #000000;
+        margin-bottom: 16px;
+        font-size: 13px;
+        font-weight: bold;
+    }
 
-button.btn-cancel:hover:not(:disabled) {
-    background-color: #DA190B;
-}
+    .message-error {
+        background: #ffcccc;
+        color: #cc0000;
+    }
 
-/* Loading Overlay */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
+    .message-success {
+        background: #ccffcc;
+        color: #006600;
+    }
 
-.loading-spinner {
-    background-color: #FFFFFF;
-    padding: 32px;
-    border: 2px solid #000000;
-    border-radius: 4px;
-    text-align: center;
-}
+    .message-warning {
+        background: #ffffcc;
+        color: #996600;
+    }
 
-.loading-spinner h3 {
-    margin: 0 0 16px 0;
-    font-size: 18px;
-}
+    .loading-state {
+        text-align: center;
+        padding: 40px;
+        font-size: 14px;
+    }
 
-.spinner {
-    border: 4px solid #F3F3F3;
-    border-top: 4px solid #000080;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto;
-}
+    .processing-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.95);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-@@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+    .processing-box {
+        border: 2px solid #000000;
+        background: #ffffff;
+        padding: 40px;
+        text-align: center;
+    }
 
-/* Select All Button */
-.selection-controls {
-    margin-bottom: 8px;
-    display: flex;
-    gap: 8px;
-}
+    .processing-box h2 {
+        margin: 0 0 20px 0;
+        font-size: 14px;
+        font-weight: bold;
+    }
 
-.selection-controls button {
-    min-width: auto;
-    padding: 6px 12px;
-    font-size: 12px;
-}
+    .processing-status {
+        font-size: 13px;
+        margin-top: 16px;
+    }
+
+    .hotkeys {
+        font-size: 11px;
+        color: #666666;
+        margin-top: 8px;
+    }
 </style>
 
 <div class="wizard-container">
     <div class="wizard-header">
-        <h2>🧙 ASISTENTE DE REGISTRO MASIVO - CONTROL DIARIO</h2>
-        <button class="btn-cancel" @onclick="CancelarWizard" disabled="@isWizardSaving">
-            CANCELAR
-        </button>
+        <h1>WIZARD REGISTRO MASIVO - CONTROL DIARIO</h1>
+        <div class="hotkeys">F5=CONFIRMAR | F8=CANCELAR | ESC=SALIR</div>
     </div>
 
-    <div class="wizard-content">
+    <div class="wizard-step-indicator">
+        Paso @currentStep de @totalSteps
+    </div>
+
+    <div class="wizard-body">
+        @if (!string.IsNullOrEmpty(wizardError))
+        {
+            <div class="message-box message-error">
+                ERROR: @wizardError
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(wizardSuccess))
+        {
+            <div class="message-box message-success">
+                OPERACION COMPLETADA: @wizardSuccess
+            </div>
+        }
+
         <!-- PASO 1: Seleccionar Empleados -->
-        <div class="wizard-section">
-            <h3>PASO 1: SELECCIONAR EMPLEADOS</h3>
-            <p>Seleccione los empleados para los que desea registrar actividades del día:</p>
-            
+        <div class="wizard-section @(currentStep == 1 ? "active" : "")">
+            <h2>Paso 1: Seleccion de Empleados</h2>
+
             <div class="selection-controls">
-                <button @onclick="SeleccionarTodos">SELECCIONAR TODOS</button>
-                <button @onclick="DeseleccionarTodos">DESELECCIONAR TODOS</button>
+                <button class="btn" @onclick="SeleccionarTodos" disabled="@isWizardSaving">SELECCIONAR TODOS</button>
+                <button class="btn" @onclick="DeseleccionarTodos" disabled="@isWizardSaving">DESELECCIONAR TODOS</button>
                 @if (departamentos.Any())
                 {
-                    <select @bind="filtroDepartamento" @bind:after="FiltrarEmpleados" style="width: auto; min-width: 200px;">
-                        <option value="">Todos los departamentos</option>
+                    <label style="margin-left: 16px;">FILTRAR POR DEPARTAMENTO:</label>
+                    <select @bind="filtroDepartamento" @bind:after="FiltrarEmpleados" disabled="@isWizardSaving" style="width: 250px;">
+                        <option value="">TODOS LOS DEPARTAMENTOS</option>
                         @foreach (var dept in departamentos)
                         {
                             <option value="@dept.Id">@dept.Nombre</option>
@@ -341,65 +352,63 @@ button.btn-cancel:hover:not(:disabled) {
                     </select>
                 }
             </div>
-            
+
             <div class="employee-list">
                 @if (isLoading)
                 {
-                    <div style="text-align: center; padding: 20px;">Cargando empleados...</div>
+                    <div class="loading-state">CARGANDO EMPLEADOS...</div>
                 }
                 else if (!empleadosFiltrados.Any())
                 {
-                    <div style="text-align: center; padding: 20px; color: #666;">No hay empleados disponibles</div>
+                    <div class="loading-state">NO HAY EMPLEADOS DISPONIBLES</div>
                 }
                 else
                 {
                     @foreach (var emp in empleadosFiltrados)
                     {
-                        <label class="employee-checkbox">
-                            <input type="checkbox" 
+                        <div class="employee-item">
+                            <input type="checkbox"
+                                   id="emp_@emp.Id"
                                    checked="@selectedEmpleadoIds.Contains(emp.Id)"
-                                   @onchange="() => ToggleEmpleado(emp.Id)" />
-                            <span>@emp.Codigo - @emp.NombreCompleto</span>
-                            <small>(@(emp.Departamento?.Nombre ?? "Sin departamento"))</small>
-                        </label>
+                                   @onchange="() => ToggleEmpleado(emp.Id)"
+                                   disabled="@isWizardSaving" />
+                            <label for="emp_@emp.Id">@emp.Codigo - @emp.NombreCompleto (@(emp.Departamento?.Nombre ?? "SIN DEPARTAMENTO"))</label>
+                        </div>
                     }
                 }
             </div>
-            
+
             <div class="selection-summary">
-                ✓ @selectedEmpleadoIds.Count empleado(s) seleccionado(s)
+                EMPLEADOS SELECCIONADOS: @selectedEmpleadoIds.Count
             </div>
         </div>
 
-        <!-- PASO 2: Fecha -->
-        <div class="wizard-section">
-            <h3>PASO 2: FECHA DEL REGISTRO</h3>
-            <p>Seleccione la fecha para la cual desea crear los registros:</p>
-            
-            <div class="form-group">
-                <label>Fecha:</label>
-                <input type="date" @bind="wizardDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                <small>Fecha seleccionada: @wizardDate.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"))</small>
-            </div>
-        </div>
+        <!-- PASO 2: Fecha y Horarios -->
+        <div class="wizard-section @(currentStep == 2 ? "active" : "")">
+            <h2>Paso 2: Fecha y Horarios</h2>
 
-        <!-- PASO 3: Horarios -->
-        <div class="wizard-section">
-            <h3>PASO 3: HORARIOS Y HORAS</h3>
-            <p>Ingrese la hora de entrada y salida (se aplicará a todos los empleados seleccionados):</p>
-            
-            <div class="time-inputs">
-                <div class="time-group">
-                    <label>Hora de Entrada:</label>
-                    <input type="time" 
+            <div class="form-row">
+                <label>FECHA DEL REGISTRO: *</label>
+                <input type="date"
+                       @bind="wizardDate"
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                       disabled="@isWizardSaving" />
+            </div>
+
+            <div class="form-row-inline">
+                <div>
+                    <label>HORA DE ENTRADA: *</label>
+                    <input type="time"
                            value="@FormatTimeSpan(wizardHoraEntrada)"
-                           @onchange="@(e => { wizardHoraEntrada = ParseTimeSpan(e.Value?.ToString()); CalcularHoras(); })" />
+                           @onchange="@(e => { wizardHoraEntrada = ParseTimeSpan(e.Value?.ToString()); CalcularHoras(); })"
+                           disabled="@isWizardSaving" />
                 </div>
-                <div class="time-group">
-                    <label>Hora de Salida:</label>
-                    <input type="time" 
+                <div>
+                    <label>HORA DE SALIDA: *</label>
+                    <input type="time"
                            value="@FormatTimeSpan(wizardHoraSalida)"
-                           @onchange="@(e => { wizardHoraSalida = ParseTimeSpan(e.Value?.ToString()); CalcularHoras(); })" />
+                           @onchange="@(e => { wizardHoraSalida = ParseTimeSpan(e.Value?.ToString()); CalcularHoras(); })"
+                           disabled="@isWizardSaving" />
                 </div>
             </div>
 
@@ -408,42 +417,40 @@ button.btn-cancel:hover:not(:disabled) {
                 var duracion = GetDuracion();
                 if (duracion.HasValue && duracion.Value.TotalHours > 0)
                 {
-                    <div class="form-group">
-                        <label>Total de Horas Calculadas:</label>
-                        <div style="padding: 12px; background-color: #E8F4F8; border: 1px solid #4CAF50; font-size: 16px; font-weight: bold;">
-                            @GetDuracionLabel() (@wizardHorasManual.ToString("F2") horas)
-                        </div>
+                    <div class="form-row">
+                        <label>HORAS CALCULADAS:</label>
+                        <input type="text"
+                               value="@GetDuracionLabel() - @wizardHorasManual.ToString("F2") horas"
+                               disabled="true" />
                     </div>
-                    
-                    <div class="form-group">
-                        <label>Ajuste Manual de Horas (opcional):</label>
-                        <input type="number" 
-                               @bind="wizardHorasManual" 
-                               min="0.25" 
-                               max="24" 
+
+                    <div class="form-row">
+                        <label>AJUSTE MANUAL DE HORAS (OPCIONAL):</label>
+                        <input type="number"
+                               @bind="wizardHorasManual"
+                               min="0.25"
+                               max="24"
                                step="0.25"
-                               style="width: 150px;" />
-                        <small>Puede ajustar manualmente las horas si necesita un valor diferente</small>
+                               disabled="@isWizardSaving" />
                     </div>
                 }
                 else
                 {
-                    <div class="alert alert-error">
-                        ⚠ La hora de salida debe ser posterior a la hora de entrada
+                    <div class="message-box message-error">
+                        ERROR: LA HORA DE SALIDA DEBE SER POSTERIOR A LA HORA DE ENTRADA
                     </div>
                 }
             }
         </div>
 
-        <!-- PASO 4: Actividad y Proyecto -->
-        <div class="wizard-section">
-            <h3>PASO 4: ACTIVIDAD Y PROYECTO</h3>
-            <p>Seleccione la actividad que se registrará para todos los empleados:</p>
-            
-            <div class="form-group">
-                <label>Actividad: *</label>
-                <select @bind="wizardActividadId" @bind:after="OnActividadChanged">
-                    <option value="0">-- Seleccione una actividad --</option>
+        <!-- PASO 3: Actividad y Proyecto -->
+        <div class="wizard-section @(currentStep == 3 ? "active" : "")">
+            <h2>Paso 3: Actividad y Proyecto</h2>
+
+            <div class="form-row">
+                <label>ACTIVIDAD: *</label>
+                <select @bind="wizardActividadId" @bind:after="OnActividadChanged" disabled="@isWizardSaving">
+                    <option value="0">-- SELECCIONE UNA ACTIVIDAD --</option>
                     @foreach (var act in actividades)
                     {
                         <option value="@act.Id">@act.Nombre</option>
@@ -451,142 +458,108 @@ button.btn-cancel:hover:not(:disabled) {
                 </select>
             </div>
 
-            @if (actividadSeleccionada != null && actividadSeleccionada.RequiereProyecto)
-            {
-                <div class="form-group">
-                    <label>Proyecto: *</label>
-                    <select @bind="wizardProyectoId">
-                        <option value="0">-- Seleccione un proyecto --</option>
-                        @foreach (var proy in proyectos)
-                        {
-                            <option value="@proy.Id">@proy.Nombre</option>
-                        }
-                    </select>
-                    <small>Esta actividad requiere un proyecto</small>
-                </div>
-            }
-            else
-            {
-                <div class="form-group">
-                    <label>Proyecto (opcional):</label>
-                    <select @bind="wizardProyectoId">
-                        <option value="0">-- Ninguno --</option>
-                        @foreach (var proy in proyectos)
-                        {
-                            <option value="@proy.Id">@proy.Nombre</option>
-                        }
-                    </select>
-                </div>
-            }
+            <div class="form-row">
+                <label>PROYECTO: @(actividadSeleccionada?.RequiereProyecto == true ? "*" : "(OPCIONAL)")</label>
+                <select @bind="wizardProyectoId" disabled="@isWizardSaving">
+                    <option value="0">-- @(actividadSeleccionada?.RequiereProyecto == true ? "SELECCIONE UN PROYECTO" : "NINGUNO") --</option>
+                    @foreach (var proy in proyectos)
+                    {
+                        <option value="@proy.Id">@proy.Nombre</option>
+                    }
+                </select>
+            </div>
 
-            <div class="form-group">
-                <label>Descripción:</label>
-                <input type="text" 
-                       @bind="wizardDescripcion" 
-                       placeholder="Descripción de la actividad realizada..."
-                       maxlength="500" />
-                <small>Esta descripción se aplicará a todos los registros</small>
+            <div class="form-row">
+                <label>DESCRIPCION:</label>
+                <input type="text"
+                       @bind="wizardDescripcion"
+                       maxlength="500"
+                       disabled="@isWizardSaving" />
             </div>
         </div>
 
-        <!-- PASO 5: Revisar y Confirmar -->
-        <div class="wizard-section">
-            <h3>PASO 5: REVISAR Y CONFIRMAR</h3>
-            <p>Revise la información antes de crear los registros:</p>
-            
+        <!-- PASO 4: Revision y Confirmacion -->
+        <div class="wizard-section @(currentStep == 4 ? "active" : "")">
+            <h2>Paso 4: Revision y Confirmacion</h2>
+
             <table class="review-table">
                 <tr>
-                    <td>📅 Fecha:</td>
-                    <td>@wizardDate.ToString("dddd, dd 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-ES"))</td>
+                    <th>CAMPO</th>
+                    <th>VALOR</th>
                 </tr>
                 <tr>
-                    <td>🕐 Horario:</td>
-                    <td>
-                        @(wizardHoraEntrada?.ToString(@"hh\:mm") ?? "-") - @(wizardHoraSalida?.ToString(@"hh\:mm") ?? "-")
-                        @if (wizardHoraEntrada.HasValue && wizardHoraSalida.HasValue)
-                        {
-                            <text>(@GetDuracionLabel(), @wizardHorasManual.ToString("F2") horas)</text>
-                        }
-                    </td>
+                    <td>FECHA</td>
+                    <td>@wizardDate.ToString("yyyy-MM-dd")</td>
                 </tr>
                 <tr>
-                    <td>👥 Empleados:</td>
+                    <td>HORARIO</td>
+                    <td>@(wizardHoraEntrada?.ToString(@"hh\:mm") ?? "-") A @(wizardHoraSalida?.ToString(@"hh\:mm") ?? "-") (@wizardHorasManual.ToString("F2") HORAS)</td>
+                </tr>
+                <tr>
+                    <td>EMPLEADOS SELECCIONADOS</td>
                     <td>
-                        <strong>@selectedEmpleadoIds.Count empleado(s) seleccionado(s)</strong>
-                        <div style="margin-top: 8px; max-height: 100px; overflow-y: auto;">
-                            @foreach (var empId in selectedEmpleadoIds.Take(10))
+                        <strong>@selectedEmpleadoIds.Count EMPLEADO(S)</strong>
+                        <div class="employee-detail-list">
+                            @foreach (var empId in selectedEmpleadoIds)
                             {
                                 var emp = allEmpleados.FirstOrDefault(e => e.Id == empId);
                                 if (emp != null)
                                 {
-                                    <div style="font-size: 12px;">• @emp.Codigo - @emp.NombreCompleto</div>
+                                    <div>- @emp.Codigo @emp.NombreCompleto</div>
                                 }
-                            }
-                            @if (selectedEmpleadoIds.Count > 10)
-                            {
-                                <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                                    ... y @(selectedEmpleadoIds.Count - 10) empleado(s) más
-                                </div>
                             }
                         </div>
                     </td>
                 </tr>
                 <tr>
-                    <td>📋 Actividad:</td>
-                    <td>
-                        <strong>@(actividades.FirstOrDefault(a => a.Id == wizardActividadId)?.Nombre ?? "-")</strong>
-                    </td>
+                    <td>ACTIVIDAD</td>
+                    <td>@(actividades.FirstOrDefault(a => a.Id == wizardActividadId)?.Nombre ?? "NO SELECCIONADA")</td>
                 </tr>
-                @if (wizardProyectoId.HasValue && wizardProyectoId.Value > 0)
-                {
-                    <tr>
-                        <td>🏗 Proyecto:</td>
-                        <td>@(proyectos.FirstOrDefault(p => p.Id == wizardProyectoId)?.Nombre ?? "-")</td>
-                    </tr>
-                }
                 <tr>
-                    <td>📝 Descripción:</td>
-                    <td>@(string.IsNullOrEmpty(wizardDescripcion) ? "(Sin descripción)" : wizardDescripcion)</td>
+                    <td>PROYECTO</td>
+                    <td>@(wizardProyectoId.HasValue && wizardProyectoId.Value > 0 ? proyectos.FirstOrDefault(p => p.Id == wizardProyectoId)?.Nombre : "NINGUNO")</td>
+                </tr>
+                <tr>
+                    <td>DESCRIPCION</td>
+                    <td>@(string.IsNullOrEmpty(wizardDescripcion) ? "SIN DESCRIPCION" : wizardDescripcion)</td>
                 </tr>
             </table>
 
-            @if (!string.IsNullOrEmpty(wizardError))
+            @if (!PuedeGuardar())
             {
-                <div class="alert alert-error">
-                    ⚠ @wizardError
-                </div>
-            }
-
-            @if (!string.IsNullOrEmpty(wizardSuccess))
-            {
-                <div class="alert alert-success">
-                    ✓ @wizardSuccess
+                <div class="message-box message-warning">
+                    ADVERTENCIA: COMPLETE TODOS LOS CAMPOS OBLIGATORIOS ANTES DE CONFIRMAR
                 </div>
             }
         </div>
     </div>
 
-    <div class="wizard-footer">
-        <button class="btn-cancel" @onclick="CancelarWizard" disabled="@isWizardSaving">
-            CANCELAR
-        </button>
-        <button class="btn-success" 
-                @onclick="GuardarTodo" 
-                disabled="@(!PuedeGuardar() || isWizardSaving)">
-            @(isWizardSaving ? "GUARDANDO..." : $"💾 CREAR {selectedEmpleadoIds.Count} REGISTRO(S)")
-        </button>
+    <div class="wizard-buttons">
+        <div class="wizard-buttons-left">
+            <button class="btn" @onclick="Anterior" disabled="@(currentStep == 1 || isWizardSaving)">ANTERIOR</button>
+        </div>
+        <div class="wizard-buttons-right">
+            <button class="btn" @onclick="CancelarWizard" disabled="@isWizardSaving">CANCELAR (F8)</button>
+            @if (currentStep < totalSteps)
+            {
+                <button class="btn" @onclick="Siguiente" disabled="@isWizardSaving">SIGUIENTE</button>
+            }
+            else
+            {
+                <button class="btn btn-primary" @onclick="GuardarTodo" disabled="@(!PuedeGuardar() || isWizardSaving)">CONFIRMAR (F5)</button>
+            }
+        </div>
     </div>
 </div>
 
 @if (isWizardSaving)
 {
-    <div class="loading-overlay">
-        <div class="loading-spinner">
-            <h3>Creando registros...</h3>
-            <div class="spinner"></div>
-            <p style="margin-top: 16px; color: #666;">
-                Procesando @registrosProcesados de @selectedEmpleadoIds.Count
-            </p>
+    <div class="processing-overlay">
+        <div class="processing-box">
+            <h2>PROCESANDO REGISTROS</h2>
+            <div class="processing-status">
+                PROCESADOS: @registrosProcesados DE @selectedEmpleadoIds.Count
+            </div>
         </div>
     </div>
 }
@@ -600,6 +573,12 @@ button.btn-cancel:hover:not(:disabled) {
     private string? wizardError;
     private string? wizardSuccess;
     private int registrosProcesados = 0;
+
+    // ============================================
+    // NAVEGACION DE PASOS
+    // ============================================
+    private int currentStep = 1;
+    private int totalSteps = 4;
 
     // ============================================
     // COLECCIONES DE DATOS
@@ -634,6 +613,31 @@ button.btn-cancel:hover:not(:disabled) {
         actividades.FirstOrDefault(a => a.Id == wizardActividadId);
 
     // ============================================
+    // NAVEGACION ENTRE PASOS
+    // ============================================
+    private void Siguiente()
+    {
+        wizardError = null;
+        
+        if (currentStep < totalSteps)
+        {
+            currentStep++;
+            StateHasChanged();
+        }
+    }
+
+    private void Anterior()
+    {
+        wizardError = null;
+        
+        if (currentStep > 1)
+        {
+            currentStep--;
+            StateHasChanged();
+        }
+    }
+
+    // ============================================
     // CICLO DE VIDA
     // ============================================
     protected override async Task OnInitializedAsync()
@@ -655,6 +659,37 @@ button.btn-cancel:hover:not(:disabled) {
         {
             Logger.LogError(ex, "Error al inicializar ControlDiarioWizard");
             wizardError = $"Error al cargar el asistente: {ex.Message}";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'F5') {
+                        e.preventDefault();
+                        const btnConfirmar = document.querySelector('.btn-primary');
+                        if (btnConfirmar && !btnConfirmar.disabled) {
+                            btnConfirmar.click();
+                        }
+                    }
+                    if (e.key === 'F8') {
+                        e.preventDefault();
+                        const btnCancelar = document.querySelector('.wizard-buttons-right .btn:first-child');
+                        if (btnCancelar && !btnCancelar.disabled) {
+                            btnCancelar.click();
+                        }
+                    }
+                    if (e.key === 'Escape') {
+                        const btnCancelar = document.querySelector('.wizard-buttons-right .btn:first-child');
+                        if (btnCancelar && !btnCancelar.disabled) {
+                            btnCancelar.click();
+                        }
+                    }
+                });
+            ");
         }
     }
 

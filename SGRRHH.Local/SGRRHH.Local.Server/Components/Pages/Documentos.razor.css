@@ -1,0 +1,474 @@
+/* DOCUMENTOS.RAZOR - ESTILO HOSPITALARIO */
+/* Sin animaciones, sin transiciones, sin efectos visuales */
+
+/* ========================================
+   HEADER
+   ======================================== */
+.page-header {
+    border: 1px solid #000;
+    border-bottom: 2px solid #000;
+    padding: 8px 12px;
+    background-color: #fff;
+    margin-bottom: 16px;
+    font-family: 'Courier New', monospace;
+}
+
+.page-title {
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.page-info {
+    font-size: 11px;
+    display: flex;
+    gap: 20px;
+}
+
+.page-info span {
+    border-right: 1px solid #ccc;
+    padding-right: 20px;
+}
+
+.page-info span:last-child {
+    border-right: none;
+}
+
+/* ========================================
+   MENSAJES
+   ======================================== */
+.error-message {
+    border: 2px solid #ff0000;
+    background-color: #fff;
+    margin-bottom: 16px;
+    font-family: 'Courier New', monospace;
+}
+
+.error-title {
+    background-color: #ff0000;
+    color: #fff;
+    padding: 8px 12px;
+    font-weight: bold;
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.error-content {
+    padding: 12px;
+    color: #000;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.success-message {
+    border: 2px solid #008000;
+    background-color: #fff;
+    margin-bottom: 16px;
+    font-family: 'Courier New', monospace;
+}
+
+.success-content {
+    padding: 12px;
+    color: #008000;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* ========================================
+   BARRA DE CONTROL
+   ======================================== */
+.control-bar {
+    border: 1px solid #000;
+    padding: 12px;
+    margin-bottom: 16px;
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-family: 'Courier New', monospace;
+    gap: 16px;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.control-label {
+    font-weight: bold;
+    font-size: 12px;
+    min-width: 80px;
+}
+
+.control-input {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 6px 8px;
+    border: 1px solid #000;
+    background-color: #fff;
+    flex: 1;
+    max-width: 400px;
+}
+
+.control-input:focus {
+    outline: 2px solid #000;
+    outline-offset: 0;
+}
+
+.control-input:disabled {
+    background-color: #e0e0e0;
+    color: #666;
+}
+
+.control-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-action {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 6px 16px;
+    border: 1px solid #000;
+    background-color: #fff;
+    color: #000;
+    cursor: pointer;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.btn-action:hover:not(:disabled) {
+    background-color: #000;
+    color: #fff;
+}
+
+.btn-action:disabled {
+    background-color: #e0e0e0;
+    color: #999;
+    cursor: not-allowed;
+    border-color: #999;
+}
+
+.btn-action.btn-danger {
+    color: #ff0000;
+    border-color: #ff0000;
+}
+
+.btn-action.btn-danger:hover:not(:disabled) {
+    background-color: #ff0000;
+    color: #fff;
+}
+
+/* ========================================
+   MENSAJE DE ESTADO
+   ======================================== */
+.status-message {
+    border: 1px solid #000;
+    padding: 40px 20px;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    background-color: #f9f9f9;
+    margin: 20px 0;
+}
+
+.status-message div:first-child {
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+}
+
+.status-message div:nth-child(2) {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+/* ========================================
+   TABLA DE DATOS
+   ======================================== */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid #000;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    background-color: #fff;
+    margin-bottom: 8px;
+}
+
+.data-table thead {
+    background-color: #000;
+    color: #fff;
+}
+
+.data-table th {
+    padding: 8px 6px;
+    text-align: left;
+    font-weight: bold;
+    border-right: 1px solid #fff;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+}
+
+.data-table th:last-child {
+    border-right: none;
+}
+
+.data-table tbody tr {
+    border-bottom: 1px solid #ccc;
+    cursor: pointer;
+}
+
+.data-table tbody tr:hover {
+    background-color: #f0f0f0;
+}
+
+.data-table tbody tr.row-selected {
+    background-color: #000;
+    color: #fff;
+}
+
+.data-table tbody tr.row-warning {
+    border-left: 3px solid #ffcc00;
+}
+
+.data-table tbody tr.row-selected.row-warning {
+    border-left: 3px solid #ffcc00;
+}
+
+.data-table td {
+    padding: 6px;
+    border-right: 1px solid #e0e0e0;
+    vertical-align: top;
+}
+
+.data-table td:last-child {
+    border-right: none;
+}
+
+.data-table .row-selected td {
+    border-right-color: #333;
+}
+
+.text-error {
+    color: #ff0000;
+    font-weight: bold;
+}
+
+.actions-cell {
+    white-space: nowrap;
+}
+
+.btn-small {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    padding: 4px 8px;
+    border: 1px solid #000;
+    background-color: #fff;
+    color: #000;
+    cursor: pointer;
+    margin-right: 4px;
+    font-weight: bold;
+}
+
+.btn-small:hover {
+    background-color: #000;
+    color: #fff;
+}
+
+.btn-small.btn-danger {
+    color: #ff0000;
+    border-color: #ff0000;
+}
+
+.btn-small.btn-danger:hover {
+    background-color: #ff0000;
+    color: #fff;
+}
+
+.table-footer {
+    border: 1px solid #000;
+    border-top: none;
+    padding: 8px 12px;
+    background-color: #f5f5f5;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* ========================================
+   MODAL
+   ======================================== */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-container {
+    background-color: #fff;
+    border: 3px solid #000;
+    min-width: 600px;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+}
+
+.modal-container.modal-confirm {
+    min-width: 400px;
+    max-width: 500px;
+}
+
+.modal-title {
+    background-color: #000;
+    color: #fff;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* ========================================
+   FORMULARIO
+   ======================================== */
+.form-container {
+    padding: 20px;
+}
+
+.form-field {
+    margin-bottom: 16px;
+}
+
+.form-row {
+    display: flex;
+    gap: 16px;
+}
+
+.form-row .form-field {
+    flex: 1;
+}
+
+.field-label {
+    display: block;
+    font-weight: bold;
+    font-size: 11px;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+}
+
+.field-input {
+    width: 100%;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 6px 8px;
+    border: 1px solid #000;
+    background-color: #fff;
+    box-sizing: border-box;
+}
+
+.field-input:focus {
+    outline: 2px solid #000;
+    outline-offset: 0;
+}
+
+.field-input:disabled {
+    background-color: #e0e0e0;
+    color: #666;
+}
+
+.field-info {
+    font-size: 10px;
+    margin-top: 4px;
+    color: #666;
+}
+
+/* ========================================
+   MODAL ACCIONES
+   ======================================== */
+.modal-actions {
+    border-top: 2px solid #000;
+    padding: 12px 16px;
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* ========================================
+   CONFIRMACION
+   ======================================== */
+.confirm-content {
+    padding: 30px 20px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+.confirm-detail {
+    font-weight: bold;
+    font-size: 14px;
+    margin: 12px 0;
+    letter-spacing: 0.5px;
+}
+
+.confirm-warning {
+    color: #ff0000;
+    font-weight: bold;
+    margin-top: 16px;
+    font-size: 12px;
+}
+
+/* ========================================
+   ESTADOS Y UTILIDADES
+   ======================================== */
+::selection {
+    background-color: #000;
+    color: #fff;
+}
+
+/* ========================================
+   MODAL DE PREVISUALIZACION
+   ======================================== */
+.modal-preview {
+    background-color: #fff;
+    border: 3px solid #000;
+    width: 90%;
+    max-width: 1000px;
+    max-height: 90vh;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+}
+
+.preview-body {
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    background-color: #f0f0f0;
+}
+
+.no-preview {
+    text-align: center;
+    padding: 40px;
+    font-size: 13px;
+    color: #666;
+    letter-spacing: 0.5px;
+}
+
+.no-preview p {
+    margin: 8px 0;
+}

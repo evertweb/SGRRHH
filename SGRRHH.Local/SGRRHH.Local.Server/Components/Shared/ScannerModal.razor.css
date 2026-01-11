@@ -1,0 +1,560 @@
+/* ========================================
+   SCANNER MODAL - Estilo Hospitalario
+   ======================================== */
+
+.scanner-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.scanner-modal {
+    background-color: #fff;
+    border: 3px solid #000;
+    width: 700px;
+    max-width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Courier New', monospace;
+}
+
+.scanner-modal-wide {
+    width: 900px;
+}
+
+.scanner-header {
+    background-color: #000;
+    color: #fff;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.scanner-close {
+    background: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+.scanner-close:hover:not(:disabled) {
+    background-color: #fff;
+    color: #000;
+}
+
+.scanner-close:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   BODY
+   ======================================== */
+.scanner-body {
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ========================================
+   OPTIONS
+   ======================================== */
+.scanner-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #ccc;
+}
+
+.scanner-option-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.scanner-option-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.scanner-label {
+    font-weight: bold;
+    font-size: 11px;
+    min-width: 60px;
+    letter-spacing: 0.5px;
+}
+
+.scanner-select {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid #000;
+    background-color: #fff;
+    min-width: 120px;
+}
+
+.scanner-select:focus {
+    outline: 2px solid #000;
+    outline-offset: 0;
+}
+
+.scanner-select:disabled {
+    background-color: #e0e0e0;
+    color: #666;
+}
+
+.scanner-btn-small {
+    background-color: #fff;
+    border: 1px solid #000;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+}
+
+.scanner-btn-small:hover:not(:disabled) {
+    background-color: #000;
+    color: #fff;
+}
+
+.scanner-btn-small:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   MAIN CONTAINER (Thumbnails + Preview)
+   ======================================== */
+.scanner-main-container {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    min-height: 300px;
+}
+
+/* ========================================
+   THUMBNAILS
+   ======================================== */
+.scanner-thumbnails {
+    width: 140px;
+    flex-shrink: 0;
+    border: 2px solid #000;
+    display: flex;
+    flex-direction: column;
+    background-color: #f9f9f9;
+}
+
+.scanner-thumbnails-header {
+    background-color: #000;
+    color: #fff;
+    padding: 6px 8px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+.scanner-thumbnails-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scanner-thumbnail {
+    position: relative;
+    border: 2px solid #ccc;
+    background-color: #fff;
+    cursor: pointer;
+    padding: 4px;
+    transition: border-color 0.15s ease;
+}
+
+.scanner-thumbnail:hover {
+    border-color: #666;
+}
+
+.scanner-thumbnail-selected {
+    border-color: #1976d2;
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.3);
+}
+
+.scanner-thumbnail-number {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    background-color: #000;
+    color: #fff;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 5px;
+    z-index: 1;
+}
+
+.scanner-thumbnail img {
+    width: 100%;
+    height: 80px;
+    object-fit: contain;
+    display: block;
+}
+
+.scanner-thumbnail-delete {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    background-color: #c62828;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.scanner-thumbnail:hover .scanner-thumbnail-delete {
+    opacity: 1;
+}
+
+.scanner-thumbnail-delete:hover {
+    background-color: #b71c1c;
+}
+
+/* ========================================
+   PREVIEW
+   ======================================== */
+.scanner-preview-container {
+    flex: 1;
+    min-height: 280px;
+    border: 2px dashed #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f5f5f5;
+}
+
+.scanner-placeholder {
+    text-align: center;
+    color: #666;
+}
+
+.scanner-placeholder-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.scanner-placeholder-text {
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.scanner-placeholder-hint {
+    font-size: 11px;
+    margin-top: 8px;
+}
+
+.scanner-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+}
+
+.scanner-preview-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.scanner-btn-nav {
+    background-color: #fff;
+    border: 1px solid #000;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+}
+
+.scanner-btn-nav:hover:not(:disabled) {
+    background-color: #000;
+    color: #fff;
+}
+
+.scanner-btn-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.scanner-preview-image {
+    flex: 1;
+    max-height: 220px;
+    overflow: hidden;
+    border: 1px solid #000;
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scanner-preview-image img {
+    max-width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+}
+
+.scanner-preview-info {
+    margin-top: 8px;
+    font-size: 10px;
+    color: #666;
+}
+
+/* ========================================
+   PROGRESS
+   ======================================== */
+.scanner-progress {
+    text-align: center;
+    padding: 24px;
+}
+
+.scanner-progress-text {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 16px;
+    letter-spacing: 1px;
+}
+
+.scanner-progress-bar {
+    width: 100%;
+    max-width: 300px;
+    height: 20px;
+    border: 2px solid #000;
+    margin: 0 auto;
+    background-color: #fff;
+    overflow: hidden;
+}
+
+.scanner-progress-fill {
+    height: 100%;
+    background-color: #000;
+    transition: width 0.3s ease;
+}
+
+.scanner-progress-indeterminate {
+    width: 30% !important;
+    animation: indeterminate 1.5s infinite ease-in-out;
+}
+
+@keyframes indeterminate {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+}
+
+.scanner-progress-page {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #666;
+}
+
+/* ========================================
+   MESSAGES
+   ======================================== */
+.scanner-message {
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.scanner-error {
+    background-color: #ffebee;
+    border: 1px solid #c62828;
+    color: #c62828;
+}
+
+.scanner-success {
+    background-color: #e8f5e9;
+    border: 1px solid #2e7d32;
+    color: #2e7d32;
+}
+
+/* ========================================
+   FOOTER
+   ======================================== */
+.scanner-footer {
+    padding: 12px 16px;
+    border-top: 2px solid #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f5f5f5;
+}
+
+.scanner-footer-left,
+.scanner-footer-right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.scanner-footer-info {
+    font-size: 10px;
+    color: #666;
+    margin-left: 8px;
+}
+
+.scanner-btn {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 8px 16px;
+    border: 2px solid #000;
+    background-color: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    transition: all 0.15s ease;
+}
+
+.scanner-btn:hover:not(:disabled) {
+    background-color: #000;
+    color: #fff;
+}
+
+.scanner-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.scanner-btn-primary {
+    background-color: #1976d2;
+    color: #fff;
+    border-color: #1976d2;
+}
+
+.scanner-btn-primary:hover:not(:disabled) {
+    background-color: #1565c0;
+    border-color: #1565c0;
+}
+
+.scanner-btn-success {
+    background-color: #2e7d32;
+    color: #fff;
+    border-color: #2e7d32;
+}
+
+.scanner-btn-success:hover:not(:disabled) {
+    background-color: #1b5e20;
+    border-color: #1b5e20;
+}
+
+.scanner-btn-danger {
+    background-color: #c62828;
+    color: #fff;
+    border-color: #c62828;
+}
+
+.scanner-btn-danger:hover:not(:disabled) {
+    background-color: #b71c1c;
+    border-color: #b71c1c;
+}
+
+.scanner-btn-secondary {
+    background-color: #757575;
+    color: #fff;
+    border-color: #757575;
+}
+
+.scanner-btn-secondary:hover:not(:disabled) {
+    background-color: #616161;
+    border-color: #616161;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 768px) {
+    .scanner-modal-wide {
+        width: 100%;
+    }
+    
+    .scanner-main-container {
+        flex-direction: column;
+    }
+    
+    .scanner-thumbnails {
+        width: 100%;
+        max-height: 120px;
+    }
+    
+    .scanner-thumbnails-list {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+    
+    .scanner-thumbnail {
+        min-width: 80px;
+    }
+    
+    .scanner-thumbnail img {
+        height: 60px;
+    }
+}
+
+@media (max-width: 600px) {
+    .scanner-modal {
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border: none;
+    }
+    
+    .scanner-option-group {
+        flex-direction: column;
+    }
+    
+    .scanner-footer {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .scanner-footer-left,
+    .scanner-footer-right {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}

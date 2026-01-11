@@ -229,14 +229,3 @@ public class CatalogCacheService : ICatalogCacheService
         return cachedData;
     }
 }
-
-public enum CatalogType
-{
-    Cargos,
-    Departamentos,
-    TiposPermiso,
-    Proyectos,
-    Actividades,
-    EmpleadosActivos,
-    EmpleadosTodos
-}

@@ -12,6 +12,9 @@ public interface IVacacionRepository : IRepository<Vacacion>
     Task<bool> ExisteTraslapeAsync(int empleadoId, DateTime fechaInicio, DateTime fechaFin, int? vacacionIdExcluir = null);
     Task<IEnumerable<Vacacion>> GetByEstadoAsync(EstadoVacacion estado);
     Task<ResumenVacaciones?> GetResumenVacacionesAsync(int empleadoId);
+    
+    /// <summary>Obtiene vacaciones pendientes de aprobación</summary>
+    Task<IEnumerable<Vacacion>> GetPendientesAsync();
 }
 
 

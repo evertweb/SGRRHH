@@ -1,58 +1,81 @@
-@using SGRRHH.Local.Domain.Entities
+﻿@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
 @using SGRRHH.Local.Shared.Interfaces
 @inject IProyectoRepository ProyectoRepository
 @inject IEmpleadoRepository EmpleadoRepository
+@inject IEspecieForestalRepository EspecieForestalRepository
+@inject ICatalogCacheService CatalogCache
 @inject ILogger<ProyectosTab> Logger
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
-<!-- Header con controles -->
-<div class="toolbar">
-    <div class="toolbar-group">
-        <button @onclick="Nuevo">NUEVO (F3)</button>
-        <button @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+<!-- Toolbar -->
+<div class="hospital-toolbar">
+    <div class="hospital-toolbar-group">
+        <button @onclick="Nuevo">NUEVO</button>
+        <button @onclick="CargarDatos">ACTUALIZAR</button>
         @if (selectedItem != null)
         {
-            <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
+            <button @onclick="EditarSeleccionado">EDITAR</button>
+            <button @onclick="() => ConfirmarEliminar(selectedItem)">ELIMINAR</button>
         }
     </div>
-    <div class="toolbar-group">
-        <input type="text" placeholder="Buscar..." 
-               @bind="searchTerm" @bind:event="oninput" />
-        <button @onclick="Buscar">BUSCAR</button>
+    <div class="hospital-toolbar-group">
+        <input type="text" placeholder="BUSCAR..." 
+               @bind="searchTerm" @bind:event="oninput" @bind:after="Filtrar" />
         @if (!string.IsNullOrEmpty(searchTerm))
         {
             <button @onclick="LimpiarBusqueda">LIMPIAR</button>
         }
         <select @bind="filtroEstado" @bind:after="Filtrar">
-            <option value="">Todos los estados</option>
-            <option value="@((int)EstadoProyecto.Activo)">Activos</option>
-            <option value="@((int)EstadoProyecto.Suspendido)">Suspendidos</option>
-            <option value="@((int)EstadoProyecto.Finalizado)">Finalizados</option>
-            <option value="@((int)EstadoProyecto.Cancelado)">Cancelados</option>
+            <option value="">TODOS LOS ESTADOS</option>
+            <option value="@((int)EstadoProyecto.Activo)">ACTIVOS</option>
+            <option value="@((int)EstadoProyecto.Suspendido)">SUSPENDIDOS</option>
+            <option value="@((int)EstadoProyecto.Finalizado)">FINALIZADOS</option>
+            <option value="@((int)EstadoProyecto.Cancelado)">CANCELADOS</option>
+        </select>
+        <select @bind="filtroTipo" @bind:after="Filtrar">
+            <option value="">TODOS LOS TIPOS</option>
+            @foreach (var tipo in Enum.GetValues<TipoProyectoForestal>())
+            {
+                <option value="@((int)tipo)">@GetTipoProyectoLabel(tipo)</option>
+            }
+        </select>
+        <select @bind="filtroEspecie" @bind:after="Filtrar">
+            <option value="">TODAS LAS ESPECIES</option>
+            @foreach (var especie in especiesForestales)
+            {
+                <option value="@especie.Id">@especie.NombreComun</option>
+            }
         </select>
     </div>
 </div>
 
 <!-- Tabla -->
-<table>
+<table class="hospital-table">
     <thead>
         <tr>
-            <th style="width: 100px;">CÓDIGO</th>
+            <th>CÓDIGO</th>
             <th>NOMBRE</th>
-            <th>CLIENTE</th>
-            <th>RESPONSABLE</th>
-            <th style="width: 100px;">PROGRESO</th>
-            <th style="width: 120px;">ESTADO</th>
-            <th style="width: 150px;">ACCIONES</th>
+            <th>TIPO</th>
+            <th>PREDIO/LOTE</th>
+            <th>ESPECIE</th>
+            <th class="text-center">ÁREA (HA)</th>
+            <th class="text-center">CUADRILLA</th>
+            <th class="text-center">HORAS</th>
+            <th class="text-center">PROGRESO</th>
+            <th class="text-center">ESTADO</th>
+            <th>ACCIONES</th>
         </tr>
     </thead>
     <tbody>
         @if (isLoading)
         {
-            <tr><td colspan="7" class="loading">Cargando proyectos...</td></tr>
+            <tr><td colspan="11" class="loading">CARGANDO PROYECTOS...</td></tr>
         }
         else if (!itemsFiltrados.Any())
         {
-            <tr><td colspan="7" class="empty-state">No hay proyectos para mostrar</td></tr>
+            <tr><td colspan="11" class="empty-state">NO HAY PROYECTOS PARA MOSTRAR</td></tr>
         }
         else
         {
@@ -62,11 +85,28 @@
                     @onclick="() => SelectItem(item)">
                     <td><strong>@item.Codigo</strong></td>
                     <td>@item.Nombre</td>
-                    <td>@(item.Cliente ?? "-")</td>
-                    <td>@(item.Responsable?.NombreCompleto ?? "-")</td>
+                    <td>
+                        <span class="badge badge-tipo-@((int)item.TipoProyecto)">
+                            @GetTipoProyectoLabel(item.TipoProyecto)
+                        </span>
+                    </td>
+                    <td>@item.PredioLote</td>
+                    <td>@(item.Especie?.NombreComun ?? "-")</td>
+                    <td class="text-center">@(item.AreaHectareas?.ToString("N2") ?? "-")</td>
+                    <td class="text-center">
+                        @if (item.CantidadEmpleados > 0)
+                        {
+                            <span class="badge badge-info">@item.CantidadEmpleados 👥</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
+                    <td class="text-center">@item.TotalHorasTrabajadas.ToString("N0") h</td>
                     <td class="text-center">
                         <div class="progress-bar">
-                            <div class="progress-bar-fill" style="width: @item.Progreso%;"></div>
+                            <div class="progress-bar-fill" style="width: @item.Progreso%"></div>
                             <span class="progress-bar-text">@item.Progreso%</span>
                         </div>
                     </td>
@@ -76,11 +116,17 @@
                         </span>
                     </td>
                     <td class="table-actions">
-                        <button @onclick="() => Editar(item)" @onclick:stopPropagation="true">
-                            EDITAR
+                        <button @onclick="() => VerDetalle(item)" @onclick:stopPropagation="true" title="Dashboard">
+                            📊
                         </button>
-                        <button @onclick="() => ConfirmarEliminar(item)" @onclick:stopPropagation="true">
-                            ELIMINAR
+                        <button @onclick="() => GestionarCuadrilla(item)" @onclick:stopPropagation="true" title="Cuadrilla">
+                            👥
+                        </button>
+                        <button @onclick="() => Editar(item)" @onclick:stopPropagation="true" title="Editar">
+                            ✏️
+                        </button>
+                        <button @onclick="() => ConfirmarEliminar(item)" @onclick:stopPropagation="true" title="Eliminar">
+                            🗑️
                         </button>
                     </td>
                 </tr>
@@ -92,93 +138,298 @@
 <!-- Modal de edición -->
 <FormModal @bind-IsVisible="showModal" 
            Title="@(isEditing ? $"EDITAR PROYECTO - {editItem?.Codigo}" : "NUEVO PROYECTO")"
-           Width="800px"
            OnSaveClicked="Guardar"
            OnCancelClicked="CerrarModal"
-           IsSaving="isSaving">
+           IsSaving="isSaving"
+           ModalSize="large">
     
     @if (editItem != null)
     {
-        <div class="grid-2">
-            <div>
-                <div class="form-group required">
-                    <label>CÓDIGO</label>
-                    <input type="text" @bind="editItem.Codigo" maxlength="20" 
-                           readonly="@isEditing" disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group required">
-                    <label>NOMBRE</label>
-                    <input type="text" @bind="editItem.Nombre" maxlength="200" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>CLIENTE</label>
-                    <input type="text" @bind="editItem.Cliente" maxlength="200" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>UBICACIÓN</label>
-                    <input type="text" @bind="editItem.Ubicacion" maxlength="200" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>PRESUPUESTO</label>
-                    <input type="number" @bind="editItem.Presupuesto" step="0.01" min="0" 
-                           disabled="@isSaving" />
-                </div>
-            </div>
-            
-            <div>
-                <div class="form-group">
-                    <label>RESPONSABLE</label>
-                    <select @bind="editItem.ResponsableId" disabled="@isSaving">
-                        <option value="">-- Sin asignar --</option>
-                        @foreach (var emp in empleadosActivos)
-                        {
-                            <option value="@emp.Id">@emp.NombreCompleto</option>
-                        }
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>FECHA INICIO</label>
-                    <input type="date" @bind="editItem.FechaInicio" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>FECHA FIN</label>
-                    <input type="date" @bind="editItem.FechaFin" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>PROGRESO (%)</label>
-                    <input type="number" @bind="editItem.Progreso" min="0" max="100" 
-                           disabled="@isSaving" />
-                </div>
-                
-                <div class="form-group">
-                    <label>ESTADO</label>
-                    <select @bind="editItem.Estado" disabled="@isSaving">
-                        @foreach (var estado in Enum.GetValues<EstadoProyecto>())
-                        {
-                            <option value="@estado">@estado</option>
-                        }
-                    </select>
-                </div>
-            </div>
+        <!-- Tabs del formulario -->
+        <div class="form-tabs">
+            <button type="button" class="form-tab @(formTab == "general" ? "active" : "")" 
+                    @onclick='() => formTab = "general"'>
+                INFORMACIÓN GENERAL @(TabGeneralCompleta() ? "✓" : "")
+            </button>
+            <button type="button" class="form-tab @(formTab == "ubicacion" ? "active" : "")" 
+                    @onclick='() => formTab = "ubicacion"'>
+                UBICACIÓN @(TabUbicacionCompleta() ? "✓" : "")
+            </button>
+            <button type="button" class="form-tab @(formTab == "forestal" ? "active" : "")" 
+                    @onclick='() => formTab = "forestal"'>
+                DATOS FORESTALES @(TabForestalCompleta() ? "✓" : "")
+            </button>
+            <button type="button" class="form-tab @(formTab == "gestion" ? "active" : "")" 
+                    @onclick='() => formTab = "gestion"'>
+                GESTIÓN @(TabGestionCompleta() ? "✓" : "")
+            </button>
         </div>
-        
-        <div class="form-group">
-            <label>DESCRIPCIÓN</label>
-            <textarea @bind="editItem.Descripcion" rows="3" 
-                     disabled="@isSaving" 
-                     maxlength="1000"></textarea>
+
+        <!-- Contenido de tabs -->
+        <div class="form-tab-content">
+            @if (formTab == "general")
+            {
+                <div class="grid-2">
+                    <div>
+                        <div class="hospital-form-group required">
+                            <label>CÓDIGO</label>
+                            <input type="text" id="codigoInput" @bind="editItem.Codigo" maxlength="20" 
+                                   readonly="@isEditing" disabled="@isSaving" />
+                        </div>
+                        
+                        <div class="hospital-form-group required">
+                            <label>NOMBRE DEL PROYECTO</label>
+                            <input type="text" id="nombreInput" @bind="editItem.Nombre" maxlength="200" 
+                                   disabled="@isSaving" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>TIPO DE PROYECTO</label>
+                            <select @bind="editItem.TipoProyecto" disabled="@isSaving">
+                                @foreach (var tipo in Enum.GetValues<TipoProyectoForestal>())
+                                {
+                                    <option value="@tipo">@GetTipoProyectoLabel(tipo)</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>CLIENTE</label>
+                            <input type="text" @bind="editItem.Cliente" maxlength="200" 
+                                   disabled="@isSaving" />
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="form-group">
+                            <label>ESTADO</label>
+                            <select @bind="editItem.Estado" disabled="@isSaving">
+                                @foreach (var estado in Enum.GetValues<EstadoProyecto>())
+                                {
+                                    <option value="@estado">@estado</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="hospital-form-group">
+                            <label>FECHA INICIO</label>
+                            <input type="date" id="fechaInicioDate" @bind="editItem.FechaInicio" 
+                                   disabled="@isSaving" />
+                        </div>
+                        
+                        <div class="hospital-form-group">
+                            <label>FECHA FIN ESTIMADA</label>
+                            <input type="date" id="fechaFinDate" @bind="editItem.FechaFin" 
+                                   disabled="@isSaving" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>PROGRESO (%)</label>
+                            <input type="number" @bind="editItem.Progreso" min="0" max="100" 
+                                   disabled="@isSaving" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>DESCRIPCIÓN</label>
+                    <textarea @bind="editItem.Descripcion" rows="3" 
+                             disabled="@isSaving" 
+                             maxlength="1000"></textarea>
+                </div>
+            }
+            else if (formTab == "ubicacion")
+            {
+                <div class="grid-2">
+                    <div>
+                        <div class="form-group">
+                            <label>PREDIO / FINCA</label>
+                            <input type="text" @bind="editItem.Predio" maxlength="100" 
+                                   disabled="@isSaving" placeholder="Nombre del predio" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>LOTE / RODAL</label>
+                            <input type="text" @bind="editItem.Lote" maxlength="50" 
+                                   disabled="@isSaving" placeholder="Ej: Lote 5, Rodal A3" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>DEPARTAMENTO</label>
+                            <input type="text" @bind="editItem.Departamento" maxlength="100" 
+                                   disabled="@isSaving" placeholder="Ej: Antioquia" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>MUNICIPIO</label>
+                            <input type="text" @bind="editItem.Municipio" maxlength="100" 
+                                   disabled="@isSaving" placeholder="Ej: Medellín" />
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="form-group">
+                            <label>VEREDA</label>
+                            <input type="text" @bind="editItem.Vereda" maxlength="100" 
+                                   disabled="@isSaving" placeholder="Zona rural específica" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>LATITUD (Decimal)</label>
+                            <input type="number" step="0.000001" @bind="editItem.Latitud" 
+                                   disabled="@isSaving" placeholder="Ej: 6.2518" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>LONGITUD (Decimal)</label>
+                            <input type="number" step="0.000001" @bind="editItem.Longitud" 
+                                   disabled="@isSaving" placeholder="Ej: -75.5636" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>ALTITUD (m.s.n.m.)</label>
+                            <input type="number" @bind="editItem.AltitudMsnm" min="0" max="5000"
+                                   disabled="@isSaving" placeholder="Metros sobre nivel del mar" />
+                        </div>
+                    </div>
+                </div>
+                
+                @if (isEditing && !string.IsNullOrEmpty(editItem.Ubicacion))
+                {
+                    <div class="form-group">
+                        <label>UBICACIÓN GENERAL (Dato histórico)</label>
+                        <div class="form-value text-muted">@editItem.Ubicacion</div>
+                    </div>
+                }
+            }
+            else if (formTab == "forestal")
+            {
+                <div class="grid-2">
+                    <div>
+                        <div class="form-group">
+                            <label>ESPECIE FORESTAL</label>
+                            <select @bind="editItem.EspecieId" disabled="@isSaving">
+                                <option value="">-- Seleccione especie --</option>
+                                @foreach (var esp in especiesForestales)
+                                {
+                                    <option value="@esp.Id">@esp.DescripcionCompleta</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>ÁREA (Hectáreas)</label>
+                            <input type="number" step="0.01" @bind="editItem.AreaHectareas" min="0"
+                                   disabled="@isSaving" placeholder="Ej: 25.5" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>FECHA DE SIEMBRA</label>
+                            <input type="date" @bind="editItem.FechaSiembra" 
+                                   disabled="@isSaving" />
+                        </div>
+                        
+                        @if (editItem.FechaSiembra.HasValue)
+                        {
+                            <div class="form-group">
+                                <label>EDAD DEL CULTIVO</label>
+                                <div class="form-value">@editItem.EdadCultivoAnios años</div>
+                            </div>
+                        }
+                        
+                        <div class="form-group">
+                            <label>TIPO DE TENENCIA</label>
+                            <select @bind="editItem.TipoTenencia" disabled="@isSaving">
+                                @foreach (var tipo in Enum.GetValues<TipoTenencia>())
+                                {
+                                    <option value="@tipo">@GetTipoTenenciaLabel(tipo)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="form-group">
+                            <label>DENSIDAD INICIAL (árboles/ha)</label>
+                            <input type="number" @bind="editItem.DensidadInicial" min="0"
+                                   disabled="@isSaving" placeholder="Ej: 1111" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>DENSIDAD ACTUAL (árboles/ha)</label>
+                            <input type="number" @bind="editItem.DensidadActual" min="0"
+                                   disabled="@isSaving" placeholder="Después de mortalidad/raleos" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>TURNO COSECHA (años)</label>
+                            <input type="number" @bind="editItem.TurnoCosechaAnios" min="1" max="100"
+                                   disabled="@isSaving" placeholder="Años para cosecha" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>CERTIFICACIÓN</label>
+                            <input type="text" @bind="editItem.Certificacion" maxlength="100" 
+                                   disabled="@isSaving" placeholder="Ej: FSC, PEFC" />
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (formTab == "gestion")
+            {
+                <div class="grid-2">
+                    <div>
+                        <div class="form-group">
+                            <label>RESPONSABLE</label>
+                            <select @bind="editItem.ResponsableId" disabled="@isSaving">
+                                <option value="">-- Sin asignar --</option>
+                                @foreach (var emp in empleadosActivos)
+                                {
+                                    <option value="@emp.Id">@emp.NombreCompleto</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>PRESUPUESTO</label>
+                            <InputMoneda @bind-Value="editItem.Presupuesto" CssClass="form-input" 
+                                        Disabled="@isSaving" Placeholder="Ej: 50.000.000" />
+                        </div>
+                    </div>
+                    
+                    @if (isEditing)
+                    {
+                        <div>
+                            <fieldset class="form-fieldset">
+                                <legend>MÉTRICAS ACUMULADAS</legend>
+                                
+                                <div class="form-group">
+                                    <label>TOTAL HORAS TRABAJADAS</label>
+                                    <div class="form-value">@editItem.TotalHorasTrabajadas.ToString("N2") horas</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>TOTAL JORNALES</label>
+                                    <div class="form-value">@editItem.TotalJornales jornales</div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>COSTO MANO DE OBRA</label>
+                                    <div class="form-value">$@editItem.CostoManoObraAcumulado.ToString("N0")</div>
+                                </div>
+                                
+                                @if (editItem.FechaUltimaActualizacionMetricas.HasValue)
+                                {
+                                    <div class="form-group">
+                                        <label>ÚLTIMA ACTUALIZACIÓN</label>
+                                        <div class="form-value">@editItem.FechaUltimaActualizacionMetricas.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                                    </div>
+                                }
+                            </fieldset>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     }
 </FormModal>
@@ -186,7 +437,6 @@
 <!-- Modal de confirmación de eliminación -->
 <FormModal @bind-IsVisible="showConfirmModal"
            Title="CONFIRMAR ELIMINACIÓN"
-           Width="400px"
            OnSaveClicked="EliminarConfirmado"
            OnCancelClicked="() => showConfirmModal = false"
            IsSaving="isSaving">
@@ -205,6 +455,7 @@
     private List<Proyecto> items = new();
     private List<Proyecto> itemsFiltrados = new();
     private List<Empleado> empleadosActivos = new();
+    private List<EspecieForestal> especiesForestales = new();
     private Proyecto? selectedItem;
     private Proyecto? editItem;
     private Proyecto? itemToDelete;
@@ -216,6 +467,9 @@
     private bool isEditing;
     private string searchTerm = "";
     private string filtroEstado = "";
+    private string filtroTipo = "";
+    private string filtroEspecie = "";
+    private string formTab = "general";
     
     protected override async Task OnInitializedAsync()
     {
@@ -234,6 +488,9 @@
             
             var empleados = await EmpleadoRepository.GetAllActiveAsync();
             empleadosActivos = empleados.OrderBy(e => e.NombreCompleto).ToList();
+            
+            var especies = await EspecieForestalRepository.GetAllActiveAsync();
+            especiesForestales = especies.ToList();
             
             Filtrar();
         }
@@ -261,6 +518,22 @@
             }
         }
         
+        if (!string.IsNullOrWhiteSpace(filtroTipo))
+        {
+            if (int.TryParse(filtroTipo, out int tipoId))
+            {
+                itemsFiltrados = itemsFiltrados.Where(p => (int)p.TipoProyecto == tipoId).ToList();
+            }
+        }
+        
+        if (!string.IsNullOrWhiteSpace(filtroEspecie))
+        {
+            if (int.TryParse(filtroEspecie, out int especieId))
+            {
+                itemsFiltrados = itemsFiltrados.Where(p => p.EspecieId == especieId).ToList();
+            }
+        }
+        
         Buscar();
     }
     
@@ -273,7 +546,12 @@
                 p.Codigo.ToLower().Contains(term) ||
                 p.Nombre.ToLower().Contains(term) ||
                 (p.Cliente ?? "").ToLower().Contains(term) ||
-                (p.Descripcion ?? "").ToLower().Contains(term)
+                (p.Descripcion ?? "").ToLower().Contains(term) ||
+                (p.Predio ?? "").ToLower().Contains(term) ||
+                (p.Lote ?? "").ToLower().Contains(term) ||
+                (p.Departamento ?? "").ToLower().Contains(term) ||
+                (p.Municipio ?? "").ToLower().Contains(term) ||
+                (p.Especie?.NombreComun ?? "").ToLower().Contains(term)
             ).ToList();
         }
         StateHasChanged();
@@ -291,18 +569,32 @@
         StateHasChanged();
     }
     
-    private void Nuevo()
+    private async Task Nuevo()
     {
         editItem = new Proyecto
         {
             Activo = true,
+            Codigo = await ProyectoRepository.GetNextCodigoAsync(),
             Estado = EstadoProyecto.Activo,
+            TipoProyecto = TipoProyectoForestal.PlantacionNueva,
+            TipoTenencia = TipoTenencia.Propio,
             Progreso = 0,
             FechaCreacion = DateTime.Now
         };
+        formTab = "general";
         isEditing = false;
         showModal = true;
         StateHasChanged();
+    }
+    
+    private void VerDetalle(Proyecto item)
+    {
+        Navigation.NavigateTo($"/proyecto/{item.Id}");
+    }
+    
+    private void GestionarCuadrilla(Proyecto item)
+    {
+        Navigation.NavigateTo($"/proyecto/{item.Id}?tab=cuadrilla");
     }
     
     private void Editar(Proyecto item)
@@ -323,8 +615,31 @@
             ResponsableId = item.ResponsableId,
             Activo = item.Activo,
             FechaCreacion = item.FechaCreacion,
-            FechaModificacion = DateTime.Now
+            FechaModificacion = DateTime.Now,
+            // Campos forestales
+            TipoProyecto = item.TipoProyecto,
+            Predio = item.Predio,
+            Lote = item.Lote,
+            Departamento = item.Departamento,
+            Municipio = item.Municipio,
+            Vereda = item.Vereda,
+            Latitud = item.Latitud,
+            Longitud = item.Longitud,
+            AltitudMsnm = item.AltitudMsnm,
+            EspecieId = item.EspecieId,
+            AreaHectareas = item.AreaHectareas,
+            FechaSiembra = item.FechaSiembra,
+            DensidadInicial = item.DensidadInicial,
+            DensidadActual = item.DensidadActual,
+            TurnoCosechaAnios = item.TurnoCosechaAnios,
+            TipoTenencia = item.TipoTenencia,
+            Certificacion = item.Certificacion,
+            TotalHorasTrabajadas = item.TotalHorasTrabajadas,
+            CostoManoObraAcumulado = item.CostoManoObraAcumulado,
+            TotalJornales = item.TotalJornales,
+            FechaUltimaActualizacionMetricas = item.FechaUltimaActualizacionMetricas
         };
+        formTab = "general";
         isEditing = true;
         showModal = true;
         StateHasChanged();
@@ -342,23 +657,71 @@
     {
         if (editItem == null) return;
         
-        // Validaciones
+        // Limpiar errores previos
+        await JSRuntime.InvokeVoidAsync("clearAllFieldErrors");
+        
+        // Validaciones básicas
         if (string.IsNullOrWhiteSpace(editItem.Codigo))
         {
-            await SetError("El código es requerido");
+            formTab = "general";
+            StateHasChanged();
+            await Task.Delay(100);
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "codigoInput", "EL CÓDIGO ES REQUERIDO");
             return;
         }
         
         if (string.IsNullOrWhiteSpace(editItem.Nombre))
         {
-            await SetError("El nombre es requerido");
+            formTab = "general";
+            StateHasChanged();
+            await Task.Delay(100);
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "nombreInput", "EL NOMBRE ES REQUERIDO");
+            return;
+        }
+        
+        // Validar código duplicado
+        if (await ProyectoRepository.ExistsCodigoAsync(editItem.Codigo, isEditing ? editItem.Id : null))
+        {
+            formTab = "general";
+            StateHasChanged();
+            await Task.Delay(100);
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "codigoInput", $"YA EXISTE UN PROYECTO CON EL CÓDIGO '{editItem.Codigo}'");
             return;
         }
         
         if (editItem.FechaInicio.HasValue && editItem.FechaFin.HasValue && 
             editItem.FechaFin < editItem.FechaInicio)
         {
-            await SetError("La fecha fin no puede ser menor a la fecha inicio");
+            formTab = "general";
+            StateHasChanged();
+            await Task.Delay(100);
+            await JSRuntime.InvokeVoidAsync("focusFieldWithError", "fechaFinDate", "LA FECHA FIN NO PUEDE SER MENOR A LA FECHA INICIO");
+            return;
+        }
+        
+        // Validaciones forestales
+        if (editItem.AreaHectareas.HasValue && editItem.AreaHectareas <= 0)
+        {
+            formTab = "forestal";
+            StateHasChanged();
+            await SetError("EL ÁREA DEBE SER MAYOR A 0");
+            return;
+        }
+        
+        // Validar coordenadas si se proporcionan
+        if (editItem.Latitud.HasValue && (editItem.Latitud < -90 || editItem.Latitud > 90))
+        {
+            formTab = "ubicacion";
+            StateHasChanged();
+            await SetError("LA LATITUD DEBE ESTAR ENTRE -90 Y 90");
+            return;
+        }
+        
+        if (editItem.Longitud.HasValue && (editItem.Longitud < -180 || editItem.Longitud > 180))
+        {
+            formTab = "ubicacion";
+            StateHasChanged();
+            await SetError("LA LONGITUD DEBE ESTAR ENTRE -180 Y 180");
             return;
         }
         
@@ -370,17 +733,34 @@
             if (isEditing)
             {
                 await ProyectoRepository.UpdateAsync(editItem);
+                
+                var itemIndex = items.FindIndex(p => p.Id == editItem.Id);
+                if (itemIndex >= 0)
+                {
+                    var reloaded = await ProyectoRepository.GetByIdAsync(editItem.Id);
+                    if (reloaded != null) items[itemIndex] = reloaded;
+                }
+                
                 await SetSuccess($"Proyecto '{editItem.Nombre}' actualizado correctamente");
                 Logger.LogInformation($"Proyecto actualizado: {editItem.Codigo}");
             }
             else
             {
-                await ProyectoRepository.AddAsync(editItem);
+                var newItem = await ProyectoRepository.AddAsync(editItem);
+                
+                var reloaded = await ProyectoRepository.GetByIdAsync(newItem.Id);
+                if (reloaded != null)
+                {
+                    items.Add(reloaded);
+                    items = items.OrderBy(p => p.Nombre).ToList();
+                }
+                
                 await SetSuccess($"Proyecto '{editItem.Nombre}' creado correctamente");
                 Logger.LogInformation($"Proyecto creado: {editItem.Codigo}");
             }
             
-            await CargarDatos();
+            CatalogCache.InvalidateCache(CatalogType.Proyectos);
+            Filtrar();
             CerrarModal();
         }
         catch (Exception ex)
@@ -412,6 +792,10 @@
         try
         {
             await ProyectoRepository.DeleteAsync(itemToDelete.Id);
+            
+            items.RemoveAll(p => p.Id == itemToDelete.Id);
+            CatalogCache.InvalidateCache(CatalogType.Proyectos);
+            
             await SetSuccess($"Proyecto '{itemToDelete.Nombre}' eliminado correctamente");
             Logger.LogInformation($"Proyecto eliminado: {itemToDelete.Codigo}");
             
@@ -435,8 +819,59 @@
     {
         showModal = false;
         editItem = null;
+        formTab = "general";
         StateHasChanged();
     }
+    
+    private string GetTipoProyectoLabel(TipoProyectoForestal tipo) => tipo switch
+    {
+        TipoProyectoForestal.PlantacionNueva => "Plantación Nueva",
+        TipoProyectoForestal.Mantenimiento => "Mantenimiento",
+        TipoProyectoForestal.Raleo => "Raleo",
+        TipoProyectoForestal.PodaFormacion => "Poda Formación",
+        TipoProyectoForestal.PodaSanitaria => "Poda Sanitaria",
+        TipoProyectoForestal.Cosecha => "Cosecha",
+        TipoProyectoForestal.Reforestacion => "Reforestación",
+        TipoProyectoForestal.Vivero => "Vivero",
+        TipoProyectoForestal.InvestigacionEnsayo => "Investigación/Ensayo",
+        TipoProyectoForestal.InfraestructuraVial => "Infraestructura Vial",
+        TipoProyectoForestal.ControlFitosanitario => "Control Fitosanitario",
+        TipoProyectoForestal.Fertilizacion => "Fertilización",
+        TipoProyectoForestal.Inventario => "Inventario",
+        TipoProyectoForestal.ControlMalezas => "Control de Malezas",
+        TipoProyectoForestal.Otro => "Otro",
+        _ => tipo.ToString()
+    };
+    
+    private string GetTipoTenenciaLabel(TipoTenencia tipo) => tipo switch
+    {
+        TipoTenencia.Propio => "Propio",
+        TipoTenencia.Arrendado => "Arrendado",
+        TipoTenencia.Comodato => "Comodato",
+        TipoTenencia.ConvenioAsociativo => "Convenio Asociativo",
+        TipoTenencia.ConcesionEstatal => "Concesión Estatal",
+        TipoTenencia.Otro => "Otro",
+        _ => tipo.ToString()
+    };
+    
+    // Indicadores de tabs completadas
+    private bool TabGeneralCompleta() => editItem != null && 
+        !string.IsNullOrWhiteSpace(editItem.Codigo) && 
+        !string.IsNullOrWhiteSpace(editItem.Nombre);
+    
+    private bool TabUbicacionCompleta() => editItem != null && 
+        (!string.IsNullOrWhiteSpace(editItem.Predio) || 
+         !string.IsNullOrWhiteSpace(editItem.Departamento) || 
+         !string.IsNullOrWhiteSpace(editItem.Municipio));
+    
+    private bool TabForestalCompleta() => editItem != null && 
+        (editItem.EspecieId.HasValue || 
+         editItem.AreaHectareas.HasValue || 
+         editItem.FechaSiembra.HasValue);
+    
+    private bool TabGestionCompleta() => editItem != null && 
+        (editItem.ResponsableId.HasValue || 
+         editItem.Presupuesto.HasValue);
     
     private async Task SetError(string message)
     {

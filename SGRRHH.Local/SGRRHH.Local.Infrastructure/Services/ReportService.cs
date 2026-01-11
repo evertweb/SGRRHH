@@ -17,6 +17,7 @@ public class ReportService : IReportService
     private readonly IPermisoRepository _permisoRepository;
     private readonly IVacacionRepository _vacacionRepository;
     private readonly IRegistroDiarioRepository _registroDiarioRepository;
+    private readonly IIncapacidadRepository _incapacidadRepository;
     private readonly ILocalStorageService _storageService;
     private readonly IConfiguracionRepository _configRepository;
     private readonly ILogger<ReportService> _logger;
@@ -33,6 +34,7 @@ public class ReportService : IReportService
         IPermisoRepository permisoRepository,
         IVacacionRepository vacacionRepository,
         IRegistroDiarioRepository registroDiarioRepository,
+        IIncapacidadRepository incapacidadRepository,
         ILocalStorageService storageService,
         IConfiguracionRepository configRepository,
         ILogger<ReportService> logger)
@@ -41,6 +43,7 @@ public class ReportService : IReportService
         _permisoRepository = permisoRepository;
         _vacacionRepository = vacacionRepository;
         _registroDiarioRepository = registroDiarioRepository;
+        _incapacidadRepository = incapacidadRepository;
         _storageService = storageService;
         _configRepository = configRepository;
         _logger = logger;
@@ -856,12 +859,13 @@ public class ReportService : IReportService
             
             column.Item().PaddingVertical(15);
             
-            // Tipo de contrato
-            column.Item().Text(text =>
+            // Tipo de contrato - Comentado: ahora se obtiene de la tabla Contrato
+            // TODO: Cargar el contrato activo del empleado para mostrar el tipo
+            /* column.Item().Text(text =>
             {
                 text.Span("Tipo de contrato: ");
                 text.Span(empleado.TipoContrato.ToString()).Bold();
-            });
+            }); */
             
             // Salario (si no es clasificado)
             if (tipoClasificado != "clasificado" && empleado.SalarioBase.HasValue)
@@ -1636,5 +1640,140 @@ public class ReportService : IReportService
         }
     }
 
+    #endregion
+    
+    #region Reporte de Incapacidades
+    
+    public async Task<Result<byte[]>> GenerarReporteCobroIncapacidadesExcel(int año, int mes)
+    {
+        try
+        {
+            await CargarConfiguracionEmpresa();
+            var reporte = await _incapacidadRepository.GetReporteCobroAsync(año, mes);
+            
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Cobro Incapacidades");
+            
+            // === ENCABEZADO ===
+            worksheet.Cell(1, 1).Value = _nombreEmpresa;
+            worksheet.Cell(1, 1).Style.Font.Bold = true;
+            worksheet.Cell(1, 1).Style.Font.FontSize = 14;
+            worksheet.Range(1, 1, 1, 12).Merge();
+            
+            worksheet.Cell(2, 1).Value = $"NIT: {_nitEmpresa}";
+            worksheet.Range(2, 1, 2, 12).Merge();
+            
+            worksheet.Cell(3, 1).Value = $"REPORTE DE COBRO DE INCAPACIDADES - {reporte.Periodo}";
+            worksheet.Cell(3, 1).Style.Font.Bold = true;
+            worksheet.Range(3, 1, 3, 12).Merge();
+            
+            worksheet.Cell(4, 1).Value = $"Generado: {DateTime.Now:dd/MM/yyyy HH:mm}";
+            worksheet.Range(4, 1, 4, 12).Merge();
+            
+            // === RESUMEN ===
+            var rowResumen = 6;
+            worksheet.Cell(rowResumen, 1).Value = "RESUMEN";
+            worksheet.Cell(rowResumen, 1).Style.Font.Bold = true;
+            worksheet.Range(rowResumen, 1, rowResumen, 4).Merge();
+            worksheet.Range(rowResumen, 1, rowResumen, 4).Style.Fill.BackgroundColor = XLColor.LightGray;
+            
+            worksheet.Cell(rowResumen + 1, 1).Value = "Total Incapacidades:";
+            worksheet.Cell(rowResumen + 1, 2).Value = reporte.TotalIncapacidades;
+            
+            worksheet.Cell(rowResumen + 2, 1).Value = "Total Días:";
+            worksheet.Cell(rowResumen + 2, 2).Value = reporte.TotalDias;
+            
+            worksheet.Cell(rowResumen + 3, 1).Value = "Total Por Cobrar:";
+            worksheet.Cell(rowResumen + 3, 2).Value = reporte.TotalPorCobrar;
+            worksheet.Cell(rowResumen + 3, 2).Style.NumberFormat.Format = "$#,##0";
+            worksheet.Cell(rowResumen + 3, 2).Style.Font.Bold = true;
+            
+            // Totales por entidad
+            var rowEntidad = rowResumen + 5;
+            worksheet.Cell(rowEntidad, 1).Value = "TOTALES POR ENTIDAD";
+            worksheet.Cell(rowEntidad, 1).Style.Font.Bold = true;
+            worksheet.Range(rowEntidad, 1, rowEntidad, 4).Merge();
+            worksheet.Range(rowEntidad, 1, rowEntidad, 4).Style.Fill.BackgroundColor = XLColor.LightGray;
+            
+            var entidadRow = rowEntidad + 1;
+            foreach (var entidad in reporte.TotalesPorEntidad)
+            {
+                worksheet.Cell(entidadRow, 1).Value = entidad.Key;
+                worksheet.Cell(entidadRow, 2).Value = entidad.Value;
+                worksheet.Cell(entidadRow, 2).Style.NumberFormat.Format = "$#,##0";
+                entidadRow++;
+            }
+            
+            // === DETALLE ===
+            var rowHeader = entidadRow + 2;
+            worksheet.Cell(rowHeader, 1).Value = "DETALLE DE INCAPACIDADES";
+            worksheet.Cell(rowHeader, 1).Style.Font.Bold = true;
+            worksheet.Range(rowHeader, 1, rowHeader, 12).Merge();
+            worksheet.Range(rowHeader, 1, rowHeader, 12).Style.Fill.BackgroundColor = XLColor.LightGray;
+            
+            // Encabezados de tabla
+            var headerRow = rowHeader + 1;
+            var headers = new[] { "No.", "Cédula", "Empleado", "Cargo", "Tipo", "Fecha Inicio", "Fecha Fin", 
+                                  "Días EPS/ARL", "Entidad", "Valor Día", "% Pago", "Valor Cobrar" };
+            
+            for (int i = 0; i < headers.Length; i++)
+            {
+                worksheet.Cell(headerRow, i + 1).Value = headers[i];
+                worksheet.Cell(headerRow, i + 1).Style.Font.Bold = true;
+                worksheet.Cell(headerRow, i + 1).Style.Fill.BackgroundColor = XLColor.LightBlue;
+                worksheet.Cell(headerRow, i + 1).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            }
+            
+            // Datos
+            var dataRow = headerRow + 1;
+            foreach (var item in reporte.Items)
+            {
+                worksheet.Cell(dataRow, 1).Value = item.NumeroIncapacidad;
+                worksheet.Cell(dataRow, 2).Value = item.EmpleadoCedula;
+                worksheet.Cell(dataRow, 3).Value = item.EmpleadoNombre;
+                worksheet.Cell(dataRow, 4).Value = item.Cargo;
+                worksheet.Cell(dataRow, 5).Value = item.TipoIncapacidad;
+                worksheet.Cell(dataRow, 6).Value = item.FechaInicio.ToString("dd/MM/yyyy");
+                worksheet.Cell(dataRow, 7).Value = item.FechaFin.ToString("dd/MM/yyyy");
+                worksheet.Cell(dataRow, 8).Value = item.DiasEpsArl;
+                worksheet.Cell(dataRow, 9).Value = item.EntidadPagadora;
+                worksheet.Cell(dataRow, 10).Value = item.ValorDiaBase;
+                worksheet.Cell(dataRow, 10).Style.NumberFormat.Format = "$#,##0";
+                worksheet.Cell(dataRow, 11).Value = $"{item.PorcentajePago:F2}%";
+                worksheet.Cell(dataRow, 12).Value = item.ValorCobrar;
+                worksheet.Cell(dataRow, 12).Style.NumberFormat.Format = "$#,##0";
+                
+                // Bordes
+                for (int i = 1; i <= 12; i++)
+                {
+                    worksheet.Cell(dataRow, i).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                }
+                
+                dataRow++;
+            }
+            
+            // Total final
+            worksheet.Cell(dataRow, 11).Value = "TOTAL:";
+            worksheet.Cell(dataRow, 11).Style.Font.Bold = true;
+            worksheet.Cell(dataRow, 12).Value = reporte.TotalPorCobrar;
+            worksheet.Cell(dataRow, 12).Style.NumberFormat.Format = "$#,##0";
+            worksheet.Cell(dataRow, 12).Style.Font.Bold = true;
+            
+            // Ajustar anchos
+            worksheet.Columns().AdjustToContents();
+            
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            
+            _logger.LogInformation("Reporte de cobro de incapacidades generado: {Periodo}", reporte.Periodo);
+            return Result<byte[]>.Ok(stream.ToArray());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generando reporte de cobro de incapacidades");
+            return Result<byte[]>.Fail($"Error: {ex.Message}");
+        }
+    }
+    
     #endregion
 }

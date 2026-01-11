@@ -1,0 +1,1492 @@
+@page "/incapacidades"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Server.Components.Shared
+@inject IIncapacidadRepository IncapacidadRepository
+@inject ISeguimientoIncapacidadRepository SeguimientoRepository
+@inject IEmpleadoRepository EmpleadoRepository
+@inject IPermisoRepository PermisoRepository
+@inject IReportService ReportService
+@inject ICatalogCacheService CatalogCache
+@inject ILocalStorageService StorageService
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ILogger<Incapacidades> Logger
+
+<PageTitle>Incapacidades - SGRRHH</PageTitle>
+
+<style>
+    /* === SISTEMA HOSPITALARIO - MÓDULO DE INCAPACIDADES === */
+    
+    body, * {
+        font-family: 'Courier New', monospace;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    .incapacidades-container {
+        width: 100%;
+        min-width: 1024px;
+        max-width: 1920px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+    }
+    
+    .incapacidades-header {
+        border-bottom: 2px solid black;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .incapacidades-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin: 0;
+        text-align: left;
+    }
+    
+    .btn-nuevo {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 8px 16px;
+        background: black;
+        color: white;
+        border: 2px solid black;
+        cursor: pointer;
+    }
+    
+    .btn-nuevo:hover {
+        background: #333;
+    }
+    
+    /* === DASHBOARD === */
+    
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        border: 2px solid black;
+        padding: 15px;
+        text-align: center;
+        background: white;
+    }
+    
+    .stat-card h3 {
+        font-size: 11px;
+        margin: 0 0 10px 0;
+        font-weight: bold;
+    }
+    
+    .stat-number {
+        font-size: 32px;
+        font-weight: bold;
+        line-height: 1;
+    }
+    
+    .stat-amount {
+        font-size: 12px;
+        margin-top: 5px;
+        color: #666;
+    }
+    
+    .stat-card.activa {
+        border-color: #0066cc;
+        background: #f0f8ff;
+    }
+    
+    .stat-card.activa .stat-number {
+        color: #0066cc;
+    }
+    
+    .stat-card.warning {
+        border-color: #cc7700;
+        background: #fffbf0;
+    }
+    
+    .stat-card.warning .stat-number {
+        color: #cc7700;
+    }
+    
+    .stat-card.info {
+        border-color: #0066cc;
+        background: #f0f8ff;
+    }
+    
+    .stat-card.info .stat-number {
+        color: #0066cc;
+    }
+    
+    .stat-card.success {
+        border-color: green;
+        background: #f0fff0;
+    }
+    
+    .stat-card.success .stat-number {
+        color: green;
+    }
+    
+    /* === TABS === */
+    
+    .incapacidades-tabs {
+        border: 1px solid black;
+        margin-bottom: 0;
+        display: flex;
+        background: #f0f0f0;
+    }
+    
+    .incapacidades-tabs button {
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        padding: 10px 15px;
+        border: none;
+        border-right: 1px solid black;
+        background: #f0f0f0;
+        cursor: pointer;
+        text-transform: uppercase;
+    }
+    
+    .incapacidades-tabs button:hover {
+        background: #e0e0e0;
+    }
+    
+    .incapacidades-tabs button.active {
+        background: white;
+        font-weight: bold;
+        border-bottom: 2px solid white;
+        margin-bottom: -1px;
+    }
+    
+    /* === CONTENIDO === */
+    
+    .incapacidades-content {
+        border: 1px solid black;
+        border-top: none;
+        padding: 15px;
+        min-height: 400px;
+    }
+    
+    /* === TABLA === */
+    
+    .tabla-incapacidades {
+        width: 100%;
+        border-collapse: collapse;
+        border: 2px solid black;
+        margin-bottom: 15px;
+    }
+    
+    .tabla-incapacidades th {
+        background: white;
+        border: 1px solid black;
+        padding: 8px;
+        text-align: left;
+        font-size: 11px;
+        font-weight: bold;
+    }
+    
+    .tabla-incapacidades td {
+        border: 1px solid black;
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+    
+    .tabla-incapacidades tbody tr {
+        cursor: pointer;
+    }
+    
+    .tabla-incapacidades tbody tr:hover {
+        background: #f5f5f5;
+    }
+    
+    .td-centro {
+        text-align: center;
+    }
+    
+    .td-numero {
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    
+    .td-empleado {
+        max-width: 180px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .td-diagnostico {
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .td-monto {
+        text-align: right;
+        font-weight: bold;
+    }
+    
+    /* === BADGES === */
+    
+    .badge {
+        display: inline-block;
+        padding: 2px 6px;
+        font-size: 10px;
+        border: 1px solid;
+        text-transform: uppercase;
+    }
+    
+    .badge-tipo-eg { background: #e3f2fd; border-color: #2196f3; color: #1565c0; }
+    .badge-tipo-at { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+    .badge-tipo-el { background: #fce4ec; border-color: #e91e63; color: #880e4f; }
+    .badge-tipo-lm { background: #f3e5f5; border-color: #9c27b0; color: #6a1b9a; }
+    .badge-tipo-lp { background: #e8f5e9; border-color: #4caf50; color: #2e7d32; }
+    
+    .badge-estado-activa { background: #e3f2fd; border-color: #2196f3; color: #1565c0; }
+    .badge-estado-finalizada { background: #f5f5f5; border-color: #9e9e9e; color: #616161; }
+    .badge-estado-transcrita { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+    .badge-estado-cobrada { background: #e8f5e9; border-color: #4caf50; color: #2e7d32; }
+    .badge-estado-cancelada { background: #ffebee; border-color: #f44336; color: #c62828; }
+    
+    .badge-prorroga { background: #ede7f6; border-color: #673ab7; color: #4527a0; }
+    
+    .badge-vencida { background: #ffebee; border-color: #f44336; color: #c62828; }
+    .badge-vence-pronto { background: #fff8e1; border-color: #ffc107; color: #ff6f00; }
+    
+    /* === BOTONES DE ACCIÓN === */
+    
+    .btn-accion {
+        font-family: 'Courier New', monospace;
+        font-size: 10px;
+        padding: 4px 8px;
+        border: 1px solid black;
+        background: white;
+        cursor: pointer;
+        margin-right: 4px;
+    }
+    
+    .btn-accion:hover {
+        background: #f0f0f0;
+    }
+    
+    .btn-accion.primary {
+        background: #0066cc;
+        color: white;
+        border-color: #0066cc;
+    }
+    
+    .btn-accion.primary:hover {
+        background: #0052a3;
+    }
+    
+    .btn-accion.success {
+        background: green;
+        color: white;
+        border-color: green;
+    }
+    
+    .btn-accion.success:hover {
+        background: #006600;
+    }
+    
+    /* === LOADING === */
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        font-size: 14px;
+        color: #666;
+    }
+    
+    /* === MENSAJE VACÍO === */
+    
+    .mensaje-vacio {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+        font-size: 12px;
+    }
+    
+    /* === MODAL === */
+    
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    
+    .modal-container {
+        background: white;
+        border: 3px solid black;
+        width: 90%;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        background: black;
+        color: white;
+        padding: 12px 15px;
+        font-weight: bold;
+        font-size: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-header button {
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid #ccc;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    
+    /* === FORMULARIO === */
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .form-row.single {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-size: 11px;
+        font-weight: bold;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        border: 1px solid black;
+    }
+    
+    .form-group textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+    
+    .form-group.error input,
+    .form-group.error select {
+        border-color: red;
+        background: #fff0f0;
+    }
+    
+    .error-message {
+        font-size: 10px;
+        color: red;
+        margin-top: 4px;
+    }
+    
+    .btn-submit {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 10px 20px;
+        background: black;
+        color: white;
+        border: 2px solid black;
+        cursor: pointer;
+    }
+    
+    .btn-submit:hover {
+        background: #333;
+    }
+    
+    .btn-cancel {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 10px 20px;
+        background: white;
+        color: black;
+        border: 2px solid black;
+        cursor: pointer;
+    }
+    
+    .btn-cancel:hover {
+        background: #f0f0f0;
+    }
+    
+    /* === DETALLE === */
+    
+    .detalle-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    
+    .detalle-section {
+        border: 1px solid #ccc;
+        padding: 15px;
+    }
+    
+    .detalle-section h4 {
+        font-size: 12px;
+        margin: 0 0 10px 0;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #ccc;
+    }
+    
+    .detalle-row {
+        display: flex;
+        font-size: 11px;
+        margin-bottom: 5px;
+    }
+    
+    .detalle-row .label {
+        font-weight: bold;
+        width: 140px;
+        flex-shrink: 0;
+    }
+    
+    .detalle-row .value {
+        flex: 1;
+    }
+    
+    .timeline {
+        margin-top: 15px;
+        border-left: 2px solid #ccc;
+        padding-left: 15px;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 15px;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -21px;
+        top: 3px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid #666;
+    }
+    
+    .timeline-item.registro::before { border-color: #2196f3; }
+    .timeline-item.transcripcion::before { border-color: #ff9800; }
+    .timeline-item.cobro::before { border-color: #4caf50; }
+    
+    .timeline-fecha {
+        font-size: 10px;
+        color: #666;
+    }
+    
+    .timeline-accion {
+        font-size: 11px;
+        font-weight: bold;
+    }
+    
+    .timeline-desc {
+        font-size: 10px;
+        color: #333;
+    }
+</style>
+
+<div class="incapacidades-container">
+    <!-- HEADER -->
+    <div class="incapacidades-header">
+        <h1 class="incapacidades-title">GESTIÓN DE INCAPACIDADES MÉDICAS</h1>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-nuevo" style="background: #0066cc;" @onclick="GenerarReporteCobro">📊 REPORTE COBRO</button>
+            <button class="btn-nuevo" @onclick="AbrirModalNueva">+ NUEVA INCAPACIDAD</button>
+        </div>
+    </div>
+    
+    <!-- DASHBOARD -->
+    <div class="dashboard-grid">
+        <div class="stat-card activa">
+            <h3>🏥 ACTIVAS</h3>
+            <div class="stat-number">@estadisticas.TotalActivas</div>
+        </div>
+        
+        <div class="stat-card warning">
+            <h3>📋 PEND. TRANSCRIBIR</h3>
+            <div class="stat-number">@estadisticas.TotalPendientesTranscribir</div>
+        </div>
+        
+        <div class="stat-card info">
+            <h3>💰 PEND. COBRO</h3>
+            <div class="stat-number">@estadisticas.TotalPendientesCobro</div>
+            <div class="stat-amount">$@estadisticas.TotalPorCobrar.ToString("N0")</div>
+        </div>
+        
+        <div class="stat-card success">
+            <h3>✅ COBRADO MES</h3>
+            <div class="stat-number">$@estadisticas.TotalCobradoMes.ToString("N0")</div>
+            <div class="stat-amount">@estadisticas.TotalDiasIncapacidadMes días</div>
+        </div>
+    </div>
+    
+    <!-- TABS -->
+    <div class="incapacidades-tabs">
+        <button class="@(tabActivo == "activas" ? "active" : "")" @onclick='() => CambiarTab("activas")'>
+            ACTIVAS (@estadisticas.TotalActivas)
+        </button>
+        <button class="@(tabActivo == "transcripcion" ? "active" : "")" @onclick='() => CambiarTab("transcripcion")'>
+            PEND. TRANSCRIPCIÓN (@estadisticas.TotalPendientesTranscribir)
+        </button>
+        <button class="@(tabActivo == "cobro" ? "active" : "")" @onclick='() => CambiarTab("cobro")'>
+            PEND. COBRO (@estadisticas.TotalPendientesCobro)
+        </button>
+        <button class="@(tabActivo == "historial" ? "active" : "")" @onclick='() => CambiarTab("historial")'>
+            HISTORIAL
+        </button>
+    </div>
+    
+    <!-- CONTENIDO -->
+    <div class="incapacidades-content">
+        @if (cargando)
+        {
+            <div class="loading">Cargando incapacidades...</div>
+        }
+        else if (!incapacidadesFiltradas.Any())
+        {
+            <div class="mensaje-vacio">No hay incapacidades en esta categoría</div>
+        }
+        else
+        {
+            <table class="tabla-incapacidades">
+                <thead>
+                    <tr>
+                        <th>NÚMERO</th>
+                        <th>EMPLEADO</th>
+                        <th>TIPO</th>
+                        <th>FECHAS</th>
+                        <th class="td-centro">DÍAS</th>
+                        <th>DIAGNÓSTICO</th>
+                        <th>ESTADO</th>
+                        <th class="td-centro">VALOR</th>
+                        <th>ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var inc in incapacidadesFiltradas)
+                    {
+                        <tr @onclick="() => VerDetalle(inc.Id)">
+                            <td class="td-numero">
+                                @inc.NumeroIncapacidad
+                                @if (inc.EsProrroga)
+                                {
+                                    <span class="badge badge-prorroga">PRÓRROGA</span>
+                                }
+                            </td>
+                            <td class="td-empleado" title="@inc.EmpleadoNombre">@inc.EmpleadoNombre</td>
+                            <td>
+                                <span class="badge @GetBadgeTipo(inc.Tipo)">@inc.TipoNombre</span>
+                            </td>
+                            <td>
+                                @inc.FechaInicio.ToString("dd/MM/yy") - @inc.FechaFin.ToString("dd/MM/yy")
+                                @if (inc.EstaVencida)
+                                {
+                                    <span class="badge badge-vencida">VENCIDA</span>
+                                }
+                                else if (inc.VencePronto)
+                                {
+                                    <span class="badge badge-vence-pronto">@inc.DiasRestantes d</span>
+                                }
+                            </td>
+                            <td class="td-centro">@inc.TotalDias</td>
+                            <td class="td-diagnostico" title="@inc.DiagnosticoDescripcion">@inc.DiagnosticoDescripcion</td>
+                            <td>
+                                <span class="badge @GetBadgeEstado(inc.Estado)">@inc.EstadoNombre</span>
+                                @if (inc.Transcrita && !inc.Cobrada)
+                                {
+                                    <span class="badge badge-estado-transcrita">TRANSCRITA</span>
+                                }
+                            </td>
+                            <td class="td-monto">
+                                @if (inc.ValorPorCobrar.HasValue)
+                                {
+                                    @:$@inc.ValorPorCobrar.Value.ToString("N0")
+                                }
+                            </td>
+                            <td @onclick:stopPropagation="true">
+                                @if (!inc.Transcrita && inc.Estado != EstadoIncapacidad.Cancelada)
+                                {
+                                    <button class="btn-accion primary" @onclick="() => AbrirModalTranscripcion(inc)">
+                                        TRANSCRIBIR
+                                    </button>
+                                }
+                                @if (inc.Transcrita && !inc.Cobrada && inc.Estado != EstadoIncapacidad.Cancelada)
+                                {
+                                    <button class="btn-accion success" @onclick="() => AbrirModalCobro(inc)">
+                                        COBRO
+                                    </button>
+                                }
+                                @if (inc.Estado == EstadoIncapacidad.Activa && !inc.EstaVencida)
+                                {
+                                    <button class="btn-accion" @onclick="() => AbrirModalProrroga(inc)">
+                                        PRÓRROGA
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- MODAL NUEVA INCAPACIDAD -->
+@if (mostrarModalNueva)
+{
+    <div class="modal-overlay" @onclick="CerrarModales">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <span>REGISTRAR NUEVA INCAPACIDAD</span>
+                <button @onclick="CerrarModales">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group @(errores.ContainsKey("EmpleadoId") ? "error" : "")">
+                        <label>Empleado *</label>
+                        <select @bind="nuevaIncapacidad.EmpleadoId">
+                            <option value="0">-- Seleccione --</option>
+                            @foreach (var emp in empleados)
+                            {
+                                <option value="@emp.Id">@emp.NombreCompleto (@emp.Cedula)</option>
+                            }
+                        </select>
+                        @if (errores.ContainsKey("EmpleadoId"))
+                        {
+                            <div class="error-message">@errores["EmpleadoId"]</div>
+                        }
+                    </div>
+                    <div class="form-group @(errores.ContainsKey("TipoIncapacidad") ? "error" : "")">
+                        <label>Tipo de Incapacidad *</label>
+                        <select @bind="nuevaIncapacidad.TipoIncapacidad">
+                            <option value="@TipoIncapacidad.EnfermedadGeneral">Enfermedad General</option>
+                            <option value="@TipoIncapacidad.AccidenteTrabajo">Accidente de Trabajo</option>
+                            <option value="@TipoIncapacidad.EnfermedadLaboral">Enfermedad Laboral</option>
+                            <option value="@TipoIncapacidad.LicenciaMaternidad">Licencia Maternidad</option>
+                            <option value="@TipoIncapacidad.LicenciaPaternidad">Licencia Paternidad</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group @(errores.ContainsKey("FechaInicio") ? "error" : "")">
+                        <label>Fecha Inicio *</label>
+                        <input type="date" @bind="nuevaIncapacidad.FechaInicio" />
+                    </div>
+                    <div class="form-group @(errores.ContainsKey("FechaFin") ? "error" : "")">
+                        <label>Fecha Fin *</label>
+                        <input type="date" @bind="nuevaIncapacidad.FechaFin" />
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha Expedición *</label>
+                        <input type="date" @bind="nuevaIncapacidad.FechaExpedicion" />
+                    </div>
+                    <div class="form-group">
+                        <label>Código CIE-10</label>
+                        <input type="text" @bind="nuevaIncapacidad.DiagnosticoCIE10" placeholder="Ej: J00" />
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Diagnóstico / Descripción *</label>
+                    <textarea @bind="nuevaIncapacidad.DiagnosticoDescripcion" placeholder="Descripción del diagnóstico médico..."></textarea>
+                    @if (errores.ContainsKey("DiagnosticoDescripcion"))
+                    {
+                        <div class="error-message">@errores["DiagnosticoDescripcion"]</div>
+                    }
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group @(errores.ContainsKey("EntidadEmisora") ? "error" : "")">
+                        <label>Entidad Emisora (Médico/IPS) *</label>
+                        <input type="text" @bind="nuevaIncapacidad.EntidadEmisora" placeholder="Nombre del médico o IPS" />
+                    </div>
+                    <div class="form-group">
+                        <label>Entidad Pagadora (EPS/ARL)</label>
+                        <input type="text" @bind="nuevaIncapacidad.EntidadPagadora" placeholder="Nombre de la EPS o ARL" />
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Observaciones</label>
+                    <textarea @bind="nuevaIncapacidad.Observaciones" placeholder="Observaciones adicionales..."></textarea>
+                </div>
+                
+                <!-- DOCUMENTO ESCANEADO -->
+                <div class="form-group">
+                    <label>Documento de Incapacidad (Certificado Médico)</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button type="button" class="btn-accion primary" @onclick="AbrirScannerIncapacidad">
+                            📠 ESCANEAR CERTIFICADO
+                        </button>
+                        @if (documentoEscaneadoBytes != null && scannerContexto == "incapacidad")
+                        {
+                            <span style="font-size: 11px; color: green;">✓ @documentoEscaneadoNombre (@FormatFileSize(documentoEscaneadoBytes.Length))</span>
+                            <button type="button" class="btn-accion" @onclick="LimpiarDocumentoEscaneado" style="padding: 2px 6px;">×</button>
+                        }
+                        else
+                        {
+                            <span style="font-size: 10px; color: #666;">(Opcional - puede escanear el certificado físico)</span>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CerrarModales">CANCELAR</button>
+                <button class="btn-submit" @onclick="GuardarNuevaIncapacidad">GUARDAR INCAPACIDAD</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- MODAL TRANSCRIPCIÓN -->
+@if (mostrarModalTranscripcion && incapacidadSeleccionada != null)
+{
+    <div class="modal-overlay" @onclick="CerrarModales">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <span>REGISTRAR TRANSCRIPCIÓN - @incapacidadSeleccionada.NumeroIncapacidad</span>
+                <button @onclick="CerrarModales">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha de Transcripción *</label>
+                        <input type="date" @bind="transcripcionDto.FechaTranscripcion" />
+                    </div>
+                    <div class="form-group">
+                        <label>Número de Radicado</label>
+                        <input type="text" @bind="transcripcionDto.NumeroRadicado" placeholder="Número de radicado EPS/ARL" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Observaciones</label>
+                    <textarea @bind="transcripcionDto.Observaciones" placeholder="Observaciones de la transcripción..."></textarea>
+                </div>
+                
+                <!-- DOCUMENTO ESCANEADO TRANSCRIPCIÓN -->
+                <div class="form-group">
+                    <label>Documento de Radicación</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button type="button" class="btn-accion primary" @onclick="AbrirScannerTranscripcion">
+                            📠 ESCANEAR RADICADO
+                        </button>
+                        @if (documentoEscaneadoBytes != null && scannerContexto == "transcripcion")
+                        {
+                            <span style="font-size: 11px; color: green;">✓ @documentoEscaneadoNombre (@FormatFileSize(documentoEscaneadoBytes.Length))</span>
+                            <button type="button" class="btn-accion" @onclick="LimpiarDocumentoEscaneado" style="padding: 2px 6px;">×</button>
+                        }
+                        else
+                        {
+                            <span style="font-size: 10px; color: #666;">(Opcional)</span>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CerrarModales">CANCELAR</button>
+                <button class="btn-submit" @onclick="GuardarTranscripcion">REGISTRAR TRANSCRIPCIÓN</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- MODAL COBRO -->
+@if (mostrarModalCobro && incapacidadSeleccionada != null)
+{
+    <div class="modal-overlay" @onclick="CerrarModales">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <span>REGISTRAR COBRO - @incapacidadSeleccionada.NumeroIncapacidad</span>
+                <button @onclick="CerrarModales">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha de Cobro *</label>
+                        <input type="date" @bind="cobroDto.FechaCobro" />
+                    </div>
+                    <div class="form-group">
+                        <label>Valor Cobrado *</label>
+                        <input type="number" @bind="cobroDto.ValorCobrado" step="1000" placeholder="0" />
+                    </div>
+                </div>
+                <p style="font-size:11px; color:#666; margin-bottom:15px;">
+                    Valor esperado: $@((incapacidadSeleccionada.ValorPorCobrar ?? 0).ToString("N0"))
+                </p>
+                <div class="form-group">
+                    <label>Observaciones</label>
+                    <textarea @bind="cobroDto.Observaciones" placeholder="Observaciones del cobro..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CerrarModales">CANCELAR</button>
+                <button class="btn-submit" @onclick="GuardarCobro">REGISTRAR COBRO</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- MODAL PRÓRROGA -->
+@if (mostrarModalProrroga && incapacidadSeleccionada != null)
+{
+    <div class="modal-overlay" @onclick="CerrarModales">
+        <div class="modal-container" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <span>REGISTRAR PRÓRROGA - @incapacidadSeleccionada.NumeroIncapacidad</span>
+                <button @onclick="CerrarModales">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:11px; background:#f0f8ff; padding:10px; margin-bottom:15px; border:1px solid #0066cc;">
+                    📋 Incapacidad original: @incapacidadSeleccionada.NumeroIncapacidad 
+                    (@incapacidadSeleccionada.FechaInicio.ToString("dd/MM/yy") - @incapacidadSeleccionada.FechaFin.ToString("dd/MM/yy"))
+                    - @incapacidadSeleccionada.TotalDias días
+                </p>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha Inicio Prórroga *</label>
+                        <input type="date" @bind="prorrogaDto.FechaInicio" />
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha Fin Prórroga *</label>
+                        <input type="date" @bind="prorrogaDto.FechaFin" />
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Fecha Expedición *</label>
+                        <input type="date" @bind="prorrogaDto.FechaExpedicion" />
+                    </div>
+                    <div class="form-group">
+                        <label>Código CIE-10</label>
+                        <input type="text" @bind="prorrogaDto.DiagnosticoCIE10" />
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Diagnóstico / Descripción *</label>
+                    <textarea @bind="prorrogaDto.DiagnosticoDescripcion"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Entidad Emisora (Médico/IPS) *</label>
+                    <input type="text" @bind="prorrogaDto.EntidadEmisora" />
+                </div>
+                
+                <div class="form-group">
+                    <label>Observaciones</label>
+                    <textarea @bind="prorrogaDto.Observaciones"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CerrarModales">CANCELAR</button>
+                <button class="btn-submit" @onclick="GuardarProrroga">REGISTRAR PRÓRROGA</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- MODAL DETALLE -->
+@if (mostrarModalDetalle && detalleIncapacidad != null)
+{
+    <div class="modal-overlay" @onclick="CerrarModales">
+        <div class="modal-container" style="max-width:1000px;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <span>DETALLE INCAPACIDAD - @detalleIncapacidad.NumeroIncapacidad</span>
+                <button @onclick="CerrarModales">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="detalle-grid">
+                    <div class="detalle-section">
+                        <h4>📋 INFORMACIÓN GENERAL</h4>
+                        <div class="detalle-row">
+                            <span class="label">Empleado:</span>
+                            <span class="value">@detalleIncapacidad.EmpleadoNombre</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Cédula:</span>
+                            <span class="value">@detalleIncapacidad.EmpleadoCedula</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Cargo:</span>
+                            <span class="value">@detalleIncapacidad.EmpleadoCargo</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Tipo:</span>
+                            <span class="value">@detalleIncapacidad.TipoNombre</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Estado:</span>
+                            <span class="value">@detalleIncapacidad.EstadoNombre</span>
+                        </div>
+                    </div>
+                    
+                    <div class="detalle-section">
+                        <h4>📅 FECHAS Y DÍAS</h4>
+                        <div class="detalle-row">
+                            <span class="label">Fecha Inicio:</span>
+                            <span class="value">@detalleIncapacidad.FechaInicio.ToString("dd/MM/yyyy")</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Fecha Fin:</span>
+                            <span class="value">@detalleIncapacidad.FechaFin.ToString("dd/MM/yyyy")</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Total Días:</span>
+                            <span class="value">@detalleIncapacidad.TotalDias</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Días Empresa:</span>
+                            <span class="value">@detalleIncapacidad.DiasEmpresa</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Días EPS/ARL:</span>
+                            <span class="value">@detalleIncapacidad.DiasEpsArl</span>
+                        </div>
+                        @if (detalleIncapacidad.EsProrroga)
+                        {
+                            <div class="detalle-row">
+                                <span class="label">Días Acumulados:</span>
+                                <span class="value"><strong>@detalleIncapacidad.TotalDiasAcumulados</strong></span>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="detalle-section">
+                        <h4>🏥 DIAGNÓSTICO</h4>
+                        <div class="detalle-row">
+                            <span class="label">CIE-10:</span>
+                            <span class="value">@(detalleIncapacidad.DiagnosticoCIE10 ?? "N/A")</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Descripción:</span>
+                            <span class="value">@detalleIncapacidad.DiagnosticoDescripcion</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Emisor:</span>
+                            <span class="value">@detalleIncapacidad.EntidadEmisora</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Pagador:</span>
+                            <span class="value">@(detalleIncapacidad.EntidadPagadora ?? "N/A")</span>
+                        </div>
+                    </div>
+                    
+                    <div class="detalle-section">
+                        <h4>💰 VALORES</h4>
+                        <div class="detalle-row">
+                            <span class="label">% Pago:</span>
+                            <span class="value">@detalleIncapacidad.PorcentajePago%</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Valor Día:</span>
+                            <span class="value">$@((detalleIncapacidad.ValorDiaBase ?? 0).ToString("N0"))</span>
+                        </div>
+                        <div class="detalle-row">
+                            <span class="label">Valor a Cobrar:</span>
+                            <span class="value"><strong>$@((detalleIncapacidad.ValorTotalCobrar ?? 0).ToString("N0"))</strong></span>
+                        </div>
+                        @if (detalleIncapacidad.Cobrada)
+                        {
+                            <div class="detalle-row">
+                                <span class="label">Valor Cobrado:</span>
+                                <span class="value" style="color:green;"><strong>$@((detalleIncapacidad.ValorCobrado ?? 0).ToString("N0"))</strong></span>
+                            </div>
+                        }
+                    </div>
+                </div>
+                
+                @if (detalleIncapacidad.Seguimientos.Any())
+                {
+                    <div class="detalle-section" style="margin-top:20px;">
+                        <h4>📜 HISTORIAL</h4>
+                        <div class="timeline">
+                            @foreach (var seg in detalleIncapacidad.Seguimientos)
+                            {
+                                <div class="timeline-item @seg.TipoAccionNombre.ToLower().Replace(" ", "")">
+                                    <div class="timeline-fecha">@seg.FechaAccion.ToString("dd/MM/yyyy HH:mm")</div>
+                                    <div class="timeline-accion">@seg.TipoAccionNombre</div>
+                                    <div class="timeline-desc">@seg.Descripcion - @seg.RealizadoPorNombre</div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CerrarModales">CERRAR</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- SCANNER MODAL -->
+<ScannerModal @bind-IsVisible="mostrarScannerModal"
+              AllowMultiplePages="true"
+              Titulo="ESCANEAR DOCUMENTO MÉDICO"
+              OnScanComplete="OnScanComplete"
+              OnPdfGenerated="OnPdfGenerated" />
+
+@code {
+    // ===== ESTADO =====
+    private EstadisticasIncapacidades estadisticas = new();
+    private List<IncapacidadResumen> incapacidadesFiltradas = new();
+    private List<Empleado> empleados = new();
+    private string tabActivo = "activas";
+    private bool cargando = true;
+    private int usuarioId = 1;
+    
+    // Modales
+    private bool mostrarModalNueva;
+    private bool mostrarModalTranscripcion;
+    private bool mostrarModalCobro;
+    private bool mostrarModalProrroga;
+    private bool mostrarModalDetalle;
+    
+    // Scanner Modal
+    private bool mostrarScannerModal;
+    private string scannerContexto = "incapacidad"; // "incapacidad" o "transcripcion"
+    private byte[]? documentoEscaneadoBytes;
+    private string? documentoEscaneadoNombre;
+    
+    // DTOs
+    private CrearIncapacidadDto nuevaIncapacidad = new();
+    private RegistrarTranscripcionDto transcripcionDto = new();
+    private RegistrarCobroDto cobroDto = new();
+    private CrearProrrogaDto prorrogaDto = new();
+    private IncapacidadResumen? incapacidadSeleccionada;
+    private IncapacidadDetalleDto? detalleIncapacidad;
+    
+    // Errores
+    private Dictionary<string, string> errores = new();
+    
+    // ===== LIFECYCLE =====
+    
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (!AuthService.IsAuthenticated || AuthService.CurrentUser == null)
+            {
+                Navigation.NavigateTo("/login");
+                return;
+            }
+            usuarioId = AuthService.CurrentUserId ?? 1;
+            
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al inicializar página de incapacidades");
+        }
+    }
+    
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        try
+        {
+            estadisticas = await IncapacidadRepository.GetEstadisticasAsync();
+            empleados = (await EmpleadoRepository.GetAllActiveAsync()).ToList();
+            await FiltrarPorTab();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar datos de incapacidades");
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+    
+    private async Task FiltrarPorTab()
+    {
+        incapacidadesFiltradas = tabActivo switch
+        {
+            "activas" => (await IncapacidadRepository.GetActivasAsync()).ToList(),
+            "transcripcion" => (await IncapacidadRepository.GetPendientesTranscripcionAsync()).ToList(),
+            "cobro" => (await IncapacidadRepository.GetPendientesCobroAsync()).ToList(),
+            "historial" => (await IncapacidadRepository.GetAllWithFiltersAsync()).ToList(),
+            _ => new List<IncapacidadResumen>()
+        };
+    }
+    
+    private async Task CambiarTab(string tab)
+    {
+        tabActivo = tab;
+        await FiltrarPorTab();
+    }
+    
+    // ===== HELPERS CSS =====
+    
+    private string GetBadgeTipo(TipoIncapacidad tipo) => tipo switch
+    {
+        TipoIncapacidad.EnfermedadGeneral => "badge-tipo-eg",
+        TipoIncapacidad.AccidenteTrabajo => "badge-tipo-at",
+        TipoIncapacidad.EnfermedadLaboral => "badge-tipo-el",
+        TipoIncapacidad.LicenciaMaternidad => "badge-tipo-lm",
+        TipoIncapacidad.LicenciaPaternidad => "badge-tipo-lp",
+        _ => ""
+    };
+    
+    private string GetBadgeEstado(EstadoIncapacidad estado) => estado switch
+    {
+        EstadoIncapacidad.Activa => "badge-estado-activa",
+        EstadoIncapacidad.Finalizada => "badge-estado-finalizada",
+        EstadoIncapacidad.Transcrita => "badge-estado-transcrita",
+        EstadoIncapacidad.Cobrada => "badge-estado-cobrada",
+        EstadoIncapacidad.Cancelada => "badge-estado-cancelada",
+        _ => ""
+    };
+    
+    // ===== MODALES =====
+    
+    private void AbrirModalNueva()
+    {
+        nuevaIncapacidad = new CrearIncapacidadDto
+        {
+            FechaInicio = DateTime.Today,
+            FechaFin = DateTime.Today,
+            FechaExpedicion = DateTime.Today,
+            TipoIncapacidad = TipoIncapacidad.EnfermedadGeneral
+        };
+        errores.Clear();
+        mostrarModalNueva = true;
+    }
+    
+    private void AbrirModalTranscripcion(IncapacidadResumen inc)
+    {
+        incapacidadSeleccionada = inc;
+        transcripcionDto = new RegistrarTranscripcionDto
+        {
+            IncapacidadId = inc.Id,
+            FechaTranscripcion = DateTime.Today
+        };
+        mostrarModalTranscripcion = true;
+    }
+    
+    private void AbrirModalCobro(IncapacidadResumen inc)
+    {
+        incapacidadSeleccionada = inc;
+        cobroDto = new RegistrarCobroDto
+        {
+            IncapacidadId = inc.Id,
+            FechaCobro = DateTime.Today,
+            ValorCobrado = inc.ValorPorCobrar ?? 0
+        };
+        mostrarModalCobro = true;
+    }
+    
+    private void AbrirModalProrroga(IncapacidadResumen inc)
+    {
+        incapacidadSeleccionada = inc;
+        prorrogaDto = new CrearProrrogaDto
+        {
+            IncapacidadAnteriorId = inc.Id,
+            FechaInicio = inc.FechaFin.AddDays(1),
+            FechaFin = inc.FechaFin.AddDays(7),
+            FechaExpedicion = DateTime.Today,
+            DiagnosticoDescripcion = inc.DiagnosticoDescripcion ?? "",
+            EntidadEmisora = inc.EntidadEmisora ?? ""
+        };
+        mostrarModalProrroga = true;
+    }
+    
+    private async Task VerDetalle(int incapacidadId)
+    {
+        try
+        {
+            detalleIncapacidad = await IncapacidadRepository.GetDetalleAsync(incapacidadId);
+            if (detalleIncapacidad != null)
+            {
+                mostrarModalDetalle = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar detalle de incapacidad {Id}", incapacidadId);
+        }
+    }
+    
+    private void CerrarModales()
+    {
+        mostrarModalNueva = false;
+        mostrarModalTranscripcion = false;
+        mostrarModalCobro = false;
+        mostrarModalProrroga = false;
+        mostrarModalDetalle = false;
+        incapacidadSeleccionada = null;
+        detalleIncapacidad = null;
+        // Limpiar documento escaneado
+        documentoEscaneadoBytes = null;
+        documentoEscaneadoNombre = null;
+    }
+    
+    // ===== GUARDAR =====
+    
+    private async Task GuardarNuevaIncapacidad()
+    {
+        errores.Clear();
+        
+        // Validaciones
+        if (nuevaIncapacidad.EmpleadoId <= 0)
+            errores["EmpleadoId"] = "Seleccione un empleado";
+        if (string.IsNullOrWhiteSpace(nuevaIncapacidad.DiagnosticoDescripcion))
+            errores["DiagnosticoDescripcion"] = "Ingrese el diagnóstico";
+        if (string.IsNullOrWhiteSpace(nuevaIncapacidad.EntidadEmisora))
+            errores["EntidadEmisora"] = "Ingrese la entidad emisora";
+        if (nuevaIncapacidad.FechaFin < nuevaIncapacidad.FechaInicio)
+            errores["FechaFin"] = "Fecha fin debe ser mayor o igual a fecha inicio";
+        
+        if (errores.Any()) return;
+        
+        try
+        {
+            var incapacidad = new Incapacidad
+            {
+                NumeroIncapacidad = await IncapacidadRepository.GenerarNumeroIncapacidadAsync(),
+                EmpleadoId = nuevaIncapacidad.EmpleadoId,
+                FechaInicio = nuevaIncapacidad.FechaInicio,
+                FechaFin = nuevaIncapacidad.FechaFin,
+                TotalDias = (int)(nuevaIncapacidad.FechaFin.Date - nuevaIncapacidad.FechaInicio.Date).TotalDays + 1,
+                FechaExpedicion = nuevaIncapacidad.FechaExpedicion,
+                DiagnosticoCIE10 = nuevaIncapacidad.DiagnosticoCIE10,
+                DiagnosticoDescripcion = nuevaIncapacidad.DiagnosticoDescripcion,
+                TipoIncapacidad = nuevaIncapacidad.TipoIncapacidad,
+                EntidadEmisora = nuevaIncapacidad.EntidadEmisora,
+                EntidadPagadora = nuevaIncapacidad.EntidadPagadora,
+                Observaciones = nuevaIncapacidad.Observaciones,
+                RegistradoPorId = usuarioId,
+                Estado = EstadoIncapacidad.Activa
+            };
+            
+            // Calcular distribución de días
+            incapacidad.CalcularDistribucionDias();
+            
+            // Guardar documento escaneado si existe
+            if (documentoEscaneadoBytes != null && scannerContexto == "incapacidad")
+            {
+                try
+                {
+                    var fileName = documentoEscaneadoNombre ?? $"INC_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                    var storageResult = await StorageService.SaveDocumentoEmpleadoAsync(
+                        nuevaIncapacidad.EmpleadoId,
+                        "Incapacidad",
+                        documentoEscaneadoBytes,
+                        fileName);
+                    
+                    if (storageResult.IsSuccess)
+                    {
+                        incapacidad.DocumentoIncapacidadPath = storageResult.Value;
+                        Logger.LogInformation("Documento de incapacidad guardado: {Path}", storageResult.Value);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Error al guardar documento escaneado, continuando sin él");
+                }
+            }
+            
+            // Guardar
+            await IncapacidadRepository.AddAsync(incapacidad);
+            
+            // Registrar seguimiento
+            await SeguimientoRepository.RegistrarAccionAsync(
+                incapacidad.Id,
+                TipoAccionSeguimientoIncapacidad.Registro,
+                $"Incapacidad registrada: {incapacidad.TotalDias} días",
+                usuarioId);
+            
+            Logger.LogInformation("Incapacidad {Numero} creada", incapacidad.NumeroIncapacidad);
+            
+            CerrarModales();
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar nueva incapacidad");
+            errores["General"] = ErrorTranslationService.Translate(ex);
+        }
+    }
+    
+    private async Task GuardarTranscripcion()
+    {
+        try
+        {
+            await IncapacidadRepository.RegistrarTranscripcionAsync(transcripcionDto, usuarioId);
+            Logger.LogInformation("Transcripción registrada para incapacidad {Id}", transcripcionDto.IncapacidadId);
+            CerrarModales();
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al registrar transcripción");
+        }
+    }
+    
+    private async Task GuardarCobro()
+    {
+        try
+        {
+            await IncapacidadRepository.RegistrarCobroAsync(cobroDto, usuarioId);
+            Logger.LogInformation("Cobro registrado para incapacidad {Id}", cobroDto.IncapacidadId);
+            CerrarModales();
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al registrar cobro");
+        }
+    }
+    
+    private async Task GuardarProrroga()
+    {
+        try
+        {
+            await IncapacidadRepository.CrearProrrogaAsync(prorrogaDto.IncapacidadAnteriorId, prorrogaDto, usuarioId);
+            Logger.LogInformation("Prórroga registrada para incapacidad {Id}", prorrogaDto.IncapacidadAnteriorId);
+            CerrarModales();
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al registrar prórroga");
+        }
+    }
+    
+    // ===== REPORTES =====
+    
+    private async Task GenerarReporteCobro()
+    {
+        try
+        {
+            var año = DateTime.Now.Year;
+            var mes = DateTime.Now.Month;
+            
+            var result = await ReportService.GenerarReporteCobroIncapacidadesExcel(año, mes);
+            
+            if (result.IsSuccess && result.Value != null)
+            {
+                var fileName = $"Reporte_Cobro_Incapacidades_{año}_{mes:D2}.xlsx";
+                var base64 = Convert.ToBase64String(result.Value);
+                
+                await JSRuntime.InvokeVoidAsync("downloadFile", fileName, 
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64);
+                
+                Logger.LogInformation("Reporte de cobro generado: {FileName}", fileName);
+            }
+            else
+            {
+                Logger.LogWarning("Error al generar reporte de cobro: {Message}", result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al generar reporte de cobro");
+        }
+    }
+    
+    // ===== SCANNER =====
+    
+    private void AbrirScannerIncapacidad()
+    {
+        scannerContexto = "incapacidad";
+        mostrarScannerModal = true;
+    }
+    
+    private void AbrirScannerTranscripcion()
+    {
+        scannerContexto = "transcripcion";
+        mostrarScannerModal = true;
+    }
+    
+    private void LimpiarDocumentoEscaneado()
+    {
+        documentoEscaneadoBytes = null;
+        documentoEscaneadoNombre = null;
+    }
+    
+    private Task OnScanComplete(List<ScannedPageDto> pages)
+    {
+        // Si son imágenes individuales, usar la primera
+        if (pages.Count > 0)
+        {
+            documentoEscaneadoBytes = pages[0].ImageBytes;
+            documentoEscaneadoNombre = $"Escaneado_{DateTime.Now:yyyyMMdd_HHmmss}.jpg";
+            Logger.LogInformation("Documento escaneado: {Name} ({Size} bytes)", 
+                documentoEscaneadoNombre, documentoEscaneadoBytes.Length);
+        }
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+    
+    private Task OnPdfGenerated(byte[] pdfBytes)
+    {
+        documentoEscaneadoBytes = pdfBytes;
+        documentoEscaneadoNombre = $"Escaneado_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+        Logger.LogInformation("PDF generado: {Name} ({Size} bytes)", 
+            documentoEscaneadoNombre, documentoEscaneadoBytes.Length);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+    
+    private string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F2} MB";
+    }
+}

@@ -38,8 +38,6 @@ public class Empleado : EntidadBase
     
     public EstadoEmpleado Estado { get; set; } = EstadoEmpleado.Activo;
     
-    public TipoContrato TipoContrato { get; set; }
-    
     public int? CargoId { get; set; }
     
     public Cargo? Cargo { get; set; }
@@ -60,11 +58,25 @@ public class Empleado : EntidadBase
     
     public NivelEducacion? NivelEducacion { get; set; }
     
+    // ========== SEGURIDAD SOCIAL COMPLETA (Colombia) ==========
+    
     public string? EPS { get; set; }
+    
+    public string? CodigoEPS { get; set; }
     
     public string? ARL { get; set; }
     
+    public string? CodigoARL { get; set; }
+    
+    public int ClaseRiesgoARL { get; set; } = 1; // Clase I-V
+    
     public string? AFP { get; set; }
+    
+    public string? CodigoAFP { get; set; }
+    
+    public string? CajaCompensacion { get; set; }
+    
+    public string? CodigoCajaCompensacion { get; set; }
     
     public decimal? SalarioBase { get; set; }
     

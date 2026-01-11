@@ -56,6 +56,60 @@ window.focusElement = function(elementId) {
 };
 
 /**
+ * Enfoca un elemento, lo resalta con error y muestra mensaje inline
+ */
+window.focusFieldWithError = function(elementId, errorMessage) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    // Limpiar errores previos
+    clearAllFieldErrors();
+    
+    // Agregar clase de error al campo
+    element.classList.add('field-error');
+    
+    // Buscar el grupo padre del campo
+    const formGroup = element.closest('.hospital-form-group');
+    if (formGroup) {
+        formGroup.classList.add('has-error');
+        
+        // Crear mensaje de error inline si no existe
+        let errorEl = formGroup.querySelector('.field-error-message');
+        if (!errorEl) {
+            errorEl = document.createElement('div');
+            errorEl.className = 'field-error-message';
+            formGroup.appendChild(errorEl);
+        }
+        errorEl.textContent = errorMessage;
+        errorEl.style.display = 'block';
+    }
+    
+    // Hacer scroll al elemento y enfocar
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => element.focus(), 100);
+    
+    // Limpiar error cuando el usuario escriba
+    element.addEventListener('input', function clearError() {
+        element.classList.remove('field-error');
+        if (formGroup) {
+            formGroup.classList.remove('has-error');
+            const errorEl = formGroup.querySelector('.field-error-message');
+            if (errorEl) errorEl.style.display = 'none';
+        }
+        element.removeEventListener('input', clearError);
+    }, { once: true });
+};
+
+/**
+ * Limpia todos los errores de campos
+ */
+window.clearAllFieldErrors = function() {
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+    document.querySelectorAll('.has-error').forEach(el => el.classList.remove('has-error'));
+    document.querySelectorAll('.field-error-message').forEach(el => el.style.display = 'none');
+};
+
+/**
  * Imprime el contenido de una página
  */
 window.printPage = function() {
@@ -322,4 +376,83 @@ window.removeLocalStorage = function(key) {
         console.error('Error removing from localStorage:', err);
         return false;
     }
+};
+
+// ========================================
+// KEYBOARD HANDLER
+// ========================================
+
+/**
+ * Configura el manejador de teclado para una pagina
+ */
+window.addKeyboardHandler = function(dotNetRef) {
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F5') {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync('HandleKeyPress', 'F5');
+        } else if (e.key === 'Escape') {
+            dotNetRef.invokeMethodAsync('HandleKeyPress', 'Escape');
+        }
+    });
+};
+
+// ========================================
+// AUTO-EXPAND TEXTAREAS
+// ========================================
+
+/**
+ * Configura auto-expansión para todos los textareas con clase .auto-expand
+ */
+window.setupAutoExpandTextareas = function() {
+    document.querySelectorAll('textarea.auto-expand').forEach(function(textarea) {
+        autoExpandTextarea(textarea);
+        textarea.addEventListener('input', function() {
+            autoExpandTextarea(this);
+        });
+    });
+};
+
+/**
+ * Auto-expande un textarea según su contenido
+ */
+function autoExpandTextarea(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = (textarea.scrollHeight) + 'px';
+}
+
+/**
+ * Inicializa auto-expand en un textarea específico
+ */
+window.initAutoExpand = function(elementId) {
+    const textarea = document.getElementById(elementId);
+    if (textarea) {
+        autoExpandTextarea(textarea);
+        textarea.addEventListener('input', function() {
+            autoExpandTextarea(this);
+        });
+    }
+};
+
+// ========================================
+// FORM HELPERS
+// ========================================
+
+/**
+ * Inicializa formularios del hospital (auto-expand, focus, etc.)
+ */
+window.initHospitalForm = function() {
+    // Auto-expand para textareas
+    document.querySelectorAll('.hospital-form-group textarea').forEach(function(textarea) {
+        // Ajustar altura inicial
+        if (textarea.value) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.max(80, textarea.scrollHeight) + 'px';
+        }
+        
+        // Ajustar al escribir
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.max(80, this.scrollHeight) + 'px';
+        });
+    });
 };

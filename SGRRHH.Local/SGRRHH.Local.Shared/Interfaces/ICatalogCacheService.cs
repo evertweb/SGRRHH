@@ -43,6 +43,11 @@ public interface ICatalogCacheService
     Task<List<Empleado>> GetEmpleadosTodosAsync(bool forceRefresh = false);
     
     /// <summary>
+    /// Invalida el caché de un catálogo específico
+    /// </summary>
+    void InvalidateCache(CatalogType catalogType);
+    
+    /// <summary>
     /// Invalida todo el caché de catálogos
     /// </summary>
     void InvalidateAllCache();
@@ -51,4 +56,18 @@ public interface ICatalogCacheService
     /// Precarga todos los catálogos en caché
     /// </summary>
     Task PreloadAllCatalogsAsync();
+}
+
+/// <summary>
+/// Tipos de catálogos disponibles para invalidación de caché
+/// </summary>
+public enum CatalogType
+{
+    Cargos,
+    Departamentos,
+    TiposPermiso,
+    Proyectos,
+    Actividades,
+    EmpleadosActivos,
+    EmpleadosTodos
 }

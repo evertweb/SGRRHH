@@ -47,9 +47,10 @@ WHERE id = @Id";
 
     public async Task DeleteAsync(int id)
     {
-        const string sql = "UPDATE registros_diarios SET activo = 0, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = @Id";
+        // Hard delete - elimina permanentemente el registro y sus detalles
         using var connection = _context.CreateConnection();
-        await connection.ExecuteAsync(sql, new { Id = id });
+        await connection.ExecuteAsync("DELETE FROM detalles_actividad WHERE registro_diario_id = @Id", new { Id = id });
+        await connection.ExecuteAsync("DELETE FROM registros_diarios WHERE id = @Id", new { Id = id });
     }
 
     public async Task<RegistroDiario?> GetByIdAsync(int id)
@@ -205,7 +206,8 @@ WHERE id = @Id";
 
     public async Task DeleteDetalleAsync(int registroId, int detalleId)
     {
-        const string sql = "UPDATE detalles_actividad SET activo = 0, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = @Id AND registro_diario_id = @RegistroId";
+        // Hard delete - elimina permanentemente el detalle
+        const string sql = "DELETE FROM detalles_actividad WHERE id = @Id AND registro_diario_id = @RegistroId";
         using var connection = _context.CreateConnection();
         await connection.ExecuteAsync(sql, new { Id = detalleId, RegistroId = registroId });
     }

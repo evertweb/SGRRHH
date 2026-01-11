@@ -12,6 +12,33 @@ public class Vacacion : EntidadBase
     
     public int DiasTomados { get; set; }
     
+    /// <summary>
+    /// Días calendario (incluye fines de semana y festivos)
+    /// </summary>
+    public int DiasCalendario => (FechaFin - FechaInicio).Days + 1;
+    
+    /// <summary>
+    /// Días hábiles reales (excluye sábados, domingos y festivos)
+    /// Se calcula dinámicamente según legislación colombiana
+    /// </summary>
+    public int DiasHabiles 
+    { 
+        get 
+        {
+            int dias = 0;
+            for (var date = FechaInicio; date <= FechaFin; date = date.AddDays(1))
+            {
+                // Excluir sábados y domingos
+                if (date.DayOfWeek != DayOfWeek.Saturday && 
+                    date.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    dias++;
+                }
+            }
+            return dias;
+        }
+    }
+    
     public int PeriodoCorrespondiente { get; set; }
     
     /// <summary>
@@ -20,7 +47,8 @@ public class Vacacion : EntidadBase
     public string Periodo => PeriodoCorrespondiente.ToString();
     
     /// <summary>
-    /// Días disponibles para el período (15 días por año por defecto)
+    /// Días hábiles disponibles para el período según legislación colombiana (15 días hábiles)
+    /// Nota: En Colombia son 15 días HÁBILES, no calendario
     /// </summary>
     public int DiasDisponibles { get; set; } = 15;
     

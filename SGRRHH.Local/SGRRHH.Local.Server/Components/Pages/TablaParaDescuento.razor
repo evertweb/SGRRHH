@@ -1,0 +1,68 @@
+@using SGRRHH.Local.Domain.DTOs
+
+<table class="tabla-seguimiento">
+    <thead>
+        <tr>
+            <th style="width: 100px;">ACTA</th>
+            <th>EMPLEADO</th>
+            <th>TIPO PERMISO</th>
+            <th style="width: 90px;">FECHA</th>
+            <th style="width: 50px;">DÍAS</th>
+            <th style="width: 100px;">MONTO</th>
+            <th style="width: 80px;">PERÍODO</th>
+            <th style="width: 80px;">ACCIONES</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Permisos.Any())
+        {
+            <tr>
+                <td colspan="8" class="empty-cell">NO HAY PERMISOS PARA DESCUENTO</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var permiso in Permisos)
+            {
+                <tr>
+                    <td class="td-acta">@permiso.NumeroActa</td>
+                    <td>@permiso.EmpleadoNombre</td>
+                    <td>@permiso.TipoPermiso</td>
+                    <td class="td-centro">@permiso.FechaInicio.ToString("dd/MM/yy")</td>
+                    <td class="td-centro">@permiso.TotalDias</td>
+                    <td class="td-centro">
+                        @if (permiso.MontoDescuento.HasValue)
+                        {
+                            <span class="badge badge-descuento">$@permiso.MontoDescuento.Value.ToString("N0")</span>
+                        }
+                        else
+                        {
+                            <span style="color: #999;">Sin calcular</span>
+                        }
+                    </td>
+                    <td class="td-centro">@(permiso.PeriodoDescuento ?? "-")</td>
+                    <td class="td-centro">
+                        <button class="btn btn-sm" @onclick="() => OnVerDetalle.InvokeAsync(permiso.Id)">VER</button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@if (Permisos.Any())
+{
+    var totalMonto = Permisos.Sum(p => p.MontoDescuento ?? 0);
+    <div style="font-size: 11px; margin-top: 10px;">
+        <strong>TOTAL A DESCONTAR: $@totalMonto.ToString("N0")</strong> 
+        (@Permisos.Count permiso(s))
+    </div>
+}
+
+@code {
+    [Parameter]
+    public List<PermisoConSeguimiento> Permisos { get; set; } = new();
+    
+    [Parameter]
+    public EventCallback<int> OnVerDetalle { get; set; }
+}

@@ -45,8 +45,16 @@ public class DapperContext
         var connection = new SqliteConnection(_pathResolver.GetConnectionString());
         connection.Open();
         
-        // Aplicar pragmas de sesión para cada conexión
-        connection.Execute(SessionPragmas);
+        // CRÍTICO: Aplicar pragmas DESPUÉS de abrir la conexión
+        // SQLite ignora pragmas si se pasan en el connection string
+        try
+        {
+            connection.Execute(SessionPragmas);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error applying session pragmas");
+        }
         
         return connection;
     }
@@ -69,12 +77,65 @@ public class DapperContext
             await connection.ExecuteAsync(DatabaseInitializer.Pragmas);
             await connection.ExecuteAsync(DatabaseInitializer.Schema);
             await connection.ExecuteAsync(DatabaseInitializer.PerformanceIndexes);
-            await connection.ExecuteAsync(DatabaseInitializer.SeedData);
+            
+            // Migración: Agregar campos de incapacidad a permisos (si no existen)
+            await TryAddColumnAsync(connection, "permisos", "incapacidad_id", "INTEGER REFERENCES incapacidades(id)");
+            await TryAddColumnAsync(connection, "permisos", "convertido_a_incapacidad", "INTEGER DEFAULT 0");
+            
+            // Migración: Agregar campos de seguridad social a empleados (si no existen)
+            await TryAddColumnAsync(connection, "empleados", "codigo_eps", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "codigo_arl", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "clase_riesgo_arl", "INTEGER DEFAULT 1");
+            await TryAddColumnAsync(connection, "empleados", "codigo_afp", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "caja_compensacion", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "codigo_caja_compensacion", "TEXT");
+            
+            // Solo ejecutar SeedData si no se ha ejecutado antes
+            // Verificamos si existe la configuración "seed_data_initialized"
+            var seedInitialized = await connection.QueryFirstOrDefaultAsync<string>(
+                "SELECT valor FROM configuracion_sistema WHERE clave = 'seed_data_initialized' LIMIT 1");
+            
+            if (string.IsNullOrEmpty(seedInitialized))
+            {
+                await connection.ExecuteAsync(DatabaseInitializer.SeedData);
+                
+                // Marcar que el seed data ya fue inicializado
+                await connection.ExecuteAsync(@"
+                    INSERT OR REPLACE INTO configuracion_sistema (clave, valor, descripcion, categoria, activo) 
+                    VALUES ('seed_data_initialized', 'true', 'Indica si los datos semilla ya fueron insertados', 'Sistema', 1);
+                ");
+                
+                _logger.LogInformation("Seed data initialized successfully");
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error running SQLite migrations");
             throw;
+        }
+    }
+    
+    /// <summary>
+    /// Intenta agregar una columna a una tabla. Si la columna ya existe, no hace nada.
+    /// </summary>
+    private async Task TryAddColumnAsync(SqliteConnection connection, string tableName, string columnName, string columnDefinition)
+    {
+        try
+        {
+            // Verificar si la columna ya existe
+            var columns = await connection.QueryAsync<dynamic>($"PRAGMA table_info({tableName})");
+            var columnExists = columns.Any(c => ((string)c.name).Equals(columnName, StringComparison.OrdinalIgnoreCase));
+            
+            if (!columnExists)
+            {
+                await connection.ExecuteAsync($"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition}");
+                _logger.LogInformation("Columna {Column} agregada a tabla {Table}", columnName, tableName);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Si falla, puede ser porque la columna ya existe o hay otro problema
+            _logger.LogDebug("No se pudo agregar columna {Column} a {Table}: {Error}", columnName, tableName, ex.Message);
         }
     }
 

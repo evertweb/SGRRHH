@@ -1,0 +1,341 @@
+@page "/dashboard-productividad"
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Shared.Interfaces
+@inject IReporteProductividadService ReporteService
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<DashboardProductividad> Logger
+
+<PageTitle>Dashboard Productividad - SGRRHH</PageTitle>
+
+<h1 class="page-title">DASHBOARD DE PRODUCTIVIDAD SILVICULTURAL</h1>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="error-block">
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">CERRAR</button>
+    </div>
+}
+
+<!-- Filtros de período -->
+<div class="panel">
+    <div class="panel-header">PERÍODO DE ANÁLISIS</div>
+    <div class="panel-body">
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <label>PERÍODO:</label>
+                <select @bind="periodoSeleccionado" @bind:after="CambiarPeriodo">
+                    <option value="mes">ESTE MES</option>
+                    <option value="trimestre">ESTE TRIMESTRE</option>
+                    <option value="anio">ESTE AÑO</option>
+                    <option value="personalizado">PERSONALIZADO</option>
+                </select>
+            </div>
+            @if (periodoSeleccionado == "personalizado")
+            {
+                <div class="toolbar-group">
+                    <label>DESDE:</label>
+                    <input type="date" @bind="fechaInicio" />
+                </div>
+                <div class="toolbar-group">
+                    <label>HASTA:</label>
+                    <input type="date" @bind="fechaFin" />
+                </div>
+                <div class="toolbar-group">
+                    <button class="btn-primary" @onclick="AplicarFiltros">APLICAR</button>
+                </div>
+            }
+            <div class="toolbar-group">
+                <button @onclick="Actualizar" disabled="@isLoading">
+                    @(isLoading ? "CARGANDO..." : "ACTUALIZAR")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="empty-state">
+        <div class="icon">⏳</div>
+        <div class="message">CARGANDO DATOS DE PRODUCTIVIDAD...</div>
+    </div>
+}
+else if (kpis != null)
+{
+    <!-- KPIs Principales -->
+    <div class="kpi-grid">
+        <div class="kpi-card kpi-primary">
+            <div class="kpi-icon">📊</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@kpis.TotalProyectosActivos</span>
+                <span class="kpi-label">PROYECTOS ACTIVOS</span>
+                <span class="kpi-detail">@kpis.TotalHectareasActivas.ToString("N0") ha</span>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">👥</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@kpis.TotalEmpleadosAsignados</span>
+                <span class="kpi-label">EMPLEADOS ASIGNADOS</span>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-success">
+            <div class="kpi-icon">⏱️</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@kpis.HorasTrabajadasMes.ToString("N0")</span>
+                <span class="kpi-label">HORAS TRABAJADAS</span>
+                <span class="kpi-detail">@kpis.JornalesMes jornales</span>
+                @if (kpis.VariacionHoras != 0)
+                {
+                    <span class="kpi-trend @(kpis.VariacionHoras >= 0 ? "trend-up" : "trend-down")">
+                        @(kpis.VariacionHoras >= 0 ? "▲" : "▼") @Math.Abs(kpis.VariacionHoras).ToString("F1")%
+                    </span>
+                }
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-warning">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@kpis.CostoManoObraMes.ToString("C0")</span>
+                <span class="kpi-label">COSTO MANO OBRA</span>
+                <span class="kpi-detail">@kpis.CostoPromedioHectarea.ToString("C0")/ha</span>
+            </div>
+        </div>
+
+        <div class="kpi-card @GetClaseRendimiento(kpis.RendimientoPromedioGeneral)">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@kpis.RendimientoPromedioGeneral.ToString("F0")%</span>
+                <span class="kpi-label">RENDIMIENTO PROMEDIO</span>
+                <span class="kpi-detail">vs esperado</span>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-info">
+            <div class="kpi-icon">🌲</div>
+            <div class="kpi-content">
+                <span class="kpi-value">@kpis.HorasPromedioHectarea.ToString("F1")</span>
+                <span class="kpi-label">HORAS / HECTÁREA</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de proyectos -->
+    <div class="panel">
+        <div class="panel-header">TOP PROYECTOS POR ACTIVIDAD</div>
+        <div class="panel-body">
+            @if (proyectosResumen.Any())
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th>PROYECTO</th>
+                            <th>ESPECIE</th>
+                            <th class="text-right">ÁREA (HA)</th>
+                            <th class="text-right">HORAS</th>
+                            <th class="text-right">COSTO</th>
+                            <th class="text-right">$/HA</th>
+                            <th class="text-center">EMPLEADOS</th>
+                            <th class="text-center">ESTADO</th>
+                            <th class="text-center">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var proyecto in proyectosResumen)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@proyecto.Codigo</strong><br/>
+                                    <small>@proyecto.Nombre</small>
+                                </td>
+                                <td>@(proyecto.Especie ?? "-")</td>
+                                <td class="text-right">@(proyecto.AreaHectareas?.ToString("F1") ?? "-")</td>
+                                <td class="text-right">@proyecto.HorasTrabajadas.ToString("F0")</td>
+                                <td class="text-right">@proyecto.CostoManoObra.ToString("C0")</td>
+                                <td class="text-right">@(proyecto.CostoPorHectarea?.ToString("C0") ?? "-")</td>
+                                <td class="text-center">@proyecto.EmpleadosActivos</td>
+                                <td class="text-center">
+                                    <span class="badge badge-@proyecto.Estado.ToLower()">@proyecto.Estado</span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn-small" @onclick="() => VerReporteProyecto(proyecto.ProyectoId)">
+                                        VER DETALLE
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <div class="icon">📋</div>
+                    <div class="message">No hay proyectos con actividad registrada</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="panel">
+        <div class="panel-header">ACCIONES RÁPIDAS</div>
+        <div class="panel-body">
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <button @onclick="ActualizarMetricas" disabled="@isActualizando">
+                        @(isActualizando ? "ACTUALIZANDO..." : "RECALCULAR MÉTRICAS")
+                    </button>
+                    <button @onclick="IrAReportes">IR A REPORTES DETALLADOS</button>
+                    <button @onclick="IrAProyectos">VER TODOS LOS PROYECTOS</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private DashboardKPIs? kpis;
+    private List<ProyectoProductividadResumen> proyectosResumen = new();
+    
+    private bool isLoading = true;
+    private bool isActualizando = false;
+    private string? errorMessage;
+    private string periodoSeleccionado = "mes";
+    private DateTime fechaInicio;
+    private DateTime fechaFin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        EstablecerPeriodoMes();
+        await CargarDatos();
+    }
+
+    private void EstablecerPeriodoMes()
+    {
+        fechaInicio = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        fechaFin = DateTime.Today;
+    }
+
+    private async Task CargarDatos()
+    {
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            kpis = await ReporteService.GetDashboardKPIsAsync(fechaInicio, fechaFin);
+            proyectosResumen = (await ReporteService.GetProyectosResumenAsync(10)).ToList();
+            Logger.LogInformation("Dashboard cargado: {Proyectos} proyectos, {Horas} horas", 
+                kpis.TotalProyectosActivos, kpis.HorasTrabajadasMes);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar dashboard de productividad");
+            errorMessage = $"Error al cargar datos: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CambiarPeriodo()
+    {
+        switch (periodoSeleccionado)
+        {
+            case "mes":
+                fechaInicio = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                fechaFin = DateTime.Today;
+                break;
+            case "trimestre":
+                var trimestre = (DateTime.Today.Month - 1) / 3;
+                fechaInicio = new DateTime(DateTime.Today.Year, trimestre * 3 + 1, 1);
+                fechaFin = DateTime.Today;
+                break;
+            case "anio":
+                fechaInicio = new DateTime(DateTime.Today.Year, 1, 1);
+                fechaFin = DateTime.Today;
+                break;
+            case "personalizado":
+                return; // No recargar automáticamente
+        }
+        await CargarDatos();
+    }
+
+    private async Task AplicarFiltros()
+    {
+        if (fechaInicio > fechaFin)
+        {
+            errorMessage = "La fecha de inicio no puede ser mayor a la fecha fin";
+            return;
+        }
+        await CargarDatos();
+    }
+
+    private async Task Actualizar()
+    {
+        await CargarDatos();
+    }
+
+    private async Task ActualizarMetricas()
+    {
+        isActualizando = true;
+        StateHasChanged();
+
+        try
+        {
+            await ReporteService.ActualizarTodasLasMetricasAsync();
+            await CargarDatos();
+            Logger.LogInformation("Métricas actualizadas correctamente");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al actualizar métricas");
+            errorMessage = $"Error al actualizar métricas: {ex.Message}";
+        }
+        finally
+        {
+            isActualizando = false;
+            StateHasChanged();
+        }
+    }
+
+    private void VerReporteProyecto(int proyectoId)
+    {
+        Navigation.NavigateTo($"/reporte-proyecto/{proyectoId}?inicio={fechaInicio:yyyy-MM-dd}&fin={fechaFin:yyyy-MM-dd}");
+    }
+
+    private void IrAReportes()
+    {
+        Navigation.NavigateTo("/reportes");
+    }
+
+    private void IrAProyectos()
+    {
+        Navigation.NavigateTo("/catalogos?tab=proyectos");
+    }
+
+    private string GetClaseRendimiento(decimal rendimiento)
+    {
+        return rendimiento switch
+        {
+            >= 100 => "kpi-success",
+            >= 80 => "kpi-warning",
+            _ => "kpi-danger"
+        };
+    }
+}

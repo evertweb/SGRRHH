@@ -1,4 +1,4 @@
-@page "/usuarios"
+﻿@page "/usuarios"
 @page "/usuarios/{UsuarioIdParam:int?}"
 @using SGRRHH.Local.Domain.Entities
 @using SGRRHH.Local.Domain.Enums
@@ -6,345 +6,329 @@
 @inject IAuthService AuthService
 @inject IUsuarioRepository UsuarioRepository
 @inject IEmpleadoRepository EmpleadoRepository
+@inject IKeyboardShortcutService KeyboardShortcutService
 @inject NavigationManager Navigation
 @inject ILogger<Usuarios> Logger
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <PageTitle>Usuarios - SGRRHH</PageTitle>
 
-<KeyboardHandler @ref="keyboardHandler" Shortcuts="shortcuts" ShowShortcutBar="true" />
-
-<h1 class="page-title">GESTIÓN DE USUARIOS</h1>
-
-@if (!AuthService.IsAdmin)
-{
-    <div class="error-block">
-        <h3>ACCESO DENEGADO</h3>
-        <p>Esta página solo está disponible para administradores.</p>
-        <button @onclick="@(() => Navigation.NavigateTo("/empleados"))">VOLVER</button>
+<div class="page-header">
+    <div class="page-title">USUARIOS</div>
+    <div class="page-info">
+        <span>USUARIO: @(AuthService.CurrentUser?.NombreCompleto ?? "N/A")</span>
+        <span>ROL: ADMINISTRADOR</span>
     </div>
-    return;
-}
+</div>
 
-@if (errorMessage != null)
+@* Sistema de roles temporalmente deshabilitado - Todos tienen acceso *@
+
+@if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="error-block">
-        <h3>ERROR</h3>
-        <p>@errorMessage</p>
-        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    <div class="error-message">
+        <div class="error-title">ERROR</div>
+        <div class="error-content">@errorMessage</div>
     </div>
 }
 
-@if (successMessage != null)
+@if (!string.IsNullOrEmpty(successMessage))
 {
-    <div class="success-block">
-        <p>@successMessage</p>
+    <div class="success-message">
+        <div class="success-content">@successMessage</div>
     </div>
 }
 
-<!-- Toolbar -->
-<div class="toolbar">
-    <div class="toolbar-group">
-        <button class="btn-primary" @onclick="NuevoUsuario">NUEVO (F3)</button>
-        <button @onclick="CargarUsuarios">ACTUALIZAR (F5)</button>
+<div class="control-bar">
+    <div class="control-group">
+        <button @onclick="NuevoUsuario" class="btn-action">NUEVO</button>
+        <button @onclick="CargarUsuarios" disabled="@isLoading" class="btn-action">
+            @(isLoading ? "CARGANDO..." : "ACTUALIZAR")
+        </button>
         @if (selectedUsuario != null)
         {
-            <button @onclick="EditarSeleccionado">EDITAR (F4)</button>
-            <button @onclick="ResetPassword">RESET PASSWORD</button>
+            <button @onclick="EditarSeleccionado" class="btn-action">EDITAR</button>
+            <button @onclick="ResetPassword" class="btn-action">RESETEAR CONTRASEÑA</button>
             @if (selectedUsuario.Activo)
             {
-                <button class="btn-danger" @onclick="ToggleEstado">DESHABILITAR</button>
+                <button @onclick="ToggleEstado" class="btn-action">DESHABILITAR</button>
             }
             else
             {
-                <button class="btn-success" @onclick="ToggleEstado">HABILITAR</button>
+                <button @onclick="ToggleEstado" class="btn-action">HABILITAR</button>
             }
         }
     </div>
     
-    <div class="toolbar-separator"></div>
-    
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Buscar... (F2)" 
-               @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
-        <button @onclick="Buscar">BUSCAR</button>
+    <div class="control-group">
+        <label class="control-label">BUSCAR:</label>
+        <input type="text" id="searchInput" @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" class="control-input" />
+        <button @onclick="Buscar" class="btn-action">BUSCAR</button>
         @if (!string.IsNullOrEmpty(searchTerm))
         {
-            <button @onclick="LimpiarBusqueda">LIMPIAR</button>
+            <button @onclick="LimpiarBusqueda" class="btn-action">LIMPIAR</button>
         }
-        <select @bind="filtroRol" @bind:after="Filtrar">
-            <option value="">Todos los roles</option>
-            <option value="@((int)RolUsuario.Administrador)">Administradores</option>
-            <option value="@((int)RolUsuario.Aprobador)">Aprobadores</option>
-            <option value="@((int)RolUsuario.Operador)">Operadores</option>
+    </div>
+    
+    <div class="control-group">
+        @* Sistema de roles temporalmente deshabilitado
+        <label class="control-label">ROL:</label>
+        <select @bind="filtroRol" @bind:after="Filtrar" class="control-input">
+            <option value="">TODOS</option>
+            <option value="@((int)RolUsuario.Administrador)">ADMINISTRADOR</option>
+            <option value="@((int)RolUsuario.Aprobador)">APROBADOR</option>
+            <option value="@((int)RolUsuario.Operador)">OPERADOR</option>
         </select>
-        <select @bind="filtroEstado" @bind:after="Filtrar">
-            <option value="">Todos los estados</option>
-            <option value="activo">Activos</option>
-            <option value="inactivo">Inactivos</option>
+        *@
+        
+        <label class="control-label">ESTADO:</label>
+        <select @bind="filtroEstado" @bind:after="Filtrar" class="control-input">
+            <option value="">TODOS</option>
+            <option value="activo">ACTIVO</option>
+            <option value="inactivo">INACTIVO</option>
         </select>
     </div>
 </div>
 
-<!-- Información de resultados -->
-<div style="margin-bottom: 8px; font-size: 12px; color: #666;">
-    Mostrando @usuarios.Count() de @totalUsuarios usuario(s)
-</div>
-
-<!-- Tabla de usuarios -->
-<div style="overflow-x: auto;">
-    <table>
+@if (isLoading)
+{
+    <div class="status-message">
+        <div>CARGANDO REGISTROS...</div>
+    </div>
+}
+else if (!usuarios.Any())
+{
+    <div class="status-message">
+        <div>SIN REGISTROS</div>
+        <div>No existen usuarios con los criterios especificados</div>
+    </div>
+}
+else
+{
+    <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 120px;">USERNAME</th>
+                <th>ID</th>
+                <th>USERNAME</th>
                 <th>NOMBRE COMPLETO</th>
-                <th style="width: 200px;">EMAIL</th>
-                <th style="width: 120px;">TELÉFONO</th>
-                <th style="width: 120px;">ROL</th>
-                <th style="width: 150px;">ÚLTIMO ACCESO</th>
-                <th style="width: 100px;">ESTADO</th>
-                <th style="width: 180px;">ACCIONES</th>
+                <th>EMAIL</th>
+                <th>TELEFONO</th>
+                <th>ROL</th>
+                <th>ULTIMO ACCESO</th>
+                <th>EMPLEADO ASOCIADO</th>
+                <th>ESTADO</th>
+                <th>ACTIVO</th>
+                <th>FECHA CREACION</th>
+                <th>ACCIONES</th>
             </tr>
         </thead>
         <tbody>
-            @if (isLoading)
+            @foreach (var usr in usuarios)
             {
-                <tr><td colspan="8" class="loading">Cargando usuarios...</td></tr>
-            }
-            else if (!usuarios.Any())
-            {
-                <tr><td colspan="8" class="empty-state">No hay usuarios para mostrar</td></tr>
-            }
-            else
-            {
-                @foreach (var usr in usuarios)
-                {
-                    <tr class="@(selectedUsuario?.Id == usr.Id ? "selected" : "")"
-                        @onclick="() => SelectUsuario(usr)">
-                        <td><strong>@usr.Username</strong></td>
-                        <td>@usr.NombreCompleto</td>
-                        <td>@(usr.Email ?? "-")</td>
-                        <td>@(usr.PhoneNumber ?? "-")</td>
-                        <td>
-                            <span class="badge-@GetRolClass(usr.Rol)">
-                                @GetRolDisplay(usr.Rol)
-                            </span>
-                        </td>
-                        <td>@(usr.UltimoAcceso?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
-                        <td>
-                            <span class="badge-@(usr.Activo ? "activo" : "inactivo")">
-                                @(usr.Activo ? "ACTIVO" : "INACTIVO")
-                            </span>
-                        </td>
-                        <td class="actions-cell">
-                            <button @onclick="() => EditarUsuario(usr)" @onclick:stopPropagation="true">
-                                EDITAR
-                            </button>
-                            @if (usr.Id != AuthService.CurrentUser?.Id)
-                            {
-                                @if (usr.Activo)
-                                {
-                                    <button @onclick="() => DeshabilitarUsuario(usr)" @onclick:stopPropagation="true"
-                                            style="background-color: #dc3545;">
-                                        DESHAB.
-                                    </button>
-                                }
-                                else
-                                {
-                                    <button @onclick="() => HabilitarUsuario(usr)" @onclick:stopPropagation="true"
-                                            style="background-color: #28a745;">
-                                        HABIL.
-                                    </button>
-                                }
-                            }
-                        </td>
-                    </tr>
-                }
+                <tr class="@(selectedUsuario?.Id == usr.Id ? "row-selected" : "")"
+                    @onclick="() => SelectUsuario(usr)">
+                    <td>@usr.Id</td>
+                    <td>@usr.Username</td>
+                    <td>@usr.NombreCompleto</td>
+                    <td>@(usr.Email ?? "-")</td>
+                    <td>@(usr.PhoneNumber ?? "-")</td>
+                    <td>@GetRolDisplay(usr.Rol)</td>
+                    <td>@(usr.UltimoAcceso?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                    <td>@(usr.EmpleadoId.HasValue ? GetEmpleadoNombre(usr.EmpleadoId.Value) : "-")</td>
+                    <td>@(usr.Activo ? "ACTIVO" : "INACTIVO")</td>
+                    <td>@(usr.Activo ? "SI" : "NO")</td>
+                    <td>@usr.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="actions-cell">
+                        <button @onclick="() => EditarUsuario(usr)" @onclick:stopPropagation="true" class="btn-small">EDITAR</button>
+                    </td>
+                </tr>
             }
         </tbody>
     </table>
-</div>
-
-<!-- Modal de Usuario (Nuevo/Editar) -->
-<FormModal @bind-IsVisible="showModal" 
-           Title="@(isEditing ? "EDITAR USUARIO" : "NUEVO USUARIO")"
-           Width="700px"
-           OnSaveClicked="Guardar"
-           OnCancelClicked="CerrarModal"
-           IsSaving="isSaving">
     
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-        <!-- Columna izquierda: Datos de cuenta -->
-        <div>
-            <div class="form-group required">
-                <label>Username:</label>
-                <input type="text" @bind="usuarioEdit.Username" 
-                       disabled="@isEditing"
-                       placeholder="Ej: jperez" />
-                @if (isEditing)
-                {
-                    <small style="color: #666;">El username no se puede cambiar</small>
-                }
-            </div>
+    <div class="table-footer">
+        <div>TOTAL REGISTROS: @usuarios.Count() | MOSTRANDO: @usuarios.Count() DE @totalUsuarios</div>
+        @if (selectedUsuario != null)
+        {
+            <div>SELECCIONADO: @selectedUsuario.Username (ID: @selectedUsuario.Id)</div>
+        }
+    </div>
+}
+
+@if (showModal)
+{
+    <div class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-title">@(isEditing ? "EDITAR USUARIO" : "NUEVO USUARIO")</div>
             
-            @if (!isEditing)
-            {
-                <div class="form-group required">
-                    <label>Contraseña:</label>
-                    <input type="password" @bind="newPassword" 
-                           placeholder="Mínimo 6 caracteres" />
+            <div class="form-container">
+                <div class="form-field">
+                    <label class="field-label">USERNAME:</label>
+                    <input type="text" @bind="usuarioEdit.Username" disabled="@isEditing" class="field-input" />
+                    @if (isEditing)
+                    {
+                        <div class="field-info">El username no puede modificarse</div>
+                    }
                 </div>
                 
-                <div class="form-group required">
-                    <label>Confirmar Contraseña:</label>
-                    <input type="password" @bind="confirmPassword" 
-                           placeholder="Repita la contraseña" />
+                @if (!isEditing)
+                {
+                    <div class="form-field">
+                        <label class="field-label">CONTRASEÑA:</label>
+                        <input type="password" @bind="newPassword" class="field-input" />
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="field-label">CONFIRMAR CONTRASEÑA:</label>
+                        <input type="password" @bind="confirmPassword" class="field-input" />
+                    </div>
+                }
+                
+                <div class="form-field">
+                    <label class="field-label">NOMBRE COMPLETO:</label>
+                    <input type="text" @bind="usuarioEdit.NombreCompleto" class="field-input" />
                 </div>
-            }
-            
-            <div class="form-group required">
-                <label>Nombre Completo:</label>
-                <input type="text" @bind="usuarioEdit.NombreCompleto" 
-                       placeholder="Ej: Juan Pérez" />
+                
+                <div class="form-field">
+                    <label class="field-label">EMAIL:</label>
+                    <input type="email" @bind="usuarioEdit.Email" class="field-input" />
+                </div>
+                
+                <div class="form-field">
+                    <label class="field-label">TELEFONO:</label>
+                    <input type="tel" @bind="usuarioEdit.PhoneNumber" class="field-input" />
+                </div>
+                
+                @* Sistema de roles temporalmente deshabilitado - Todos serán administradores
+                <div class="form-field">
+                    <label class="field-label">ROL:</label>
+                    <select @bind="usuarioEdit.Rol" class="field-input">
+                        @foreach (var rol in Enum.GetValues<RolUsuario>())
+                        {
+                            <option value="@rol">@GetRolDisplay(rol)</option>
+                        }
+                    </select>
+                    <div class="field-info">@GetRolDescription(usuarioEdit.Rol)</div>
+                </div>
+                *@
+                
+                <div class="form-field">
+                    <label class="field-label">ROL:</label>
+                    <div class="field-input" style="background:#333;color:#0f0;">ADMINISTRADOR (Roles serán rediseñados)</div>
+                </div>
+                
+                <div class="form-field">
+                    <label class="field-label">EMPLEADO ASOCIADO:</label>
+                    <select @bind="usuarioEdit.EmpleadoId" class="field-input">
+                        <option value="">NINGUNO</option>
+                        @foreach (var emp in empleados)
+                        {
+                            <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+                        }
+                    </select>
+                </div>
+                
+                <div class="form-field">
+                    <label class="field-label">
+                        <input type="checkbox" @bind="usuarioEdit.Activo" />
+                        USUARIO ACTIVO
+                    </label>
+                </div>
+                
+                @if (isEditing)
+                {
+                    <div class="form-separator">CAMBIAR CONTRASEÑA</div>
+                    
+                    <div class="form-field">
+                        <label class="field-label">NUEVA CONTRASEÑA:</label>
+                        <input type="password" @bind="newPassword" class="field-input" />
+                        <div class="field-info">Dejar vacio para no cambiar</div>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="field-label">CONFIRMAR NUEVA CONTRASEÑA:</label>
+                        <input type="password" @bind="confirmPassword" class="field-input" />
+                    </div>
+                }
             </div>
-            
-            <div class="form-group">
-                <label>Email:</label>
-                <input type="email" @bind="usuarioEdit.Email" 
-                       placeholder="usuario@ejemplo.com" />
-            </div>
-        </div>
-        
-        <!-- Columna derecha: Rol y permisos -->
-        <div>
-            <div class="form-group required">
-                <label>Rol del Usuario:</label>
-                <select @bind="usuarioEdit.Rol">
-                    @foreach (var rol in Enum.GetValues<RolUsuario>())
-                    {
-                        <option value="@rol">@GetRolDisplay(rol)</option>
-                    }
-                </select>
-                <small style="color: #666; display: block; margin-top: 4px;">
-                    @GetRolDescription(usuarioEdit.Rol)
-                </small>
-            </div>
-            
-            <div class="form-group">
-                <label>Teléfono:</label>
-                <input type="tel" @bind="usuarioEdit.PhoneNumber" 
-                       placeholder="Ej: 0999999999" />
-            </div>
-            
-            <div class="form-group">
-                <label>Empleado Asociado (Opcional):</label>
-                <select @bind="usuarioEdit.EmpleadoId">
-                    <option value="">-- Ninguno --</option>
-                    @foreach (var emp in empleados)
-                    {
-                        <option value="@emp.Id">@emp.NombreCompleto (@emp.Codigo)</option>
-                    }
-                </select>
-                <small style="color: #666; display: block; margin-top: 4px;">
-                    Vincule el usuario con un empleado del sistema
-                </small>
-            </div>
-            
-            <div class="form-group">
-                <label style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" @bind="usuarioEdit.Activo" />
-                    Usuario Activo
-                </label>
-                <small style="color: #666; display: block; margin-top: 4px;">
-                    Los usuarios inactivos no pueden iniciar sesión
-                </small>
+
+            <div class="modal-actions">
+                <button @onclick="CerrarModal" class="btn-action">CANCELAR [ESC]</button>
+                <button @onclick="Guardar" disabled="@isSaving" class="btn-action">
+                    @(isSaving ? "GUARDANDO..." : "GUARDAR [F5]")
+                </button>
             </div>
         </div>
     </div>
-    
-    @if (isEditing)
-    {
-        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #333;">
-            <p style="margin-bottom: 8px; font-weight: bold;">CAMBIAR CONTRASEÑA:</p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                <div class="form-group">
-                    <label>Nueva Contraseña:</label>
-                    <input type="password" @bind="newPassword" 
-                           placeholder="Dejar vacío para no cambiar" />
+}
+
+@if (showResetModal)
+{
+    <div class="modal-backdrop">
+        <div class="modal-container">
+            <div class="modal-title">RESETEAR CONTRASEÑA</div>
+            
+            @if (selectedUsuario != null)
+            {
+                <div class="form-container">
+                    <div class="confirm-content">
+                        <div>Usuario seleccionado:</div>
+                        <div class="confirm-detail">@selectedUsuario.Username - @selectedUsuario.NombreCompleto</div>
+                        <div class="confirm-warning">El usuario debera usar la nueva contraseña para iniciar sesion.</div>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="field-label">NUEVA CONTRASEÑA:</label>
+                        <input type="password" @bind="newPassword" class="field-input" />
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="field-label">CONFIRMAR NUEVA CONTRASEÑA:</label>
+                        <input type="password" @bind="confirmPassword" class="field-input" />
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Confirmar Nueva Contraseña:</label>
-                    <input type="password" @bind="confirmPassword" 
-                           placeholder="Repita la nueva contraseña" />
-                </div>
+            }
+
+            <div class="modal-actions">
+                <button @onclick="() => showResetModal = false" class="btn-action">CANCELAR</button>
+                <button @onclick="ConfirmarResetPassword" disabled="@isSaving" class="btn-action">
+                    @(isSaving ? "PROCESANDO..." : "RESETEAR")
+                </button>
             </div>
-            <small style="color: #666;">Solo complete estos campos si desea cambiar la contraseña del usuario.</small>
         </div>
-    }
-</FormModal>
+    </div>
+}
 
-<!-- Modal de Reset Password -->
-<FormModal @bind-IsVisible="showResetModal" 
-           Title="RESET DE CONTRASEÑA"
-           Width="500px"
-           OnSaveClicked="ConfirmarResetPassword"
-           OnCancelClicked="() => showResetModal = false"
-           IsSaving="isSaving">
-    
-    @if (selectedUsuario != null)
-    {
-        <p style="margin-bottom: 16px;">
-            ¿Está seguro que desea resetear la contraseña del usuario <strong>@selectedUsuario.Username</strong>?
-        </p>
-        
-        <div class="form-group required">
-            <label>Nueva Contraseña:</label>
-            <input type="password" @bind="newPassword" 
-                   placeholder="Mínimo 6 caracteres" />
-        </div>
-        
-        <div class="form-group required">
-            <label>Confirmar Nueva Contraseña:</label>
-            <input type="password" @bind="confirmPassword" 
-                   placeholder="Repita la contraseña" />
-        </div>
-        
-        <div class="alert alert-warning">
-            <p style="margin: 0;">
-                ⚠️ El usuario deberá usar esta nueva contraseña para iniciar sesión.
-            </p>
-        </div>
-    }
-</FormModal>
+@if (showConfirmModal)
+{
+    <div class="modal-backdrop">
+        <div class="modal-container modal-confirm">
+            <div class="modal-title">@confirmModalTitle</div>
+            
+            <div class="confirm-content">
+                <div>@confirmModalMessage</div>
+                @if (confirmModalType == "deshabilitar")
+                {
+                    <div class="confirm-warning">El usuario no podra iniciar sesion hasta ser habilitado nuevamente.</div>
+                }
+            </div>
 
-<!-- Modal de Confirmación -->
-<FormModal @bind-IsVisible="showConfirmModal" 
-           Title="@confirmModalTitle"
-           Width="500px"
-           OnSaveClicked="ConfirmarAccion"
-           OnCancelClicked="() => showConfirmModal = false"
-           IsSaving="isSaving">
-    
-    <p>@confirmModalMessage</p>
-    
-    @if (confirmModalType == "deshabilitar")
-    {
-        <div class="alert alert-error">
-            <p style="margin: 0;">
-                ⚠️ El usuario no podrá iniciar sesión hasta que sea habilitado nuevamente.
-            </p>
+            <div class="modal-actions">
+                <button @onclick="() => showConfirmModal = false" class="btn-action">CANCELAR</button>
+                <button @onclick="ConfirmarAccion" disabled="@isSaving" class="btn-action">
+                    @(isSaving ? "PROCESANDO..." : confirmButtonText)
+                </button>
+            </div>
         </div>
-    }
-</FormModal>
+    </div>
+}
 
 @code {
     [Parameter] public int? UsuarioIdParam { get; set; }
     
-    private KeyboardHandler? keyboardHandler;
-    private List<KeyboardHandler.KeyboardShortcut> shortcuts = new();
+    private const string PageId = "usuarios";
     
     private List<Usuario> usuarios = new();
-    private List<Usuario> usuariosFiltered = new();
     private List<Empleado> empleados = new();
     private Usuario? selectedUsuario;
     private Usuario usuarioEdit = new();
@@ -363,11 +347,9 @@
     private string filtroEstado = string.Empty;
     private int totalUsuarios;
     
-    // Para reset de password
     private string newPassword = string.Empty;
     private string confirmPassword = string.Empty;
     
-    // Para confirmaciones
     private string confirmModalTitle = string.Empty;
     private string confirmModalMessage = string.Empty;
     private string confirmButtonText = "CONFIRMAR";
@@ -384,25 +366,24 @@
         
         if (!AuthService.IsAdmin)
         {
-            Logger.LogWarning("Usuario {User} intentó acceder a /usuarios sin permisos de admin", 
+            Logger.LogWarning("Usuario {User} intento acceder a /usuarios sin permisos", 
                 AuthService.CurrentUser?.Username);
             return;
         }
         
-        // Configurar atajos de teclado
-        shortcuts = new List<KeyboardHandler.KeyboardShortcut>
+        // Registrar atajos de teclado para esta página
+        KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
         {
-            new() { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = FocusBusqueda },
-            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = NuevoUsuario },
-            new() { Key = "F4", KeyDisplay = "F4", Description = "Editar", Action = EditarSeleccionado },
-            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarUsuarios },
-            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModal }
-        };
+            new() { Key = "F2", KeyDisplay = "F2", Description = "Buscar", Action = FocusBusqueda, Priority = 10 },
+            new() { Key = "F3", KeyDisplay = "F3", Description = "Nuevo", Action = NuevoUsuario, Priority = 10 },
+            new() { Key = "F4", KeyDisplay = "F4", Description = "Editar", Action = EditarSeleccionado, Priority = 10 },
+            new() { Key = "F5", KeyDisplay = "F5", Description = "Actualizar", Action = CargarUsuarios, Priority = 10 },
+            new() { Key = "Escape", KeyDisplay = "ESC", Description = "Cerrar", Action = CerrarModal, Priority = 10 }
+        });
         
         await CargarUsuarios();
         await CargarEmpleados();
         
-        // Si viene un parámetro de usuario, editarlo
         if (UsuarioIdParam.HasValue)
         {
             var usuario = usuarios.FirstOrDefault(u => u.Id == UsuarioIdParam.Value);
@@ -413,11 +394,17 @@
         }
     }
     
+    public void Dispose()
+    {
+        KeyboardShortcutService.ClearPageShortcuts(PageId);
+    }
+    
     private async Task CargarUsuarios()
     {
         try
         {
             isLoading = true;
+            errorMessage = null;
             StateHasChanged();
             
             usuarios = (await UsuarioRepository.GetAllAsync()).ToList();
@@ -430,7 +417,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al cargar usuarios");
-            errorMessage = "Error al cargar usuarios: " + ex.Message;
+            errorMessage = $"ERROR CRITICO: Fallo al cargar usuarios - {ex.Message}";
         }
         finally
         {
@@ -458,7 +445,6 @@
     {
         var filtered = usuarios.AsEnumerable();
         
-        // Filtro por búsqueda
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var search = searchTerm.ToLower();
@@ -469,20 +455,18 @@
             );
         }
         
-        // Filtro por rol
         if (!string.IsNullOrEmpty(filtroRol) && int.TryParse(filtroRol, out int rolId))
         {
             filtered = filtered.Where(u => (int)u.Rol == rolId);
         }
         
-        // Filtro por estado
         if (!string.IsNullOrEmpty(filtroEstado))
         {
             bool activo = filtroEstado == "activo";
             filtered = filtered.Where(u => u.Activo == activo);
         }
         
-        usuariosFiltered = filtered.ToList();
+        usuarios = filtered.ToList();
         StateHasChanged();
         await Task.CompletedTask;
     }
@@ -495,7 +479,7 @@
     private async Task LimpiarBusqueda()
     {
         searchTerm = string.Empty;
-        await Filtrar();
+        await CargarUsuarios();
         await FocusBusqueda();
     }
     
@@ -526,15 +510,16 @@
         usuarioEdit = new Usuario
         {
             Activo = true,
-            Rol = RolUsuario.Operador
+            Rol = RolUsuario.Administrador // Todos son admin mientras se rediseñan los roles
         };
         
         isEditing = false;
         showModal = true;
         newPassword = string.Empty;
         confirmPassword = string.Empty;
+        errorMessage = null;
         
-        Logger.LogInformation("Preparando nuevo usuario");
+        Logger.LogInformation("Iniciando creacion de nuevo usuario");
         return Task.CompletedTask;
     }
     
@@ -542,31 +527,34 @@
     {
         try
         {
+            // No copiar Id ni PasswordHash manualmente - el Id se asigna después
+            // PasswordHash se mantiene solo si no se cambia la contraseña
             usuarioEdit = new Usuario
             {
-                Id = usuario.Id,
                 Username = usuario.Username,
-                PasswordHash = usuario.PasswordHash,
                 NombreCompleto = usuario.NombreCompleto,
                 Email = usuario.Email,
                 PhoneNumber = usuario.PhoneNumber,
                 Rol = usuario.Rol,
                 Activo = usuario.Activo,
-                EmpleadoId = usuario.EmpleadoId,
-                UltimoAcceso = usuario.UltimoAcceso
+                EmpleadoId = usuario.EmpleadoId
             };
+            usuarioEdit.Id = usuario.Id;
+            usuarioEdit.PasswordHash = usuario.PasswordHash; // Se mantiene el hash actual
+            usuarioEdit.UltimoAcceso = usuario.UltimoAcceso;
             
             isEditing = true;
             showModal = true;
             newPassword = string.Empty;
             confirmPassword = string.Empty;
+            errorMessage = null;
             
             Logger.LogInformation("Editando usuario: {Username}", usuario.Username);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error al preparar edición de usuario {Id}", usuario.Id);
-            errorMessage = "Error al cargar usuario: " + ex.Message;
+            Logger.LogError(ex, "Error al preparar edicion de usuario {Id}", usuario.Id);
+            errorMessage = $"ERROR: Fallo al cargar datos del usuario - {ex.Message}";
         }
     }
     
@@ -588,64 +576,59 @@
             errorMessage = null;
             StateHasChanged();
             
-            // Validaciones
             if (string.IsNullOrWhiteSpace(usuarioEdit.Username))
             {
-                errorMessage = "El username es requerido";
+                errorMessage = "ERROR: Campo USERNAME requerido";
                 return;
             }
             
             if (string.IsNullOrWhiteSpace(usuarioEdit.NombreCompleto))
             {
-                errorMessage = "El nombre completo es requerido";
+                errorMessage = "ERROR: Campo NOMBRE COMPLETO requerido";
                 return;
             }
             
-            // Validar username único
             if (!isEditing)
             {
                 if (await UsuarioRepository.ExistsUsernameAsync(usuarioEdit.Username))
                 {
-                    errorMessage = $"El username '{usuarioEdit.Username}' ya está en uso";
+                    errorMessage = $"ERROR: El username '{usuarioEdit.Username}' ya existe";
                     return;
                 }
                 
-                // Validar contraseña en nuevo usuario
                 if (string.IsNullOrWhiteSpace(newPassword))
                 {
-                    errorMessage = "La contraseña es requerida para usuarios nuevos";
+                    errorMessage = "ERROR: Campo CONTRASEÑA requerido para usuarios nuevos";
                     return;
                 }
                 
                 if (newPassword.Length < 6)
                 {
-                    errorMessage = "La contraseña debe tener al menos 6 caracteres";
+                    errorMessage = "ERROR: La contraseña debe tener minimo 6 caracteres";
                     return;
                 }
                 
                 if (newPassword != confirmPassword)
                 {
-                    errorMessage = "Las contraseñas no coinciden";
+                    errorMessage = "ERROR: Las contraseñas no coinciden";
                     return;
                 }
                 
-                // Hash de contraseña
                 usuarioEdit.PasswordHash = AuthService.HashPassword(newPassword);
             }
             else
             {
-                // Si se especificó nueva contraseña en edición
                 if (!string.IsNullOrWhiteSpace(newPassword))
                 {
                     if (newPassword.Length < 6)
                     {
-                        errorMessage = "La contraseña debe tener al menos 6 caracteres";
+                        errorMessage = "ERROR: La contraseña debe tener minimo 6 caracteres";
                         return;
                     }
                     
                     if (newPassword != confirmPassword)
                     {
-                        errorMessage = "Las contraseñas no coinciden";
+                        errorMessage = "ERROR: Las contraseñas no coinciden";
                         return;
                     }
                     
@@ -653,7 +636,6 @@
                 }
             }
             
-            // Guardar
             if (isEditing)
             {
                 await UsuarioRepository.UpdateAsync(usuarioEdit);
@@ -664,13 +646,12 @@
             {
                 var id = await UsuarioRepository.AddAsync(usuarioEdit);
                 Logger.LogInformation("Usuario creado: {Username} con ID {Id}", usuarioEdit.Username, id);
-                successMessage = $"Usuario '{usuarioEdit.Username}' creado correctamente";
+                successMessage = $"Usuario '{usuarioEdit.Username}' creado correctamente con ID {id}";
             }
             
             await CargarUsuarios();
             CerrarModal();
             
-            // Limpiar mensaje después de 3 segundos
             _ = Task.Run(async () =>
             {
                 await Task.Delay(3000);
@@ -681,7 +662,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al guardar usuario");
-            errorMessage = "Error al guardar usuario: " + ex.Message;
+            errorMessage = $"ERROR CRITICO: Fallo al guardar usuario - {ex.Message}";
         }
         finally
         {
@@ -695,9 +676,9 @@
         showModal = false;
         showResetModal = false;
         showConfirmModal = false;
-        selectedUsuario = null;
         newPassword = string.Empty;
         confirmPassword = string.Empty;
+        errorMessage = null;
         StateHasChanged();
         return Task.CompletedTask;
     }
@@ -708,12 +689,13 @@
         
         if (selectedUsuario.Id == AuthService.CurrentUser?.Id)
         {
-            errorMessage = "No puede resetear su propia contraseña desde aquí. Use la opción de cambio de contraseña.";
+            errorMessage = "ERROR: No puede resetear su propia contraseña desde aqui";
             return;
         }
         
         newPassword = string.Empty;
         confirmPassword = string.Empty;
+        errorMessage = null;
         showResetModal = true;
     }
     
@@ -727,26 +709,24 @@
             errorMessage = null;
             StateHasChanged();
             
-            // Validaciones
             if (string.IsNullOrWhiteSpace(newPassword))
             {
-                errorMessage = "La nueva contraseña es requerida";
+                errorMessage = "ERROR: Campo NUEVA CONTRASEÑA requerido";
                 return;
             }
             
             if (newPassword.Length < 6)
             {
-                errorMessage = "La contraseña debe tener al menos 6 caracteres";
+                errorMessage = "ERROR: La contraseña debe tener minimo 6 caracteres";
                 return;
             }
             
             if (newPassword != confirmPassword)
             {
-                errorMessage = "Las contraseñas no coinciden";
+                errorMessage = "ERROR: Las contraseñas no coinciden";
                 return;
             }
             
-            // Reset password
             var result = await AuthService.ResetPasswordAsync(selectedUsuario.Id, newPassword);
             
             if (result.IsSuccess)
@@ -759,7 +739,6 @@
                 newPassword = string.Empty;
                 confirmPassword = string.Empty;
                 
-                // Limpiar mensaje después de 3 segundos
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(3000);
@@ -769,13 +748,13 @@
             }
             else
             {
-                errorMessage = result.ErrorMessage ?? "Error al resetear contraseña";
+                errorMessage = $"ERROR: {result.ErrorMessage ?? "Fallo al resetear contraseña"}";
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al resetear contraseña de usuario {Id}", selectedUsuario.Id);
-            errorMessage = "Error al resetear contraseña: " + ex.Message;
+            errorMessage = $"ERROR CRITICO: Fallo al resetear contraseña - {ex.Message}";
         }
         finally
         {
@@ -801,7 +780,7 @@
     private async Task HabilitarUsuario(Usuario usuario)
     {
         confirmModalTitle = "HABILITAR USUARIO";
-        confirmModalMessage = $"¿Está seguro que desea habilitar al usuario '{usuario.Username}'?";
+        confirmModalMessage = $"Se habilitara el usuario: {usuario.Username} - {usuario.NombreCompleto}";
         confirmButtonText = "HABILITAR";
         confirmModalType = "habilitar";
         confirmAction = async () => await EjecutarHabilitar(usuario);
@@ -813,12 +792,12 @@
     {
         if (usuario.Id == AuthService.CurrentUser?.Id)
         {
-            errorMessage = "No puede deshabilitar su propia cuenta.";
+            errorMessage = "ERROR: No puede deshabilitar su propia cuenta";
             return;
         }
         
         confirmModalTitle = "DESHABILITAR USUARIO";
-        confirmModalMessage = $"¿Está seguro que desea deshabilitar al usuario '{usuario.Username}'?";
+        confirmModalMessage = $"Se deshabilitara el usuario: {usuario.Username} - {usuario.NombreCompleto}";
         confirmButtonText = "DESHABILITAR";
         confirmModalType = "deshabilitar";
         confirmAction = async () => await EjecutarDeshabilitar(usuario);
@@ -838,8 +817,8 @@
             successMessage = $"Usuario '{usuario.Username}' habilitado correctamente";
             
             await CargarUsuarios();
+            showConfirmModal = false;
             
-            // Limpiar mensaje después de 3 segundos
             _ = Task.Run(async () =>
             {
                 await Task.Delay(3000);
@@ -850,7 +829,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al habilitar usuario {Id}", usuario.Id);
-            errorMessage = "Error al habilitar usuario: " + ex.Message;
+            errorMessage = $"ERROR: Fallo al habilitar usuario - {ex.Message}";
         }
     }
     
@@ -866,8 +845,8 @@
             successMessage = $"Usuario '{usuario.Username}' deshabilitado correctamente";
             
             await CargarUsuarios();
+            showConfirmModal = false;
             
-            // Limpiar mensaje después de 3 segundos
             _ = Task.Run(async () =>
             {
                 await Task.Delay(3000);
@@ -878,7 +857,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error al deshabilitar usuario {Id}", usuario.Id);
-            errorMessage = "Error al deshabilitar usuario: " + ex.Message;
+            errorMessage = $"ERROR: Fallo al deshabilitar usuario - {ex.Message}";
         }
     }
     
@@ -887,11 +866,9 @@
         if (confirmAction != null)
         {
             await confirmAction.Invoke();
-            showConfirmModal = false;
         }
     }
     
-    // Helpers para roles
     private string GetRolDisplay(RolUsuario rol) => rol switch
     {
         RolUsuario.Administrador => "ADMINISTRADOR",
@@ -910,9 +887,15 @@
     
     private string GetRolDescription(RolUsuario rol) => rol switch
     {
-        RolUsuario.Administrador => "Acceso completo al sistema, gestión de usuarios y configuración",
-        RolUsuario.Aprobador => "Puede aprobar/rechazar permisos y vacaciones",
-        RolUsuario.Operador => "Acceso básico para operaciones del día a día",
+        RolUsuario.Administrador => "Acceso completo al sistema",
+        RolUsuario.Aprobador => "Puede aprobar permisos y vacaciones",
+        RolUsuario.Operador => "Acceso basico para operaciones diarias",
         _ => ""
     };
+    
+    private string GetEmpleadoNombre(int empleadoId)
+    {
+        var empleado = empleados.FirstOrDefault(e => e.Id == empleadoId);
+        return empleado != null ? $"{empleado.Codigo} - {empleado.NombreCompleto}" : "-";
+    }
 }

@@ -1,0 +1,104 @@
+@using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Infrastructure.Services
+@inject IAuthService AuthService
+@inject IJSRuntime JSRuntime
+@inject ILogger<AuthPersistence> Logger
+
+@* 
+    Componente para persistir sesión entre recargas de página.
+    Usa localStorage para guardar el ID del usuario autenticado.
+    Se coloca en App.razor o MainLayout.razor.
+*@
+
+@code {
+    private const string SESSION_KEY = "sgrrhh_session_user_id";
+    private bool _initialized = false;
+    
+    [Parameter] public EventCallback OnSessionRestored { get; set; }
+    [Parameter] public EventCallback OnSessionNotFound { get; set; }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            
+            // Si ya hay sesión activa, solo guardamos
+            if (AuthService.IsAuthenticated)
+            {
+                await SaveSessionAsync();
+                return;
+            }
+            
+            // Intentar restaurar sesión desde localStorage
+            await TryRestoreSessionAsync();
+        }
+    }
+    
+    private async Task TryRestoreSessionAsync()
+    {
+        try
+        {
+            var userIdStr = await JSRuntime.InvokeAsync<string?>("getLocalStorage", SESSION_KEY);
+            
+            if (!string.IsNullOrEmpty(userIdStr) && int.TryParse(userIdStr, out int userId))
+            {
+                // Obtener el servicio tipado para acceder a GetUserByIdAsync
+                if (AuthService is LocalAuthService localAuth)
+                {
+                    var user = await localAuth.GetUserByIdAsync(userId);
+                    
+                    if (user != null)
+                    {
+                        AuthService.SetCurrentUser(user);
+                        Logger.LogInformation("Sesión restaurada para usuario: {Username}", user.Username);
+                        await OnSessionRestored.InvokeAsync();
+                        return;
+                    }
+                    else
+                    {
+                        // Usuario no válido, limpiar localStorage
+                        await ClearSessionAsync();
+                        Logger.LogWarning("Sesión inválida en localStorage, limpiando...");
+                    }
+                }
+            }
+            
+            await OnSessionNotFound.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error restaurando sesión desde localStorage");
+            await OnSessionNotFound.InvokeAsync();
+        }
+    }
+    
+    public async Task SaveSessionAsync()
+    {
+        try
+        {
+            if (AuthService.CurrentUserId.HasValue)
+            {
+                await JSRuntime.InvokeVoidAsync("setLocalStorage", SESSION_KEY, AuthService.CurrentUserId.Value.ToString());
+                Logger.LogDebug("Sesión guardada en localStorage para usuario ID: {UserId}", AuthService.CurrentUserId.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error guardando sesión en localStorage");
+        }
+    }
+    
+    public async Task ClearSessionAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("removeLocalStorage", SESSION_KEY);
+            Logger.LogDebug("Sesión eliminada de localStorage");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error eliminando sesión de localStorage");
+        }
+    }
+}

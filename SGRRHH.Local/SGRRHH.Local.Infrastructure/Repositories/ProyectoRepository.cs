@@ -1,6 +1,7 @@
 using Dapper;
 using Microsoft.Extensions.Logging;
 using SGRRHH.Local.Domain.Entities;
+using SGRRHH.Local.Domain.Enums;
 using SGRRHH.Local.Shared.Interfaces;
 
 namespace SGRRHH.Local.Infrastructure.Repositories;
@@ -19,9 +20,24 @@ public class ProyectoRepository : IProyectoRepository
     public async Task<Proyecto> AddAsync(Proyecto entity)
     {
         entity.FechaCreacion = DateTime.Now;
-        const string sql = @"INSERT INTO proyectos (codigo, nombre, descripcion, cliente, ubicacion, presupuesto, progreso, fecha_inicio, fecha_fin, estado, responsable_id, activo, fecha_creacion)
-VALUES (@Codigo, @Nombre, @Descripcion, @Cliente, @Ubicacion, @Presupuesto, @Progreso, @FechaInicio, @FechaFin, @Estado, @ResponsableId, 1, @FechaCreacion);
-SELECT last_insert_rowid();";
+        const string sql = @"
+            INSERT INTO proyectos (
+                codigo, nombre, descripcion, cliente, ubicacion, presupuesto, progreso, 
+                fecha_inicio, fecha_fin, estado, responsable_id, activo, fecha_creacion,
+                tipo_proyecto, predio, lote, departamento, municipio, vereda,
+                latitud, longitud, altitud_msnm, especie_id, area_hectareas, fecha_siembra,
+                densidad_inicial, densidad_actual, turno_cosecha_anios, tipo_tenencia, certificacion,
+                total_horas_trabajadas, costo_mano_obra_acumulado, total_jornales, fecha_ultima_actualizacion_metricas
+            )
+            VALUES (
+                @Codigo, @Nombre, @Descripcion, @Cliente, @Ubicacion, @Presupuesto, @Progreso,
+                @FechaInicio, @FechaFin, @Estado, @ResponsableId, 1, @FechaCreacion,
+                @TipoProyecto, @Predio, @Lote, @Departamento, @Municipio, @Vereda,
+                @Latitud, @Longitud, @AltitudMsnm, @EspecieId, @AreaHectareas, @FechaSiembra,
+                @DensidadInicial, @DensidadActual, @TurnoCosechaAnios, @TipoTenencia, @Certificacion,
+                @TotalHorasTrabajadas, @CostoManoObraAcumulado, @TotalJornales, @FechaUltimaActualizacionMetricas
+            );
+            SELECT last_insert_rowid();";
 
         using var connection = _context.CreateConnection();
         entity.Id = await connection.ExecuteScalarAsync<int>(sql, entity);
@@ -31,20 +47,42 @@ SELECT last_insert_rowid();";
     public async Task UpdateAsync(Proyecto entity)
     {
         entity.FechaModificacion = DateTime.Now;
-        const string sql = @"UPDATE proyectos
-SET codigo = @Codigo,
-    nombre = @Nombre,
-    descripcion = @Descripcion,
-    cliente = @Cliente,
-    ubicacion = @Ubicacion,
-    presupuesto = @Presupuesto,
-    progreso = @Progreso,
-    fecha_inicio = @FechaInicio,
-    fecha_fin = @FechaFin,
-    estado = @Estado,
-    responsable_id = @ResponsableId,
-    fecha_modificacion = @FechaModificacion
-WHERE id = @Id";
+        const string sql = @"
+            UPDATE proyectos SET
+                codigo = @Codigo,
+                nombre = @Nombre,
+                descripcion = @Descripcion,
+                cliente = @Cliente,
+                ubicacion = @Ubicacion,
+                presupuesto = @Presupuesto,
+                progreso = @Progreso,
+                fecha_inicio = @FechaInicio,
+                fecha_fin = @FechaFin,
+                estado = @Estado,
+                responsable_id = @ResponsableId,
+                fecha_modificacion = @FechaModificacion,
+                tipo_proyecto = @TipoProyecto,
+                predio = @Predio,
+                lote = @Lote,
+                departamento = @Departamento,
+                municipio = @Municipio,
+                vereda = @Vereda,
+                latitud = @Latitud,
+                longitud = @Longitud,
+                altitud_msnm = @AltitudMsnm,
+                especie_id = @EspecieId,
+                area_hectareas = @AreaHectareas,
+                fecha_siembra = @FechaSiembra,
+                densidad_inicial = @DensidadInicial,
+                densidad_actual = @DensidadActual,
+                turno_cosecha_anios = @TurnoCosechaAnios,
+                tipo_tenencia = @TipoTenencia,
+                certificacion = @Certificacion,
+                total_horas_trabajadas = @TotalHorasTrabajadas,
+                costo_mano_obra_acumulado = @CostoManoObraAcumulado,
+                total_jornales = @TotalJornales,
+                fecha_ultima_actualizacion_metricas = @FechaUltimaActualizacionMetricas
+            WHERE id = @Id";
 
         using var connection = _context.CreateConnection();
         await connection.ExecuteAsync(sql, entity);
@@ -52,37 +90,92 @@ WHERE id = @Id";
 
     public async Task DeleteAsync(int id)
     {
-        const string sql = "UPDATE proyectos SET activo = 0, fecha_modificacion = CURRENT_TIMESTAMP WHERE id = @Id";
+        // Hard delete - elimina permanentemente el registro
+        const string sql = "DELETE FROM proyectos WHERE id = @Id";
         using var connection = _context.CreateConnection();
         await connection.ExecuteAsync(sql, new { Id = id });
     }
 
     public async Task<Proyecto?> GetByIdAsync(int id)
     {
-        const string sql = "SELECT * FROM proyectos WHERE id = @Id";
+        const string sql = @"
+            SELECT p.*, ef.*
+            FROM proyectos p
+            LEFT JOIN especies_forestales ef ON p.especie_id = ef.id
+            WHERE p.id = @Id";
+        
         using var connection = _context.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<Proyecto>(sql, new { Id = id });
+        var result = await connection.QueryAsync<Proyecto, EspecieForestal, Proyecto>(
+            sql,
+            (proyecto, especie) =>
+            {
+                proyecto.Especie = especie;
+                return proyecto;
+            },
+            new { Id = id },
+            splitOn: "id");
+        
+        return result.FirstOrDefault();
     }
 
     public async Task<IEnumerable<Proyecto>> GetAllAsync()
     {
-        const string sql = "SELECT * FROM proyectos";
+        const string sql = @"
+            SELECT p.*, ef.*
+            FROM proyectos p
+            LEFT JOIN especies_forestales ef ON p.especie_id = ef.id
+            ORDER BY p.nombre";
+        
         using var connection = _context.CreateConnection();
-        return await connection.QueryAsync<Proyecto>(sql);
+        return await connection.QueryAsync<Proyecto, EspecieForestal, Proyecto>(
+            sql,
+            (proyecto, especie) =>
+            {
+                proyecto.Especie = especie;
+                return proyecto;
+            },
+            splitOn: "id");
     }
 
     public async Task<IEnumerable<Proyecto>> GetAllActiveAsync()
     {
-        const string sql = "SELECT * FROM proyectos WHERE activo = 1";
+        const string sql = @"
+            SELECT p.*, ef.*
+            FROM proyectos p
+            LEFT JOIN especies_forestales ef ON p.especie_id = ef.id
+            WHERE p.activo = 1
+            ORDER BY p.nombre";
+        
         using var connection = _context.CreateConnection();
-        return await connection.QueryAsync<Proyecto>(sql);
+        return await connection.QueryAsync<Proyecto, EspecieForestal, Proyecto>(
+            sql,
+            (proyecto, especie) =>
+            {
+                proyecto.Especie = especie;
+                return proyecto;
+            },
+            splitOn: "id");
     }
 
     public async Task<IEnumerable<Proyecto>> GetByEstadoAsync(EstadoProyecto estado)
     {
-        const string sql = "SELECT * FROM proyectos WHERE estado = @Estado";
+        const string sql = @"
+            SELECT p.*, ef.*
+            FROM proyectos p
+            LEFT JOIN especies_forestales ef ON p.especie_id = ef.id
+            WHERE p.estado = @Estado
+            ORDER BY p.nombre";
+        
         using var connection = _context.CreateConnection();
-        return await connection.QueryAsync<Proyecto>(sql, new { Estado = estado });
+        return await connection.QueryAsync<Proyecto, EspecieForestal, Proyecto>(
+            sql,
+            (proyecto, especie) =>
+            {
+                proyecto.Especie = especie;
+                return proyecto;
+            },
+            new { Estado = estado },
+            splitOn: "id");
     }
 
     public async Task<IEnumerable<Proyecto>> SearchAsync(string searchTerm)
@@ -92,18 +185,41 @@ WHERE id = @Id";
 
     public async Task<IEnumerable<Proyecto>> SearchAsync(string? searchTerm, EstadoProyecto? estado)
     {
-        var sql = "SELECT * FROM proyectos WHERE 1=1";
+        var sql = @"
+            SELECT p.*, ef.*
+            FROM proyectos p
+            LEFT JOIN especies_forestales ef ON p.especie_id = ef.id
+            WHERE 1=1";
+        
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            sql += " AND (lower(nombre) LIKE lower(@Term) OR lower(codigo) LIKE lower(@Term) OR lower(descripcion) LIKE lower(@Term))";
+            sql += @" AND (
+                lower(p.nombre) LIKE lower(@Term) OR 
+                lower(p.codigo) LIKE lower(@Term) OR 
+                lower(p.descripcion) LIKE lower(@Term) OR
+                lower(p.predio) LIKE lower(@Term) OR
+                lower(p.lote) LIKE lower(@Term) OR
+                lower(p.departamento) LIKE lower(@Term) OR
+                lower(p.municipio) LIKE lower(@Term) OR
+                lower(ef.nombre_comun) LIKE lower(@Term)
+            )";
         }
         if (estado.HasValue)
         {
-            sql += " AND estado = @Estado";
+            sql += " AND p.estado = @Estado";
         }
+        sql += " ORDER BY p.nombre";
 
         using var connection = _context.CreateConnection();
-        return await connection.QueryAsync<Proyecto>(sql, new { Term = $"%{searchTerm}%", Estado = estado });
+        return await connection.QueryAsync<Proyecto, EspecieForestal, Proyecto>(
+            sql,
+            (proyecto, especie) =>
+            {
+                proyecto.Especie = especie;
+                return proyecto;
+            },
+            new { Term = $"%{searchTerm}%", Estado = estado },
+            splitOn: "id");
     }
 
     public async Task<bool> ExistsCodigoAsync(string codigo, int? excludeId = null)

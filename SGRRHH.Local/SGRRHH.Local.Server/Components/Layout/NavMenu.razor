@@ -49,6 +49,21 @@
                 </NavLink>
             </div>
             
+            @if (AuthService.IsAdmin || AuthService.IsAprobador)
+            {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="seguimiento-permisos">
+                        <span class="nav-icon">📋</span> Seguimiento
+                    </NavLink>
+                </div>
+                
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="incapacidades">
+                        <span class="nav-icon">🏥</span> Incapacidades
+                    </NavLink>
+                </div>
+            }
+            
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="vacaciones">
                     <span class="nav-icon">🏖️</span> Vacaciones
@@ -138,60 +153,6 @@
     }
 }
 
-<style>
-.user-info {
-    padding: 16px;
-    background-color: rgba(255, 255, 255, 0.1);
-    margin-bottom: 8px;
-}
 
-.user-name {
-    margin: 0;
-    font-weight: bold;
-    font-size: 14px;
-    color: #FFFFFF;
-}
-
-.user-role {
-    margin: 4px 0 0 0;
-    font-size: 12px;
-    color: #CCCCCC;
-}
-
-.nav-section {
-    padding: 12px 16px 4px 16px;
-    font-size: 10px;
-    font-weight: bold;
-    color: #888888;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 8px;
-}
-
-.nav-icon {
-    margin-right: 8px;
-    font-size: 14px;
-}
-
-.btn-logout {
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: none;
-    color: #FFFFFF;
-    padding: 8px 16px;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.btn-logout:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-hr {
-    border-color: rgba(255, 255, 255, 0.2);
-    margin: 8px 0;
-}
-</style>
 
 

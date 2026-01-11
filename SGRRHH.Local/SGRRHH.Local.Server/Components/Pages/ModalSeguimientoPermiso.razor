@@ -1,0 +1,155 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+
+<div class="modal-overlay" @onclick="OnCerrar">
+    <div class="modal-box" style="max-width: 800px;" @onclick:stopPropagation>
+        <div class="modal-header">
+            DETALLE PERMISO: @Permiso.NumeroActa
+        </div>
+        <div class="modal-body">
+            <!-- Información del Permiso -->
+            <div style="border: 1px solid black; padding: 15px; margin-bottom: 15px;">
+                <div style="font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid black; padding-bottom: 5px;">
+                    INFORMACIÓN DEL PERMISO
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 11px;">
+                    <div><strong>Estado:</strong> @GetEstadoTexto(Permiso.Estado)</div>
+                    <div><strong>Resolución:</strong> @GetResolucionTexto(Permiso.TipoResolucion)</div>
+                    <div><strong>Fecha Solicitud:</strong> @Permiso.FechaSolicitud.ToString("dd/MM/yyyy")</div>
+                    <div><strong>Período:</strong> @Permiso.FechaInicio.ToString("dd/MM") - @Permiso.FechaFin.ToString("dd/MM/yyyy")</div>
+                    <div><strong>Total Días:</strong> @Permiso.TotalDias</div>
+                    <div><strong>Completado:</strong> @(Permiso.Completado ? "SÍ" : "NO")</div>
+                    
+                    @if (Permiso.RequiereDocumentoPosterior)
+                    {
+                        <div><strong>Documento Pendiente:</strong> SÍ</div>
+                        <div><strong>Límite Documento:</strong> @(Permiso.FechaLimiteDocumento?.ToString("dd/MM/yyyy") ?? "-")</div>
+                    }
+                    
+                    @if (Permiso.TipoResolucion == TipoResolucionPermiso.Compensado)
+                    {
+                        <div><strong>Horas a Compensar:</strong> @Permiso.HorasCompensar</div>
+                        <div><strong>Horas Compensadas:</strong> @Permiso.HorasCompensadas</div>
+                        <div><strong>Límite Compensación:</strong> @(Permiso.FechaLimiteCompensacion?.ToString("dd/MM/yyyy") ?? "-")</div>
+                    }
+                    
+                    @if (Permiso.TipoResolucion == TipoResolucionPermiso.Descontado)
+                    {
+                        <div><strong>Monto Descuento:</strong> $@(Permiso.MontoDescuento?.ToString("N0") ?? "0")</div>
+                        <div><strong>Período Descuento:</strong> @(Permiso.PeriodoDescuento ?? "-")</div>
+                    }
+                </div>
+            </div>
+            
+            <!-- Compensaciones (si aplica) -->
+            @if (Compensaciones.Any())
+            {
+                <div style="border: 1px solid black; padding: 15px; margin-bottom: 15px;">
+                    <div style="font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid black; padding-bottom: 5px;">
+                        REGISTRO DE COMPENSACIONES
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                        <thead>
+                            <tr style="background: #f0f0f0;">
+                                <th style="border: 1px solid #ccc; padding: 5px;">FECHA</th>
+                                <th style="border: 1px solid #ccc; padding: 5px;">HORAS</th>
+                                <th style="border: 1px solid #ccc; padding: 5px;">DESCRIPCIÓN</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var comp in Compensaciones)
+                            {
+                                <tr>
+                                    <td style="border: 1px solid #ccc; padding: 5px; text-align: center;">@comp.FechaCompensacion.ToString("dd/MM/yyyy")</td>
+                                    <td style="border: 1px solid #ccc; padding: 5px; text-align: center;">@comp.HorasCompensadas h</td>
+                                    <td style="border: 1px solid #ccc; padding: 5px;">@(comp.Descripcion ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            
+            <!-- Historial de Seguimiento -->
+            <div style="border: 1px solid black; padding: 15px;">
+                <div style="font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid black; padding-bottom: 5px;">
+                    HISTORIAL DE ACCIONES (@Seguimientos.Count)
+                </div>
+                @if (!Seguimientos.Any())
+                {
+                    <div style="font-size: 11px; color: #666; text-align: center; padding: 20px;">
+                        Sin acciones registradas
+                    </div>
+                }
+                else
+                {
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        @foreach (var seg in Seguimientos.OrderByDescending(s => s.FechaAccion))
+                        {
+                            <div class="historial-item">
+                                <div class="historial-fecha">@seg.FechaAccion.ToString("dd/MM/yyyy HH:mm")</div>
+                                <div class="historial-accion">@GetAccionTexto(seg.TipoAccion)</div>
+                                <div style="font-size: 11px;">@seg.Descripcion</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" @onclick="OnCerrar">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Permiso Permiso { get; set; } = null!;
+    
+    [Parameter]
+    public List<SeguimientoPermiso> Seguimientos { get; set; } = new();
+    
+    [Parameter]
+    public List<CompensacionHoras> Compensaciones { get; set; } = new();
+    
+    [Parameter]
+    public EventCallback OnCerrar { get; set; }
+    
+    private string GetEstadoTexto(EstadoPermiso estado) => estado switch
+    {
+        EstadoPermiso.Pendiente => "PENDIENTE",
+        EstadoPermiso.Aprobado => "APROBADO",
+        EstadoPermiso.Rechazado => "RECHAZADO",
+        EstadoPermiso.Cancelado => "CANCELADO",
+        EstadoPermiso.AprobadoPendienteDocumento => "APROBADO - PEND. DOCUMENTO",
+        EstadoPermiso.AprobadoEnCompensacion => "APROBADO - EN COMPENSACIÓN",
+        EstadoPermiso.Completado => "COMPLETADO",
+        _ => estado.ToString()
+    };
+    
+    private string GetResolucionTexto(TipoResolucionPermiso resolucion) => resolucion switch
+    {
+        TipoResolucionPermiso.PendienteDefinir => "PENDIENTE",
+        TipoResolucionPermiso.Remunerado => "REMUNERADO",
+        TipoResolucionPermiso.Descontado => "DESCONTADO",
+        TipoResolucionPermiso.Compensado => "COMPENSADO",
+        _ => resolucion.ToString()
+    };
+    
+    private string GetAccionTexto(TipoAccionSeguimiento accion) => accion switch
+    {
+        TipoAccionSeguimiento.Solicitud => "SOLICITUD",
+        TipoAccionSeguimiento.Aprobacion => "APROBACIÓN",
+        TipoAccionSeguimiento.Rechazo => "RECHAZO",
+        TipoAccionSeguimiento.DocumentoEntregado => "DOCUMENTO ENTREGADO",
+        TipoAccionSeguimiento.CompensacionIniciada => "COMPENSACIÓN INICIADA",
+        TipoAccionSeguimiento.HorasCompensadas => "HORAS COMPENSADAS",
+        TipoAccionSeguimiento.Completado => "COMPLETADO",
+        TipoAccionSeguimiento.Observacion => "OBSERVACIÓN",
+        TipoAccionSeguimiento.DocumentoRechazado => "DOCUMENTO RECHAZADO",
+        TipoAccionSeguimiento.CompensacionVencida => "COMPENSACIÓN VENCIDA",
+        TipoAccionSeguimiento.CambioResolucion => "CAMBIO DE RESOLUCIÓN",
+        TipoAccionSeguimiento.DocumentoVencido => "DOCUMENTO VENCIDO",
+        _ => accion.ToString()
+    };
+}

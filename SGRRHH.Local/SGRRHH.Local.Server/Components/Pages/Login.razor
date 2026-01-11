@@ -5,58 +5,56 @@
 @using SGRRHH.Local.Domain.Enums
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <div class="login-container">
     <div class="login-box">
-        <h2>SGRRHH LOCAL</h2>
-        <h3>Sistema de Gestión de Recursos Humanos</h3>
+        <div class="login-header">
+            <div class="system-title">SGRRHH LOCAL</div>
+            <div class="system-subtitle">SISTEMA DE GESTION DE RECURSOS HUMANOS</div>
+            <div class="system-version">VERSION 1.0.0</div>
+        </div>
         
         @if (!string.IsNullOrEmpty(errorMessage))
         {
             <div class="error-block">
-                <p>@errorMessage</p>
+                ERROR: @errorMessage
             </div>
         }
         
-        <div class="form-group">
-            <label>USUARIO</label>
-            <input type="text" 
-                   @bind="username" 
-                   @bind:event="oninput"
-                   @onkeydown="HandleKeyDown"
-                   placeholder="Ingrese su usuario"
-                   autofocus />
-        </div>
-        
-        <div class="form-group">
-            <label>CONTRASEÑA</label>
-            <input type="password" 
-                   @bind="password" 
-                   @bind:event="oninput"
-                   @onkeydown="HandleKeyDown"
-                   placeholder="Ingrese su contraseña" />
-        </div>
-        
-        <div class="form-group">
-            <button class="btn-primary" @onclick="DoLogin" disabled="@isLoading">
-                @if (isLoading)
-                {
-                    <span>INGRESANDO...</span>
-                }
-                else
-                {
-                    <span>INGRESAR</span>
-                }
-            </button>
-        </div>
-        
-        <div class="login-footer">
-            <small>Versión 1.0.0 | © 2026 SGRRHH</small>
+        <div class="login-form">
+            <div class="form-field">
+                <label class="field-label">USUARIO:</label>
+                <input type="text" 
+                       class="field-input"
+                       @bind="username" 
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown"
+                       disabled="@isLoading"
+                       autofocus />
+            </div>
+            
+            <div class="form-field">
+                <label class="field-label">CONTRASEÑA:</label>
+                <input type="password" 
+                       class="field-input"
+                       @bind="password" 
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown"
+                       disabled="@isLoading" />
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn-login" @onclick="DoLogin" disabled="@isLoading">
+                    INICIAR SESION
+                </button>
+            </div>
         </div>
     </div>
 </div>
 
 @code {
+    private const string SESSION_KEY = "sgrrhh_session_user_id";
     private string username = "";
     private string password = "";
     private string? errorMessage;
@@ -64,7 +62,6 @@
     
     protected override void OnInitialized()
     {
-        // Si ya está autenticado, ir a la página por defecto según rol
         if (AuthService.IsAuthenticated)
         {
             Navigation.NavigateTo(GetDefaultPageByRole());
@@ -73,18 +70,43 @@
     
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")
+        if (e.Key == "Enter" && !isLoading)
         {
             await DoLogin();
         }
+        else if (e.Key == "Escape")
+        {
+            ClearForm();
+        }
+    }
+    
+    private void ClearForm()
+    {
+        username = "";
+        password = "";
+        errorMessage = null;
+        StateHasChanged();
     }
     
     private async Task DoLogin()
     {
         if (isLoading) return;
         
-        isLoading = true;
         errorMessage = null;
+        
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            errorMessage = "El campo USUARIO es obligatorio.";
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "El campo CONTRASEÑA es obligatorio.";
+            return;
+        }
+        
+        isLoading = true;
         StateHasChanged();
         
         try
@@ -93,6 +115,8 @@
             
             if (result.IsSuccess)
             {
+                // Guardar sesión en localStorage para persistir entre recargas
+                await SaveSessionAsync();
                 Navigation.NavigateTo(GetDefaultPageByRole());
             }
             else
@@ -107,17 +131,24 @@
         }
     }
     
+    private async Task SaveSessionAsync()
+    {
+        try
+        {
+            if (AuthService.CurrentUserId.HasValue)
+            {
+                await JSRuntime.InvokeVoidAsync("setLocalStorage", SESSION_KEY, AuthService.CurrentUserId.Value.ToString());
+            }
+        }
+        catch
+        {
+            // Ignorar errores de localStorage
+        }
+    }
+    
     private string GetDefaultPageByRole()
     {
-        if (AuthService.CurrentUser == null)
-            return "/login";
-        
-        return AuthService.CurrentUser.Rol switch
-        {
-            RolUsuario.Administrador => "/usuarios",
-            RolUsuario.Aprobador => "/empleados", // Ingeniera
-            RolUsuario.Operador => "/control-diario", // Secretaria
-            _ => "/empleados"
-        };
+        // Todos los usuarios van a la página Home después del login
+        return "/home";
     }
 }

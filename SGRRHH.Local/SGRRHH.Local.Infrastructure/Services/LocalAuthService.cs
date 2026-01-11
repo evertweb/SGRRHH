@@ -18,10 +18,15 @@ public class LocalAuthService : IAuthService
     public Usuario? CurrentUser => _currentUser;
     public int? CurrentUserId => _currentUser?.Id;
     public bool IsAuthenticated => _currentUser != null;
-    public bool IsAdmin => _currentUser?.Rol == RolUsuario.Administrador;
-    public bool IsAprobador => _currentUser?.Rol == RolUsuario.Aprobador || IsAdmin;
-    public bool IsOperador => _currentUser?.Rol == RolUsuario.Operador || IsAdmin;
-    public bool IsSupervisor => IsAprobador; // Supervisor es equivalente a Aprobador
+    
+    // =====================================================================
+    // ROLES TEMPORALMENTE DESHABILITADOS - Todos funcionan como Admin
+    // TODO: Rediseñar sistema de roles
+    // =====================================================================
+    public bool IsAdmin => IsAuthenticated; // Todos son admin mientras se rediseña
+    public bool IsAprobador => IsAuthenticated; // Todos tienen acceso completo
+    public bool IsOperador => IsAuthenticated; // Todos tienen acceso completo
+    public bool IsSupervisor => IsAuthenticated; // Todos tienen acceso completo
     
     public event EventHandler<Usuario?>? OnAuthStateChanged;
     
@@ -96,6 +101,53 @@ public class LocalAuthService : IAuthService
         OnAuthStateChanged?.Invoke(this, null);
         
         return Task.FromResult(Result.Ok("Sesión cerrada"));
+    }
+    
+    /// <summary>
+    /// Intenta restaurar la sesión buscando el usuario por ID.
+    /// El ID se obtiene desde localStorage por el componente que llama este método.
+    /// </summary>
+    public async Task<bool> TryRestoreSessionAsync()
+    {
+        // Este método es llamado por el componente AuthPersistence que lee el userId de localStorage
+        // Si ya hay un usuario autenticado, no hacer nada
+        if (_currentUser != null)
+            return true;
+            
+        return false;
+    }
+    
+    /// <summary>
+    /// Establece el usuario actual (usado para restaurar sesión desde localStorage).
+    /// </summary>
+    public void SetCurrentUser(Usuario? user)
+    {
+        _currentUser = user;
+        if (user != null)
+        {
+            _logger.LogInformation("Sesión restaurada para: {Username}", user.Username);
+        }
+        OnAuthStateChanged?.Invoke(this, _currentUser);
+    }
+    
+    /// <summary>
+    /// Obtiene un usuario por ID para restaurar sesión.
+    /// </summary>
+    public async Task<Usuario?> GetUserByIdAsync(int userId)
+    {
+        try
+        {
+            var usuario = await _usuarioRepository.GetByIdAsync(userId);
+            if (usuario != null && usuario.Activo)
+            {
+                return usuario;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error obteniendo usuario {UserId} para restaurar sesión", userId);
+        }
+        return null;
     }
     
     public async Task<Result> ChangePasswordAsync(int userId, string currentPassword, string newPassword)

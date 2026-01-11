@@ -1,7 +1,31 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+﻿@using SGRRHH.Local.Server.Components.Shared
+@using SGRRHH.Local.Shared.Interfaces
+@inject IAuthService AuthService
+
+<AuthPersistence @ref="authPersistence" 
+                 OnSessionRestored="OnSessionRestored" 
+                 OnSessionNotFound="OnSessionNotFound" />
+
+<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
+
+@code {
+    private AuthPersistence? authPersistence;
+    
+    private void OnSessionRestored()
+    {
+        // Sesión restaurada correctamente, el usuario continuará autenticado
+        StateHasChanged();
+    }
+    
+    private void OnSessionNotFound()
+    {
+        // No hay sesión guardada, el usuario será redirigido a login por MainLayout
+        StateHasChanged();
+    }
+}
 
