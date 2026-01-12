@@ -1,0 +1,263 @@
+@* ============================================================
+   ImagePreviewPopup.razor
+   Ventana emergente de pantalla completa para ver imágenes
+   Con controles de zoom y navegación
+   ============================================================ *@
+
+<div class="image-preview-popup @(IsVisible ? "visible" : "")" @onclick="HandleBackdropClick" @onkeydown="HandleKeyDown" tabindex="0">
+    <div class="preview-container" @onclick:stopPropagation="true">
+        @* Barra superior con controles *@
+        <div class="preview-toolbar">
+            <div class="preview-toolbar-left">
+                @if (TotalPages > 1)
+                {
+                    <button class="preview-btn" @onclick="PreviousPage" disabled="@(CurrentIndex <= 0)" title="Anterior (←)">◀</button>
+                    <span class="preview-page-info">@(CurrentIndex + 1) / @TotalPages</span>
+                    <button class="preview-btn" @onclick="NextPage" disabled="@(CurrentIndex >= TotalPages - 1)" title="Siguiente (→)">▶</button>
+                    <span class="preview-separator"></span>
+                }
+                <button class="preview-btn" @onclick="@(() => Rotate(-90))" title="Rotar izquierda (Q)">↺</button>
+                <button class="preview-btn" @onclick="@(() => Rotate(90))" title="Rotar derecha (E)">↻</button>
+                <span class="preview-separator"></span>
+                <button class="preview-btn" @onclick="FlipH" title="Voltear horizontal (H)">⇆</button>
+                <button class="preview-btn" @onclick="FlipV" title="Voltear vertical (V)">⇅</button>
+            </div>
+            
+            <div class="preview-toolbar-center">
+                <button class="preview-btn" @onclick="ZoomOut" disabled="@(zoom <= 25)" title="Alejar (-)">−</button>
+                <span class="preview-zoom-display">@(zoom == 0 ? "Ajustar" : $"{zoom}%")</span>
+                <button class="preview-btn" @onclick="ZoomIn" disabled="@(zoom >= 400)" title="Acercar (+)">+</button>
+                <span class="preview-separator"></span>
+                <button class="preview-btn @(zoom == 0 ? "active" : "")" @onclick="@(() => SetZoom(0))" title="Ajustar (F)">Ajustar</button>
+                <button class="preview-btn @(zoom == 100 ? "active" : "")" @onclick="@(() => SetZoom(100))" title="100% (1)">100%</button>
+                <button class="preview-btn @(zoom == 200 ? "active" : "")" @onclick="@(() => SetZoom(200))" title="200% (2)">200%</button>
+            </div>
+            
+            <div class="preview-toolbar-right">
+                @if (ImageInfo != null)
+                {
+                    <span class="preview-info">@ImageInfo</span>
+                }
+                <button class="preview-btn preview-btn-close" @onclick="Close" title="Cerrar (Esc)">✕</button>
+            </div>
+        </div>
+        
+        @* Área de imagen *@
+        <div class="preview-image-area">
+            @if (!string.IsNullOrEmpty(ImageDataUrl))
+            {
+                <div class="preview-image-scroll @(zoom > 0 ? "scrollable" : "")">
+                    <img src="@ImageDataUrl" 
+                         alt="Vista previa" 
+                         class="preview-image @(zoom == 0 ? "fit" : "")"
+                         style="@GetImageStyle()"
+                         draggable="false" />
+                </div>
+            }
+            else
+            {
+                <div class="preview-empty">
+                    <span>Sin imagen para mostrar</span>
+                </div>
+            }
+        </div>
+        
+        @* Barra inferior con acciones *@
+        <div class="preview-footer">
+            <div class="preview-footer-info">
+                @if (!string.IsNullOrEmpty(PageInfo))
+                {
+                    <span>@PageInfo</span>
+                }
+            </div>
+            <div class="preview-footer-actions">
+                <button class="preview-action-btn" @onclick="OnAccept" title="Aceptar cambios">
+                    ✓ ACEPTAR
+                </button>
+                <button class="preview-action-btn secondary" @onclick="Close" title="Cancelar">
+                    CANCELAR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+    
+    [Parameter] public string? ImageDataUrl { get; set; }
+    [Parameter] public string? ImageInfo { get; set; }
+    [Parameter] public string? PageInfo { get; set; }
+    
+    [Parameter] public int CurrentIndex { get; set; }
+    [Parameter] public int TotalPages { get; set; } = 1;
+    
+    [Parameter] public EventCallback<int> OnNavigate { get; set; }
+    [Parameter] public EventCallback<int> OnRotate { get; set; }
+    [Parameter] public EventCallback<bool> OnFlipHorizontal { get; set; }
+    [Parameter] public EventCallback<bool> OnFlipVertical { get; set; }
+    [Parameter] public EventCallback OnAccepted { get; set; }
+    
+    private int zoom = 0; // 0 = ajustar automáticamente
+    private int rotation = 0;
+    private bool flippedH = false;
+    private bool flippedV = false;
+    
+    private void Close()
+    {
+        IsVisible = false;
+        IsVisibleChanged.InvokeAsync(false);
+    }
+    
+    private void HandleBackdropClick()
+    {
+        // No cerrar al hacer clic fuera, solo con botón o Esc
+    }
+    
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Escape":
+                Close();
+                break;
+            case "ArrowLeft":
+                PreviousPage();
+                break;
+            case "ArrowRight":
+                NextPage();
+                break;
+            case "-":
+            case "_":
+                ZoomOut();
+                break;
+            case "+":
+            case "=":
+                ZoomIn();
+                break;
+            case "f":
+            case "F":
+                SetZoom(0);
+                break;
+            case "1":
+                SetZoom(100);
+                break;
+            case "2":
+                SetZoom(200);
+                break;
+            case "q":
+            case "Q":
+                Rotate(-90);
+                break;
+            case "e":
+            case "E":
+                Rotate(90);
+                break;
+            case "h":
+            case "H":
+                FlipH();
+                break;
+            case "v":
+            case "V":
+                FlipV();
+                break;
+        }
+    }
+    
+    private void SetZoom(int value)
+    {
+        zoom = value;
+        StateHasChanged();
+    }
+    
+    private void ZoomIn()
+    {
+        if (zoom == 0) zoom = 50;
+        else if (zoom < 400) zoom += 25;
+        StateHasChanged();
+    }
+    
+    private void ZoomOut()
+    {
+        if (zoom > 25) zoom -= 25;
+        else zoom = 0;
+        StateHasChanged();
+    }
+    
+    private void PreviousPage()
+    {
+        if (CurrentIndex > 0)
+            OnNavigate.InvokeAsync(CurrentIndex - 1);
+    }
+    
+    private void NextPage()
+    {
+        if (CurrentIndex < TotalPages - 1)
+            OnNavigate.InvokeAsync(CurrentIndex + 1);
+    }
+    
+    private void Rotate(int degrees)
+    {
+        rotation = (rotation + degrees + 360) % 360;
+        OnRotate.InvokeAsync(degrees);
+    }
+    
+    private void FlipH()
+    {
+        flippedH = !flippedH;
+        OnFlipHorizontal.InvokeAsync(flippedH);
+    }
+    
+    private void FlipV()
+    {
+        flippedV = !flippedV;
+        OnFlipVertical.InvokeAsync(flippedV);
+    }
+    
+    private async Task OnAccept()
+    {
+        await OnAccepted.InvokeAsync();
+        Close();
+    }
+    
+    private string GetImageStyle()
+    {
+        var transforms = new List<string>();
+        
+        if (rotation != 0)
+            transforms.Add($"rotate({rotation}deg)");
+        
+        if (flippedH)
+            transforms.Add("scaleX(-1)");
+        
+        if (flippedV)
+            transforms.Add("scaleY(-1)");
+        
+        var style = "";
+        
+        if (zoom > 0)
+        {
+            style = $"width: {zoom}%; max-width: none; max-height: none;";
+        }
+        
+        if (transforms.Any())
+        {
+            style += $" transform: {string.Join(" ", transforms)};";
+        }
+        
+        return style;
+    }
+    
+    /// <summary>
+    /// Reinicia el estado visual cuando se abre el popup
+    /// </summary>
+    public void Reset()
+    {
+        zoom = 0;
+        rotation = 0;
+        flippedH = false;
+        flippedV = false;
+        StateHasChanged();
+    }
+}

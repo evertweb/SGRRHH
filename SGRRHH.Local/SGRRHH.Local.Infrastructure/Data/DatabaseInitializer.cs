@@ -1034,14 +1034,10 @@ INSERT OR IGNORE INTO especies_forestales (codigo, nombre_comun, nombre_cientifi
 ('GUA-ANG', 'Guadua', 'Guadua angustifolia', 'Poaceae', 5, 625, 1);
 
 -- =====================================================
--- PERFILES DE ESCANEO PREDEFINIDOS (snake_case)
+-- PERFIL DE ESCANEO PREDEFINIDO (snake_case)
 -- =====================================================
 INSERT OR IGNORE INTO scan_profiles (id, name, description, is_default, dpi, color_mode, source, page_size) VALUES 
-(1, 'Documento Rápido', 'Escaneo rápido de documentos en escala de grises', 0, 150, 'Grayscale', 'Flatbed', 'Letter'),
-(2, 'Documento Alta Calidad', 'Escaneo de alta calidad para archivo permanente', 1, 300, 'Color', 'Flatbed', 'Letter'),
-(3, 'Cédula/ID', 'Optimizado para documentos de identidad', 0, 300, 'Color', 'Flatbed', 'A5'),
-(4, 'Foto', 'Escaneo de fotografías en alta resolución', 0, 600, 'Color', 'Flatbed', 'Letter'),
-(5, 'Blanco y Negro', 'Documentos de texto para OCR', 0, 300, 'BlackWhite', 'Flatbed', 'Letter');
+(1, 'DOCUMENTO', 'Perfil estándar para escaneo de documentos', 1, 300, 'Color', 'Flatbed', 'Letter');
 ";
 
     public const string PerformanceIndexes = @"-- Índices adicionales para consultas frecuentes

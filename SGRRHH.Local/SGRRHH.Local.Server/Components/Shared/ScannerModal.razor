@@ -12,396 +12,387 @@
 @if (IsVisible)
 {
     <div class="scanner-backdrop" @onclick="OnBackdropClick" @onkeydown="HandleKeyPress" tabindex="-1">
-        <div class="scanner-modal @(AllowMultiplePages ? "scanner-modal-wide" : "")" @onclick:stopPropagation="true">
+        <div class="scanner-modal scanner-modal-fullscreen" @onclick:stopPropagation="true">
             <div class="scanner-header">
-                <span>@(Titulo ?? (AllowMultiplePages ? "ESCANEO MULTIPLE DE DOCUMENTOS" : "ESCANER DE DOCUMENTOS"))</span>
-                <button class="scanner-close" @onclick="Cerrar" disabled="@isScanning">X</button>
+                <span>@(Titulo ?? (AllowMultiplePages ? "ESCANEO MÚLTIPLE DE DOCUMENTOS" : "ESCÁNER DE DOCUMENTOS"))</span>
+                <button class="scanner-close" @onclick="Cerrar" disabled="@isScanning">✕</button>
             </div>
             
-            <div class="scanner-body">
-                @* Selector de Perfiles *@
-                <div class="scanner-profiles-section">
-                    <div class="scanner-option-row">
-                        <label class="scanner-label">PERFIL:</label>
-                        <select @bind="selectedProfileId" class="scanner-select" disabled="@isScanning"
-                                @bind:after="LoadSelectedProfile">
-                            <option value="0">-- CONFIGURACION MANUAL --</option>
-                            @foreach (var profile in profiles)
+            <div class="scanner-body-horizontal">
+                @* === PANEL IZQUIERDO: VISTA PREVIA GRANDE === *@
+                <div class="scanner-preview-panel">
+                    @* Barra de herramientas superior *@
+                    <div class="scanner-preview-toolbar">
+                        <div class="scanner-toolbar-left">
+                            @if (AllowMultiplePages && scannedPages.Count > 0)
                             {
-                                <option value="@profile.Id">
-                                    @profile.Name @(profile.IsDefault ? "(★)" : "")
-                                </option>
+                                <button class="scanner-tool-btn" @onclick="PreviousPage" disabled="@(previewIndex <= 0)" title="Página anterior">◀</button>
+                                <span class="scanner-page-indicator">@(previewIndex + 1) / @scannedPages.Count</span>
+                                <button class="scanner-tool-btn" @onclick="NextPage" disabled="@(previewIndex >= scannedPages.Count - 1)" title="Página siguiente">▶</button>
+                                <div class="scanner-tool-separator"></div>
                             }
-                        </select>
-                        <button class="scanner-btn-small" @onclick="RefreshProfiles" disabled="@isScanning" title="Actualizar perfiles">
-                            ↻
-                        </button>
-                        <button class="scanner-btn-small" @onclick="OpenSaveProfileDialog" disabled="@isScanning" title="Guardar configuración actual como perfil">
-                            💾
-                        </button>
-                    </div>
-                </div>
-                
-                @* Panel de Opciones *@
-                <div class="scanner-options">
-                    <div class="scanner-option-row">
-                        <label class="scanner-label">ESCANER:</label>
-                        <select @bind="selectedDeviceId" class="scanner-select" disabled="@isScanning">
-                            @if (scanners.Count == 0)
+                            @if (scannedPages.Count > 0)
                             {
-                                <option value="">-- SIN ESCANERES --</option>
+                                <button class="scanner-tool-btn" @onclick="@(() => RotatePage(-90))" title="Rotar izquierda 90°">↺</button>
+                                <button class="scanner-tool-btn" @onclick="@(() => RotatePage(90))" title="Rotar derecha 90°">↻</button>
+                                <button class="scanner-tool-btn" @onclick="@(() => RotatePage(180))" title="Rotar 180°">⟲</button>
+                                <div class="scanner-tool-separator"></div>
+                                <button class="scanner-tool-btn" @onclick="FlipHorizontalPage" title="Voltear horizontal">⇆</button>
+                                <button class="scanner-tool-btn" @onclick="FlipVerticalPage" title="Voltear vertical">⇅</button>
+                                <div class="scanner-tool-separator"></div>
+                                <button class="scanner-tool-btn" @onclick="AutoCropPage" title="Auto-recortar bordes">⬚</button>
                             }
-                            else
-                            {
-                                @foreach (var scanner in scanners)
-                                {
-                                    <option value="@scanner.Id">@scanner.Name (@scanner.Driver)</option>
-                                }
-                            }
-                        </select>
-                        <button class="scanner-btn-small" @onclick="RefreshScanners" disabled="@isScanning" title="Actualizar lista">
-                            ↻
-                        </button>
+                        </div>
+                        <div class="scanner-toolbar-right">
+                            <button class="scanner-tool-btn" @onclick="ZoomOut" title="Alejar" disabled="@(previewZoom <= 25)">−</button>
+                            <span class="scanner-zoom-indicator">@(previewZoom == 0 ? "Auto" : $"{previewZoom}%")</span>
+                            <button class="scanner-tool-btn" @onclick="ZoomIn" title="Acercar" disabled="@(previewZoom >= 200)">+</button>
+                            <div class="scanner-tool-separator"></div>
+                            <button class="scanner-tool-btn @(previewZoom == 0 ? "active" : "")" @onclick="@(() => SetZoom(0))" title="Ajustar automáticamente">AJUSTAR</button>
+                            <button class="scanner-tool-btn @(previewZoom == 100 ? "active" : "")" @onclick="@(() => SetZoom(100))" title="Tamaño real">100%</button>
+                            <div class="scanner-tool-separator"></div>
+                            <button class="scanner-tool-btn scanner-fullscreen-btn" 
+                                    @onclick="OpenFullscreenOverlay" 
+                                    title="Ver en pantalla completa (doble clic en imagen)" 
+                                    disabled="@(scannedPages.Count == 0 && previewImage == null)">AMPLIAR</button>
+                        </div>
                     </div>
                     
-                    <div class="scanner-option-group">
-                        <div class="scanner-option-row">
-                            <label class="scanner-label">DPI:</label>
-                            <select @bind="selectedDpi" class="scanner-select" disabled="@isScanning">
-                                <option value="75">75 ppp</option>
-                                <option value="100">100 ppp</option>
-                                <option value="150">150 ppp</option>
-                                <option value="200">200 ppp</option>
-                                <option value="300">300 ppp</option>
-                                <option value="400">400 ppp</option>
-                                <option value="600">600 ppp</option>
-                            </select>
-                        </div>
-                        
-                        <div class="scanner-option-row">
-                            <label class="scanner-label">COLOR:</label>
-                            <select @bind="selectedColorMode" class="scanner-select" disabled="@isScanning">
-                                <option value="Color">Color</option>
-                                <option value="Grayscale">Escala de grises</option>
-                                <option value="BlackWhite">Blanco y negro</option>
-                            </select>
-                        </div>
-                        
-                        <div class="scanner-option-row">
-                            <label class="scanner-label">FUENTE:</label>
-                            <select @bind="selectedSource" class="scanner-select" disabled="@isScanning">
-                                <option value="Flatbed">Documento (Cama plana)</option>
-                                <option value="Feeder">Alimentador</option>
-                                <option value="Auto">Automático</option>
-                            </select>
-                        </div>
-                        
-                        @if (AllowMultiplePages)
+                    @* Área de vista previa principal *@
+                    <div class="scanner-preview-main @(previewZoom > 0 ? "scanner-preview-scrollable" : "")">
+                        @if (isScanning)
                         {
-                            <div class="scanner-option-row">
-                                <label class="scanner-label">SALIDA:</label>
-                                <select @bind="outputFormat" class="scanner-select" disabled="@isScanning">
-                                    <option value="images">Imágenes separadas</option>
-                                    <option value="pdf">PDF combinado</option>
-                                    <option value="pdf-ocr">PDF buscable (OCR)</option>
-                                </select>
+                            <div class="scanner-progress-overlay">
+                                <div class="scanner-progress-content">
+                                    <div class="scanner-progress-spinner"></div>
+                                    <div class="scanner-progress-text">@progressStatus</div>
+                                    <div class="scanner-progress-bar">
+                                        <div class="scanner-progress-fill" style="width: @(progressPercent * 100)%"></div>
+                                    </div>
+                                    <div class="scanner-progress-page">Página @currentPage</div>
+                                </div>
                             </div>
-                            
-                            @if (outputFormat == "pdf-ocr")
-                            {
-                                <div class="scanner-option-row">
-                                    <label class="scanner-label">IDIOMA OCR:</label>
-                                    <select @bind="ocrLanguage" class="scanner-select" disabled="@isScanning">
-                                        <option value="spa">Español</option>
-                                        <option value="eng">Inglés</option>
-                                        <option value="por">Portugués</option>
-                                    </select>
-                                    @if (!ocrService.IsAvailable)
-                                    {
-                                        <span class="scanner-ocr-warning" title="OCR no está instalado. El PDF se generará sin texto buscable.">⚠️</span>
-                                    }
-                                </div>
-                            }
                         }
-                    </div>
-                    
-                    @* Panel de Corrección de Imagen (colapsable) *@
-                    <div class="scanner-correction-panel">
-                        <div class="scanner-correction-header" @onclick="ToggleCorrectionPanel">
-                            <span>CORRECCION DE IMAGEN</span>
-                            <span class="scanner-correction-toggle">@(showCorrectionPanel ? "▼" : "▶")</span>
-                        </div>
-                        
-                        @if (showCorrectionPanel)
+                        else if (isGeneratingPdf)
                         {
-                            <div class="scanner-correction-body">
-                                <div class="scanner-slider-row">
-                                    <label>BRILLO:</label>
-                                    <input type="range" min="-100" max="100" @bind="imageCorrection.Brightness" 
-                                           @bind:event="oninput" disabled="@isScanning" />
-                                    <span class="scanner-slider-value">@imageCorrection.Brightness</span>
+                            <div class="scanner-progress-overlay">
+                                <div class="scanner-progress-content">
+                                    <div class="scanner-progress-spinner"></div>
+                                    <div class="scanner-progress-text">GENERANDO PDF...</div>
+                                    <div class="scanner-progress-bar">
+                                        <div class="scanner-progress-fill scanner-progress-indeterminate"></div>
+                                    </div>
+                                    <div class="scanner-progress-page">Combinando @scannedPages.Count página(s)</div>
                                 </div>
+                            </div>
+                        }
+                        else if (scannedPages.Count > 0)
+                        {
+                            <div class="scanner-image-wrapper" @ondblclick="OpenFullscreenOverlay" title="Doble clic para pantalla completa">
+                                <img src="data:@scannedPages[previewIndex].MimeType;base64,@Convert.ToBase64String(scannedPages[previewIndex].ImageBytes)" 
+                                     alt="Página escaneada"
+                                     class="scanner-main-image"
+                                     style="@GetImageZoomStyle()" />
+                            </div>
+                        }
+                        else if (isPreviewMode && previewImage != null)
+                        {
+                            <div class="scanner-preview-selection-area"
+                                 @onmousedown="StartAreaSelectionAsync"
+                                 @onmousemove="UpdateAreaSelectionAsync"
+                                 @onmouseup="EndAreaSelectionAsync"
+                                 @onmouseleave="EndAreaSelectionAsync">
+                                <img src="data:@previewImage.MimeType;base64,@Convert.ToBase64String(previewImage.ImageBytes)" 
+                                     alt="Vista previa" @ref="previewImageElement"
+                                     class="scanner-main-image" />
                                 
-                                <div class="scanner-slider-row">
-                                    <label>CONTRASTE:</label>
-                                    <input type="range" min="-100" max="100" @bind="imageCorrection.Contrast" 
-                                           @bind:event="oninput" disabled="@isScanning" />
-                                    <span class="scanner-slider-value">@imageCorrection.Contrast</span>
-                                </div>
-                                
-                                <div class="scanner-slider-row">
-                                    <label>GAMMA:</label>
-                                    <input type="range" min="10" max="300" @bind="gammaSliderValue" 
-                                           @bind:event="oninput" disabled="@isScanning" />
-                                    <span class="scanner-slider-value">@imageCorrection.Gamma.ToString("F1")</span>
-                                </div>
-                                
-                                <div class="scanner-slider-row">
-                                    <label>NITIDEZ:</label>
-                                    <input type="range" min="0" max="100" @bind="imageCorrection.Sharpness" 
-                                           @bind:event="oninput" disabled="@isScanning" />
-                                    <span class="scanner-slider-value">@imageCorrection.Sharpness</span>
-                                </div>
-                                
-                                @if (scanOptions.ColorMode == ScanColorMode.BlackWhite)
+                                @if (selectedArea != null && !selectedArea.IsFullArea)
                                 {
-                                    <div class="scanner-slider-row">
-                                        <label>UMBRAL B/N:</label>
-                                        <input type="range" min="0" max="255" @bind="imageCorrection.BlackWhiteThreshold" 
-                                               @bind:event="oninput" disabled="@isScanning" />
-                                        <span class="scanner-slider-value">@imageCorrection.BlackWhiteThreshold</span>
+                                    <div class="scanner-selection-box"
+                                         style="left: @(selectedArea.Left)%; top: @(selectedArea.Top)%; 
+                                                width: @(selectedArea.Width)%; height: @(selectedArea.Height)%;">
+                                        <div class="scanner-selection-info">
+                                            @(selectedArea.Width.ToString("F0"))% × @(selectedArea.Height.ToString("F0"))%
+                                        </div>
                                     </div>
                                 }
-                                
-                                <div class="scanner-correction-actions">
-                                    <button class="scanner-btn-small" @onclick="ResetCorrections" disabled="@isScanning">
-                                        RESTABLECER
-                                    </button>
-                                    @if (scannedPages.Count > 0 && imageCorrection.HasCorrections)
+                                @if (isSelectingArea)
+                                {
+                                    <div class="scanner-selection-box scanner-selection-active"
+                                         style="left: @Math.Min(selectionStart.X, selectionCurrent.X)%; 
+                                                top: @Math.Min(selectionStart.Y, selectionCurrent.Y)%; 
+                                                width: @Math.Abs(selectionCurrent.X - selectionStart.X)%; 
+                                                height: @Math.Abs(selectionCurrent.Y - selectionStart.Y)%;">
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="scanner-placeholder-large">
+                                <div class="scanner-placeholder-icon">📄</div>
+                                <div class="scanner-placeholder-text">COLOQUE EL DOCUMENTO EN EL ESCÁNER</div>
+                                <div class="scanner-placeholder-hint">
+                                    @if (AllowMultiplePages)
                                     {
-                                        <button class="scanner-btn-small scanner-btn-preview" @onclick="PreviewCorrections" 
-                                                disabled="@(isScanning || isPreviewingCorrections)"
-                                                title="Ver cómo quedará la imagen con las correcciones actuales">
-                                            @(isPreviewingCorrections ? "PREVISUALIZANDO..." : "VISTA PREVIA")
-                                        </button>
-                                        <button class="scanner-btn-small scanner-btn-apply" @onclick="ApplyCorrectionsToCurrentPage" 
-                                                disabled="@isScanning">
-                                            APLICAR
-                                        </button>
+                                        <span>Presione "ESCANEAR" para digitalizar cada página</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Use "Vista Previa" para seleccionar área o "Escanear" directo</span>
                                     }
                                 </div>
                             </div>
                         }
                     </div>
+                    
+                    @* Barra de estado inferior *@
+                    <div class="scanner-preview-statusbar">
+                        @if (scannedPages.Count > 0)
+                        {
+                            <span>@scannedPages[previewIndex].Width × @scannedPages[previewIndex].Height px</span>
+                            <span class="scanner-status-separator">|</span>
+                            <span>@FormatFileSize(scannedPages[previewIndex].ImageBytes.Length)</span>
+                            <span class="scanner-status-separator">|</span>
+                            <span>@scannedPages[previewIndex].ScannedAt.ToString("HH:mm:ss")</span>
+                            <span class="scanner-status-separator">|</span>
+                            <span class="scanner-status-hint">Doble clic o ⛶ para pantalla completa</span>
+                        }
+                        else if (previewImage != null)
+                        {
+                            <span>Vista previa: @previewImage.Width × @previewImage.Height px (75 DPI)</span>
+                        }
+                        else
+                        {
+                            <span>Sin documento</span>
+                        }
+                    </div>
                 </div>
                 
-                @* Contenedor Principal con miniaturas y preview *@
-                <div class="scanner-main-container">
+                @* === PANEL DERECHO: CONFIGURACIÓN Y MINIATURAS === *@
+                <div class="scanner-config-panel">
+                    @* Selector de escáner *@
+                    <div class="scanner-section">
+                        <div class="scanner-section-header">ESCÁNER</div>
+                        <div class="scanner-section-body">
+                            <div class="scanner-field">
+                                <select @bind="selectedDeviceId" class="scanner-select-full" disabled="@isScanning">
+                                    @if (scanners.Count == 0)
+                                    {
+                                        <option value="">-- SIN ESCÁNERES --</option>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var scanner in scanners)
+                                        {
+                                            <option value="@scanner.Id">@scanner.Name</option>
+                                        }
+                                    }
+                                </select>
+                                <button class="scanner-btn-icon" @onclick="RefreshScanners" disabled="@isScanning" title="Actualizar lista">↻</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    @* Configuración de entrada *@
+                    <div class="scanner-section">
+                        <div class="scanner-section-header">CONFIGURACIÓN DE ENTRADA</div>
+                        <div class="scanner-section-body">
+                            <div class="scanner-field-row">
+                                <label>Fuente:</label>
+                                <select @bind="selectedSource" class="scanner-select" disabled="@isScanning">
+                                    <option value="Flatbed">Documento (Placa)</option>
+                                    <option value="Feeder">Alimentador</option>
+                                    <option value="Auto">Automático</option>
+                                </select>
+                            </div>
+                            <div class="scanner-field-row">
+                                <label>Modo color:</label>
+                                <select @bind="selectedColorMode" class="scanner-select" disabled="@isScanning">
+                                    <option value="Color">Color</option>
+                                    <option value="Grayscale">Escala de grises</option>
+                                    <option value="BlackWhite">Blanco y negro</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    @* Configuración de salida *@
+                    <div class="scanner-section">
+                        <div class="scanner-section-header">CONFIGURACIÓN DE SALIDA</div>
+                        <div class="scanner-section-body">
+                            <div class="scanner-field-row">
+                                <label>Resolución:</label>
+                                <select @bind="selectedDpi" class="scanner-select" disabled="@isScanning">
+                                    <option value="75">75 ppp</option>
+                                    <option value="100">100 ppp</option>
+                                    <option value="150">150 ppp</option>
+                                    <option value="200">200 ppp</option>
+                                    <option value="300">300 ppp</option>
+                                    <option value="400">400 ppp</option>
+                                    <option value="600">600 ppp</option>
+                                </select>
+                            </div>
+                            @if (AllowMultiplePages)
+                            {
+                                <div class="scanner-field-row">
+                                    <label>Formato:</label>
+                                    <select @bind="outputFormat" class="scanner-select" disabled="@isScanning">
+                                        <option value="images">Imágenes separadas</option>
+                                        <option value="pdf">PDF combinado</option>
+                                        <option value="pdf-ocr">PDF buscable (OCR)</option>
+                                    </select>
+                                </div>
+                                @if (outputFormat == "pdf-ocr")
+                                {
+                                    <div class="scanner-field-row">
+                                        <label>Idioma OCR:</label>
+                                        <select @bind="ocrLanguage" class="scanner-select" disabled="@isScanning">
+                                            <option value="spa">Español</option>
+                                            <option value="eng">Inglés</option>
+                                            <option value="por">Portugués</option>
+                                        </select>
+                                        @if (!ocrService.IsAvailable)
+                                        {
+                                            <span class="scanner-ocr-warning" title="OCR no instalado">⚠️</span>
+                                        }
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                    
+                    @* Configuración de imagen *@
+                    <div class="scanner-section scanner-section-collapsible">
+                        <div class="scanner-section-header scanner-section-toggle" @onclick="ToggleCorrectionPanel">
+                            <span>CONFIGURACIÓN DE IMAGEN</span>
+                            <span>@(showCorrectionPanel ? "▼" : "▶")</span>
+                        </div>
+                        @if (showCorrectionPanel)
+                        {
+                            <div class="scanner-section-body">
+                                <div class="scanner-slider-field">
+                                    <label>Ajuste imagen:</label>
+                                    <select class="scanner-select" disabled="@isScanning">
+                                        <option>Automático</option>
+                                    </select>
+                                </div>
+                                <div class="scanner-slider-field">
+                                    <label>Nitidez:</label>
+                                    <select @bind="sharpnessMode" class="scanner-select" disabled="@isScanning">
+                                        <option value="0">DESACTIVADO</option>
+                                        <option value="1">ACTIVADO</option>
+                                    </select>
+                                </div>
+                                <div class="scanner-slider-field">
+                                    <label>Brillo:</label>
+                                    <input type="range" min="-100" max="100" @bind="imageCorrection.Brightness" @bind:event="oninput" disabled="@isScanning" />
+                                    <span class="scanner-slider-val">@imageCorrection.Brightness</span>
+                                </div>
+                                <div class="scanner-slider-field">
+                                    <label>Contraste:</label>
+                                    <input type="range" min="-100" max="100" @bind="imageCorrection.Contrast" @bind:event="oninput" disabled="@isScanning" />
+                                    <span class="scanner-slider-val">@imageCorrection.Contrast</span>
+                                </div>
+                                <div class="scanner-slider-field">
+                                    <label>Gamma:</label>
+                                    <input type="range" min="10" max="300" @bind="gammaSliderValue" @bind:event="oninput" disabled="@isScanning" />
+                                    <span class="scanner-slider-val">@imageCorrection.Gamma.ToString("F1")</span>
+                                </div>
+                                @if (scannedPages.Count > 0 && imageCorrection.HasCorrections)
+                                {
+                                    <div class="scanner-correction-btns">
+                                        <button class="scanner-btn-sm" @onclick="ResetCorrections" disabled="@isScanning">Restablecer</button>
+                                        <button class="scanner-btn-sm scanner-btn-apply" @onclick="ApplyCorrectionsToCurrentPage" disabled="@isScanning">Aplicar</button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    @* Perfiles guardados *@
+                    <div class="scanner-section">
+                        <div class="scanner-section-header">PERFIL</div>
+                        <div class="scanner-section-body">
+                            <div class="scanner-field">
+                                <select @bind="selectedProfileId" class="scanner-select-full" disabled="@isScanning"
+                                        @bind:after="LoadSelectedProfile">
+                                    <option value="0">Definido por el usuario</option>
+                                    @foreach (var profile in profiles)
+                                    {
+                                        <option value="@profile.Id">@profile.Name @(profile.IsDefault ? "★" : "")</option>
+                                    }
+                                </select>
+                                <button class="scanner-btn-icon" @onclick="OpenSaveProfileDialog" disabled="@isScanning" title="Guardar perfil">💾</button>
+                            </div>
+                        </div>
+                    </div>
+                    
                     @* Miniaturas (solo en modo batch) *@
                     @if (AllowMultiplePages && scannedPages.Count > 0)
                     {
-                        <div class="scanner-thumbnails">
-                            <div class="scanner-thumbnails-header">
-                                PAGINAS (@scannedPages.Count)
-                            </div>
-                            <div class="scanner-thumbnails-list">
+                        <div class="scanner-section scanner-section-thumbnails">
+                            <div class="scanner-section-header">PÁGINAS (@scannedPages.Count)</div>
+                            <div class="scanner-thumbnails-grid">
                                 @for (int i = 0; i < scannedPages.Count; i++)
                                 {
                                     var index = i;
-                                    <div class="scanner-thumbnail @(previewIndex == index ? "scanner-thumbnail-selected" : "")" 
+                                    <div class="scanner-thumb @(previewIndex == index ? "scanner-thumb-selected" : "")" 
                                          @onclick="() => SelectPage(index)">
-                                        <div class="scanner-thumbnail-number">@(index + 1)</div>
-                                        <img src="data:@scannedPages[index].MimeType;base64,@Convert.ToBase64String(scannedPages[index].ImageBytes)" 
-                                             alt="Página @(index + 1)" />
-                                        <button class="scanner-thumbnail-delete" 
-                                                @onclick="() => DeletePage(index)" 
-                                                @onclick:stopPropagation="true"
-                                                title="Eliminar página">×</button>
+                                        <span class="scanner-thumb-num">@(index + 1)</span>
+                                        <img src="data:@scannedPages[index].MimeType;base64,@Convert.ToBase64String(scannedPages[index].ImageBytes)" alt="Pág @(index + 1)" />
+                                        <button class="scanner-thumb-del" @onclick="() => DeletePage(index)" @onclick:stopPropagation="true" title="Eliminar">×</button>
                                     </div>
                                 }
                             </div>
                         </div>
                     }
                     
-                    @* Vista Previa *@
-                    <div class="scanner-preview-container">
-                        @if (isScanning)
-                        {
-                            <div class="scanner-progress">
-                                <div class="scanner-progress-text">@progressStatus</div>
-                                <div class="scanner-progress-bar">
-                                    <div class="scanner-progress-fill" style="width: @(progressPercent * 100)%"></div>
-                                </div>
-                                <div class="scanner-progress-page">Página @currentPage</div>
-                            </div>
-                        }
-                        else if (isGeneratingPdf)
-                        {
-                            <div class="scanner-progress">
-                                <div class="scanner-progress-text">GENERANDO PDF...</div>
-                                <div class="scanner-progress-bar">
-                                    <div class="scanner-progress-fill scanner-progress-indeterminate"></div>
-                                </div>
-                                <div class="scanner-progress-page">Combinando @scannedPages.Count página(s)</div>
-                            </div>
-                        }
-                        else if (scannedPages.Count > 0)
-                        {
-                            <div class="scanner-preview">
-                                <div class="scanner-preview-nav">
-                                    <button class="scanner-btn-nav" @onclick="PreviousPage" disabled="@(previewIndex <= 0)">◀</button>
-                                    <span>PAGINA @(previewIndex + 1) DE @scannedPages.Count</span>
-                                    <button class="scanner-btn-nav" @onclick="NextPage" disabled="@(previewIndex >= scannedPages.Count - 1)">▶</button>
-                                </div>
-                                
-                                @* Barra de herramientas de transformación *@
-                                <div class="scanner-toolbar">
-                                    <button class="scanner-tool-btn" @onclick="@(() => RotatePage(-90))" title="Rotar izquierda 90°">
-                                        ↺
-                                    </button>
-                                    <button class="scanner-tool-btn" @onclick="@(() => RotatePage(90))" title="Rotar derecha 90°">
-                                        ↻
-                                    </button>
-                                    <button class="scanner-tool-btn" @onclick="@(() => RotatePage(180))" title="Rotar 180°">
-                                        ⟲
-                                    </button>
-                                    <div class="scanner-tool-separator"></div>
-                                    <button class="scanner-tool-btn" @onclick="FlipHorizontalPage" title="Voltear horizontal">
-                                        ⇆
-                                    </button>
-                                    <button class="scanner-tool-btn" @onclick="FlipVerticalPage" title="Voltear vertical">
-                                        ⇅
-                                    </button>
-                                    <div class="scanner-tool-separator"></div>
-                                    <button class="scanner-tool-btn" @onclick="AutoCropPage" title="Auto-recortar bordes">
-                                        ⬚
-                                    </button>
-                                </div>
-                                
-                                <div class="scanner-preview-image @(IsPortrait(scannedPages[previewIndex]) ? "portrait" : "landscape")">
-                                    <img src="data:@scannedPages[previewIndex].MimeType;base64,@Convert.ToBase64String(scannedPages[previewIndex].ImageBytes)" 
-                                         alt="Página escaneada" />
-                                </div>
-                                <div class="scanner-preview-info">
-                                    @scannedPages[previewIndex].Width x @scannedPages[previewIndex].Height px | 
-                                    @FormatFileSize(scannedPages[previewIndex].ImageBytes.Length) |
-                                    Escaneado: @scannedPages[previewIndex].ScannedAt.ToString("HH:mm:ss")
-                                </div>
-                            </div>
-                        }
-                        else if (isPreviewMode && previewImage != null)
-                        {
-                            @* Modo Vista Previa con selección de área *@
-                            <div class="scanner-preview-mode">
-                                <div class="scanner-preview-header">
-                                    SELECCIONE EL ÁREA A ESCANEAR (o deje vacío para área completa)
-                                </div>
-                                <div class="scanner-preview-canvas" 
-                                     @onmousedown="StartAreaSelectionAsync"
-                                     @onmousemove="UpdateAreaSelectionAsync"
-                                     @onmouseup="EndAreaSelectionAsync"
-                                     @onmouseleave="EndAreaSelectionAsync">
-                                    <img src="data:@previewImage.MimeType;base64,@Convert.ToBase64String(previewImage.ImageBytes)" 
-                                         alt="Vista previa" @ref="previewImageElement" />
-                                    
-                                    @if (selectedArea != null && !selectedArea.IsFullArea)
-                                    {
-                                        <div class="scanner-selection-box"
-                                             style="left: @(selectedArea.Left)%; top: @(selectedArea.Top)%; 
-                                                    width: @(selectedArea.Width)%; height: @(selectedArea.Height)%;">
-                                            <div class="scanner-selection-info">
-                                                @(selectedArea.Width.ToString("F0"))% x @(selectedArea.Height.ToString("F0"))%
-                                            </div>
-                                        </div>
-                                    }
-                                    @if (isSelectingArea)
-                                    {
-                                        <div class="scanner-selection-box scanner-selection-active"
-                                             style="left: @Math.Min(selectionStart.X, selectionCurrent.X)%; 
-                                                    top: @Math.Min(selectionStart.Y, selectionCurrent.Y)%; 
-                                                    width: @Math.Abs(selectionCurrent.X - selectionStart.X)%; 
-                                                    height: @Math.Abs(selectionCurrent.Y - selectionStart.Y)%;">
-                                        </div>
-                                    }
-                                </div>
-                                <div class="scanner-preview-actions">
-                                    <button class="scanner-btn-small" @onclick="ClearSelectedArea">
-                                        ÁREA COMPLETA
-                                    </button>
-                                    <span class="scanner-preview-info-text">
-                                        Vista previa: @previewImage.Width x @previewImage.Height px (75 DPI)
-                                    </span>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="scanner-placeholder">
-                                <div class="scanner-placeholder-icon">📄</div>
-                                <div class="scanner-placeholder-text">COLOQUE EL DOCUMENTO EN EL ESCANER</div>
-                                <div class="scanner-placeholder-hint">
-                                    @if (AllowMultiplePages)
-                                    {
-                                        <span>PRESIONE "ESCANEAR" PARA CADA PAGINA</span>
-                                    }
-                                    else
-                                    {
-                                        <span>USE "VISTA PREVIA" PARA SELECCIONAR ÁREA O "ESCANEAR" DIRECTO</span>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </div>
+                    @* Espacio flexible *@
+                    <div class="scanner-section-spacer"></div>
+                    
+                    @* Mensajes *@
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="scanner-message scanner-error">@errorMessage</div>
+                    }
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="scanner-message scanner-success">@successMessage</div>
+                    }
                 </div>
-                
-                @* Mensajes *@
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="scanner-message scanner-error">@errorMessage</div>
-                }
-                @if (!string.IsNullOrEmpty(successMessage))
-                {
-                    <div class="scanner-message scanner-success">@successMessage</div>
-                }
             </div>
             
-            <div class="scanner-footer">
+            @* === FOOTER CON BOTONES DE ACCIÓN === *@
+            <div class="scanner-footer-actions">
                 <div class="scanner-footer-left">
                     @if (scannedPages.Count > 0)
                     {
                         <button class="scanner-btn scanner-btn-secondary" @onclick="ClearPages" disabled="@(isScanning || isGeneratingPdf)">
-                            LIMPIAR TODO
+                            Limpiar Todo
                         </button>
-                        <span class="scanner-footer-info">
-                            @scannedPages.Count pág. | @FormatFileSize(scannedPages.Sum(p => p.ImageBytes.Length))
-                        </span>
+                        <span class="scanner-footer-info">@scannedPages.Count pág. | @FormatFileSize(scannedPages.Sum(p => p.ImageBytes.Length))</span>
                     }
                 </div>
                 <div class="scanner-footer-right">
                     @if (isScanning || isGeneratingPdf)
                     {
-                        <button class="scanner-btn scanner-btn-danger" @onclick="CancelScan" disabled="@isGeneratingPdf">
-                            CANCELAR
-                        </button>
+                        <button class="scanner-btn scanner-btn-danger" @onclick="CancelScan" disabled="@isGeneratingPdf">Cancelar</button>
                     }
                     else
                     {
-                        <button class="scanner-btn" @onclick="Cerrar">
-                            CERRAR [ESC]
-                        </button>
                         @if (scannedPages.Count == 0 && !isPreviewMode)
                         {
-                            <button class="scanner-btn" @onclick="StartPreviewScan" disabled="@(scanners.Count == 0)" title="Escaneo rápido de vista previa para seleccionar área">
-                                VISTA PREVIA
+                            <button class="scanner-btn" @onclick="StartPreviewScan" disabled="@(scanners.Count == 0)" title="Escaneo rápido de vista previa">
+                                Vista Preliminar
                             </button>
                         }
                         @if (isPreviewMode)
                         {
-                            <button class="scanner-btn scanner-btn-secondary" @onclick="ExitPreviewMode">
-                                CANCELAR PREVIEW
-                            </button>
+                            <button class="scanner-btn" @onclick="ClearSelectedArea">Área Completa</button>
+                            <button class="scanner-btn scanner-btn-secondary" @onclick="ExitPreviewMode">Cancelar</button>
                             <button class="scanner-btn scanner-btn-success" @onclick="ScanWithSelectedArea" disabled="@(scanners.Count == 0)">
-                                ESCANEAR @(selectedArea?.IsFullArea != false ? "COMPLETO" : "ÁREA")
+                                Escanear @(selectedArea?.IsFullArea != false ? "" : "Área")
                             </button>
                         }
                         else
@@ -409,11 +400,11 @@
                             <button class="scanner-btn scanner-btn-primary" @onclick="StartScan" disabled="@(scanners.Count == 0)">
                                 @if (AllowMultiplePages && scannedPages.Count > 0)
                                 {
-                                    <span>+ ESCANEAR [F5]</span>
+                                    <span>Escanear</span>
                                 }
                                 else
                                 {
-                                    <span>ESCANEAR [F5]</span>
+                                    <span>Escanear</span>
                                 }
                             </button>
                         }
@@ -421,23 +412,18 @@
                         {
                             @if (AllowMultiplePages && outputFormat == "pdf")
                             {
-                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsPdf">
-                                    GENERAR PDF (@scannedPages.Count)
-                                </button>
+                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsPdf">Generar PDF</button>
                             }
                             else if (AllowMultiplePages && outputFormat == "pdf-ocr")
                             {
-                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsOcrPdf">
-                                    PDF BUSCABLE (@scannedPages.Count)
-                                </button>
+                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsOcrPdf">PDF Buscable</button>
                             }
                             else
                             {
-                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmScan">
-                                    ACEPTAR (@scannedPages.Count)
-                                </button>
+                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmScan">Aceptar</button>
                             }
                         }
+                        <button class="scanner-btn" @onclick="Cerrar">Cerrar</button>
                     }
                 </div>
             </div>
@@ -490,6 +476,15 @@
         </div>
     </div>
 }
+
+@* Popup de vista previa fullscreen *@
+<ImagePreviewPopup @bind-IsVisible="showFullscreenPreview"
+                   ImageDataUrl="@fullscreenImageUrl"
+                   ImageInfo="@fullscreenImageInfo"
+                   PageInfo="@fullscreenPageInfo"
+                   CurrentIndex="@fullscreenCurrentIndex"
+                   TotalPages="@fullscreenTotalPages"
+                   OnNavigate="NavigateFullscreenPage" />
 
 @code {
     [Parameter] public bool IsVisible { get; set; }
@@ -598,6 +593,17 @@
         set => imageCorrection.Gamma = value / 100f;
     }
     
+    // Nitidez como selector (0=off, 1=on)
+    private int sharpnessMode
+    {
+        get => imageCorrection.Sharpness > 0 ? 1 : 0;
+        set => imageCorrection.Sharpness = value == 1 ? 50 : 0;
+    }
+    
+    // Control de zoom de vista previa (0 = ajustar, 50 = 50%, 100 = 100%)
+    private int previewZoom = 0;
+    
+    // Popup de pantalla completa
     private bool isScanning = false;
     private bool isGeneratingPdf = false;
     private bool isLoadingScanners = false;
@@ -1131,6 +1137,123 @@
     /// Determina si la imagen es vertical (portrait) u horizontal (landscape)
     /// </summary>
     private bool IsPortrait(ScannedPageDto page) => page.Height > page.Width;
+    
+    /// <summary>
+    /// Establece el nivel de zoom de la vista previa
+    /// </summary>
+    private void SetZoom(int zoom)
+    {
+        previewZoom = zoom;
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Aumenta el zoom de la vista previa
+    /// </summary>
+    private void ZoomIn()
+    {
+        if (previewZoom == 0) previewZoom = 50;
+        else if (previewZoom < 200) previewZoom += 25;
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Reduce el zoom de la vista previa
+    /// </summary>
+    private void ZoomOut()
+    {
+        if (previewZoom > 25) previewZoom -= 25;
+        else previewZoom = 0; // Volver a ajuste automático
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Genera el estilo CSS para aplicar zoom a la imagen
+    /// </summary>
+    private string GetImageZoomStyle()
+    {
+        if (previewZoom == 0)
+        {
+            // Auto-ajuste: la imagen se adapta al contenedor
+            return "max-width: 100%; max-height: 100%; width: auto; height: auto;";
+        }
+        else
+        {
+            // Zoom específico: aplicar escala
+            return $"max-width: none; max-height: none; width: {previewZoom}%; height: auto;";
+        }
+    }
+    
+    #endregion
+    
+    #region Popup Pantalla Completa (Overlay)
+    
+    // Variables para el popup de vista previa fullscreen
+    private bool showFullscreenPreview = false;
+    private string? fullscreenImageUrl = null;
+    private string? fullscreenImageInfo = null;
+    private string? fullscreenPageInfo = null;
+    private int fullscreenCurrentIndex = 0;
+    private int fullscreenTotalPages = 1;
+    
+    /// <summary>
+    /// Abre el overlay de vista previa a pantalla completa
+    /// </summary>
+    private void OpenFullscreenOverlay()
+    {
+        if (scannedPages.Count == 0 && previewImage == null)
+        {
+            Console.WriteLine("[FULLSCREEN] No hay imágenes para mostrar");
+            return;
+        }
+        
+        Console.WriteLine("[FULLSCREEN] Abriendo overlay de vista previa...");
+        
+        if (scannedPages.Count > 0)
+        {
+            fullscreenCurrentIndex = previewIndex;
+            fullscreenTotalPages = scannedPages.Count;
+            UpdateFullscreenImage();
+        }
+        else if (previewImage != null)
+        {
+            fullscreenCurrentIndex = 0;
+            fullscreenTotalPages = 1;
+            fullscreenImageUrl = $"data:{previewImage.MimeType};base64,{Convert.ToBase64String(previewImage.ImageBytes)}";
+            fullscreenImageInfo = $"{previewImage.Width} × {previewImage.Height} px";
+            fullscreenPageInfo = "Vista previa";
+        }
+        
+        showFullscreenPreview = true;
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Actualiza la imagen mostrada en el popup según el índice actual
+    /// </summary>
+    private void UpdateFullscreenImage()
+    {
+        if (scannedPages.Count > 0 && fullscreenCurrentIndex >= 0 && fullscreenCurrentIndex < scannedPages.Count)
+        {
+            var page = scannedPages[fullscreenCurrentIndex];
+            fullscreenImageUrl = $"data:{page.MimeType};base64,{Convert.ToBase64String(page.ImageBytes)}";
+            fullscreenImageInfo = $"{page.Width} × {page.Height} px";
+            fullscreenPageInfo = $"Página {fullscreenCurrentIndex + 1} de {fullscreenTotalPages}";
+        }
+    }
+    
+    /// <summary>
+    /// Navega a una página específica en el popup
+    /// </summary>
+    private void NavigateFullscreenPage(int newIndex)
+    {
+        if (newIndex >= 0 && newIndex < fullscreenTotalPages)
+        {
+            fullscreenCurrentIndex = newIndex;
+            UpdateFullscreenImage();
+            StateHasChanged();
+        }
+    }
     
     #endregion
 

@@ -1,5 +1,6 @@
 /* ========================================
-   SCANNER MODAL - Estilo Hospitalario
+   SCANNER MODAL - Estilo ScanGear/Canon
+   Layout: Vista previa grande + Panel derecho
    ======================================== */
 
 .scanner-backdrop {
@@ -8,54 +9,60 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
 }
 
+/* Modal principal - Pantalla completa estilo app de escritorio */
 .scanner-modal {
-    background-color: #fff;
-    border: 3px solid #000;
-    width: 700px;
-    max-width: 95vw;
-    max-height: 90vh;
+    background-color: #FFFFFF;
+    border: 2px solid #666666;
     display: flex;
     flex-direction: column;
-    font-family: 'Courier New', monospace;
+    font-family: 'Courier New', 'Courier', monospace;
+    font-size: 13px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
-.scanner-modal-wide {
-    width: 900px;
+.scanner-modal-fullscreen {
+    width: 98vw;
+    height: 95vh;
+    max-width: 1800px;
+    max-height: none; /* Sin límite de altura */
 }
 
+/* Header - Estilo hospitalario */
 .scanner-header {
-    background-color: #000;
-    color: #fff;
-    padding: 12px 16px;
+    background-color: #FFFFFF;
+    border-bottom: 2px solid #666666;
+    padding: 8px 12px;
     font-size: 14px;
-    font-weight: bold;
-    letter-spacing: 1px;
+    font-weight: 600;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    color: #000000;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .scanner-close {
-    background: transparent;
-    border: 1px solid #fff;
-    color: #fff;
-    width: 24px;
+    background: linear-gradient(to bottom, #f5f5f5, #ddd);
+    border: 1px solid #999;
+    color: #333;
+    width: 28px;
     height: 24px;
     cursor: pointer;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
+    font-size: 14px;
+    border-radius: 3px;
 }
 
 .scanner-close:hover:not(:disabled) {
-    background-color: #fff;
-    color: #000;
+    background: linear-gradient(to bottom, #fee, #fcc);
+    border-color: #c00;
 }
 
 .scanner-close:disabled {
@@ -64,333 +71,718 @@
 }
 
 /* ========================================
-   BODY
+   BODY - Layout Horizontal Principal
    ======================================== */
-.scanner-body {
-    padding: 16px;
+.scanner-body-horizontal {
     flex: 1;
-    overflow-y: auto;
     display: flex;
-    flex-direction: column;
-    gap: 16px;
+    overflow: hidden;
+    background-color: #e8e8e8;
+    min-height: 0; /* Importante para que flex funcione correctamente */
 }
 
 /* ========================================
-   OPTIONS
+   PANEL IZQUIERDO: VISTA PREVIA GRANDE
    ======================================== */
-.scanner-options {
+.scanner-preview-panel {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px dashed #ccc;
+    background-color: #666;
+    border-right: 1px solid #999;
+    min-width: 0;
+    min-height: 0; /* Importante para que flex funcione correctamente */
 }
 
-.scanner-option-row {
+/* Toolbar superior de vista previa */
+.scanner-preview-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: linear-gradient(to bottom, #555, #444);
+    border-bottom: 1px solid #333;
+    min-height: 40px;
+}
+
+.scanner-toolbar-left,
+.scanner-toolbar-right {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.scanner-page-indicator {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 0 10px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.scanner-tool-btn {
+    min-width: 32px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #666;
+    background: linear-gradient(to bottom, #5a5a5a, #4a4a4a);
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scanner-tool-btn:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #6a6a6a, #5a5a5a);
+    border-color: #888;
+}
+
+.scanner-tool-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.scanner-tool-btn.active {
+    background: linear-gradient(to bottom, #4a7ab8, #3a6aa8);
+    border-color: #2a5a98;
+}
+
+/* Botón de ampliar/pantalla completa */
+.scanner-fullscreen-btn {
+    background: linear-gradient(to bottom, #006600, #004400) !important;
+    border-color: #004400 !important;
+    color: #fff !important;
+    padding: 0 12px !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.scanner-fullscreen-btn:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #008800, #006600) !important;
+}
+
+/* Link que parece botón para abrir nueva ventana */
+.scanner-tool-link {
+    text-decoration: none;
+}
+
+.scanner-tool-link.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.scanner-tool-separator {
+    width: 1px;
+    height: 20px;
+    background-color: #666;
+    margin: 0 6px;
+}
+
+.scanner-zoom-indicator {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 45px;
+    text-align: center;
+    padding: 0 6px;
+}
+
+/* Área principal de vista previa */
+.scanner-preview-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #555;
+    background-image: 
+        linear-gradient(45deg, #4a4a4a 25%, transparent 25%),
+        linear-gradient(-45deg, #4a4a4a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #4a4a4a 75%),
+        linear-gradient(-45deg, transparent 75%, #4a4a4a 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    overflow: hidden;
+    position: relative;
+    min-height: 0; /* Importante para que flex funcione correctamente */
+}
+
+.scanner-preview-scrollable {
+    overflow: auto;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.scanner-image-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Permite scroll cuando imagen es grande con zoom */
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.scanner-main-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    background-color: #fff;
+    transition: width 0.15s ease-out;
+    /* El zoom se aplica mediante style inline */
+}
+
+/* Área de selección en vista previa */
+.scanner-preview-selection-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    max-height: 100%;
+    cursor: crosshair;
+}
+
+.scanner-preview-selection-area img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+}
+
+.scanner-selection-box {
+    position: absolute;
+    border: 2px dashed #00aaff;
+    background-color: rgba(0, 170, 255, 0.15);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.scanner-selection-active {
+    border-color: #ffaa00;
+    background-color: rgba(255, 170, 0, 0.2);
+}
+
+.scanner-selection-info {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 2px;
+}
+
+/* Placeholder cuando no hay documento */
+.scanner-placeholder-large {
+    text-align: center;
+    color: #bbb;
+    padding: 40px;
+}
+
+.scanner-placeholder-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.scanner-placeholder-text {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.scanner-placeholder-hint {
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+/* Barra de estado inferior */
+.scanner-preview-statusbar {
+    padding: 6px 12px;
+    background: linear-gradient(to bottom, #444, #3a3a3a);
+    border-top: 1px solid #333;
+    color: #ccc;
+    font-size: 11px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.scanner-status-separator {
+    color: #666;
+}
+
+.scanner-status-hint {
+    color: #4a7ab8;
+    font-style: italic;
+    cursor: pointer;
+}
+
+.scanner-status-hint:hover {
+    text-decoration: underline;
+}
+
+/* ========================================
+   PANEL DERECHO: CONFIGURACIÓN
+   ======================================== */
+.scanner-config-panel {
+    width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: #f0f0f0;
+    overflow-y: auto;
+}
+
+/* Secciones del panel */
+.scanner-section {
+    border-bottom: 1px solid #ccc;
+}
+
+.scanner-section-header {
+    background: linear-gradient(to bottom, #e8e8e8, #ddd);
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid #bbb;
+}
+
+.scanner-section-toggle {
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+}
+
+.scanner-section-toggle:hover {
+    background: linear-gradient(to bottom, #f0f0f0, #e8e8e8);
+}
+
+.scanner-section-body {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background-color: #f8f8f8;
+}
+
+.scanner-section-collapsible .scanner-section-body {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-top: none;
+    margin: 0 8px 8px 8px;
+    border-radius: 0 0 4px 4px;
+}
+
+/* Campos de formulario */
+.scanner-field {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.scanner-field-row {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.scanner-option-group {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
+.scanner-field-row label {
+    min-width: 85px;
+    font-size: 11px;
+    color: #444;
 }
 
-.scanner-label {
-    font-weight: bold;
+.scanner-select,
+.scanner-select-full {
+    font-family: 'Segoe UI', sans-serif;
     font-size: 11px;
-    min-width: 60px;
-    letter-spacing: 0.5px;
+    padding: 4px 6px;
+    border: 1px solid #aaa;
+    border-radius: 2px;
+    background-color: #fff;
 }
 
 .scanner-select {
     flex: 1;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    padding: 4px 8px;
-    border: 1px solid #000;
-    background-color: #fff;
-    min-width: 120px;
 }
 
-.scanner-select:focus {
-    outline: 2px solid #000;
-    outline-offset: 0;
+.scanner-select-full {
+    flex: 1;
 }
 
-.scanner-select:disabled {
-    background-color: #e0e0e0;
-    color: #666;
+.scanner-select:focus,
+.scanner-select-full:focus {
+    outline: none;
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
 }
 
-.scanner-btn-small {
-    background-color: #fff;
-    border: 1px solid #000;
-    padding: 4px 8px;
+.scanner-select:disabled,
+.scanner-select-full:disabled {
+    background-color: #eee;
+    color: #888;
+}
+
+.scanner-btn-icon {
+    width: 28px;
+    height: 24px;
+    border: 1px solid #aaa;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
     cursor: pointer;
-    font-family: 'Courier New', monospace;
     font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.scanner-btn-small:hover:not(:disabled) {
-    background-color: #000;
-    color: #fff;
+.scanner-btn-icon:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #fff, #f0f0f0);
+    border-color: #888;
 }
 
-.scanner-btn-small:disabled {
+.scanner-btn-icon:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-/* ========================================
-   MAIN CONTAINER (Thumbnails + Preview)
-   ======================================== */
-.scanner-main-container {
+/* Sliders de configuración de imagen */
+.scanner-slider-field {
     display: flex;
-    gap: 16px;
-    flex: 1;
-    min-height: 320px;
-    max-height: 500px;
-    overflow: hidden;
-}
-
-/* ========================================
-   THUMBNAILS
-   ======================================== */
-.scanner-thumbnails {
-    width: 140px;
-    flex-shrink: 0;
-    border: 2px solid #000;
-    display: flex;
-    flex-direction: column;
-    background-color: #f9f9f9;
-}
-
-.scanner-thumbnails-header {
-    background-color: #000;
-    color: #fff;
-    padding: 6px 8px;
-    font-size: 10px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    text-align: center;
-}
-
-.scanner-thumbnails-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 8px;
 }
 
-.scanner-thumbnail {
+.scanner-slider-field label {
+    min-width: 75px;
+    font-size: 11px;
+    color: #444;
+}
+
+.scanner-slider-field input[type="range"] {
+    flex: 1;
+    height: 4px;
+    cursor: pointer;
+}
+
+.scanner-slider-field select {
+    flex: 1;
+    font-size: 11px;
+    padding: 3px 6px;
+    border: 1px solid #aaa;
+    border-radius: 2px;
+}
+
+.scanner-slider-val {
+    min-width: 35px;
+    font-size: 11px;
+    font-family: 'Consolas', monospace;
+    text-align: right;
+    color: #666;
+}
+
+.scanner-correction-btns {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid #ddd;
+}
+
+.scanner-btn-sm {
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 1px solid #aaa;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+    cursor: pointer;
+}
+
+.scanner-btn-sm:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #fff, #f0f0f0);
+}
+
+.scanner-btn-sm.scanner-btn-apply {
+    background: linear-gradient(to bottom, #5cb85c, #4cae4c);
+    border-color: #4cae4c;
+    color: #fff;
+}
+
+.scanner-btn-sm.scanner-btn-apply:hover {
+    background: linear-gradient(to bottom, #6cc86c, #5cb85c);
+}
+
+/* Sección de miniaturas */
+.scanner-section-thumbnails {
+    flex: 1;
+    min-height: 120px;
+    max-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.scanner-thumbnails-grid {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+    overflow-y: auto;
+    background-color: #fff;
+    align-content: flex-start;
+}
+
+.scanner-thumb {
     position: relative;
+    width: 65px;
     border: 2px solid #ccc;
     background-color: #fff;
     cursor: pointer;
-    padding: 4px;
-    transition: border-color 0.15s ease;
+    padding: 2px;
+    transition: border-color 0.15s;
 }
 
-.scanner-thumbnail:hover {
-    border-color: #666;
+.scanner-thumb:hover {
+    border-color: #888;
 }
 
-.scanner-thumbnail-selected {
-    border-color: #1976d2;
-    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.3);
+.scanner-thumb-selected {
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.3);
 }
 
-.scanner-thumbnail-number {
+.scanner-thumb-num {
     position: absolute;
-    top: 2px;
-    left: 2px;
-    background-color: #000;
+    top: 0;
+    left: 0;
+    background-color: #333;
     color: #fff;
     font-size: 9px;
     font-weight: bold;
-    padding: 2px 5px;
-    z-index: 1;
+    padding: 1px 4px;
 }
 
-.scanner-thumbnail img {
+.scanner-thumb img {
     width: 100%;
-    height: 80px;
+    height: 55px;
     object-fit: contain;
     display: block;
 }
 
-.scanner-thumbnail-delete {
+.scanner-thumb-del {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 18px;
-    height: 18px;
-    background-color: #c62828;
+    top: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    background-color: #dc3545;
     color: #fff;
     border: none;
     cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transition: opacity 0.15s;
 }
 
-.scanner-thumbnail:hover .scanner-thumbnail-delete {
+.scanner-thumb:hover .scanner-thumb-del {
     opacity: 1;
 }
 
-.scanner-thumbnail-delete:hover {
-    background-color: #b71c1c;
+.scanner-thumb-del:hover {
+    background-color: #c82333;
+}
+
+/* Espaciador flexible */
+.scanner-section-spacer {
+    flex: 1;
+    min-height: 20px;
+}
+
+/* Mensajes de estado */
+.scanner-message {
+    margin: 8px;
+    padding: 8px 12px;
+    font-size: 11px;
+    border-radius: 3px;
+}
+
+.scanner-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.scanner-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
 }
 
 /* ========================================
-   PREVIEW
+   FOOTER - Botones de Acción
    ======================================== */
-.scanner-preview-container {
-    flex: 1;
-    min-height: 320px;
-    max-height: 450px;
-    border: 2px dashed #ccc;
+.scanner-footer-actions {
+    padding: 10px 16px;
+    border-top: 1px solid #aaa;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    background-color: #f5f5f5;
-    overflow: hidden;
+    background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
 }
 
-.scanner-placeholder {
-    text-align: center;
-    color: #666;
+.scanner-footer-left,
+.scanner-footer-right {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 
-.scanner-placeholder-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-}
-
-.scanner-placeholder-text {
-    font-size: 14px;
-    font-weight: bold;
-    letter-spacing: 1px;
-}
-
-.scanner-placeholder-hint {
+.scanner-footer-info {
     font-size: 11px;
-    margin-top: 8px;
+    color: #666;
+    margin-left: 8px;
 }
 
-.scanner-preview {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px;
-    overflow: hidden;
-}
-
-.scanner-preview-nav {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 8px;
+/* Botones principales */
+.scanner-btn {
+    font-family: 'Segoe UI', sans-serif;
     font-size: 12px;
-    font-weight: bold;
-}
-
-.scanner-btn-nav {
-    background-color: #fff;
-    border: 1px solid #000;
-    padding: 4px 12px;
+    padding: 8px 20px;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    background: linear-gradient(to bottom, #f8f8f8, #e0e0e0);
     cursor: pointer;
-    font-family: 'Courier New', monospace;
+    transition: all 0.15s;
 }
 
-.scanner-btn-nav:hover:not(:disabled) {
-    background-color: #000;
-    color: #fff;
+.scanner-btn:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #fff, #eee);
+    border-color: #888;
 }
 
-.scanner-btn-nav:disabled {
-    opacity: 0.3;
+.scanner-btn:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
-.scanner-preview-image {
-    flex: 1;
-    max-height: 300px;
-    overflow: hidden;
-    border: 1px solid #000;
-    background-color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.scanner-btn-primary {
+    background: linear-gradient(to bottom, #4a90d9, #3a7cc9);
+    border-color: #3a7cc9;
+    color: #fff;
 }
 
-.scanner-preview-image img {
-    max-width: 100%;
-    max-height: 300px;
-    object-fit: contain;
+.scanner-btn-primary:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #5aa0e9, #4a90d9);
 }
 
-/* Imagen vertical (portrait) - más alta que ancha */
-.scanner-preview-image.portrait {
-    max-height: 350px;
+.scanner-btn-success {
+    background: linear-gradient(to bottom, #5cb85c, #4cae4c);
+    border-color: #4cae4c;
+    color: #fff;
 }
 
-.scanner-preview-image.portrait img {
-    max-height: 350px;
-    max-width: auto;
+.scanner-btn-success:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #6cc86c, #5cb85c);
 }
 
-/* Imagen horizontal (landscape) - más ancha que alta */
-.scanner-preview-image.landscape img {
-    max-width: 100%;
-    max-height: 250px;
+.scanner-btn-danger {
+    background: linear-gradient(to bottom, #dc3545, #c82333);
+    border-color: #c82333;
+    color: #fff;
 }
 
-.scanner-preview-info {
-    margin-top: 8px;
-    font-size: 10px;
-    color: #666;
+.scanner-btn-danger:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #e04656, #dc3545);
+}
+
+.scanner-btn-secondary {
+    background: linear-gradient(to bottom, #6c757d, #5a6268);
+    border-color: #5a6268;
+    color: #fff;
+}
+
+.scanner-btn-secondary:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #7c858e, #6c757d);
 }
 
 /* ========================================
-   PROGRESS
+   PROGRESS OVERLAY
    ======================================== */
-.scanner-progress {
+.scanner-progress-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.scanner-progress-content {
+    background-color: #fff;
+    padding: 30px 50px;
+    border-radius: 8px;
     text-align: center;
-    padding: 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.scanner-progress-spinner {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 16px;
+    border: 4px solid #e0e0e0;
+    border-top-color: #4a90d9;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 .scanner-progress-text {
     font-size: 14px;
-    font-weight: bold;
-    margin-bottom: 16px;
-    letter-spacing: 1px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
 }
 
 .scanner-progress-bar {
-    width: 100%;
-    max-width: 300px;
-    height: 20px;
-    border: 2px solid #000;
-    margin: 0 auto;
-    background-color: #fff;
+    width: 200px;
+    height: 8px;
+    background-color: #e0e0e0;
+    border-radius: 4px;
     overflow: hidden;
+    margin: 0 auto;
 }
 
 .scanner-progress-fill {
     height: 100%;
-    background-color: #000;
+    background-color: #4a90d9;
     transition: width 0.3s ease;
 }
 
@@ -411,350 +803,15 @@
 }
 
 /* ========================================
-   MESSAGES
-   ======================================== */
-.scanner-message {
-    padding: 8px 12px;
-    font-size: 11px;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-}
-
-.scanner-error {
-    background-color: #ffebee;
-    border: 1px solid #c62828;
-    color: #c62828;
-}
-
-.scanner-success {
-    background-color: #e8f5e9;
-    border: 1px solid #2e7d32;
-    color: #2e7d32;
-}
-
-/* ========================================
-   FOOTER
-   ======================================== */
-.scanner-footer {
-    padding: 12px 16px;
-    border-top: 2px solid #000;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #f5f5f5;
-}
-
-.scanner-footer-left,
-.scanner-footer-right {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.scanner-footer-info {
-    font-size: 10px;
-    color: #666;
-    margin-left: 8px;
-}
-
-.scanner-btn {
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    padding: 8px 16px;
-    border: 2px solid #000;
-    background-color: #fff;
-    cursor: pointer;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    transition: all 0.15s ease;
-}
-
-.scanner-btn:hover:not(:disabled) {
-    background-color: #000;
-    color: #fff;
-}
-
-.scanner-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.scanner-btn-primary {
-    background-color: #1976d2;
-    color: #fff;
-    border-color: #1976d2;
-}
-
-.scanner-btn-primary:hover:not(:disabled) {
-    background-color: #1565c0;
-    border-color: #1565c0;
-}
-
-.scanner-btn-success {
-    background-color: #2e7d32;
-    color: #fff;
-    border-color: #2e7d32;
-}
-
-.scanner-btn-success:hover:not(:disabled) {
-    background-color: #1b5e20;
-    border-color: #1b5e20;
-}
-
-.scanner-btn-danger {
-    background-color: #c62828;
-    color: #fff;
-    border-color: #c62828;
-}
-
-.scanner-btn-danger:hover:not(:disabled) {
-    background-color: #b71c1c;
-    border-color: #b71c1c;
-}
-
-.scanner-btn-secondary {
-    background-color: #757575;
-    color: #fff;
-    border-color: #757575;
-}
-
-.scanner-btn-secondary:hover:not(:disabled) {
-    background-color: #616161;
-    border-color: #616161;
-}
-
-/* ========================================
-   RESPONSIVE
-   ======================================== */
-@media (max-width: 768px) {
-    .scanner-modal-wide {
-        width: 100%;
-    }
-    
-    .scanner-main-container {
-        flex-direction: column;
-    }
-    
-    .scanner-thumbnails {
-        width: 100%;
-        max-height: 120px;
-    }
-    
-    .scanner-thumbnails-list {
-        flex-direction: row;
-        overflow-x: auto;
-        overflow-y: hidden;
-    }
-    
-    .scanner-thumbnail {
-        min-width: 80px;
-    }
-    
-    .scanner-thumbnail img {
-        height: 60px;
-    }
-}
-
-@media (max-width: 600px) {
-    .scanner-modal {
-        width: 100%;
-        height: 100%;
-        max-height: 100vh;
-        border: none;
-    }
-    
-    .scanner-option-group {
-        flex-direction: column;
-    }
-    
-    .scanner-footer {
-        flex-direction: column;
-        gap: 12px;
-    }
-    
-    .scanner-footer-left,
-    .scanner-footer-right {
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-}
-
-/* ========================================
-   CORRECTION PANEL
-   ======================================== */
-.scanner-correction-panel {
-    border: 1px solid #ccc;
-    margin-top: 8px;
-}
-
-.scanner-correction-header {
-    background-color: #e0e0e0;
-    padding: 8px 12px;
-    font-size: 11px;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    user-select: none;
-}
-
-.scanner-correction-header:hover {
-    background-color: #d0d0d0;
-}
-
-.scanner-correction-toggle {
-    font-size: 10px;
-}
-
-.scanner-correction-body {
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background-color: #f9f9f9;
-}
-
-.scanner-slider-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.scanner-slider-row label {
-    font-size: 10px;
-    font-weight: bold;
-    min-width: 70px;
-}
-
-.scanner-slider-row input[type="range"] {
-    flex: 1;
-    height: 6px;
-    cursor: pointer;
-}
-
-.scanner-slider-value {
-    font-size: 11px;
-    font-family: 'Courier New', monospace;
-    min-width: 40px;
-    text-align: right;
-}
-
-.scanner-correction-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 4px;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-}
-
-.scanner-btn-preview {
-    background-color: #1976d2;
-    color: #fff;
-    border-color: #1976d2;
-}
-
-.scanner-btn-preview:hover:not(:disabled) {
-    background-color: #1565c0;
-    border-color: #1565c0;
-}
-
-.scanner-btn-apply {
-    background-color: #2e7d32;
-    color: #fff;
-    border-color: #2e7d32;
-}
-
-.scanner-btn-apply:hover:not(:disabled) {
-    background-color: #1b5e20;
-    border-color: #1b5e20;
-}
-
-/* ========================================
-   IMAGE TOOLBAR
-   ======================================== */
-.scanner-toolbar {
-    display: flex;
-    gap: 4px;
-    padding: 8px;
-    background-color: #f0f0f0;
-    border-bottom: 1px solid #ccc;
-    justify-content: center;
-}
-
-.scanner-tool-btn {
-    width: 32px;
-    height: 32px;
-    border: 1px solid #000;
-    background-color: #fff;
-    cursor: pointer;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Courier New', monospace;
-}
-
-.scanner-tool-btn:hover {
-    background-color: #000;
-    color: #fff;
-}
-
-.scanner-tool-separator {
-    width: 1px;
-    background-color: #ccc;
-    margin: 0 8px;
-}
-
-/* ========================================
-   PROFILES SECTION
-   ======================================== */
-.scanner-profiles-section {
-    padding-bottom: 12px;
-    border-bottom: 2px solid #000;
-    margin-bottom: 8px;
-}
-
-.scanner-input {
-    flex: 1;
-    font-family: 'Courier New', monospace;
-    font-size: 12px;
-    padding: 6px 10px;
-    border: 1px solid #000;
-    background-color: #fff;
-}
-
-.scanner-input:focus {
-    outline: 2px solid #000;
-    outline-offset: 0;
-}
-
-.scanner-checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-}
-
-.scanner-checkbox-label input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-}
-
-/* ========================================
    PROFILE DIALOG
    ======================================== */
 .scanner-profile-dialog {
-    background-color: #fff;
-    border: 3px solid #000;
+    background-color: #f0f0f0;
+    border: 1px solid #888;
     width: 450px;
     max-width: 95vw;
-    font-family: 'Courier New', monospace;
+    font-family: 'Segoe UI', sans-serif;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     z-index: 1001;
 }
 
@@ -763,93 +820,60 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    background-color: #fff;
+}
+
+.scanner-option-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.scanner-label {
+    min-width: 100px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.scanner-input {
+    flex: 1;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 12px;
+    padding: 6px 10px;
+    border: 1px solid #aaa;
+    border-radius: 2px;
+}
+
+.scanner-input:focus {
+    outline: none;
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
+}
+
+.scanner-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    cursor: pointer;
 }
 
 .scanner-profile-dialog-info {
-    background-color: #f0f0f0;
-    border: 1px dashed #999;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
     padding: 10px;
-    font-size: 10px;
-    line-height: 1.6;
-}
-
-/* ========================================
-   PREVIEW MODE (Selección de Área)
-   ======================================== */
-.scanner-preview-mode {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.scanner-preview-header {
-    background-color: #1976d2;
-    color: #fff;
-    padding: 8px 12px;
     font-size: 11px;
-    font-weight: bold;
-    text-align: center;
-    letter-spacing: 0.5px;
+    line-height: 1.6;
+    border-radius: 3px;
 }
 
-.scanner-preview-canvas {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    cursor: crosshair;
-    background-color: #333;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 250px;
-    max-height: 400px;
-}
-
-.scanner-preview-canvas img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    user-select: none;
-    -webkit-user-drag: none;
-    pointer-events: none;
-}
-
-.scanner-selection-box {
-    position: absolute;
-    border: 2px dashed #1976d2;
-    background-color: rgba(25, 118, 210, 0.2);
-    pointer-events: none;
-    z-index: 10;
-}
-
-.scanner-selection-active {
-    border-color: #ff9800;
-    background-color: rgba(255, 152, 0, 0.2);
-}
-
-.scanner-selection-info {
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    background-color: #000;
-    color: #fff;
-    font-size: 9px;
-    padding: 2px 4px;
-}
-
-.scanner-preview-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px;
-    background-color: #f0f0f0;
+.scanner-footer {
+    padding: 12px 16px;
     border-top: 1px solid #ccc;
-}
-
-.scanner-preview-info-text {
-    font-size: 10px;
-    color: #666;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
 }
 
 /* ========================================
@@ -859,4 +883,50 @@
     font-size: 14px;
     cursor: help;
     margin-left: 4px;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 1024px) {
+    .scanner-modal-fullscreen {
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        max-height: none;
+        border: none;
+    }
+    
+    .scanner-config-panel {
+        width: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .scanner-body-horizontal {
+        flex-direction: column;
+    }
+    
+    .scanner-preview-panel {
+        height: 50%;
+        border-right: none;
+        border-bottom: 1px solid #999;
+    }
+    
+    .scanner-config-panel {
+        width: 100%;
+        height: 50%;
+    }
+    
+    .scanner-footer-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .scanner-footer-left,
+    .scanner-footer-right {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
 }

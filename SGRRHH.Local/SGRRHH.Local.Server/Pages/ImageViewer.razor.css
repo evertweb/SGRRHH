@@ -1,0 +1,229 @@
+/* ============================================================
+   ImageViewer.razor.css
+   Estilos para la ventana de vista previa de imagen
+   ============================================================ */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.image-viewer-container {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+    background-color: #1a1a1a;
+    font-family: 'Segoe UI', 'Courier New', monospace;
+    font-size: 13px;
+    color: #fff;
+    outline: none;
+}
+
+/* ====== TOOLBAR ====== */
+.viewer-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: linear-gradient(to bottom, #333, #222);
+    border-bottom: 1px solid #444;
+    min-height: 48px;
+    flex-shrink: 0;
+}
+
+.toolbar-left,
+.toolbar-center,
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.viewer-btn {
+    padding: 8px 14px;
+    border: 1px solid #555;
+    background: linear-gradient(to bottom, #444, #333);
+    color: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.viewer-btn:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #555, #444);
+    border-color: #777;
+}
+
+.viewer-btn:active:not(:disabled) {
+    background: linear-gradient(to bottom, #333, #222);
+}
+
+.viewer-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.viewer-btn.active {
+    background: linear-gradient(to bottom, #4a7ab8, #3a6aa8);
+    border-color: #5a8ac8;
+}
+
+.viewer-btn.btn-close {
+    background: linear-gradient(to bottom, #a44, #833);
+    border-color: #955;
+}
+
+.viewer-btn.btn-close:hover {
+    background: linear-gradient(to bottom, #c55, #a44);
+    border-color: #c77;
+}
+
+.separator {
+    width: 1px;
+    height: 28px;
+    background-color: #555;
+    margin: 0 8px;
+}
+
+.page-indicator,
+.zoom-display {
+    color: #ccc;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 70px;
+    text-align: center;
+    padding: 0 8px;
+}
+
+.image-info {
+    color: #888;
+    font-size: 12px;
+    margin-right: 16px;
+}
+
+/* ====== ÁREA DE IMAGEN ====== */
+.viewer-image-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-color: #111;
+    /* Patrón de cuadrícula tipo transparencia */
+    background-image: 
+        linear-gradient(45deg, #1a1a1a 25%, transparent 25%),
+        linear-gradient(-45deg, #1a1a1a 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1a1a1a 75%),
+        linear-gradient(-45deg, transparent 75%, #1a1a1a 75%);
+    background-size: 30px 30px;
+    background-position: 0 0, 0 15px, 15px -15px, -15px 0px;
+}
+
+.image-scroll-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.image-scroll-container.scroll-mode {
+    overflow: auto;
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.image-scroll-container.fit-mode {
+    overflow: hidden;
+}
+
+.viewer-image {
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.8);
+    border: 1px solid #333;
+    background-color: #fff;
+    transition: transform 0.15s ease;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.fit-mode .viewer-image {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.loading-message,
+.no-image {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 16px;
+    gap: 16px;
+}
+
+.no-image p {
+    color: #444;
+    font-size: 13px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #333;
+    border-top-color: #4a7ab8;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ====== BARRA DE ESTADO ====== */
+.viewer-status {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 6px 16px;
+    background: #222;
+    border-top: 1px solid #333;
+    min-height: 28px;
+    flex-shrink: 0;
+    color: #666;
+    font-size: 11px;
+}
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 900px) {
+    .viewer-toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px;
+    }
+    
+    .toolbar-center {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .viewer-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+    
+    .separator {
+        display: none;
+    }
+}

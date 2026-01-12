@@ -1,0 +1,321 @@
+@page "/image-viewer"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@layout SGRRHH.Local.Server.Components.Layout.EmptyLayout
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<PageTitle>Vista Previa - SGRRHH</PageTitle>
+
+<div class="image-viewer-container" @onkeydown="HandleKeyDown" tabindex="0" @ref="containerRef">
+    @* Barra de herramientas *@
+    <div class="viewer-toolbar">
+        <div class="toolbar-left">
+            @if (totalPages > 1)
+            {
+                <button class="viewer-btn" @onclick="PreviousPage" disabled="@(currentPage <= 0)">◀ Anterior</button>
+                <span class="page-indicator">@(currentPage + 1) / @totalPages</span>
+                <button class="viewer-btn" @onclick="NextPage" disabled="@(currentPage >= totalPages - 1)">Siguiente ▶</button>
+                <span class="separator"></span>
+            }
+            <button class="viewer-btn" @onclick="@(() => Rotate(-90))" title="Rotar izquierda (Q)">↺ Rotar</button>
+            <button class="viewer-btn" @onclick="@(() => Rotate(90))" title="Rotar derecha (E)">↻ Rotar</button>
+            <span class="separator"></span>
+            <button class="viewer-btn" @onclick="FlipH" title="Voltear horizontal (H)">⇆ Voltear H</button>
+            <button class="viewer-btn" @onclick="FlipV" title="Voltear vertical (V)">⇅ Voltear V</button>
+        </div>
+        
+        <div class="toolbar-center">
+            <button class="viewer-btn" @onclick="ZoomOut" disabled="@(zoom <= 10)">−</button>
+            <span class="zoom-display">@zoom%</span>
+            <button class="viewer-btn" @onclick="ZoomIn" disabled="@(zoom >= 500)">+</button>
+            <span class="separator"></span>
+            <button class="viewer-btn @(fitMode ? "active" : "")" @onclick="ToggleFit">Ajustar</button>
+            <button class="viewer-btn" @onclick="@(() => SetZoom(100))">100%</button>
+            <button class="viewer-btn" @onclick="@(() => SetZoom(200))">200%</button>
+        </div>
+        
+        <div class="toolbar-right">
+            <span class="image-info">@imageInfo</span>
+            <button class="viewer-btn btn-close" @onclick="CloseWindow">✕ Cerrar</button>
+        </div>
+    </div>
+    
+    @* Área de imagen *@
+    <div class="viewer-image-area" @onwheel="HandleWheel">
+        @if (!string.IsNullOrEmpty(imageDataUrl))
+        {
+            <div class="image-scroll-container @(fitMode ? "fit-mode" : "scroll-mode")">
+                <img src="@imageDataUrl" 
+                     alt="Vista previa" 
+                     class="viewer-image"
+                     style="@GetImageStyle()"
+                     draggable="false" />
+            </div>
+        }
+        else if (isLoading)
+        {
+            <div class="loading-message">
+                <div class="spinner"></div>
+                <span>Cargando imagen...</span>
+            </div>
+        }
+        else
+        {
+            <div class="no-image">
+                <span>No hay imagen disponible</span>
+                <p>Esta ventana recibe imágenes desde el escáner.</p>
+            </div>
+        }
+    </div>
+    
+    @* Barra de estado *@
+    <div class="viewer-status">
+        <span>Atajos: Rueda=Zoom | Q/E=Rotar | H/V=Voltear | ←/→=Páginas | Esc=Cerrar</span>
+    </div>
+</div>
+
+@code {
+    private ElementReference containerRef;
+    private string imageDataUrl = "";
+    private string imageInfo = "";
+    private int zoom = 100;
+    private bool fitMode = true;
+    private int rotation = 0;
+    private bool flippedH = false;
+    private bool flippedV = false;
+    private int currentPage = 0;
+    private int totalPages = 1;
+    private bool isLoading = true;
+    
+    // Almacenamiento de todas las páginas recibidas
+    private List<string> pageImages = new();
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Registrar callback para recibir imágenes desde la ventana padre
+            await JS.InvokeVoidAsync("imageViewerInterop.initialize", DotNetObjectReference.Create(this));
+            
+            // Focus para capturar teclas
+            await containerRef.FocusAsync();
+            
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+    
+    /// <summary>
+    /// Recibe una imagen desde JavaScript (ventana padre)
+    /// </summary>
+    [JSInvokable]
+    public void ReceiveImage(string dataUrl, string info, int pageIndex, int total)
+    {
+        // Asegurar que la lista tiene suficiente espacio
+        while (pageImages.Count <= pageIndex)
+        {
+            pageImages.Add("");
+        }
+        
+        pageImages[pageIndex] = dataUrl;
+        totalPages = total;
+        currentPage = pageIndex;
+        imageDataUrl = dataUrl;
+        imageInfo = info;
+        
+        // Reset transformaciones
+        rotation = 0;
+        flippedH = false;
+        flippedV = false;
+        
+        StateHasChanged();
+    }
+    
+    /// <summary>
+    /// Recibe todas las páginas de una vez
+    /// </summary>
+    [JSInvokable]
+    public void ReceiveAllPages(string[] dataUrls, string[] infos)
+    {
+        pageImages = dataUrls.ToList();
+        totalPages = dataUrls.Length;
+        currentPage = 0;
+        
+        if (pageImages.Count > 0)
+        {
+            imageDataUrl = pageImages[0];
+            imageInfo = infos.Length > 0 ? infos[0] : "";
+        }
+        
+        rotation = 0;
+        flippedH = false;
+        flippedV = false;
+        
+        StateHasChanged();
+    }
+    
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Escape":
+                CloseWindow();
+                break;
+            case "ArrowLeft":
+                PreviousPage();
+                break;
+            case "ArrowRight":
+                NextPage();
+                break;
+            case "-":
+            case "_":
+                ZoomOut();
+                break;
+            case "+":
+            case "=":
+                ZoomIn();
+                break;
+            case "0":
+                ToggleFit();
+                break;
+            case "1":
+                SetZoom(100);
+                break;
+            case "2":
+                SetZoom(200);
+                break;
+            case "q":
+            case "Q":
+                Rotate(-90);
+                break;
+            case "e":
+            case "E":
+                Rotate(90);
+                break;
+            case "h":
+            case "H":
+                FlipH();
+                break;
+            case "v":
+            case "V":
+                FlipV();
+                break;
+        }
+    }
+    
+    private void HandleWheel(WheelEventArgs e)
+    {
+        fitMode = false;
+        if (e.DeltaY < 0)
+            ZoomIn();
+        else
+            ZoomOut();
+    }
+    
+    private void SetZoom(int value)
+    {
+        zoom = value;
+        fitMode = false;
+        StateHasChanged();
+    }
+    
+    private void ZoomIn()
+    {
+        fitMode = false;
+        if (zoom < 500) zoom = Math.Min(500, zoom + 25);
+        StateHasChanged();
+    }
+    
+    private void ZoomOut()
+    {
+        fitMode = false;
+        if (zoom > 10) zoom = Math.Max(10, zoom - 25);
+        StateHasChanged();
+    }
+    
+    private void ToggleFit()
+    {
+        fitMode = !fitMode;
+        if (!fitMode) zoom = 100;
+        StateHasChanged();
+    }
+    
+    private void PreviousPage()
+    {
+        if (currentPage > 0)
+        {
+            currentPage--;
+            imageDataUrl = pageImages[currentPage];
+            rotation = 0;
+            flippedH = false;
+            flippedV = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void NextPage()
+    {
+        if (currentPage < totalPages - 1 && currentPage < pageImages.Count - 1)
+        {
+            currentPage++;
+            imageDataUrl = pageImages[currentPage];
+            rotation = 0;
+            flippedH = false;
+            flippedV = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void Rotate(int degrees)
+    {
+        rotation = (rotation + degrees + 360) % 360;
+        StateHasChanged();
+    }
+    
+    private void FlipH()
+    {
+        flippedH = !flippedH;
+        StateHasChanged();
+    }
+    
+    private void FlipV()
+    {
+        flippedV = !flippedV;
+        StateHasChanged();
+    }
+    
+    private async void CloseWindow()
+    {
+        await JS.InvokeVoidAsync("window.close");
+    }
+    
+    private string GetImageStyle()
+    {
+        var transforms = new List<string>();
+        
+        if (rotation != 0)
+            transforms.Add($"rotate({rotation}deg)");
+        
+        if (flippedH)
+            transforms.Add("scaleX(-1)");
+        
+        if (flippedV)
+            transforms.Add("scaleY(-1)");
+        
+        var style = "";
+        
+        if (!fitMode)
+        {
+            style = $"width: {zoom}%; max-width: none; max-height: none;";
+        }
+        
+        if (transforms.Count > 0)
+        {
+            style += $" transform: {string.Join(" ", transforms)};";
+        }
+        
+        return style;
+    }
+}
