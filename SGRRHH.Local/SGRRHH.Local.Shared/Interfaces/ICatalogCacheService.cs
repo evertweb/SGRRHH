@@ -43,6 +43,26 @@ public interface ICatalogCacheService
     Task<List<Empleado>> GetEmpleadosTodosAsync(bool forceRefresh = false);
     
     /// <summary>
+    /// Obtiene todas las EPS vigentes (cacheado)
+    /// </summary>
+    Task<List<Eps>> GetEpsAsync(bool forceRefresh = false);
+    
+    /// <summary>
+    /// Obtiene todas las AFP vigentes (cacheado)
+    /// </summary>
+    Task<List<Afp>> GetAfpAsync(bool forceRefresh = false);
+    
+    /// <summary>
+    /// Obtiene todas las ARL vigentes (cacheado)
+    /// </summary>
+    Task<List<Arl>> GetArlAsync(bool forceRefresh = false);
+    
+    /// <summary>
+    /// Obtiene todas las Cajas de Compensación vigentes (cacheado)
+    /// </summary>
+    Task<List<CajaCompensacion>> GetCajasCompensacionAsync(bool forceRefresh = false);
+    
+    /// <summary>
     /// Invalida el caché de un catálogo específico
     /// </summary>
     void InvalidateCache(CatalogType catalogType);
@@ -69,5 +89,9 @@ public enum CatalogType
     Proyectos,
     Actividades,
     EmpleadosActivos,
-    EmpleadosTodos
+    EmpleadosTodos,
+    Eps,
+    Afp,
+    Arl,
+    CajasCompensacion
 }

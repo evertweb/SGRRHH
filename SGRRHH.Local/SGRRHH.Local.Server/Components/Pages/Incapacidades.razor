@@ -1476,9 +1476,14 @@
     private Task OnPdfGenerated(byte[] pdfBytes)
     {
         documentoEscaneadoBytes = pdfBytes;
-        documentoEscaneadoNombre = $"Escaneado_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-        Logger.LogInformation("PDF generado: {Name} ({Size} bytes)", 
+        documentoEscaneadoNombre = $"Incapacidad_Escaneada_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+        Logger.LogInformation("PDF escaneado listo: {Name} ({Size} bytes)", 
             documentoEscaneadoNombre, documentoEscaneadoBytes.Length);
+        
+        // Mostrar confirmación visual
+        // TODO: Agregar MessageToast a esta página
+        // messageToast?.ShowSuccess($"✓ PDF escaneado listo ({FormatFileSize(pdfBytes.Length)})");
+        
         StateHasChanged();
         return Task.CompletedTask;
     }

@@ -44,6 +44,9 @@ window.KeyboardHandler = (function () {
             activeElement.tagName === 'SELECT'
         );
 
+        // Validar que e.key existe antes de usarlo
+        if (!e.key) return;
+
         // Permitir que las teclas de función funcionen incluso en inputs
         const isFunctionKey = e.key.startsWith('F') && /^F\d+$/.test(e.key);
         const isEscape = e.key === 'Escape';

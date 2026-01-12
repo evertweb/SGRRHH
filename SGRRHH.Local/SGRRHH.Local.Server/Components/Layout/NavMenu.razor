@@ -17,6 +17,14 @@
             <div class="user-info">
                 <p class="user-name">👤 @AuthService.CurrentUser.NombreCompleto</p>
                 <p class="user-role">@AuthService.CurrentUser.Rol</p>
+                @if (AuthService.ModoCorporativoActivo)
+                {
+                    <p class="modo-badge modo-corporativo" title="Restricciones de roles activas">🔒 MODO CORPORATIVO</p>
+                }
+                else
+                {
+                    <p class="modo-badge modo-libre" title="Acceso libre para todos">🔓 Acceso Libre</p>
+                }
             </div>
             
             <!-- GESTIÓN DE PERSONAL -->
@@ -149,7 +157,8 @@
     private async Task HandleLogout()
     {
         await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/login", forceLoad: true);
+        // Navegar a página de logout (no a login para evitar auto-login)
+        Navigation.NavigateTo("/logged-out", forceLoad: true);
     }
 }
 

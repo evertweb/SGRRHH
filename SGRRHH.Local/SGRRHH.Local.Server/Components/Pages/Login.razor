@@ -15,56 +15,151 @@
             <div class="system-version">VERSION 1.0.0</div>
         </div>
         
-        @if (!string.IsNullOrEmpty(errorMessage))
+        @if (isCheckingToken)
         {
-            <div class="error-block">
-                ERROR: @errorMessage
+            <div class="loading-block">
+                <span class="loading-spinner"></span> Verificando dispositivo...
             </div>
         }
-        
-        <div class="login-form">
-            <div class="form-field">
-                <label class="field-label">USUARIO:</label>
-                <input type="text" 
-                       class="field-input"
-                       @bind="username" 
-                       @bind:event="oninput"
-                       @onkeydown="HandleKeyDown"
-                       disabled="@isLoading"
-                       autofocus />
-            </div>
+        else
+        {
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="error-block">
+                    ERROR: @errorMessage
+                </div>
+            }
             
-            <div class="form-field">
-                <label class="field-label">CONTRASEÑA:</label>
-                <input type="password" 
-                       class="field-input"
-                       @bind="password" 
-                       @bind:event="oninput"
-                       @onkeydown="HandleKeyDown"
-                       disabled="@isLoading" />
-            </div>
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="success-block">
+                    @successMessage
+                </div>
+            }
             
-            <div class="form-actions">
-                <button class="btn-login" @onclick="DoLogin" disabled="@isLoading">
-                    INICIAR SESION
-                </button>
+            <div class="login-form">
+                <div class="form-field">
+                    <label class="field-label">USUARIO:</label>
+                    <input type="text" 
+                           class="field-input"
+                           @bind="username" 
+                           @bind:event="oninput"
+                           @onkeydown="HandleKeyDown"
+                           disabled="@isLoading"
+                           autofocus />
+                </div>
+                
+                <div class="form-field">
+                    <label class="field-label">CONTRASEÑA:</label>
+                    <input type="password" 
+                           class="field-input"
+                           @bind="password" 
+                           @bind:event="oninput"
+                           @onkeydown="HandleKeyDown"
+                           disabled="@isLoading" />
+                </div>
+                
+                <div class="form-field-checkbox">
+                    <label class="checkbox-container">
+                        <input type="checkbox" @bind="recordarDispositivo" disabled="@isLoading" />
+                        <span class="checkbox-label">🔐 RECORDAR ESTE DISPOSITIVO</span>
+                    </label>
+                    <div class="checkbox-hint">
+                        (No volverás a ingresar contraseña desde este equipo)
+                    </div>
+                </div>
+                
+                @if (recordarDispositivo)
+                {
+                    <div class="form-field">
+                        <label class="field-label">NOMBRE DEL DISPOSITIVO:</label>
+                        <input type="text" 
+                               class="field-input"
+                               @bind="nombreDispositivo" 
+                               @bind:event="oninput"
+                               placeholder="Ej: PC Oficina, Laptop Campo..."
+                               disabled="@isLoading" />
+                    </div>
+                }
+                
+                <div class="form-actions">
+                    <button class="btn-login" @onclick="DoLogin" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="loading-spinner"></span>
+                        }
+                        INICIAR SESION
+                    </button>
+                </div>
             </div>
-        </div>
+        }
     </div>
 </div>
 
 @code {
     private const string SESSION_KEY = "sgrrhh_session_user_id";
+    private const string DEVICE_TOKEN_KEY = "sgrrhh_device_token";
+    
     private string username = "";
     private string password = "";
+    private string nombreDispositivo = "";
+    private bool recordarDispositivo = false;
     private string? errorMessage;
+    private string? successMessage;
     private bool isLoading;
+    private bool isCheckingToken;
     
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (AuthService.IsAuthenticated)
+        if (firstRender)
         {
-            Navigation.NavigateTo(GetDefaultPageByRole());
+            // Si ya está autenticado, redirigir
+            if (AuthService.IsAuthenticated)
+            {
+                Navigation.NavigateTo(GetDefaultPageByRole());
+                return;
+            }
+            
+            // Intentar login automático con token de dispositivo
+            await TryAutoLoginWithDeviceToken();
+        }
+    }
+    
+    private async Task TryAutoLoginWithDeviceToken()
+    {
+        try
+        {
+            isCheckingToken = true;
+            StateHasChanged();
+            
+            var deviceToken = await JSRuntime.InvokeAsync<string?>("getLocalStorage", DEVICE_TOKEN_KEY);
+            
+            if (!string.IsNullOrWhiteSpace(deviceToken))
+            {
+                var result = await AuthService.LoginConTokenDispositivoAsync(deviceToken);
+                
+                if (result.IsSuccess)
+                {
+                    // También guardar el userId para compatibilidad
+                    await SaveSessionAsync();
+                    Navigation.NavigateTo(GetDefaultPageByRole());
+                    return;
+                }
+                else
+                {
+                    // Token inválido o expirado, limpiar
+                    await JSRuntime.InvokeVoidAsync("removeLocalStorage", DEVICE_TOKEN_KEY);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Ignorar errores de localStorage
+        }
+        finally
+        {
+            isCheckingToken = false;
+            StateHasChanged();
         }
     }
     
@@ -84,7 +179,10 @@
     {
         username = "";
         password = "";
+        nombreDispositivo = "";
+        recordarDispositivo = false;
         errorMessage = null;
+        successMessage = null;
         StateHasChanged();
     }
     
@@ -93,6 +191,7 @@
         if (isLoading) return;
         
         errorMessage = null;
+        successMessage = null;
         
         if (string.IsNullOrWhiteSpace(username))
         {
@@ -106,6 +205,12 @@
             return;
         }
         
+        if (recordarDispositivo && string.IsNullOrWhiteSpace(nombreDispositivo))
+        {
+            errorMessage = "Ingrese un nombre para identificar este dispositivo.";
+            return;
+        }
+        
         isLoading = true;
         StateHasChanged();
         
@@ -115,8 +220,26 @@
             
             if (result.IsSuccess)
             {
-                // Guardar sesión en localStorage para persistir entre recargas
+                // Guardar sesión estándar
                 await SaveSessionAsync();
+                
+                // Si marcó recordar dispositivo, autorizar y guardar token
+                if (recordarDispositivo)
+                {
+                    var userAgent = await JSRuntime.InvokeAsync<string>("eval", "navigator.userAgent");
+                    var tokenResult = await AuthService.AutorizarDispositivoAsync(
+                        nombreDispositivo.Trim(),
+                        userAgent,
+                        null, // IP se puede obtener del servidor si se requiere
+                        null  // Sin expiración
+                    );
+                    
+                    if (tokenResult.IsSuccess && tokenResult.Value != null)
+                    {
+                        await JSRuntime.InvokeVoidAsync("setLocalStorage", DEVICE_TOKEN_KEY, tokenResult.Value);
+                    }
+                }
+                
                 Navigation.NavigateTo(GetDefaultPageByRole());
             }
             else

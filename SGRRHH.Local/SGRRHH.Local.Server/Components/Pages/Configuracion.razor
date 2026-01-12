@@ -252,6 +252,56 @@
         <div class="form-section">
             <h2>PARAMETROS DE SEGURIDAD</h2>
             
+            @* Control de Acceso - Modo Corporativo *@
+            <div class="form-row" style="border: 2px solid #000; padding: 15px; margin-bottom: 20px; background: #f9f9f9;">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div>
+                        <strong style="font-size: 14px;">
+                            @if (AuthService.ModoCorporativoActivo)
+                            {
+                                <span>🔒 MODO CORPORATIVO ACTIVO</span>
+                            }
+                            else
+                            {
+                                <span>🔓 ACCESO LIBRE</span>
+                            }
+                        </strong>
+                        <p style="margin: 5px 0 0 0; font-size: 11px; color: #666;">
+                            @if (AuthService.ModoCorporativoActivo)
+                            {
+                                <span>Las restricciones de roles están aplicadas</span>
+                            }
+                            else
+                            {
+                                <span>Todos los usuarios tienen acceso completo</span>
+                            }
+                        </p>
+                    </div>
+                    <div>
+                        <button class="@(AuthService.ModoCorporativoActivo ? "btn-danger" : "btn-primary")" 
+                                style="min-width: 120px;"
+                                @onclick="ToggleModoCorporativo">
+                            @if (AuthService.ModoCorporativoActivo)
+                            {
+                                <span>DESACTIVAR</span>
+                            }
+                            else
+                            {
+                                <span>ACTIVAR</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ccc; font-size: 11px;">
+                    <strong>¿Qué hace el Modo Corporativo?</strong>
+                    <ul style="margin: 5px 0 0 15px; padding: 0;">
+                        <li>Operadores (Secretaria): Solo pueden crear y editar datos básicos</li>
+                        <li>Aprobadores (Ingeniera): Pueden aprobar/rechazar, editar datos críticos</li>
+                        <li>Administradores: Acceso completo</li>
+                    </ul>
+                </div>
+            </div>
+            
             <div class="form-row">
                 <label>TIEMPO SESION (MINUTOS):</label>
                 <input type="number" @bind="tiempoSesion" min="5" max="480" />
@@ -563,6 +613,36 @@
         {
             _ = CargarEstadisticasDb();
         }
+    }
+    
+    private async Task ToggleModoCorporativo()
+    {
+        var activar = !AuthService.ModoCorporativoActivo;
+        var resultado = await AuthService.SetModoCorporativoAsync(activar);
+        
+        if (!resultado.IsSuccess)
+        {
+            errorMessage = resultado.Message;
+        }
+        else
+        {
+            successMessage = resultado.Message;
+            Logger.LogInformation("Modo Corporativo {Estado} por {Usuario}", 
+                activar ? "ACTIVADO" : "DESACTIVADO", AuthService.CurrentUser?.Username);
+            
+            // Limpiar mensaje después de un tiempo
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                await InvokeAsync(() =>
+                {
+                    successMessage = null;
+                    StateHasChanged();
+                });
+            });
+        }
+        
+        StateHasChanged();
     }
     
     private async Task CargarEstadisticasDb()

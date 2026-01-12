@@ -77,6 +77,15 @@ builder.Services.AddScoped<IIncapacidadRepository, IncapacidadRepository>();
 // Repositorio de Notificaciones
 builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
 
+// Repositorios de Seguridad Social (EPS, AFP, ARL, Cajas de Compensación)
+builder.Services.AddScoped<IEpsRepository, EpsRepository>();
+builder.Services.AddScoped<IAfpRepository, AfpRepository>();
+builder.Services.AddScoped<IArlRepository, ArlRepository>();
+builder.Services.AddScoped<ICajaCompensacionRepository, CajaCompensacionRepository>();
+
+// Repositorio de Dispositivos Autorizados (login sin contraseña)
+builder.Services.AddScoped<IDispositivoAutorizadoRepository, DispositivoAutorizadoRepository>();
+
 // Authentication service
 builder.Services.AddScoped<IAuthService, LocalAuthService>();
 

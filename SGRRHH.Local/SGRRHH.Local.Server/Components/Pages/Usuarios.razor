@@ -49,6 +49,7 @@
         {
             <button @onclick="EditarSeleccionado" class="btn-action">EDITAR</button>
             <button @onclick="ResetPassword" class="btn-action">RESETEAR CONTRASEÑA</button>
+            <button @onclick="VerDispositivos" class="btn-action">🔐 DISPOSITIVOS</button>
             @if (selectedUsuario.Activo)
             {
                 <button @onclick="ToggleEstado" class="btn-action">DESHABILITAR</button>
@@ -323,6 +324,93 @@ else
     </div>
 }
 
+@* ========================================================================= *@
+@* MODAL: DISPOSITIVOS AUTORIZADOS                                           *@
+@* ========================================================================= *@
+@if (showDispositivosModal && selectedUsuario != null)
+{
+    <div class="modal-backdrop">
+        <div class="modal-container modal-wide">
+            <div class="modal-title">🔐 DISPOSITIVOS AUTORIZADOS - @selectedUsuario.Username</div>
+            
+            <div class="modal-content-scroll">
+                @if (isLoadingDispositivos)
+                {
+                    <div class="loading-message">Cargando dispositivos...</div>
+                }
+                else if (!dispositivosUsuario.Any())
+                {
+                    <div class="empty-message">
+                        <div>Este usuario no tiene dispositivos autorizados.</div>
+                        <div class="empty-hint">Los dispositivos se autorizan desde la pantalla de login.</div>
+                    </div>
+                }
+                else
+                {
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>NOMBRE</th>
+                                <th>NAVEGADOR</th>
+                                <th>IP AUTORIZACION</th>
+                                <th>FECHA CREACION</th>
+                                <th>ULTIMO USO</th>
+                                <th>EXPIRA</th>
+                                <th>ESTADO</th>
+                                <th>ACCIONES</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var disp in dispositivosUsuario)
+                            {
+                                <tr class="@(!disp.Activo ? "row-inactive" : "")">
+                                    <td>@disp.Id</td>
+                                    <td>@disp.NombreDispositivo</td>
+                                    <td class="cell-truncate" title="@disp.HuellaNavegador">
+                                        @TruncateUserAgent(disp.HuellaNavegador)
+                                    </td>
+                                    <td>@(disp.IpAutorizacion ?? "-")</td>
+                                    <td>@disp.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@(disp.FechaUltimoUso?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
+                                    <td>@(disp.FechaExpiracion?.ToString("dd/MM/yyyy") ?? "No expira")</td>
+                                    <td>@(disp.Activo ? "ACTIVO" : "REVOCADO")</td>
+                                    <td class="actions-cell">
+                                        @if (disp.Activo)
+                                        {
+                                            <button @onclick="() => RevocarDispositivo(disp)" 
+                                                    class="btn-small btn-danger">REVOCAR</button>
+                                        }
+                                        else
+                                        {
+                                            <span class="status-revoked">REVOCADO</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    
+                    <div class="panel-info">
+                        <div>Total: @dispositivosUsuario.Count() dispositivos | 
+                             Activos: @dispositivosUsuario.Count(d => d.Activo)</div>
+                    </div>
+                }
+            </div>
+            
+            <div class="modal-actions">
+                @if (dispositivosUsuario.Any(d => d.Activo))
+                {
+                    <button @onclick="RevocarTodosDispositivos" class="btn-action btn-warning">
+                        REVOCAR TODOS
+                    </button>
+                }
+                <button @onclick="() => showDispositivosModal = false" class="btn-action">CERRAR</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public int? UsuarioIdParam { get; set; }
     
@@ -355,6 +443,11 @@ else
     private string confirmButtonText = "CONFIRMAR";
     private string confirmModalType = string.Empty;
     private Func<Task>? confirmAction;
+    
+    // Dispositivos autorizados
+    private bool showDispositivosModal;
+    private bool isLoadingDispositivos;
+    private List<DispositivoAutorizado> dispositivosUsuario = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -897,5 +990,117 @@ else
     {
         var empleado = empleados.FirstOrDefault(e => e.Id == empleadoId);
         return empleado != null ? $"{empleado.Codigo} - {empleado.NombreCompleto}" : "-";
+    }
+    
+    // =========================================================================
+    // GESTIÓN DE DISPOSITIVOS AUTORIZADOS
+    // =========================================================================
+    
+    private async Task VerDispositivos()
+    {
+        if (selectedUsuario == null) return;
+        
+        try
+        {
+            isLoadingDispositivos = true;
+            showDispositivosModal = true;
+            StateHasChanged();
+            
+            dispositivosUsuario = (await AuthService.ObtenerDispositivosDeUsuarioAsync(selectedUsuario.Id)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando dispositivos del usuario {Id}", selectedUsuario.Id);
+            errorMessage = "ERROR: No se pudieron cargar los dispositivos";
+        }
+        finally
+        {
+            isLoadingDispositivos = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task RevocarDispositivo(DispositivoAutorizado dispositivo)
+    {
+        try
+        {
+            var result = await AuthService.RevocarDispositivoAsync(dispositivo.Id);
+            
+            if (result.IsSuccess)
+            {
+                Logger.LogInformation("Dispositivo {Id} revocado por {Admin}", 
+                    dispositivo.Id, AuthService.CurrentUser?.Username);
+                successMessage = $"Dispositivo '{dispositivo.NombreDispositivo}' revocado";
+                
+                // Recargar lista
+                await VerDispositivos();
+                
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+                    successMessage = null;
+                    await InvokeAsync(StateHasChanged);
+                });
+            }
+            else
+            {
+                errorMessage = $"ERROR: {result.ErrorMessage}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error revocando dispositivo {Id}", dispositivo.Id);
+            errorMessage = $"ERROR: Fallo al revocar dispositivo - {ex.Message}";
+        }
+    }
+    
+    private async Task RevocarTodosDispositivos()
+    {
+        if (selectedUsuario == null) return;
+        
+        try
+        {
+            var result = await AuthService.RevocarTodosDispositivosAsync(selectedUsuario.Id);
+            
+            if (result.IsSuccess)
+            {
+                Logger.LogInformation("Todos los dispositivos revocados para usuario {Username} por {Admin}", 
+                    selectedUsuario.Username, AuthService.CurrentUser?.Username);
+                successMessage = $"Todos los dispositivos de '{selectedUsuario.Username}' revocados";
+                
+                // Recargar lista
+                await VerDispositivos();
+                
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+                    successMessage = null;
+                    await InvokeAsync(StateHasChanged);
+                });
+            }
+            else
+            {
+                errorMessage = $"ERROR: {result.ErrorMessage}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error revocando todos los dispositivos del usuario {Id}", selectedUsuario.Id);
+            errorMessage = $"ERROR: Fallo al revocar dispositivos - {ex.Message}";
+        }
+    }
+    
+    private static string TruncateUserAgent(string? userAgent)
+    {
+        if (string.IsNullOrEmpty(userAgent)) return "-";
+        
+        // Extraer navegador principal
+        if (userAgent.Contains("Chrome")) return "Chrome";
+        if (userAgent.Contains("Firefox")) return "Firefox";
+        if (userAgent.Contains("Safari") && !userAgent.Contains("Chrome")) return "Safari";
+        if (userAgent.Contains("Edge")) return "Edge";
+        if (userAgent.Contains("Opera") || userAgent.Contains("OPR")) return "Opera";
+        
+        return userAgent.Length > 30 ? userAgent[..30] + "..." : userAgent;
     }
 }

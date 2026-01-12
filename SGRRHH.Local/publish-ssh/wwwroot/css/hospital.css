@@ -417,6 +417,80 @@ body {
     font-weight: 600;
 }
 
+.success-block {
+    margin: 0 24px 20px 24px;
+    padding: 12px;
+    background-color: #E5FFE5;
+    border: 2px solid var(--color-success);
+    color: var(--color-success);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.loading-block {
+    margin: 0 24px 20px 24px;
+    padding: 16px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--color-text);
+    border: 1px solid var(--color-border-light);
+    background-color: #FAFAFA;
+}
+
+/* ===== CHECKBOX EN FORMULARIOS ===== */
+.form-field-checkbox {
+    margin: 16px 0;
+    padding: 12px;
+    background-color: #F5F5F5;
+    border: 1px dashed var(--color-border);
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    accent-color: var(--color-text);
+    cursor: pointer;
+}
+
+.checkbox-label {
+    font-family: var(--font-family);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.checkbox-hint {
+    font-family: var(--font-family);
+    font-size: 10px;
+    color: #666666;
+    margin-top: 4px;
+    margin-left: 28px;
+}
+
+/* ===== SPINNER DE CARGA ===== */
+.loading-spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--color-border);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 /* ===== MENSAJE DE ERROR DE BLAZOR ===== */
 #blazor-error-ui {
     background-color: var(--color-error);
@@ -755,6 +829,62 @@ tr.selected {
     justify-content: flex-end;
 }
 
+/* Variantes de modal */
+.modal-wide {
+    min-width: 900px;
+    max-width: 95%;
+}
+
+.modal-content-scroll {
+    max-height: 400px;
+    overflow-y: auto;
+    margin: 12px 0;
+    border: 1px solid var(--color-border-light);
+}
+
+/* Estados de filas en tablas */
+.row-inactive {
+    opacity: 0.5;
+    background-color: #F0F0F0 !important;
+}
+
+/* Truncar texto en celdas */
+.cell-truncate {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Estados revocados */
+.status-revoked {
+    color: #666666;
+    font-size: 11px;
+    font-style: italic;
+}
+
+/* Mensajes vacíos */
+.empty-message, .loading-message {
+    text-align: center;
+    padding: 30px;
+    color: var(--color-text);
+    font-size: 12px;
+}
+
+.empty-hint {
+    margin-top: 8px;
+    color: #666666;
+    font-size: 11px;
+}
+
+/* Info adicional en paneles */
+.panel-info {
+    padding: 10px 12px;
+    background-color: #F5F5F5;
+    border-top: 1px solid var(--color-border);
+    font-size: 11px;
+}
+
 /* ===== MARCA DE AGUA ===== */
 .watermark {
     position: fixed;
@@ -977,6 +1107,18 @@ tr.selected {
     background-color: #FFFFFF;
     color: #000000;
     max-width: 400px;
+}
+
+/* Inputs de texto manuales siempre en mayúsculas */
+input[type="text"].hospital-input,
+input:not([type]).hospital-input,
+textarea.hospital-input {
+    text-transform: uppercase;
+}
+
+/* Excluir email del uppercase (debe respetar formato estándar) */
+input[type="email"].hospital-input {
+    text-transform: none;
 }
 
 .hospital-input:focus {
@@ -2656,4 +2798,27 @@ tr.selected {
     .quick-access-btn {
         min-width: calc(50% - 6px);
     }
+}
+
+/* ===== MODO CORPORATIVO BADGES ===== */
+.modo-badge {
+    font-size: 9px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 0;
+    text-align: center;
+    margin-top: 4px;
+    text-transform: uppercase;
+}
+
+.modo-corporativo {
+    background-color: #CC0000;
+    color: #FFFFFF;
+    border: 1px solid #990000;
+}
+
+.modo-libre {
+    background-color: #006600;
+    color: #FFFFFF;
+    border: 1px solid #004400;
 }

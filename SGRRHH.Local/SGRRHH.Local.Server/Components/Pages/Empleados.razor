@@ -2,6 +2,7 @@
 @page "/empleados/{EmpleadoIdParam:int?}"
 @using SGRRHH.Local.Domain.Entities
 @using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.Services
 @using SGRRHH.Local.Shared.Interfaces
 @using Microsoft.AspNetCore.Components.Forms
 @inject IAuthService AuthService
@@ -323,7 +324,10 @@
 
     <div class="action-bar">
         <div class="action-buttons">
-            <button class="btn" @onclick="NuevoEmpleadoOnboarding">NUEVO (F3)</button>
+            @if (PuedeCrear)
+            {
+                <button class="btn" @onclick="NuevoEmpleadoOnboarding">NUEVO (F3)</button>
+            }
             <button class="btn" @onclick="CargarEmpleados">ACTUALIZAR (F5)</button>
             <button class="btn" @onclick="Buscar">BUSCAR (F2)</button>
         </div>
@@ -344,10 +348,13 @@
                 <select class="filter-select" @bind="filtroEstado" @bind:after="Filtrar">
                     <option value="">TODOS</option>
                     <option value="@((int)EstadoEmpleado.Activo)">ACTIVOS</option>
-                    <option value="@((int)EstadoEmpleado.Retirado)">RETIRADOS</option>
                     <option value="@((int)EstadoEmpleado.PendienteAprobacion)">PENDIENTES</option>
                     <option value="@((int)EstadoEmpleado.EnVacaciones)">EN VACACIONES</option>
+                    <option value="@((int)EstadoEmpleado.EnLicencia)">EN LICENCIA</option>
+                    <option value="@((int)EstadoEmpleado.EnIncapacidad)">EN INCAPACIDAD</option>
                     <option value="@((int)EstadoEmpleado.Suspendido)">SUSPENDIDOS</option>
+                    <option value="@((int)EstadoEmpleado.Retirado)">RETIRADOS</option>
+                    <option value="@((int)EstadoEmpleado.Rechazado)">RECHAZADOS</option>
                 </select>
             </div>
             
@@ -360,6 +367,13 @@
 
     <div class="results-info">
         Mostrando @empleados.Count de @totalEmpleados registro(s)
+        @if (_datosDesactualizados)
+        {
+            <span style="margin-left: 20px; color: #FF9900; font-weight: bold;">
+                ⚠ HAY CAMBIOS - 
+                <button class="btn" style="display: inline-block; padding: 4px 8px; margin: 0;" @onclick="CargarEmpleados">REFRESCAR AHORA</button>
+            </span>
+        }
     </div>
 
     <table class="data-table">
@@ -416,8 +430,16 @@
                         @* <td>@emp.TipoContrato.ToString()</td> *@ @* Campo eliminado - ver Contrato *@
                         <td>@NumberFormatHelper.FormatearMoneda(emp.SalarioBase)</td>
                         <td class="cell-actions">
-                            <button class="btn-table" @onclick="() => EditarEmpleado(emp)" @onclick:stopPropagation="true">EDITAR</button>
-                            @if (AuthService.IsAdmin)
+                            @if (PuedeEditar)
+                            {
+                                <button class="btn-table" @onclick="() => EditarEmpleado(emp)" @onclick:stopPropagation="true">EDITAR</button>
+                            }
+                            @if (PuedeAprobar && emp.Estado == EstadoEmpleado.PendienteAprobacion && 
+                                EstadoEmpleadoService.TienePermisoParaTransicion(AuthService.CurrentUser?.Rol ?? RolUsuario.Operador, emp.Estado, EstadoEmpleado.Activo))
+                            {
+                                <button class="btn-table" style="color: #006600; border-color: #006600;" @onclick="() => AprobarEmpleado(emp)" @onclick:stopPropagation="true">APROBAR</button>
+                            }
+                            @if (PuedeEliminar)
                             {
                                 <button class="btn-table btn-danger-small" @onclick="() => ConfirmarEliminarEmpleado(emp)" @onclick:stopPropagation="true">ELIMINAR</button>
                             }
@@ -476,13 +498,6 @@
     </div>
 }
 
-<!-- Modal de Formulario de Empleado -->
-<EmpleadoForm IsOpen="showModal"
-              Empleado="empleadoEdit"
-              IsEditing="isEditing"
-              OnSave="Guardar"
-              OnClose="CerrarModal" />
-
 @code {
     [Parameter] public int? EmpleadoIdParam { get; set; }
     
@@ -499,7 +514,17 @@
     private Empleado? empleadoEdit;
     private Empleado? empleadoOriginal; // Para detectar cambios
     
-    // Paginaci�n
+    // Permisos del usuario actual para este módulo
+    private PermisosModulo _permisos;
+    private bool PuedeCrear => _permisos.HasFlag(PermisosModulo.Crear);
+    private bool PuedeEditar => _permisos.HasFlag(PermisosModulo.Editar);
+    private bool PuedeEliminar => _permisos.HasFlag(PermisosModulo.Eliminar);
+    private bool PuedeAprobar => _permisos.HasFlag(PermisosModulo.Aprobar);
+    private bool PuedeEditarCriticos => _permisos.HasFlag(PermisosModulo.EditarDatosCriticos);
+    private bool PuedeRetirar => _permisos.HasFlag(PermisosModulo.Retirar);
+    private bool PuedeExportar => _permisos.HasFlag(PermisosModulo.Exportar);
+    
+    // Paginación
     private int currentPage = 1;
     private int pageSize = 20;
     private int totalEmpleados;
@@ -520,6 +545,12 @@
     private bool showConfirmModal;
     private string confirmMessage = "";
     private Action? confirmAction;
+    
+    // Polling automático
+    private System.Threading.Timer? _pollingTimer;
+    private DateTime _ultimaCarga = DateTime.MinValue;
+    private bool _datosDesactualizados = false;
+    private const int PollingIntervalSeconds = 30;
 
     protected override async Task OnInitializedAsync()
     {
@@ -528,6 +559,9 @@
             Navigation.NavigateTo("/login");
             return;
         }
+        
+        // Cargar permisos del usuario para este módulo
+        _permisos = AuthService.ObtenerPermisosModulo("Empleados");
         
         // Registrar atajos de teclado para esta página
         KeyboardShortcutService.RegisterPageShortcuts(PageId, new List<KeyboardShortcutDto>
@@ -550,11 +584,73 @@
                 await EditarEmpleado(empleado);
             }
         }
+        
+        // Iniciar polling automático
+        IniciarPolling();
     }
     
     public void Dispose()
     {
+        _pollingTimer?.Dispose();
         KeyboardShortcutService.ClearPageShortcuts(PageId);
+    }
+    
+    private void IniciarPolling()
+    {
+        // Polling cada 30 segundos
+        _pollingTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                await VerificarCambios();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error en polling autom�tico");
+            }
+        }, null, TimeSpan.FromSeconds(PollingIntervalSeconds), TimeSpan.FromSeconds(PollingIntervalSeconds));
+    }
+    
+    private async Task VerificarCambios()
+    {
+        try
+        {
+            // Solo verificar si han pasado m�s de 10 segundos desde la �ltima carga
+            if ((DateTime.Now - _ultimaCarga).TotalSeconds < 10)
+                return;
+            
+            var empleadosActuales = (await EmpleadoRepo.GetAllWithRelationsAsync()).ToList();
+            
+            // Verificar si hay diferencias en los timestamps
+            var hayDiferencias = false;
+            
+            if (empleadosActuales.Count != todosEmpleados.Count)
+            {
+                hayDiferencias = true;
+            }
+            else
+            {
+                foreach (var empActual in empleadosActuales)
+                {
+                    var empLocal = todosEmpleados.FirstOrDefault(e => e.Id == empActual.Id);
+                    if (empLocal == null || empLocal.UltimaActualizacion != empActual.UltimaActualizacion)
+                    {
+                        hayDiferencias = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (hayDiferencias && !_datosDesactualizados)
+            {
+                _datosDesactualizados = true;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error verificando cambios");
+        }
     }
     
     private async Task CargarCatalogos()
@@ -580,9 +676,11 @@
         try
         {
             isLoading = true;
+            _datosDesactualizados = false;
             StateHasChanged();
             
             todosEmpleados = (await EmpleadoRepo.GetAllWithRelationsAsync()).ToList();
+            _ultimaCarga = DateTime.Now;
             
             // Aplicar filtros
             var filtrados = todosEmpleados
@@ -634,6 +732,70 @@
         if (selectedEmpleado != null)
         {
             await EditarEmpleado(selectedEmpleado);
+        }
+    }
+
+    private async Task AprobarEmpleado(Empleado empleado)
+    {
+        try
+        {
+            // PASO 1: Recargar empleado desde BD para verificar estado actual
+            var empleadoActual = await EmpleadoRepo.GetByIdWithRelationsAsync(empleado.Id);
+            if (empleadoActual == null)
+            {
+                messageToast?.ShowError("El empleado no existe");
+                await CargarEmpleados();
+                return;
+            }
+            
+            // PASO 2: Verificar que el estado sigue siendo PendienteAprobacion
+            if (empleadoActual.Estado != EstadoEmpleado.PendienteAprobacion)
+            {
+                messageToast?.ShowError($"El empleado ya no está pendiente de aprobación. Estado actual: {EstadoEmpleadoService.ObtenerDescripcion(empleadoActual.Estado)}");
+                await CargarEmpleados();
+                return;
+            }
+            
+            // PASO 3: Obtener rol del usuario actual
+            var rolUsuario = AuthService.CurrentUser?.Rol ?? RolUsuario.Operador;
+            
+            // PASO 4: Validar que la transición sea permitida
+            if (!EstadoEmpleadoService.TienePermisoParaTransicion(rolUsuario, empleadoActual.Estado, EstadoEmpleado.Activo))
+            {
+                messageToast?.ShowError("No tiene permisos para aprobar empleados");
+                return;
+            }
+            
+            // PASO 5: Validar que el estado actual sea PendienteAprobacion
+            if (!EstadoEmpleadoService.EsTransicionValida(empleadoActual.Estado, EstadoEmpleado.Activo))
+            {
+                messageToast?.ShowError($"No se puede aprobar un empleado en estado {empleadoActual.Estado}");
+                return;
+            }
+            
+            // PASO 6: Actualizar estado y campos de auditoría
+            empleadoActual.Estado = EstadoEmpleado.Activo;
+            empleadoActual.AprobadoPorId = AuthService.CurrentUser?.Id;
+            empleadoActual.FechaAprobacion = DateTime.Now;
+            
+            await EmpleadoRepo.UpdateAsync(empleadoActual);
+            
+            messageToast?.ShowSuccess($"Empleado {empleadoActual.Codigo} aprobado correctamente");
+            Logger.LogInformation("Empleado aprobado: {Codigo} por {Usuario} (Id: {UserId})", 
+                empleadoActual.Codigo, AuthService.CurrentUser?.Username, AuthService.CurrentUser?.Id);
+            
+            await CargarEmpleados();
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("modificado por otro usuario"))
+        {
+            Logger.LogWarning(ex, "Conflicto de concurrencia aprobando empleado {Id}", empleado.Id);
+            messageToast?.ShowError("El empleado fue modificado por otro usuario. Por favor, intente nuevamente.");
+            await CargarEmpleados();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error aprobando empleado {Id}", empleado.Id);
+            messageToast?.ShowError(ErrorTranslationService.Translate(ex));
         }
     }
 
@@ -1058,8 +1220,11 @@
         {
             EstadoEmpleado.Activo => "activo",
             EstadoEmpleado.Retirado => "retirado",
+            EstadoEmpleado.Rechazado => "retirado",
             EstadoEmpleado.PendienteAprobacion => "pendiente",
             EstadoEmpleado.EnVacaciones => "vacaciones",
+            EstadoEmpleado.EnLicencia => "vacaciones",
+            EstadoEmpleado.EnIncapacidad => "suspendido",
             EstadoEmpleado.Suspendido => "suspendido",
             _ => "activo"
         };

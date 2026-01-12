@@ -294,7 +294,7 @@ else
             messageToast?.ShowWarning("Su sesión ha expirado por inactividad");
             await Task.Delay(2000);
             await AuthService.LogoutAsync();
-            Navigation.NavigateTo("/login");
+            Navigation.NavigateTo("/logged-out", forceLoad: true);
         });
     }
     
@@ -344,7 +344,8 @@ else
         await ClearSessionAsync();
         await SessionService.EndSessionAsync();
         await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/login");
+        // Navegar a página de logout (no a login para evitar auto-login)
+        Navigation.NavigateTo("/logged-out", forceLoad: true);
     }
     
     private async Task ClearSessionAsync()

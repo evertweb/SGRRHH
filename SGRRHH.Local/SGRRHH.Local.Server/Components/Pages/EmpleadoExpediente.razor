@@ -2,6 +2,7 @@
 @using SGRRHH.Local.Domain.Entities
 @using SGRRHH.Local.Domain.Enums
 @using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Domain.Services
 @using SGRRHH.Local.Shared.Interfaces
 @using Microsoft.AspNetCore.Components.Forms
 @inject IAuthService AuthService
@@ -93,9 +94,40 @@
 
     .estado-activo { background: #E8FFE8; border-color: #006400; color: #006400; }
     .estado-retirado { background: #FFE8E8; border-color: #8B0000; color: #8B0000; }
+    .estado-rechazado { background: #FFE8E8; border-color: #8B0000; color: #8B0000; }
     .estado-pendienteaprobacion { background: #FFFACD; border-color: #B8860B; color: #B8860B; }
     .estado-envacaciones { background: #E8E8FF; border-color: #4B0082; color: #4B0082; }
+    .estado-enlicencia { background: #E8E8FF; border-color: #4B0082; color: #4B0082; }
+    .estado-enincapacidad { background: #FFEFD5; border-color: #FF8C00; color: #FF8C00; }
     .estado-suspendido { background: #FFE8E8; border-color: #DC143C; color: #DC143C; }
+
+    .estado-selector {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 5px;
+    }
+
+    .estado-selector select {
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        padding: 4px 8px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+    }
+
+    .estado-selector button {
+        font-family: 'Courier New', monospace;
+        font-size: 10px;
+        padding: 4px 8px;
+        border: 1px solid #000000;
+        background: #FFFFFF;
+        cursor: pointer;
+    }
+
+    .estado-selector button:hover {
+        background: #F0F0F0;
+    }
 
     .expediente-actions {
         display: flex;
@@ -481,8 +513,23 @@ else
                         @(empleado.Cargo?.Nombre ?? "Sin cargo") - @(empleado.Departamento?.Nombre ?? "Sin departamento")
                     </div>
                     <div class="expediente-estado estado-@empleado.Estado.ToString().ToLower()">
-                        @empleado.Estado.ToString().ToUpper()
+                        @EstadoEmpleadoService.ObtenerDescripcion(empleado.Estado)
                     </div>
+                    @if (transicionesPermitidas.Any())
+                    {
+                        <div class="estado-selector">
+                            <select @bind="nuevoEstadoSeleccionado">
+                                <option value="">-- Cambiar estado --</option>
+                                @foreach (var estado in transicionesPermitidas)
+                                {
+                                    <option value="@((int)estado)">@EstadoEmpleadoService.ObtenerDescripcion(estado)</option>
+                                }
+                            </select>
+                            <button @onclick="CambiarEstado" disabled="@(string.IsNullOrEmpty(nuevoEstadoSeleccionado) || isSavingEstado)">
+                                @(isSavingEstado ? "GUARDANDO..." : "APLICAR")
+                            </button>
+                        </div>
+                    }
                 </div>
             </div>
             <div class="expediente-actions">
@@ -656,6 +703,11 @@ else
     private byte[]? bytesParaImprimir = null;
     private string? nombreDocumentoImprimir = null;
 
+    // Cambio de estado
+    private List<EstadoEmpleado> transicionesPermitidas = new();
+    private string nuevoEstadoSeleccionado = "";
+    private bool isSavingEstado = false;
+
     private void SetActiveTab(string tab) => activeTab = tab;
     
     private void IrADocumentos() => Navigation.NavigateTo($"/documentos/{EmpleadoId}");
@@ -707,6 +759,11 @@ else
                     contrato.Cargo = cargos.FirstOrDefault(c => c.Id == contrato.CargoId);
                 }
 
+                // Cargar transiciones de estado permitidas según rol
+                var rolUsuario = AuthService.CurrentUser?.Rol ?? RolUsuario.Operador;
+                transicionesPermitidas = EstadoEmpleadoService.ObtenerTransicionesPermitidas(empleado.Estado, rolUsuario).ToList();
+                nuevoEstadoSeleccionado = "";
+
                 Logger.LogInformation("Expediente cargado: {Codigo} con {Docs} documentos y {Contratos} contratos",
                     empleado.Codigo, documentos.Count, contratos.Count);
             }
@@ -732,6 +789,104 @@ else
     {
         // Abrir modal de edición usando el EmpleadoForm existente
         Navigation.NavigateTo($"/empleados?edit={EmpleadoId}");
+    }
+
+    private async Task CambiarEstado()
+    {
+        if (empleado == null || string.IsNullOrEmpty(nuevoEstadoSeleccionado))
+            return;
+
+        try
+        {
+            isSavingEstado = true;
+            StateHasChanged();
+
+            var nuevoEstado = (EstadoEmpleado)int.Parse(nuevoEstadoSeleccionado);
+            var rolUsuario = AuthService.CurrentUser?.Rol ?? RolUsuario.Operador;
+            
+            // PASO 1: Recargar empleado desde BD para verificar estado actual
+            var empleadoActual = await EmpleadoRepo.GetByIdWithRelationsAsync(empleado.Id);
+            if (empleadoActual == null)
+            {
+                messageToast?.ShowError("El empleado no existe");
+                Navigation.NavigateTo("/empleados");
+                return;
+            }
+            
+            var estadoAnterior = empleadoActual.Estado;
+            
+            // PASO 2: Verificar si el estado cambió desde que se cargó la página
+            if (estadoAnterior != empleado.Estado)
+            {
+                messageToast?.ShowError($"El estado del empleado cambió. Estado actual: {EstadoEmpleadoService.ObtenerDescripcion(estadoAnterior)}. Recargando...");
+                empleado = empleadoActual;
+                transicionesPermitidas = EstadoEmpleadoService.ObtenerTransicionesPermitidas(estadoAnterior, rolUsuario).ToList();
+                nuevoEstadoSeleccionado = "";
+                return;
+            }
+
+            // PASO 3: Validar transición
+            if (!EstadoEmpleadoService.TienePermisoParaTransicion(rolUsuario, estadoAnterior, nuevoEstado))
+            {
+                messageToast?.ShowError("No tiene permisos para realizar este cambio de estado");
+                return;
+            }
+
+            if (!EstadoEmpleadoService.EsTransicionValida(estadoAnterior, nuevoEstado))
+            {
+                messageToast?.ShowError($"No se puede cambiar de {estadoAnterior} a {nuevoEstado}");
+                return;
+            }
+
+            // PASO 4: Aplicar cambio
+            empleadoActual.Estado = nuevoEstado;
+
+            // Si es aprobación, registrar quién aprueba
+            if (estadoAnterior == EstadoEmpleado.PendienteAprobacion && nuevoEstado == EstadoEmpleado.Activo)
+            {
+                empleadoActual.AprobadoPorId = AuthService.CurrentUser?.Id;
+                empleadoActual.FechaAprobacion = DateTime.Now;
+            }
+
+            await EmpleadoRepo.UpdateAsync(empleadoActual);
+
+            Logger.LogInformation("Estado cambiado: {Codigo} de {Anterior} a {Nuevo} por {Usuario}",
+                empleadoActual.Codigo, estadoAnterior, nuevoEstado, AuthService.CurrentUser?.Username);
+
+            messageToast?.ShowSuccess($"Estado cambiado a {EstadoEmpleadoService.ObtenerDescripcion(nuevoEstado)}");
+
+            // Actualizar objeto local
+            empleado = empleadoActual;
+            
+            // Recargar transiciones permitidas
+            transicionesPermitidas = EstadoEmpleadoService.ObtenerTransicionesPermitidas(nuevoEstado, rolUsuario).ToList();
+            nuevoEstadoSeleccionado = "";
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("modificado por otro usuario"))
+        {
+            Logger.LogWarning(ex, "Conflicto de concurrencia cambiando estado del empleado {Id}", empleado?.Id);
+            messageToast?.ShowError("El empleado fue modificado por otro usuario. Recargando datos...");
+            
+            // Recargar empleado
+            var empleadoActualizado = await EmpleadoRepo.GetByIdWithRelationsAsync(empleado!.Id);
+            if (empleadoActualizado != null)
+            {
+                empleado = empleadoActualizado;
+                var rolUsuario = AuthService.CurrentUser?.Rol ?? RolUsuario.Operador;
+                transicionesPermitidas = EstadoEmpleadoService.ObtenerTransicionesPermitidas(empleado.Estado, rolUsuario).ToList();
+            }
+            nuevoEstadoSeleccionado = "";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cambiando estado del empleado {Id}", empleado?.Id);
+            messageToast?.ShowError("Error al cambiar estado: " + ex.Message);
+        }
+        finally
+        {
+            isSavingEstado = false;
+            StateHasChanged();
+        }
     }
 
     private void ConfirmarEliminar()
@@ -1287,9 +1442,70 @@ else
         mostrarScannerModal = true;
     }
     
-    private void OnScanComplete(List<ScannedPageDto> pages)
+    private async Task OnScanComplete(List<ScannedPageDto> pages)
     {
-        Logger.LogInformation($"Escaneo completado en expediente: {pages.Count} página(s)");
+        if (empleado == null || pages.Count == 0)
+        {
+            Logger.LogWarning("OnScanComplete: No hay empleado o páginas escaneadas");
+            return;
+        }
+        
+        try
+        {
+            Logger.LogInformation($"Guardando {pages.Count} página(s) escaneada(s) para empleado {empleado.Codigo}");
+            
+            foreach (var page in pages)
+            {
+                // Determinar formato basado en el MimeType
+                var extension = page.MimeType.Contains("png") ? ".png" : ".jpg";
+                var fileName = $"Documento_Escaneado_{DateTime.Now:yyyyMMdd_HHmmss}_{page.PageNumber}{extension}";
+                
+                var storageResult = await StorageService.SaveDocumentoEmpleadoAsync(
+                    empleado.Id,
+                    "Documento Escaneado",
+                    page.ImageBytes,
+                    fileName);
+                
+                if (storageResult.IsSuccess)
+                {
+                    var documento = new DocumentoEmpleado
+                    {
+                        EmpleadoId = empleado.Id,
+                        TipoDocumento = TipoDocumentoEmpleado.Otro,
+                        Nombre = pages.Count > 1 ? $"Documento Escaneado (Pág. {page.PageNumber})" : "Documento Escaneado",
+                        NombreArchivoOriginal = fileName,
+                        TipoMime = page.MimeType,
+                        TamanoArchivo = page.ImageBytes.Length,
+                        SubidoPorNombre = AuthService.CurrentUser?.NombreCompleto,
+                        SubidoPorUsuarioId = AuthService.CurrentUser?.Id,
+                        ArchivoPath = storageResult.Value,
+                        Activo = true,
+                        FechaCreacion = DateTime.Now
+                    };
+                    
+                    await DocumentoRepo.AddAsync(documento);
+                    documentos.Insert(0, documento);
+                    
+                    Logger.LogInformation("Imagen escaneada guardada: {Path}", storageResult.Value);
+                }
+                else
+                {
+                    Logger.LogError("Error guardando imagen escaneada: {Error}", storageResult.Error);
+                }
+            }
+            
+            messageToast?.ShowSuccess($"✓ {pages.Count} imagen(es) escaneada(s) guardada(s) exitosamente");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar imágenes escaneadas");
+            messageToast?.ShowError("Error al guardar imágenes escaneadas");
+        }
+        finally
+        {
+            mostrarScannerModal = false;
+            StateHasChanged();
+        }
     }
     
     private async Task OnPdfGenerated(byte[] pdfBytes)

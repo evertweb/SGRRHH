@@ -91,6 +91,31 @@ public class DapperContext
             await TryAddColumnAsync(connection, "empleados", "codigo_caja_compensacion", "TEXT");
             
             // =====================================================
+            // MIGRACIONES CONTACTO EXPANDIDO (Enero 2026)
+            // =====================================================
+            
+            // Contacto expandido
+            await TryAddColumnAsync(connection, "empleados", "telefono_celular", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "telefono_fijo", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "whatsapp", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "municipio", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "barrio", "TEXT");
+            
+            // Información médica (emergencias)
+            await TryAddColumnAsync(connection, "empleados", "tipo_sangre", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "alergias", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "condiciones_medicas", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "medicamentos_actuales", "TEXT");
+            
+            // Contactos de emergencia expandidos
+            await TryAddColumnAsync(connection, "empleados", "parentesco_contacto_emergencia", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "telefono_emergencia_2", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "contacto_emergencia_2", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "telefono_emergencia_2_contacto_2", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "parentesco_contacto_emergencia_2", "TEXT");
+            await TryAddColumnAsync(connection, "empleados", "telefono_emergencia_2_alternativo", "TEXT");
+            
+            // =====================================================
             // MIGRACIONES SILVICULTURALES Y PROYECTOS
             // =====================================================
             

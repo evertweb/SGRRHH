@@ -16,6 +16,10 @@ public class CatalogCacheService : ICatalogCacheService
     private readonly IProyectoRepository _proyectoRepository;
     private readonly IActividadRepository _actividadRepository;
     private readonly IEmpleadoRepository _empleadoRepository;
+    private readonly IEpsRepository _epsRepository;
+    private readonly IAfpRepository _afpRepository;
+    private readonly IArlRepository _arlRepository;
+    private readonly ICajaCompensacionRepository _cajaCompensacionRepository;
     private readonly IMemoryCache _cache;
     private readonly ILogger<CatalogCacheService> _logger;
     
@@ -27,6 +31,10 @@ public class CatalogCacheService : ICatalogCacheService
     private const string ACTIVIDADES_KEY = "catalog_actividades";
     private const string EMPLEADOS_ACTIVOS_KEY = "catalog_empleados_activos";
     private const string EMPLEADOS_TODOS_KEY = "catalog_empleados_todos";
+    private const string EPS_KEY = "catalog_eps";
+    private const string AFP_KEY = "catalog_afp";
+    private const string ARL_KEY = "catalog_arl";
+    private const string CAJAS_KEY = "catalog_cajas_compensacion";
     
     // Default cache duration
     private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(10);
@@ -38,6 +46,10 @@ public class CatalogCacheService : ICatalogCacheService
         IProyectoRepository proyectoRepository,
         IActividadRepository actividadRepository,
         IEmpleadoRepository empleadoRepository,
+        IEpsRepository epsRepository,
+        IAfpRepository afpRepository,
+        IArlRepository arlRepository,
+        ICajaCompensacionRepository cajaCompensacionRepository,
         IMemoryCache cache,
         ILogger<CatalogCacheService> logger)
     {
@@ -47,6 +59,10 @@ public class CatalogCacheService : ICatalogCacheService
         _proyectoRepository = proyectoRepository;
         _actividadRepository = actividadRepository;
         _empleadoRepository = empleadoRepository;
+        _epsRepository = epsRepository;
+        _afpRepository = afpRepository;
+        _arlRepository = arlRepository;
+        _cajaCompensacionRepository = cajaCompensacionRepository;
         _cache = cache;
         _logger = logger;
     }
@@ -139,6 +155,50 @@ public class CatalogCacheService : ICatalogCacheService
     }
     
     /// <summary>
+    /// Obtiene todas las EPS vigentes (cacheado)
+    /// </summary>
+    public async Task<List<Eps>> GetEpsAsync(bool forceRefresh = false)
+    {
+        return await GetOrLoadAsync(EPS_KEY, async () =>
+        {
+            return await _epsRepository.GetVigentesAsync();
+        }, forceRefresh);
+    }
+    
+    /// <summary>
+    /// Obtiene todas las AFP vigentes (cacheado)
+    /// </summary>
+    public async Task<List<Afp>> GetAfpAsync(bool forceRefresh = false)
+    {
+        return await GetOrLoadAsync(AFP_KEY, async () =>
+        {
+            return await _afpRepository.GetVigentesAsync();
+        }, forceRefresh);
+    }
+    
+    /// <summary>
+    /// Obtiene todas las ARL vigentes (cacheado)
+    /// </summary>
+    public async Task<List<Arl>> GetArlAsync(bool forceRefresh = false)
+    {
+        return await GetOrLoadAsync(ARL_KEY, async () =>
+        {
+            return await _arlRepository.GetVigentesAsync();
+        }, forceRefresh);
+    }
+    
+    /// <summary>
+    /// Obtiene todas las Cajas de Compensación vigentes (cacheado)
+    /// </summary>
+    public async Task<List<CajaCompensacion>> GetCajasCompensacionAsync(bool forceRefresh = false)
+    {
+        return await GetOrLoadAsync(CAJAS_KEY, async () =>
+        {
+            return await _cajaCompensacionRepository.GetVigentesAsync();
+        }, forceRefresh);
+    }
+    
+    /// <summary>
     /// Invalida el caché de un catálogo específico
     /// </summary>
     public void InvalidateCache(CatalogType catalogType)
@@ -152,6 +212,10 @@ public class CatalogCacheService : ICatalogCacheService
             CatalogType.Actividades => ACTIVIDADES_KEY,
             CatalogType.EmpleadosActivos => EMPLEADOS_ACTIVOS_KEY,
             CatalogType.EmpleadosTodos => EMPLEADOS_TODOS_KEY,
+            CatalogType.Eps => EPS_KEY,
+            CatalogType.Afp => AFP_KEY,
+            CatalogType.Arl => ARL_KEY,
+            CatalogType.CajasCompensacion => CAJAS_KEY,
             _ => null
         };
         
@@ -174,6 +238,10 @@ public class CatalogCacheService : ICatalogCacheService
         _cache.Remove(ACTIVIDADES_KEY);
         _cache.Remove(EMPLEADOS_ACTIVOS_KEY);
         _cache.Remove(EMPLEADOS_TODOS_KEY);
+        _cache.Remove(EPS_KEY);
+        _cache.Remove(AFP_KEY);
+        _cache.Remove(ARL_KEY);
+        _cache.Remove(CAJAS_KEY);
         
         _logger.LogInformation("Todo el caché de catálogos ha sido invalidado");
     }

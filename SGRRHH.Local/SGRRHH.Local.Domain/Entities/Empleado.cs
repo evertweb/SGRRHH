@@ -22,13 +22,49 @@ public class Empleado : EntidadBase
     
     public string? Direccion { get; set; }
     
-    public string? Telefono { get; set; }
+    // ========== CONTACTO EXPANDIDO ==========
     
-    public string? TelefonoEmergencia { get; set; }
+    public string? TelefonoCelular { get; set; }
+    
+    public string? TelefonoFijo { get; set; }
+    
+    public string? Telefono { get; set; } // Mantener para compatibilidad
+    
+    public string? Whatsapp { get; set; }
+    
+    public string? Email { get; set; }
+    
+    public string? Municipio { get; set; }
+    
+    public string? Barrio { get; set; }
+    
+    // ========== INFORMACIÓN MÉDICA (EMERGENCIAS) ==========
+    
+    public string? TipoSangre { get; set; } // A+, A-, B+, B-, O+, O-, AB+, AB-
+    
+    public string? Alergias { get; set; }
+    
+    public string? CondicionesMedicas { get; set; }
+    
+    public string? MedicamentosActuales { get; set; }
+    
+    // ========== CONTACTOS DE EMERGENCIA ==========
     
     public string? ContactoEmergencia { get; set; }
     
-    public string? Email { get; set; }
+    public string? TelefonoEmergencia { get; set; }
+    
+    public string? ParentescoContactoEmergencia { get; set; }
+    
+    public string? TelefonoEmergencia2 { get; set; } // Segundo teléfono del contacto 1
+    
+    public string? ContactoEmergencia2 { get; set; }
+    
+    public string? TelefonoEmergencia2Contacto2 { get; set; }
+    
+    public string? ParentescoContactoEmergencia2 { get; set; }
+    
+    public string? TelefonoEmergencia2Alternativo { get; set; } // Segundo teléfono del contacto 2
     
     public string? FotoPath { get; set; }
     
@@ -105,6 +141,12 @@ public class Empleado : EntidadBase
             return Math.Max(0, antiguedad);
         }
     }
+    
+    /// <summary>
+    /// Timestamp de última actualización (usado para detectar cambios en polling)
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public DateTime UltimaActualizacion => FechaModificacion ?? FechaCreacion;
 }
 
 

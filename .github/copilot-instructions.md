@@ -117,13 +117,30 @@ Este proyecto usa:
 - **Blazor Server** para UI
 - **Estilo "hospitalario"** (Courier New, diseño terminal)
 
-### 4. Validar compilación
+### 4. ⚠️ REGLA ESTRICTA: Respetar estilos de UI
+**TODO cambio que involucre la UI DEBE respetar de forma estricta el estilo existente:**
+- **Archivo principal de estilos:** `SGRRHH.Local.Server/wwwroot/css/hospital.css`
+- **NO crear bloques `<style>` inline** en componentes Razor
+- **NO usar colores arbitrarios** (verde terminal #00ff00, etc.)
+- **Usar las variables CSS existentes:**
+  - `--color-bg`, `--color-text`, `--color-border`
+  - `--color-error` (#CC0000), `--color-success` (#006600), `--color-warning` (#FF9900)
+  - `--font-family` (Courier New)
+- **Usar las clases CSS existentes:**
+  - Botones: `.btn-action`, `.btn-primary`, `.btn-danger`, `.btn-success`
+  - Modales: `.modal-overlay`, `.modal-box`, `.modal-header`, `.modal-footer`
+  - Formularios: `.form-field`, `.field-label`, `.field-input`
+  - Tablas: `.data-table`, `.row-inactive`, `.cell-truncate`
+  - Mensajes: `.error-block`, `.success-block`, `.loading-block`
+- **Si necesitas estilos nuevos:** Agrégalos a `hospital.css`, NO inline
+
+### 5. Validar compilación
 Después de cambios significativos:
 ```powershell
 dotnet build 2>&1 | Select-String -Pattern "error|Build succeeded|Build FAILED"
 ```
 
-### 5. No crear documentación innecesaria
+### 6. No crear documentación innecesaria
 - NO crear archivos .md para documentar cada cambio
 - SÍ crear prompts cuando el cambio es grande y delegable
 - SÍ actualizar CHANGELOG.md para features importantes

@@ -72,10 +72,29 @@ CREATE TABLE IF NOT EXISTS empleados (
     genero INTEGER,
     estado_civil INTEGER,
     direccion TEXT,
+    -- CONTACTO EXPANDIDO (Enero 2026)
     telefono TEXT,
-    telefono_emergencia TEXT,
-    contacto_emergencia TEXT,
+    telefono_celular TEXT,
+    telefono_fijo TEXT,
+    whatsapp TEXT,
     email TEXT,
+    municipio TEXT,
+    barrio TEXT,
+    -- INFORMACIÓN MÉDICA (EMERGENCIAS)
+    tipo_sangre TEXT,
+    alergias TEXT,
+    condiciones_medicas TEXT,
+    medicamentos_actuales TEXT,
+    -- CONTACTOS DE EMERGENCIA
+    contacto_emergencia TEXT,
+    telefono_emergencia TEXT,
+    parentesco_contacto_emergencia TEXT,
+    telefono_emergencia_2 TEXT,
+    contacto_emergencia_2 TEXT,
+    telefono_emergencia_2_contacto_2 TEXT,
+    parentesco_contacto_emergencia_2 TEXT,
+    telefono_emergencia_2_alternativo TEXT,
+    -- FIN CONTACTO EXPANDIDO
     foto_path TEXT,
     fecha_ingreso TEXT NOT NULL,
     fecha_retiro TEXT,
@@ -735,6 +754,29 @@ CREATE INDEX IF NOT EXISTS idx_seguimiento_permisos_fecha ON seguimiento_permiso
 CREATE INDEX IF NOT EXISTS idx_seguimiento_permisos_tipo ON seguimiento_permisos(tipo_accion);
 CREATE INDEX IF NOT EXISTS idx_compensaciones_horas_permiso ON compensaciones_horas(permiso_id);
 CREATE INDEX IF NOT EXISTS idx_compensaciones_horas_fecha ON compensaciones_horas(fecha_compensacion);
+
+-- =====================================================
+-- DISPOSITIVOS AUTORIZADOS (Login tipo SSH)
+-- Autenticación sin contraseña desde equipos de confianza
+-- =====================================================
+CREATE TABLE IF NOT EXISTS dispositivos_autorizados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    device_token TEXT NOT NULL UNIQUE,
+    nombre_dispositivo TEXT NOT NULL,
+    huella_navegador TEXT,
+    ip_autorizacion TEXT,
+    fecha_autorizacion TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_ultimo_uso TEXT,
+    fecha_expiracion TEXT,
+    activo INTEGER DEFAULT 1,
+    fecha_creacion TEXT DEFAULT CURRENT_TIMESTAMP,
+    fecha_modificacion TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_dispositivos_autorizados_token ON dispositivos_autorizados(device_token);
+CREATE INDEX IF NOT EXISTS idx_dispositivos_autorizados_usuario ON dispositivos_autorizados(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_dispositivos_autorizados_activo ON dispositivos_autorizados(activo);
 ";
 
     public const string SeedData = @"-- =====================================================
@@ -761,20 +803,23 @@ INSERT OR IGNORE INTO departamentos (codigo, nombre, descripcion, activo) VALUES
 
 -- =====================================================
 -- CARGOS (Estructura típica ~20 empleados)
+-- Cada cargo está asociado a su departamento correspondiente
 -- =====================================================
-INSERT OR IGNORE INTO cargos (codigo, nombre, descripcion, nivel, requisitos, activo) VALUES
-('GEN01', 'Gerente General', 'Dirección estratégica de la empresa', 5, 'Profesional + Experiencia directiva', 1),
-('OPE01', 'Ingeniero Forestal', 'Director técnico de operaciones forestales', 4, 'Ingeniero Forestal titulado', 1),
-('OPE02', 'Supervisor de Campo', 'Coordinación de cuadrillas y actividades diarias', 3, 'Técnico Forestal o experiencia equivalente', 1),
-('OPE03', 'Operario Forestal - Motosierrista', 'Operación de motosierra para aprovechamiento', 2, 'Certificado competencia motosierrista', 1),
-('OPE04', 'Auxiliar de Campo', 'Actividades silviculturales generales', 1, 'Primaria o experiencia en campo', 1),
-('OPE05', 'Viverista', 'Producción y cuidado de plántulas', 2, 'Experiencia en vivero forestal', 1),
-('LOG01', 'Conductor', 'Transporte de personal y materiales', 2, 'Licencia de conducción C2/C3', 1),
-('LOG02', 'Almacenista', 'Control de inventarios y despachos', 2, 'Técnico o experiencia equivalente', 1),
-('MAN01', 'Mecánico', 'Mantenimiento de maquinaria y equipos', 2, 'Técnico en mecánica', 1),
-('ADM01', 'Auxiliar Administrativo', 'Apoyo administrativo y gestión documental', 2, 'Técnico Administrativo', 1),
-('ADM02', 'Coordinador SST', 'Seguridad y Salud en el Trabajo', 3, 'Profesional SST o Tecnólogo', 1),
-('ADM03', 'Contador', 'Gestión contable y tributaria', 4, 'Contador Público titulado', 1);
+INSERT OR IGNORE INTO cargos (codigo, nombre, descripcion, nivel, departamento_id, requisitos, activo) VALUES
+('GEN01', 'Gerente General', 'Dirección estratégica de la empresa', 5, 1, 'Profesional + Experiencia directiva', 1),
+('OPE01', 'Ingeniero Forestal', 'Director técnico de operaciones forestales', 4, 2, 'Ingeniero Forestal titulado', 1),
+('OPE02', 'Supervisor de Campo', 'Coordinación de cuadrillas y actividades diarias', 3, 2, 'Técnico Forestal o experiencia equivalente', 1),
+('OPE03', 'Operario Forestal - Motosierrista', 'Operación de motosierra para aprovechamiento', 2, 2, 'Certificado competencia motosierrista', 1),
+('OPE04', 'Auxiliar de Campo', 'Actividades silviculturales generales', 1, 2, 'Primaria o experiencia en campo', 1),
+('OPE05', 'Viverista', 'Producción y cuidado de plántulas', 2, 6, 'Experiencia en vivero forestal', 1),
+('OPE06', 'Operario Forestal', 'Actividades silviculturales generales sin especialización', 1, 2, 'Primaria o experiencia en campo', 1),
+('LOG01', 'Conductor', 'Transporte de personal y materiales', 2, 5, 'Licencia de conducción C2/C3', 1),
+('LOG02', 'Almacenista', 'Control de inventarios y despachos', 2, 5, 'Técnico o experiencia equivalente', 1),
+('LOG03', 'Tractorista', 'Operación de tractores para actividades forestales y agrícolas', 2, 5, 'Licencia de conducción, experiencia en maquinaria agrícola', 1),
+('MAN01', 'Mecánico', 'Mantenimiento de maquinaria y equipos', 2, 5, 'Técnico en mecánica', 1),
+('ADM01', 'Auxiliar Administrativo', 'Apoyo administrativo y gestión documental', 2, 3, 'Técnico Administrativo', 1),
+('ADM02', 'Coordinador SST', 'Seguridad y Salud en el Trabajo', 3, 4, 'Profesional SST o Tecnólogo', 1),
+('ADM03', 'Contador', 'Gestión contable y tributaria', 4, 3, 'Contador Público titulado', 1);
 
 -- =====================================================
 -- TIPOS DE PERMISO (Código Sustantivo del Trabajo 2026)

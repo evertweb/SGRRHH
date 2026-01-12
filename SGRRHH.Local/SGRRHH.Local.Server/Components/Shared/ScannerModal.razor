@@ -410,17 +410,15 @@
                         }
                         @if (scannedPages.Count > 0)
                         {
-                            @if (AllowMultiplePages && outputFormat == "pdf")
+                            @if (AllowMultiplePages && outputFormat == "pdf-ocr")
                             {
-                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsPdf">Generar PDF</button>
-                            }
-                            else if (AllowMultiplePages && outputFormat == "pdf-ocr")
-                            {
-                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsOcrPdf">PDF Buscable</button>
+                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmAsOcrPdf">Guardar PDF (OCR)</button>
                             }
                             else
                             {
-                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmScan">Aceptar</button>
+                                <button class="scanner-btn scanner-btn-success" @onclick="ConfirmScan">
+                                    💾 Guardar PDF
+                                </button>
                             }
                         }
                         <button class="scanner-btn" @onclick="Cerrar">Cerrar</button>
@@ -773,14 +771,44 @@
     {
         if (scannedPages.Count == 0) return;
         
-        // Renumerar páginas
-        for (int i = 0; i < scannedPages.Count; i++)
-        {
-            scannedPages[i].PageNumber = i + 1;
-        }
+        // Siempre generar PDF para una experiencia más profesional
+        isGeneratingPdf = true;
+        errorMessage = null;
+        progressStatus = "Generando PDF...";
+        StateHasChanged();
         
-        await OnScanComplete.InvokeAsync(new List<ScannedPageDto>(scannedPages));
-        await Cerrar();
+        try
+        {
+            // Renumerar páginas
+            for (int i = 0; i < scannedPages.Count; i++)
+            {
+                scannedPages[i].PageNumber = i + 1;
+            }
+            
+            // Generar PDF combinando todas las páginas escaneadas
+            var pdfBytes = await GeneratePdfFromPagesAsync();
+            
+            if (pdfBytes != null && pdfBytes.Length > 0)
+            {
+                Console.WriteLine($"[SCAN] PDF generado exitosamente: {pdfBytes.Length} bytes ({scannedPages.Count} página(s))");
+                await OnPdfGenerated.InvokeAsync(pdfBytes);
+                await Cerrar();
+            }
+            else
+            {
+                errorMessage = "Error al generar el PDF";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error generando PDF: {ex.Message}";
+            Console.WriteLine($"[SCAN] ERROR generando PDF: {ex}");
+        }
+        finally
+        {
+            isGeneratingPdf = false;
+            StateHasChanged();
+        }
     }
 
     private async Task ConfirmAsPdf()
