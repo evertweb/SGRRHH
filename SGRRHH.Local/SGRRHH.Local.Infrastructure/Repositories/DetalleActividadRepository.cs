@@ -83,6 +83,19 @@ WHERE id = @Id";
         return await connection.QueryAsync<DetalleActividad>(sql, new { RegistroId = registroDiarioId });
     }
 
+    public async Task<IEnumerable<DetalleActividad>> GetByRegistroIdsAsync(IEnumerable<int> registroIds)
+    {
+        var ids = registroIds?.Distinct().ToList() ?? new List<int>();
+        if (!ids.Any())
+        {
+            return new List<DetalleActividad>();
+        }
+
+        const string sql = "SELECT * FROM detalles_actividad WHERE registro_diario_id IN @RegistroIds AND activo = 1";
+        using var connection = _context.CreateConnection();
+        return await connection.QueryAsync<DetalleActividad>(sql, new { RegistroIds = ids });
+    }
+
     public async Task<IEnumerable<DetalleActividad>> GetByProyectoAsync(int proyectoId)
     {
         const string sql = "SELECT * FROM detalles_actividad WHERE proyecto_id = @ProyectoId AND activo = 1";

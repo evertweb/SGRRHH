@@ -1,0 +1,38 @@
+@using SGRRHH.Local.Domain.Services
+@inject IPermisoCalculationService CalculationService
+
+<div class="permisos-campo-form">
+    <label class="permisos-campo-label">TOTAL DE DIAS</label>
+    <input type="number" class="permisos-campo-input" value="@TotalDias" disabled />
+</div>
+
+@code {
+    [Parameter] public DateTime FechaInicio { get; set; }
+    [Parameter] public DateTime FechaFin { get; set; }
+    [Parameter] public int TotalDias { get; set; }
+    [Parameter] public EventCallback<int> TotalDiasChanged { get; set; }
+
+    private DateTime? ultimoInicio;
+    private DateTime? ultimoFin;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var inicio = FechaInicio.Date;
+        var fin = FechaFin.Date;
+
+        if (inicio == default || fin == default)
+            return;
+
+        if (ultimoInicio == inicio && ultimoFin == fin)
+            return;
+
+        ultimoInicio = inicio;
+        ultimoFin = fin;
+
+        var dias = await CalculationService.CalcularDiasLaborablesAsync(inicio, fin);
+        if (dias != TotalDias)
+        {
+            await TotalDiasChanged.InvokeAsync(dias);
+        }
+    }
+}

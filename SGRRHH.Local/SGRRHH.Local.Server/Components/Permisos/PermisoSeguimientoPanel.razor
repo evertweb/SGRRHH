@@ -1,0 +1,51 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Server.Components.Pages
+@inject IPermisoRepository PermisoRepository
+@inject ISeguimientoPermisoRepository SeguimientoRepository
+@inject ICompensacionHorasRepository CompensacionRepository
+@inject ILogger<PermisoSeguimientoPanel> Logger
+
+@if (mostrar && permiso != null)
+{
+    <ModalSeguimientoPermiso Permiso="permiso"
+                             Seguimientos="seguimientos"
+                             Compensaciones="compensaciones"
+                             OnCerrar="Cerrar" />
+}
+
+@code {
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private bool mostrar;
+    private Permiso? permiso;
+    private List<SeguimientoPermiso> seguimientos = new();
+    private List<CompensacionHoras> compensaciones = new();
+
+    public async Task Open(int permisoId)
+    {
+        try
+        {
+            permiso = await PermisoRepository.GetByIdAsync(permisoId);
+            if (permiso == null)
+            {
+                await OnError.InvokeAsync("ERROR: NO SE ENCONTRÓ EL PERMISO");
+                return;
+            }
+
+            seguimientos = (await SeguimientoRepository.GetByPermisoIdWithUsuarioAsync(permisoId)).ToList();
+            compensaciones = (await CompensacionRepository.GetByPermisoIdWithAprobadorAsync(permisoId)).ToList();
+            mostrar = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando seguimiento de permiso");
+            await OnError.InvokeAsync(ErrorTranslationService.Translate(ex));
+        }
+    }
+
+    private Task Cerrar()
+    {
+        mostrar = false;
+        return Task.CompletedTask;
+    }
+}

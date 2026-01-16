@@ -1,11 +1,16 @@
 <#
 .SYNOPSIS
-    Deploy de SGRRHH a servidor remoto via SSH.
+    Deploy INCREMENTAL SEGURO de SGRRHH a servidor remoto via SMB/Robocopy.
 
 .DESCRIPTION
-    Compila la aplicación en modo Release (self-contained win-x64),
-    la empaqueta y la despliega al servidor via SSH/SCP.
-    NO configura servicios - la app debe arrancarse manualmente.
+    Compila la aplicación en modo Release (self-contained win-x64) y
+    sincroniza SOLO los archivos modificados al servidor via robocopy.
+    
+    PROTECCIONES DE SEGURIDAD:
+    - NUNCA elimina archivos del servidor que no existen en source
+    - NUNCA toca las carpetas: Data, certs, logs, backups
+    - NUNCA sobrescribe: *.db, *.bat, *.ps1, *.lnk, appsettings.json
+    - Muestra qué archivos están protegidos antes de ejecutar
 
 .PARAMETER SkipBuild
     Omite la compilación y usa el último build existente.
@@ -16,16 +21,21 @@
 .PARAMETER IncludeDatabase
     Incluye la base de datos en el deploy (¡CUIDADO! Sobrescribe datos).
 
+.PARAMETER FullSync
+    Fuerza sincronización completa con /MIR. ¡PELIGROSO! Puede eliminar
+    archivos del servidor. Requiere confirmación adicional.
+
 .EXAMPLE
-    .\Deploy-ToServer.ps1
+    .\Deploy-ToServer.ps1           # Deploy normal (seguro)
     .\Deploy-ToServer.ps1 -SkipBuild
-    .\Deploy-ToServer.ps1 -Force -IncludeDatabase
+    .\Deploy-ToServer.ps1 -Force
 #>
 
 param(
     [switch]$SkipBuild,
     [switch]$Force,
-    [switch]$IncludeDatabase
+    [switch]$IncludeDatabase,
+    [switch]$FullSync
 )
 
 # ============================================================================
@@ -38,20 +48,47 @@ $Config = @{
     SshUser        = "equipo1"
     SshHost        = "192.168.1.248"
     RemotePath     = "C:\SGRRHH"
+    SharePath      = "\\192.168.1.248\SGRRHH"
     
     # Rutas locales
     SolutionDir    = Split-Path -Parent $PSScriptRoot
     ProjectDir     = Join-Path (Split-Path -Parent $PSScriptRoot) "SGRRHH.Local.Server"
     PublishDir     = Join-Path (Split-Path -Parent $PSScriptRoot) "publish-ssh"
     
-    # Archivos/carpetas a excluir del deploy
-    ExcludeItems   = @(
+    # =========================================================================
+    # PROTECCIÓN DEL SERVIDOR - NUNCA eliminar estos archivos/carpetas
+    # =========================================================================
+    
+    # Archivos a excluir del deploy (NO se sobrescriben ni eliminan)
+    ExcludeFiles   = @(
+        # Configuración local del servidor
         "appsettings.Development.json",
-        "*.pdb"
+        "appsettings.json",           # Mantener config del servidor
+        
+        # Archivos de debug
+        "*.pdb",
+        
+        # Scripts del servidor (creados manualmente)
+        "*.bat",                      # Todos los scripts batch
+        "*.ps1",                      # Todos los scripts PowerShell
+        
+        # Herramientas del servidor
+        "sqlite3.exe",                # Herramienta SQLite
+        "*.lnk",                      # Accesos directos
+        
+        # Base de datos (CRÍTICO)
+        "*.db",                       # Todos los archivos de BD
+        "*.db-shm",                   # SQLite shared memory
+        "*.db-wal"                    # SQLite write-ahead log
     )
     
-    # Carpetas a preservar en el servidor (no se eliminan)
-    PreserveDirs   = @("Data", "certs", "logs")
+    # Carpetas a preservar en el servidor (NUNCA se tocan)
+    PreserveDirs   = @(
+        "Data",                       # Base de datos
+        "certs",                      # Certificados SSL
+        "logs",                       # Logs de la aplicación
+        "backups"                     # Backups locales (si existen)
+    )
 }
 
 $Config.SshTarget = "$($Config.SshUser)@$($Config.SshHost)"
@@ -81,12 +118,76 @@ function Write-Header {
     Write-Host ("=" * 60) -ForegroundColor DarkGray
 }
 
+function Test-SmbConnection {
+    Write-Step "Verificando conexión SMB a $($Config.SharePath)..."
+    
+    # Verificar si ya está conectado
+    $existingConnection = net use 2>&1 | Select-String $Config.SshHost
+    
+    if (-not $existingConnection) {
+        Write-Step "Estableciendo conexión SMB..." "WARN"
+        # Intentar conectar (asume credenciales ya guardadas o sesión activa)
+        $result = net use $Config.SharePath /persistent:yes 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            throw "No se puede conectar al share SMB. Ejecuta manualmente: net use $($Config.SharePath) /user:$($Config.SshUser) <password>"
+        }
+    }
+    
+    # Verificar acceso
+    if (-not (Test-Path $Config.SharePath)) {
+        throw "No se puede acceder al share: $($Config.SharePath)"
+    }
+    
+    Write-Step "Conexión SMB establecida" "OK"
+}
+
+function Show-ServerProtectedAssets {
+    Write-Step "Verificando archivos protegidos en el servidor..."
+    
+    $protected = @()
+    
+    # Verificar carpetas protegidas
+    foreach ($dir in $Config.PreserveDirs) {
+        $path = Join-Path $Config.SharePath $dir
+        if (Test-Path $path) {
+            $itemCount = (Get-ChildItem $path -Recurse -File -ErrorAction SilentlyContinue | Measure-Object).Count
+            $protected += "  [D] $dir/ ($itemCount archivos)"
+        }
+    }
+    
+    # Verificar archivos protegidos específicos
+    $serverFiles = Get-ChildItem $Config.SharePath -File -ErrorAction SilentlyContinue
+    foreach ($file in $serverFiles) {
+        $isProtected = $false
+        foreach ($pattern in $Config.ExcludeFiles) {
+            if ($file.Name -like $pattern) {
+                $isProtected = $true
+                break
+            }
+        }
+        if ($isProtected) {
+            $protected += "  [F] $($file.Name)"
+        }
+    }
+    
+    if ($protected.Count -gt 0) {
+        Write-Host ""
+        Write-Host "  ARCHIVOS PROTEGIDOS (no serán modificados):" -ForegroundColor Green
+        foreach ($item in $protected) {
+            Write-Host $item -ForegroundColor DarkGreen
+        }
+        Write-Host ""
+    }
+    
+    Write-Step "Verificación completada" "OK"
+}
+
 function Test-SshConnection {
     Write-Step "Verificando conexión SSH a $($Config.SshTarget)..."
     
     $result = ssh $Config.SshTarget "echo OK" 2>&1
     if ($LASTEXITCODE -ne 0 -or $result -ne "OK") {
-        throw "No se puede conectar al servidor. Verifica que SSH esté configurado."
+        throw "No se puede conectar al servidor via SSH."
     }
     
     Write-Step "Conexión SSH establecida" "OK"
@@ -149,9 +250,9 @@ function Build-Application {
 }
 
 function Remove-ExcludedFiles {
-    Write-Step "Eliminando archivos excluidos del paquete..."
+    Write-Step "Eliminando archivos excluidos del paquete local..."
     
-    foreach ($pattern in $Config.ExcludeItems) {
+    foreach ($pattern in $Config.ExcludeFiles) {
         $files = Get-ChildItem -Path $Config.PublishDir -Filter $pattern -Recurse -ErrorAction SilentlyContinue
         foreach ($file in $files) {
             Remove-Item $file.FullName -Force
@@ -160,65 +261,78 @@ function Remove-ExcludedFiles {
     }
 }
 
-function Create-DeployPackage {
-    Write-Step "Creando paquete de deploy..."
+function Deploy-WithRobocopy {
+    Write-Step "Sincronizando archivos con robocopy (solo cambios)..."
     
-    $zipPath = Join-Path $Config.SolutionDir "deploy-package.zip"
+    $source = $Config.PublishDir
+    $dest = $Config.SharePath
     
-    if (Test-Path $zipPath) {
-        Remove-Item $zipPath -Force
+    # =========================================================================
+    # OPCIONES ROBOCOPY - MODO SEGURO (NO elimina nada del servidor)
+    # =========================================================================
+    # /E   = Copia subdirectorios (incluye vacíos)
+    # /XO  = Excluir archivos más antiguos (solo copia si source es más nuevo)
+    # /XX  = Excluir archivos "extra" del destino (NO los elimina)
+    # /XD  = Excluir directorios específicos
+    # /XF  = Excluir archivos específicos
+    # /NP  = No mostrar progreso porcentual
+    # /NDL = No listar directorios
+    # /NJH = No job header
+    # /R:2 = Reintentos
+    # /W:1 = Espera entre reintentos
+    # /IT  = Include Tweaked files
+    #
+    # IMPORTANTE: NO usamos /MIR para evitar eliminar archivos del servidor
+    # =========================================================================
+    
+    # Construir comando - modo SEGURO por defecto
+    $robocopyCmd = "robocopy `"$source`" `"$dest`" /E /XO /XX /NP /NDL /NJH /R:2 /W:1 /IT"
+    
+    # Agregar cada directorio a preservar como exclusión separada
+    foreach ($dir in $Config.PreserveDirs) {
+        $robocopyCmd += " /XD `"$dest\$dir`""
     }
     
-    Compress-Archive -Path "$($Config.PublishDir)\*" -DestinationPath $zipPath -Force
-    
-    $sizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 2)
-    Write-Step "Paquete creado: $sizeMB MB" "OK"
-    
-    return $zipPath
-}
-
-function Deploy-ToServer {
-    param([string]$ZipPath)
-    
-    $remoteZip = "$($Config.RemotePath)\deploy-package.zip"
-    
-    # Crear directorio remoto si no existe
-    Write-Step "Preparando directorio remoto..."
-    ssh $Config.SshTarget "if not exist `"$($Config.RemotePath)`" mkdir `"$($Config.RemotePath)`""
-    
-    # Copiar ZIP al servidor
-    Write-Step "Copiando paquete al servidor..."
-    scp $ZipPath "$($Config.SshTarget):$($Config.RemotePath.Replace('\', '/'))/"
-    
-    if ($LASTEXITCODE -ne 0) {
-        throw "Error al copiar el paquete"
+    # Agregar archivos a excluir
+    foreach ($file in $Config.ExcludeFiles) {
+        $robocopyCmd += " /XF `"$file`""
     }
     
-    # Limpiar archivos antiguos (preservando Data, certs, logs)
-    Write-Step "Limpiando archivos antiguos (preservando Data, certs, logs)..."
+    if ($FullSync) {
+        Write-Step "[!] Modo FULL SYNC - usando /MIR (puede eliminar extras)" "WARN"
+        # Cambiar /E /XO /XX por /MIR, pero mantener todas las exclusiones
+        $robocopyCmd = $robocopyCmd -replace "/E /XO /XX", "/MIR"
+    }
     
-    $preserveList = ($Config.PreserveDirs + @("deploy-package.zip")) -join "|"
+    Write-Host ""
+    if ($FullSync) {
+        Write-Host "  Modo: FULL SYNC (/MIR) - PELIGROSO" -ForegroundColor Yellow
+    } else {
+        Write-Host "  Modo: INCREMENTAL SEGURO (/E /XO /XX)" -ForegroundColor Green
+    }
+    Write-Host "  Comando: $robocopyCmd" -ForegroundColor DarkGray
+    Write-Host ""
     
-    $cleanupScript = @"
-cd /d "$($Config.RemotePath)"
-for /D %%d in (*) do (
-    echo %%d | findstr /i /r "$preserveList" >nul || rd /s /q "%%d"
-)
-for %%f in (*) do (
-    echo %%f | findstr /i /r "$preserveList" >nul || del /q "%%f"
-)
-"@
+    # Ejecutar robocopy
+    $output = cmd /c $robocopyCmd 2>&1
+    $exitCode = $LASTEXITCODE
     
-    ssh $Config.SshTarget "cmd /c `"$cleanupScript`"" 2>$null
+    # Robocopy exit codes: 0-7 son éxito, 8+ son errores
+    if ($exitCode -ge 8) {
+        Write-Host ($output -join "`n") -ForegroundColor Red
+        throw "Error en robocopy (código $exitCode)"
+    }
     
-    # Descomprimir
-    Write-Step "Descomprimiendo en servidor..."
-    ssh $Config.SshTarget "powershell -Command `"Expand-Archive -Path '$remoteZip' -DestinationPath '$($Config.RemotePath)' -Force`""
+    # Mostrar resumen
+    $copied = ($output | Select-String "Newer|New File|Modified|newer" | Measure-Object).Count
+    $skipped = ($output | Select-String "same|older" | Measure-Object).Count
     
-    # Eliminar ZIP remoto
-    ssh $Config.SshTarget "del `"$remoteZip`""
+    Write-Host ""
+    Write-Host "  Archivos actualizados: $copied" -ForegroundColor Green
+    Write-Host "  Archivos sin cambio:   $skipped" -ForegroundColor Gray  
+    Write-Host ""
     
-    Write-Step "Archivos desplegados correctamente" "OK"
+    Write-Step "Sincronización completada" "OK"
 }
 
 function Copy-Database {
@@ -277,9 +391,26 @@ function Show-Summary {
 # ============================================================================
 
 try {
-    Write-Header "DEPLOY SGRRHH A SERVIDOR"
+    Write-Header "DEPLOY INCREMENTAL SGRRHH"
     Write-Host "  Fecha: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
-    Write-Host "  Destino: $($Config.SshTarget):$($Config.RemotePath)" -ForegroundColor Gray
+    Write-Host "  Destino: $($Config.SharePath)" -ForegroundColor Gray
+    Write-Host "  Método: Robocopy (solo archivos modificados)" -ForegroundColor Gray
+    
+    if ($FullSync) {
+        Write-Host ""
+        Write-Host "  [!] ADVERTENCIA: Modo -FullSync activado" -ForegroundColor Red
+        Write-Host "      Esto usará /MIR que puede ELIMINAR archivos del servidor." -ForegroundColor Red
+        Write-Host "      Las carpetas protegidas ($($Config.PreserveDirs -join ', ')) seguirán excluidas." -ForegroundColor Yellow
+        Write-Host ""
+        
+        if (-not $Force) {
+            $confirmFull = Read-Host "¿Estás SEGURO de usar FullSync? (escribe 'SI' para confirmar)"
+            if ($confirmFull -ne "SI") {
+                Write-Step "Deploy cancelado por el usuario" "WARN"
+                exit 0
+            }
+        }
+    }
     
     if (-not $Force) {
         Write-Host ""
@@ -290,29 +421,29 @@ try {
         }
     }
     
-    # Paso 1: Verificar conexión SSH
+    # Paso 1: Verificar conexión SMB
+    Test-SmbConnection
+    
+    # Paso 1.5: Mostrar archivos protegidos del servidor
+    Show-ServerProtectedAssets
+    
+    # Paso 2: Verificar conexión SSH (para detener app)
     Test-SshConnection
     
-    # Paso 2: Detener app remota
+    # Paso 3: Detener app remota
     Stop-RemoteApp
     
-    # Paso 3: Compilar
+    # Paso 4: Compilar
     Build-Application
     
-    # Paso 4: Limpiar archivos excluidos
+    # Paso 5: Limpiar archivos excluidos localmente
     Remove-ExcludedFiles
     
-    # Paso 5: Crear paquete
-    $zipPath = Create-DeployPackage
-    
-    # Paso 6: Desplegar
-    Deploy-ToServer -ZipPath $zipPath
+    # Paso 6: Sincronizar con robocopy
+    Deploy-WithRobocopy
     
     # Paso 7: Copiar DB si se solicitó
     Copy-Database
-    
-    # Paso 8: Limpiar ZIP local
-    Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
     
     # Resumen
     Show-Summary

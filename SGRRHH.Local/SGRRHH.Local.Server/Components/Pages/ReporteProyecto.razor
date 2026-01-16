@@ -144,16 +144,16 @@ else if (reporte != null && reporte.ProyectoId > 0)
     <div class="panel">
         <div class="panel-header">
             <div class="tab-buttons">
-                <button class="@(tabActivo == "categoria" ? "active" : "")" @onclick='() => tabActivo = "categoria"'>
+                <button class="@(tabActivo == "categoria" ? "active" : "")" @onclick='() => SetActiveTab("categoria")'>
                     POR CATEGORÍA
                 </button>
-                <button class="@(tabActivo == "actividad" ? "active" : "")" @onclick='() => tabActivo = "actividad"'>
+                <button class="@(tabActivo == "actividad" ? "active" : "")" @onclick='() => SetActiveTab("actividad")'>
                     POR ACTIVIDAD
                 </button>
-                <button class="@(tabActivo == "empleado" ? "active" : "")" @onclick='() => tabActivo = "empleado"'>
+                <button class="@(tabActivo == "empleado" ? "active" : "")" @onclick='() => SetActiveTab("empleado")'>
                     POR EMPLEADO
                 </button>
-                <button class="@(tabActivo == "diario" ? "active" : "")" @onclick='() => tabActivo = "diario"'>
+                <button class="@(tabActivo == "diario" ? "active" : "")" @onclick='() => SetActiveTab("diario")'>
                     POR DÍA
                 </button>
             </div>
@@ -399,6 +399,9 @@ else
     
     [SupplyParameterFromQuery(Name = "fin")]
     public string? FinQuery { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? TabQuery { get; set; }
 
     private ReporteProyectoDetalle? reporte;
     private bool isLoading = true;
@@ -406,6 +409,7 @@ else
     private DateTime fechaInicio;
     private DateTime fechaFin;
     private string tabActivo = "categoria";
+    private static readonly HashSet<string> _tabsValidos = new() { "categoria", "actividad", "empleado", "diario" };
 
     protected override async Task OnInitializedAsync()
     {
@@ -432,6 +436,12 @@ else
         else
         {
             fechaFin = DateTime.Today;
+        }
+        
+        // Leer tab desde URL
+        if (!string.IsNullOrEmpty(TabQuery) && _tabsValidos.Contains(TabQuery))
+        {
+            tabActivo = TabQuery;
         }
 
         await CargarReporte();
@@ -464,6 +474,13 @@ else
     private void VolverAlDashboard()
     {
         Navigation.NavigateTo("/dashboard-productividad");
+    }
+    
+    private void SetActiveTab(string tab)
+    {
+        tabActivo = tab;
+        var uri = Navigation.GetUriWithQueryParameter("tab", tab);
+        Navigation.NavigateTo(uri, replace: true);
     }
 
     private string GetBadgeClaseRendimiento(decimal porcentaje)

@@ -1,0 +1,122 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Shared.Helpers
+
+@if (Empleado == null)
+{
+    return;
+}
+
+<div class="section">
+    <div class="section-header">INFORMACIÓN PERSONAL</div>
+    <div class="section-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">CÓDIGO</span>
+                <span class="info-value">@Empleado.Codigo</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">CÉDULA</span>
+                <span class="info-value">@NumberFormatHelper.FormatearCedula(Empleado.Cedula)</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">NOMBRES</span>
+                <span class="info-value">@Empleado.Nombres</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">APELLIDOS</span>
+                <span class="info-value">@Empleado.Apellidos</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">FECHA NACIMIENTO</span>
+                <span class="info-value">
+                    @(Empleado.FechaNacimiento?.ToString("dd/MM/yyyy") ?? "No registrada")
+                    @if (Empleado.FechaNacimiento.HasValue)
+                    {
+                        <text> (@DateHelper.CalcularEdad(Empleado.FechaNacimiento.Value) años)</text>
+                    }
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">GÉNERO</span>
+                <span class="info-value">@(Empleado.Genero?.ToString() ?? "No registrado")</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">ESTADO CIVIL</span>
+                <span class="info-value">@(Empleado.EstadoCivil?.ToString() ?? "No registrado")</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">DIRECCIÓN</span>
+                <span class="info-value">@(Empleado.Direccion ?? "No registrada")</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">INFORMACIÓN DE CONTACTO</div>
+    <div class="section-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">TELÉFONO</span>
+                <span class="info-value">@(Empleado.Telefono ?? "No registrado")</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">EMAIL</span>
+                <span class="info-value">@(Empleado.Email ?? "No registrado")</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">CONTACTO EMERGENCIA</span>
+                <span class="info-value">@(Empleado.ContactoEmergencia ?? "No registrado")</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">TELÉFONO EMERGENCIA</span>
+                <span class="info-value">@(Empleado.TelefonoEmergencia ?? "No registrado")</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">INFORMACIÓN LABORAL</div>
+    <div class="section-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">FECHA INGRESO</span>
+                <span class="info-value">
+                    @Empleado.FechaIngreso.ToString("dd/MM/yyyy")
+                    (@DateHelper.CalcularAntiguedad(Empleado.FechaIngreso))
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">FECHA RETIRO</span>
+                <span class="info-value">@(Empleado.FechaRetiro?.ToString("dd/MM/yyyy") ?? "Activo")</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">CARGO</span>
+                <span class="info-value">@(Empleado.Cargo?.Nombre ?? "Sin cargo")</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">DEPARTAMENTO</span>
+                <span class="info-value">@(Empleado.Departamento?.Nombre ?? "Sin departamento")</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">SALARIO BASE</span>
+                <span class="info-value">@NumberFormatHelper.FormatearMoneda(Empleado.SalarioBase)</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">NIVEL EDUCACIÓN</span>
+                <span class="info-value">@(Empleado.NivelEducacion?.ToString() ?? "No registrado")</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Empleado.Observaciones))
+{
+    <div class="section">
+        <div class="section-header">OBSERVACIONES</div>
+        <div class="section-body">
+            <p>@Empleado.Observaciones</p>
+        </div>
+    </div>
+}

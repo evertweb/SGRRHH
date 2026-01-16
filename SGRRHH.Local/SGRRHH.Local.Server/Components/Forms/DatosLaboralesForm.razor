@@ -1,0 +1,138 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Services
+@using SGRRHH.Local.Shared.Helpers
+
+@inject ILogger<DatosLaboralesForm> Logger
+
+@if (Empleado == null)
+{
+    return;
+}
+
+<div class="hospital-section">
+    <div class="hospital-section-header">INFORMACION LABORAL</div>
+    <div class="hospital-section-body">
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">FECHA INGRESO *</label>
+                <input type="date" class="hospital-input" @bind="Empleado.FechaIngreso" />
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">DEPARTAMENTO</label>
+                <select class="hospital-input" @onchange="OnDepartamentoChanged">
+                    <option value="">-- SELECCIONE --</option>
+                    @foreach (var d in Departamentos)
+                    {
+                        <option value="@d.Id" selected="@(Empleado.DepartamentoId == d.Id)">@d.Nombre</option>
+                    }
+                </select>
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label">CARGO</label>
+                <select class="hospital-input" @bind="Empleado.CargoId" @bind:after="OnCargoChanged" disabled="@(!Empleado.DepartamentoId.HasValue)">
+                    <option value="">@(Empleado.DepartamentoId.HasValue ? "-- SELECCIONE CARGO --" : "-- PRIMERO SELECCIONE DEPARTAMENTO --")</option>
+                    @foreach (var c in CargosFiltrados)
+                    {
+                        <option value="@c.Id">@c.Nombre @(c.SalarioBase.HasValue ? $"(${c.SalarioBase.Value:N0})" : "")</option>
+                    }
+                </select>
+                @if (Empleado.DepartamentoId.HasValue && !CargosFiltrados.Any())
+                {
+                    <div class="hospital-field-hint" style="color: #FF9900;">No hay cargos asociados a este departamento</div>
+                }
+                @if (Empleado.CargoId.HasValue)
+                {
+                    var cargoSel = Cargos.FirstOrDefault(c => c.Id == Empleado.CargoId);
+                    if (cargoSel?.SalarioBase.HasValue == true)
+                    {
+                        <div class="hospital-field-hint">Salario sugerido: $@cargoSel.SalarioBase.Value.ToString("N0")</div>
+                    }
+                }
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">ESTADO INICIAL</label>
+                <input type="text" 
+                       class="hospital-input" 
+                       value="@EstadoEmpleadoService.ObtenerDescripcion(Empleado.Estado)" 
+                       readonly 
+                       style="background-color: #f0f0f0; color: @EstadoEmpleadoService.ObtenerColorCss(Empleado.Estado); font-weight: bold;" />
+                <div class="hospital-field-hint">
+                    @if (EsOperador)
+                    {
+                        <span>Los empleados creados por Operadores quedan pendientes de aprobación</span>
+                    }
+                    else
+                    {
+                        <span>Los empleados creados por Aprobadores/Admins quedan activos inmediatamente</span>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">SALARIO BASE *</label>
+                <InputMoneda @bind-Value="Empleado.SalarioBase" CssClass="hospital-input" Placeholder="Ej: 1.750.905" />
+                <div class="hospital-field-hint">
+                    Salario mínimo Colombia 2026: @NumberFormatHelper.FormatearMoneda(1750905m)
+                    @if (Empleado.SalarioBase.HasValue && Empleado.SalarioBase.Value < 1750905)
+                    {
+                        <span style="color: #CC0000;"> - ¡ATENCIÓN: MENOR AL SALARIO MÍNIMO!</span>
+                    }
+                </div>
+            </div>
+            
+            <div class="hospital-form-field">
+                <!-- Espacio vacío para mantener la cuadrícula -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Empleado Empleado { get; set; } = new();
+    [Parameter] public List<Cargo> Cargos { get; set; } = new();
+    [Parameter] public List<Departamento> Departamentos { get; set; } = new();
+    [Parameter] public bool EsOperador { get; set; }
+    
+    private IEnumerable<Cargo> CargosFiltrados => Empleado.DepartamentoId.HasValue 
+        ? Cargos.Where(c => c.DepartamentoId == Empleado.DepartamentoId.Value)
+        : Enumerable.Empty<Cargo>();
+    
+    private void OnDepartamentoChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int deptoId) && deptoId > 0)
+        {
+            Empleado.DepartamentoId = deptoId;
+        }
+        else
+        {
+            Empleado.DepartamentoId = null;
+        }
+        
+        Empleado.CargoId = null;
+        Empleado.SalarioBase = null;
+        
+        StateHasChanged();
+    }
+    
+    private void OnCargoChanged()
+    {
+        if (Empleado.CargoId.HasValue)
+        {
+            var cargoSeleccionado = Cargos.FirstOrDefault(c => c.Id == Empleado.CargoId);
+            if (cargoSeleccionado?.SalarioBase.HasValue == true)
+            {
+                Empleado.SalarioBase = cargoSeleccionado.SalarioBase;
+                Logger.LogInformation("Salario del cargo '{Cargo}' asignado al empleado: {Salario}", 
+                    cargoSeleccionado.Nombre, cargoSeleccionado.SalarioBase);
+            }
+        }
+        StateHasChanged();
+    }
+}

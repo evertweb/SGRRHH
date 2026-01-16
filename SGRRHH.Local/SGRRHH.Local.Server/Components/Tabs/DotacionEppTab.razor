@@ -1,0 +1,306 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Server.Components.Shared
+@inherits DotacionEppTabBase
+
+<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+    <span style="font-size: 12px; font-weight: bold;">
+        DOTACIÓN Y EPP: @EntregasDotacion.Count ENTREGAS
+        @if (TallasEmpleado != null)
+        {
+            <span style="margin-left: 15px; color: #006600;">✓ TALLAS REGISTRADAS</span>
+        }
+        else
+        {
+            <span style="margin-left: 15px; color: #CC0000;">⚠ SIN TALLAS</span>
+        }
+    </span>
+    @if (TallasEmpleado == null)
+    {
+        <button class="btn" style="background: #FFF9E6;" @onclick="() => showTallasForm = true">
+            📏 REGISTRAR TALLAS
+        </button>
+    }
+    else
+    {
+        <button class="btn" style="background: #E8FFE8;" @onclick="AgregarNuevaEntrega">
+            + PROGRAMAR ENTREGA
+        </button>
+    }
+</div>
+
+@* Formulario de Tallas *@
+@if (showTallasForm)
+{
+    <div class="section" style="border: 2px solid #FF9900; margin-bottom: 20px;">
+        <div class="section-header" style="background: #FFF9E6;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>📏 @(TallasEmpleado == null ? "REGISTRAR TALLAS" : "EDITAR TALLAS")</span>
+                <div>
+                    <button class="btn-table" style="background: #E8FFE8;" @onclick="GuardarTallas" disabled="@isSavingEntrega">
+                        @(isSavingEntrega ? "..." : "💾 GUARDAR")
+                    </button>
+                    <button class="btn-table btn-danger" @onclick="() => { showTallasForm = false; }">
+                        ❌
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="section-body">
+            @{
+                var tallas = TallasEmpleado ?? new TallasEmpleado { EmpleadoId = EmpleadoId };
+            }
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">TALLA CAMISA</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.TallaCamisa">
+                        <option value="">-- Seleccione --</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                        <option value="XXXL">XXXL</option>
+                    </select>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">TALLA PANTALÓN</span>
+                    <input type="text" class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.TallaPantalon" maxlength="10" placeholder="28, 30, 32, 34..." />
+                </div>
+                <div class="info-item">
+                    <span class="info-label">TALLA OVERALL</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.TallaOverall">
+                        <option value="">-- Seleccione --</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                    </select>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">TALLA CHAQUETA</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.TallaChaqueta">
+                        <option value="">-- Seleccione --</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                        <option value="XXXL">XXXL</option>
+                    </select>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">TALLA CALZADO (NÚMERO)</span>
+                    <input type="number" class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.TallaCalzadoNumero" min="36" max="46" placeholder="36-46" />
+                </div>
+                <div class="info-item">
+                    <span class="info-label">ANCHO CALZADO</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.AnchoCalzado">
+                        <option value="">-- Seleccione --</option>
+                        <option value="Normal">Normal</option>
+                        <option value="Ancho">Ancho</option>
+                    </select>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">TIPO CALZADO PREFERIDO</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.TipoCalzadoPreferido">
+                        <option value="">-- Seleccione --</option>
+                        <option value="Bota">Bota</option>
+                        <option value="Zapato">Zapato</option>
+                        <option value="Tenis">Tenis</option>
+                    </select>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">TALLA GUANTES</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.TallaGuantes">
+                        <option value="">-- Seleccione --</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                    </select>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">TALLA CASCO</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.TallaCasco">
+                        <option value="">-- Seleccione --</option>
+                        <option value="Ajustable">Ajustable</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                    </select>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">TALLA GAFAS</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="tallas.TallaGafas">
+                        <option value="">-- Seleccione --</option>
+                        <option value="Universal">Universal</option>
+                        <option value="Graduadas">Graduadas</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top: 10px;">
+                <span class="info-label">OBSERVACIONES</span>
+                <textarea class="hospital-input" style="font-size: 11px; padding: 4px; min-height: 60px; width: 100%;" @bind="tallas.Observaciones" maxlength="500" placeholder="Ej: Pie ancho, necesita bota especial"></textarea>
+            </div>
+        </div>
+    </div>
+}
+
+@* Mensaje si no hay tallas *@
+@if (TallasEmpleado == null && !showTallasForm)
+{
+    <div class="empty-message">
+        ⚠️ PRIMERO DEBE REGISTRAR LAS TALLAS DEL EMPLEADO<br />
+        <button class="btn" style="margin-top: 15px; background: #FFF9E6;" @onclick="() => showTallasForm = true">
+            📏 REGISTRAR TALLAS AHORA
+        </button>
+    </div>
+    return;
+}
+
+@* Lista de Entregas *@
+@if (!EntregasDotacion.Any())
+{
+    <div class="empty-message">
+        NO HAY ENTREGAS DE DOTACIÓN PROGRAMADAS<br />
+        <button class="btn" style="margin-top: 15px; background: #E8FFE8;" @onclick="AgregarNuevaEntrega">
+            + PROGRAMAR PRIMERA ENTREGA
+        </button>
+    </div>
+}
+else
+{
+    @foreach (var entrega in EntregasDotacion)
+    {
+        var esEdicion = entregaEditandoId == entrega.Id;
+        var entregaTemporal = esEdicion ? entregaEnEdicion : entrega;
+        var colorEstado = entrega.Estado switch
+        {
+            EstadoEntregaDotacion.Programada => "#E8F0FF",
+            EstadoEntregaDotacion.Entregada => "#E8FFE8",
+            EstadoEntregaDotacion.Parcial => "#FFF9E6",
+            EstadoEntregaDotacion.Cancelada => "#FFE8E8",
+            _ => "#F0F0F0"
+        };
+        
+        <div class="section" style="border-left: 4px solid @colorEstado;">
+            <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    @entrega.FechaEntrega.ToString("dd/MM/yyyy") - @entrega.Periodo
+                    <span style="background: @colorEstado; padding: 2px 6px; font-size: 9px; margin-left: 10px; border: 1px solid #999;">
+                        @entrega.Estado.ToString().ToUpper()
+                    </span>
+                    <span style="margin-left: 10px; font-size: 10px; color: #666;">
+                        @(entrega.TipoEntrega == TipoEntregaDotacion.DotacionLegal ? "👕 DOTACIÓN LEGAL" : 
+                          entrega.TipoEntrega == TipoEntregaDotacion.EPP ? "🦺 EPP" : "👕🦺 AMBOS")
+                    </span>
+                </div>
+                <div>
+                    @if (!esEdicion && entrega.Estado == EstadoEntregaDotacion.Programada)
+                    {
+                        <button class="btn-table" style="background: #E8FFE8;" @onclick="() => MarcarComoEntregada(entrega.Id)" title="Marcar como entregada">✅</button>
+                        <button class="btn-table" @onclick="() => EditarEntrega(entrega)" title="Editar entrega">✏️</button>
+                        <button class="btn-table btn-danger" @onclick="() => ConfirmarEliminarEntrega(entrega)" title="Eliminar entrega">🗑️</button>
+                    }
+                    else if (!esEdicion)
+                    {
+                        <button class="btn-table" @onclick="() => MostrarDetalles(entrega)" title="Ver detalles">📋</button>
+                    }
+                    else
+                    {
+                        <button class="btn-table" style="background: #E8FFE8;" @onclick="GuardarEntregaEditada" disabled="@isSavingEntrega">
+                            @(isSavingEntrega ? "..." : "💾")
+                        </button>
+                        <button class="btn-table btn-danger" @onclick="CancelarEdicionEntrega">❌</button>
+                    }
+                </div>
+            </div>
+            <div class="section-body">
+                @if (!esEdicion)
+                {
+                    @* Vista de elementos entregados *@
+                    @if (entrega.Detalles.Any())
+                    {
+                        <div style="margin-bottom: 10px;">
+                            <span style="font-size: 11px; font-weight: bold;">ELEMENTOS ENTREGADOS:</span>
+                        </div>
+                        @foreach (var detalle in entrega.Detalles)
+                        {
+                            <div style="padding: 6px; border-bottom: 1px solid #EEEEEE; display: flex; justify-content: space-between;">
+                                <span style="font-size: 11px;">
+                                    @detalle.Cantidad x @detalle.NombreElemento
+                                    @if (!string.IsNullOrEmpty(detalle.Talla))
+                                    {
+                                        <span style="color: #666;"> (Talla: @detalle.Talla)</span>
+                                    }
+                                    @if (detalle.EsDotacionLegal)
+                                    {
+                                        <span style="color: #006600; margin-left: 8px;">👕 LEGAL</span>
+                                    }
+                                    @if (detalle.EsEPP)
+                                    {
+                                        <span style="color: #FF6600; margin-left: 8px;">🦺 EPP</span>
+                                    }
+                                </span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div style="font-size: 10px; color: #999; font-style: italic;">Sin elementos registrados</div>
+                    }
+
+                    @* Acta de entrega *@
+                    <div style="margin-top: 15px; padding: 10px; border: 1px solid #CCCCCC; background: #F9F9F9;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 11px; font-weight: bold;">📄 ACTA DE ENTREGA</span>
+                            @if (entrega.DocumentoActaId.HasValue)
+                            {
+                                var doc = Documentos.FirstOrDefault(d => d.Id == entrega.DocumentoActaId.Value);
+                                if (doc != null)
+                                {
+                                    <div style="display: flex; gap: 5px;">
+                                        <button class="btn-table" @onclick="() => OnPrevisualizarDocumento.InvokeAsync(doc)" title="Ver acta">👁️</button>
+                                        <button class="btn-table" @onclick="() => OnDescargarDocumento.InvokeAsync(doc)" title="Descargar">💾</button>
+                                    </div>
+                                }
+                            }
+                            else if (entrega.Estado == EstadoEntregaDotacion.Entregada)
+                            {
+                                <button class="btn-table" style="background: #E8F0FF;" @onclick="() => OnAbrirScannerActa.InvokeAsync(entrega.Id)" title="Escanear acta">📷 ESCANEAR</button>
+                            }
+                        </div>
+                        @if (entrega.DocumentoActaId.HasValue)
+                        {
+                            var doc = Documentos.FirstOrDefault(d => d.Id == entrega.DocumentoActaId.Value);
+                            if (doc != null)
+                            {
+                                <div style="margin-top: 8px; font-size: 10px; color: #666;">
+                                    ✓ @doc.NombreArchivoOriginal 
+                                    <span style="margin-left: 10px;">Subido: @doc.FechaCreacion.ToString("dd/MM/yyyy")</span>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(entrega.Observaciones))
+                    {
+                        <div style="margin-top: 10px; font-size: 10px; color: #666;">
+                            <strong>Observaciones:</strong> @entrega.Observaciones
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+}
+
+@* Modal de confirmación de eliminación *@
+<ConfirmDeleteDialog 
+    IsVisible="@showConfirmDeleteEntrega"
+    Title="Confirmar Eliminación"
+    Message="@($"¿Está seguro de eliminar la entrega de dotación?{Environment.NewLine}Periodo: {entregaAEliminar?.Periodo}{Environment.NewLine}Fecha: {entregaAEliminar?.FechaEntrega:dd/MM/yyyy}")"
+    OnConfirm="@EliminarEntrega"
+    OnCancel="@(() => { showConfirmDeleteEntrega = false; entregaAEliminar = null; })" />

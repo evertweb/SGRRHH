@@ -1,0 +1,102 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+
+<tr class="@(IsSelected ? "selected-row" : "")" @onclick="Seleccionar">
+    <td>@Registro.Empleado?.Codigo</td>
+    <td>
+        <a href="javascript:void(0)"
+           @onclick="IrAExpediente"
+           @onclick:stopPropagation="true"
+           class="empleado-link"
+           title="Ver expediente de @Registro.Empleado?.NombreCompleto">
+            @Registro.Empleado?.NombreCompleto
+        </a>
+    </td>
+    <td>@(Registro.Empleado?.Departamento?.Nombre ?? "-")</td>
+    <td>@Registro.Fecha.ToString("dd/MM/yyyy")</td>
+    <td>
+        @if (EstaEditandoEntrada)
+        {
+            <input type="time"
+                   value="@FormatTimeSpan(Registro.HoraEntrada)"
+                   @onchange="OnHoraEntradaChanged"
+                   class="hospital-input-time"
+                   @onclick:stopPropagation="true" />
+        }
+        else
+        {
+            <span @onclick="EditarEntrada" @onclick:stopPropagation="true" class="editable-field">
+                @(Registro.HoraEntrada?.ToString(@"hh\:mm") ?? "-")
+            </span>
+        }
+    </td>
+    <td>
+        @if (EstaEditandoSalida)
+        {
+            <input type="time"
+                   value="@FormatTimeSpan(Registro.HoraSalida)"
+                   @onchange="OnHoraSalidaChanged"
+                   class="hospital-input-time"
+                   @onclick:stopPropagation="true" />
+        }
+        else
+        {
+            <span @onclick="EditarSalida" @onclick:stopPropagation="true" class="editable-field">
+                @(Registro.HoraSalida?.ToString(@"hh\:mm") ?? "-")
+            </span>
+        }
+    </td>
+    <td>@Registro.TotalHoras.ToString("F1")</td>
+    <td>@(Registro.DetallesActividades?.Count ?? 0)</td>
+    <td>
+        @if (Registro.Estado == EstadoRegistroDiario.Borrador)
+        {
+            <span class="estado-borrador">BORRADOR</span>
+        }
+        else if (Registro.Estado == EstadoRegistroDiario.Completado)
+        {
+            <span class="estado-completado">COMPLETADO</span>
+        }
+        else if (Registro.Estado == EstadoRegistroDiario.Aprobado)
+        {
+            <span class="estado-aprobado">APROBADO</span>
+        }
+    </td>
+    <td>@(string.IsNullOrEmpty(Registro.Observaciones) ? "-" : (Registro.Observaciones.Length > 30 ? Registro.Observaciones.Substring(0, 30) + "..." : Registro.Observaciones))</td>
+    <td>@Registro.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+    <td class="acciones-inline">
+        <button @onclick="RegistrarEntrada"
+                @onclick:stopPropagation="true"
+                class="btn-accion-inline btn-entrada"
+                title="Registrar entrada (hora actual)"
+                disabled="@(Registro.HoraEntrada != null)">
+            E
+        </button>
+        <button @onclick="RegistrarSalida"
+                @onclick:stopPropagation="true"
+                class="btn-accion-inline btn-salida"
+                title="Registrar salida (hora actual)"
+                disabled="@(Registro.HoraSalida != null)">
+            S
+        </button>
+        <button @onclick="AgregarActividad"
+                @onclick:stopPropagation="true"
+                class="btn-accion-inline btn-actividad"
+                title="Agregar actividad">
+            +
+        </button>
+        <button @onclick="CompletarRegistro"
+                @onclick:stopPropagation="true"
+                class="btn-accion-inline btn-completar"
+                title="Marcar como completado"
+                disabled="@(!Registro.EstaCompleto || Registro.Estado == EstadoRegistroDiario.Completado)">
+            ✓
+        </button>
+        <button @onclick="VerDetalle"
+                @onclick:stopPropagation="true"
+                class="btn-accion-inline btn-ver"
+                title="Ver detalle completo">
+            ⋯
+        </button>
+    </td>
+</tr>

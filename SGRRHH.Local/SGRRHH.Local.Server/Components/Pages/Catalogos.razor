@@ -95,9 +95,13 @@
 @code {
     private const string PageId = "catalogos";
     
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? TabQuery { get; set; }
+    
     private string activeTab = "departamentos";
     private string? errorMessage;
     private string? successMessage;
+    private static readonly HashSet<string> _tabsValidos = new() { "departamentos", "cargos", "tiposPermiso", "proyectos", "actividades" };
     
     protected override async Task OnInitializedAsync()
     {
@@ -112,6 +116,12 @@
         {
             errorMessage = "No tiene permisos para acceder a esta sección";
             return;
+        }
+        
+        // Leer tab desde URL
+        if (!string.IsNullOrEmpty(TabQuery) && _tabsValidos.Contains(TabQuery))
+        {
+            activeTab = TabQuery;
         }
         
         // Registrar atajos de teclado para esta página
@@ -137,7 +147,8 @@
         activeTab = tab;
         errorMessage = null;
         successMessage = null;
-        StateHasChanged();
+        var uri = Navigation.GetUriWithQueryParameter("tab", tab);
+        Navigation.NavigateTo(uri, replace: true);
     }
     
     private Task NuevoItem()

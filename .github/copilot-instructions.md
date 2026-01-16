@@ -100,6 +100,8 @@ Los prompts para delegar deben incluir:
 
 ## 📋 Otras Reglas de Comportamiento
 
+Referencia rápida de arquitectura: ver [architecture.md](../architecture.md) para capas, flujo y deploy.
+
 ### 1. Preguntar antes de asumir
 Cuando la solicitud es ambigua, preguntar:
 > "¿Quieres que documente la solución para implementar después, o prefieres que implemente directamente?"

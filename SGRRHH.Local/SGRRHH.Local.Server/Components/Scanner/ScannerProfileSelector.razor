@@ -1,0 +1,88 @@
+@using SGRRHH.Local.Domain.DTOs
+
+<div class="scanner-section">
+    <div class="scanner-section-header">PERFIL</div>
+    <div class="scanner-section-body">
+        <div class="scanner-field">
+            <select @bind="PerfilSeleccionadoId" class="scanner-select-full" disabled="@Deshabilitado"
+                    @bind:after="AfterCargarPerfil">
+                <option value="0">Definido por el usuario</option>
+                @foreach (var profile in Perfiles)
+                {
+                    <option value="@profile.Id">@profile.Name @(profile.IsDefault ? "★" : "")</option>
+                }
+            </select>
+            <button class="scanner-btn-icon" @onclick="AlAbrirGuardarPerfil" disabled="@Deshabilitado" title="Guardar perfil">💾</button>
+        </div>
+    </div>
+</div>
+
+@if (MostrarDialogoGuardar)
+{
+    <div class="scanner-backdrop" @onclick:stopPropagation="true">
+        <div class="scanner-profile-dialog" @onclick:stopPropagation="true">
+            <div class="scanner-header">
+                <span>GUARDAR PERFIL</span>
+                <button class="scanner-close" @onclick="AlCerrarGuardarPerfil">X</button>
+            </div>
+            <div class="scanner-profile-dialog-body">
+                <div class="scanner-option-row">
+                    <label class="scanner-label">NOMBRE:</label>
+                    <input type="text" @bind="NuevoPerfilNombre" class="scanner-input"
+                           placeholder="Ej: Mi perfil de documentos" maxlength="50" />
+                </div>
+                <div class="scanner-option-row">
+                    <label class="scanner-label">DESCRIPCION:</label>
+                    <input type="text" @bind="NuevoPerfilDescripcion" class="scanner-input"
+                           placeholder="Descripción opcional" maxlength="200" />
+                </div>
+                <div class="scanner-option-row">
+                    <label class="scanner-checkbox-label">
+                        <input type="checkbox" @bind="NuevoPerfilPredeterminado" />
+                        <span>ESTABLECER COMO PREDETERMINADO</span>
+                    </label>
+                </div>
+                <div class="scanner-profile-dialog-info">
+                    <strong>CONFIGURACIÓN A GUARDAR:</strong><br />
+                    DPI: @OpcionesEscaneo.Dpi | Color: @OpcionesEscaneo.ColorMode | Fuente: @OpcionesEscaneo.Source<br />
+                    @if (Correcciones.HasCorrections)
+                    {
+                        <span>Correcciones: Brillo=@Correcciones.Brightness, Contraste=@Correcciones.Contrast</span>
+                    }
+                </div>
+            </div>
+            <div class="scanner-footer">
+                <button class="scanner-btn" @onclick="AlCerrarGuardarPerfil">CANCELAR</button>
+                <button class="scanner-btn scanner-btn-success" @onclick="AlGuardarPerfil"
+                        disabled="@string.IsNullOrWhiteSpace(NuevoPerfilNombre)">
+                    GUARDAR PERFIL
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public List<ScanProfileDto> Perfiles { get; set; } = new();
+    [Parameter] public int PerfilSeleccionadoId { get; set; }
+    [Parameter] public EventCallback<int> PerfilSeleccionadoIdChanged { get; set; }
+    [Parameter] public bool Deshabilitado { get; set; }
+    [Parameter] public EventCallback AlCargarPerfil { get; set; }
+    [Parameter] public EventCallback AlAbrirGuardarPerfil { get; set; }
+    [Parameter] public EventCallback AlCerrarGuardarPerfil { get; set; }
+    [Parameter] public EventCallback AlGuardarPerfil { get; set; }
+    [Parameter] public bool MostrarDialogoGuardar { get; set; }
+    [Parameter] public string NuevoPerfilNombre { get; set; } = "";
+    [Parameter] public EventCallback<string> NuevoPerfilNombreChanged { get; set; }
+    [Parameter] public string NuevoPerfilDescripcion { get; set; } = "";
+    [Parameter] public EventCallback<string> NuevoPerfilDescripcionChanged { get; set; }
+    [Parameter] public bool NuevoPerfilPredeterminado { get; set; }
+    [Parameter] public EventCallback<bool> NuevoPerfilPredeterminadoChanged { get; set; }
+    [Parameter] public ScanOptionsDto OpcionesEscaneo { get; set; } = new();
+    [Parameter] public ImageCorrectionDto Correcciones { get; set; } = new();
+
+    private async Task AfterCargarPerfil()
+    {
+        await AlCargarPerfil.InvokeAsync();
+    }
+}

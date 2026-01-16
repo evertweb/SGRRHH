@@ -1,0 +1,45 @@
+@* Diálogo de confirmación de eliminación reutilizable *@
+@using SGRRHH.Local.Server.Components.Shared
+
+<Modal IsVisible="@IsVisible" Title="@Title" MaxWidth="400px" OnClose="@HandleCancel">
+    <ChildContent>
+        <p>@Message</p>
+        @if (!string.IsNullOrEmpty(WarningMessage))
+        {
+            <p class="text-danger">@WarningMessage</p>
+        }
+    </ChildContent>
+    <Footer>
+        <button class="btn btn-secondary" @onclick="HandleCancel" type="button">Cancelar</button>
+        <button class="btn btn-danger" @onclick="HandleConfirm" disabled="@IsProcessing" type="button">
+            @(IsProcessing ? "Procesando..." : ConfirmButtonText)
+        </button>
+    </Footer>
+</Modal>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string Title { get; set; } = "Confirmar Eliminación";
+    [Parameter] public string Message { get; set; } = "¿Está seguro?";
+    [Parameter] public string WarningMessage { get; set; } = "Esta acción no se puede deshacer.";
+    [Parameter] public string ConfirmButtonText { get; set; } = "Eliminar";
+    [Parameter] public bool IsProcessing { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task HandleConfirm()
+    {
+        if (!IsProcessing)
+        {
+            await OnConfirm.InvokeAsync();
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        if (!IsProcessing)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+}

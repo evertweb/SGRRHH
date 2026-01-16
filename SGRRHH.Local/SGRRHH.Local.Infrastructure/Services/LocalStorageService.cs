@@ -89,7 +89,9 @@ public class LocalStorageService : ILocalStorageService
 
         var resized = ImageHelper.ResizeImage(imageBytes, 400, 400);
         var optimized = ImageHelper.OptimizeForStorage(resized, 85);
-        ext = ".jpg"; // Optimización fuerza JPEG
+        // Mantener extensión original si es PNG, sino usar JPG optimizado
+        if (ext != ".png")
+            ext = ".jpg"; // Optimizar como JPEG solo si no es PNG
 
         var directory = Path.Combine(_basePath, FOTOS_EMPLEADOS, empleadoId.ToString());
         Directory.CreateDirectory(directory);

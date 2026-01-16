@@ -1,0 +1,312 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.Services
+@using SGRRHH.Local.Shared.Helpers
+@using SGRRHH.Local.Server.Components.Shared
+
+@if (Empleado == null)
+{
+    return;
+}
+
+<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+    <span style="font-size: 12px; font-weight: bold;">
+        CUENTAS BANCARIAS: @cuentasBancarias.Count
+    </span>
+    <button class="btn" style="background: #E8FFE8;" @onclick="AgregarNuevaCuenta">
+        + AGREGAR CUENTA
+    </button>
+</div>
+
+@if (!cuentasBancarias.Any())
+{
+    <div class="empty-message">
+        NO HAY CUENTAS BANCARIAS REGISTRADAS<br />
+        <button class="btn" style="margin-top: 15px; background: #E8FFE8;" @onclick="AgregarNuevaCuenta">
+            + AGREGAR PRIMERA CUENTA
+        </button>
+    </div>
+}
+
+@* Formulario para NUEVA cuenta (cuando cuentaEditandoId == 0) *@
+@if (cuentaEditandoId == 0 && cuentaEnEdicion != null)
+{
+    <div class="section" style="border: 2px dashed #006600; background: #F0FFF0;">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="color: #006600; font-weight: bold;">
+                ➕ NUEVA CUENTA BANCARIA
+            </div>
+            <div>
+                <button class="btn-table" style="background: #E8FFE8;" @onclick="GuardarNuevaCuenta" disabled="@isSavingCuenta">
+                    @(isSavingCuenta ? "..." : "💾 GUARDAR")
+                </button>
+                <button class="btn-table btn-danger" @onclick="CancelarEdicionCuenta">❌ CANCELAR</button>
+            </div>
+        </div>
+        <div class="section-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">BANCO *</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" value="@(bancoSeleccionado.HasValue ? ((int)bancoSeleccionado.Value).ToString() : "")" @onchange="OnBancoSelectChanged">
+                        <option value="">-- SELECCIONE BANCO --</option>
+                        @foreach (var banco in bancosDisponibles)
+                        {
+                            <option value="@((int)banco)">@BancoService.GetNombreBanco(banco)</option>
+                        }
+                        <option value="@((int)BancoColombia.Otro)">OTRO</option>
+                    </select>
+                    @if (bancoSeleccionado == BancoColombia.Otro)
+                    {
+                        <input type="text" class="hospital-input" style="font-size: 11px; padding: 4px; margin-top: 5px;" @bind="bancoOtroTexto" maxlength="100" placeholder="Especifique el nombre del banco" />
+                    }
+                </div>
+                <div class="info-item">
+                    <span class="info-label">TIPO CUENTA *</span>
+                    <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="cuentaEnEdicion.TipoCuenta" disabled="@(!bancoSeleccionado.HasValue)">
+                        @if (!bancoSeleccionado.HasValue)
+                        {
+                            <option value="">-- SELECCIONE BANCO PRIMERO --</option>
+                        }
+                        else
+                        {
+                            @foreach (var tipo in GetTiposCuentaDisponibles())
+                            {
+                                <option value="@tipo">@GetNombreTipoCuenta(tipo)</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">NÚMERO DE CUENTA *</span>
+                    <input type="text" class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="cuentaEnEdicion.NumeroCuenta" maxlength="50" placeholder="Solo números" />
+                </div>
+                <div class="info-item">
+                    <span class="info-label">NOMBRE TITULAR *</span>
+                    <input type="text" class="hospital-input" style="font-size: 11px; padding: 4px; background-color: #f0f0f0;" value="@(Empleado?.NombreCompleto ?? "")" readonly />
+                </div>
+                <div class="info-item">
+                    <span class="info-label">DOCUMENTO TITULAR *</span>
+                    <input type="text" class="hospital-input" style="font-size: 11px; padding: 4px; background-color: #f0f0f0;" value="@(Empleado?.Cedula ?? "")" readonly />
+                </div>
+                <div class="info-item">
+                    <span class="info-label">FECHA APERTURA *</span>
+                    <input type="date" class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="cuentaEnEdicion.FechaApertura" required />
+                </div>
+                <div class="info-item" style="display: flex; align-items: center; gap: 10px;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="checkbox" @bind="cuentaEnEdicion.EsCuentaNomina" />
+                        <span class="info-label" style="margin: 0;">ES CUENTA DE NÓMINA</span>
+                    </label>
+                </div>
+                <div class="info-item" style="display: flex; align-items: center; gap: 10px;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                        <input type="checkbox" @bind="cuentaEnEdicion.EstaActiva" />
+                        <span class="info-label" style="margin: 0;">CUENTA ACTIVA</span>
+                    </label>
+                </div>
+            </div>
+            <div style="margin-top: 10px;">
+                <span class="info-label">OBSERVACIONES *</span>
+                <textarea class="hospital-input" style="font-size: 11px; padding: 4px; min-height: 60px; width: 100%;" @bind="cuentaEnEdicion.Observaciones" maxlength="500" placeholder="Observaciones sobre la cuenta" required></textarea>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    @foreach (var cuenta in cuentasBancarias)
+    {
+        var esEdicion = cuentaEditandoId == cuenta.Id;
+        var cuentaTemporal = esEdicion ? cuentaEnEdicion : cuenta;
+        
+        <div class="section" style="@(cuenta.EsCuentaNomina ? "border: 2px solid #006600;" : "")">
+            <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    @cuenta.Banco - @cuenta.NumeroCuenta
+                    @if (cuenta.EsCuentaNomina)
+                    {
+                        <span style="background: #006600; color: white; padding: 2px 6px; font-size: 9px; margin-left: 10px;">NÓMINA</span>
+                    }
+                    @if (!cuenta.EstaActiva)
+                    {
+                        <span style="background: #CC0000; color: white; padding: 2px 6px; font-size: 9px; margin-left: 10px;">INACTIVA</span>
+                    }
+                </div>
+                <div>
+                    @if (!esEdicion)
+                    {
+                        <button class="btn-table" @onclick="() => EditarCuenta(cuenta)" title="Editar cuenta">✏️</button>
+                        @if (!cuenta.EsCuentaNomina && cuentasBancarias.Count(c => c.EstaActiva) > 1)
+                        {
+                            <button class="btn-table" style="background: #E8FFE8;" @onclick="() => MarcarComoNomina(cuenta.Id)" title="Marcar como cuenta de nómina">⭐</button>
+                        }
+                        <button class="btn-table btn-danger" @onclick="() => ConfirmarEliminarCuenta(cuenta)" title="Eliminar cuenta">🗑️</button>
+                    }
+                    else
+                    {
+                        <button class="btn-table" style="background: #E8FFE8;" @onclick="GuardarCuentaEditada" disabled="@isSavingCuenta">
+                            @(isSavingCuenta ? "..." : "💾")
+                        </button>
+                        <button class="btn-table btn-danger" @onclick="CancelarEdicionCuenta">❌</button>
+                    }
+                </div>
+            </div>
+            <div class="section-body">
+                @if (esEdicion && cuentaTemporal != null)
+                {
+                    <!-- MODO EDICIÓN -->
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">BANCO *</span>
+                            <select class="hospital-input" style="font-size: 11px; padding: 4px;" value="@(bancoSeleccionado.HasValue ? ((int)bancoSeleccionado.Value).ToString() : "")" @onchange="OnBancoSelectChanged">
+                                <option value="">-- SELECCIONE BANCO --</option>
+                                @foreach (var banco in bancosDisponibles)
+                                {
+                                    <option value="@((int)banco)">@BancoService.GetNombreBanco(banco)</option>
+                                }
+                                <option value="@((int)BancoColombia.Otro)">OTRO</option>
+                            </select>
+                            @if (bancoSeleccionado == BancoColombia.Otro)
+                            {
+                                <input type="text" class="hospital-input" style="font-size: 11px; padding: 4px; margin-top: 5px;" @bind="bancoOtroTexto" maxlength="100" placeholder="Especifique el nombre del banco" />
+                            }
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">TIPO CUENTA *</span>
+                            <select class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="cuentaTemporal.TipoCuenta" disabled="@(!bancoSeleccionado.HasValue)">
+                                @if (!bancoSeleccionado.HasValue)
+                                {
+                                    <option value="">-- SELECCIONE BANCO PRIMERO --</option>
+                                }
+                                else
+                                {
+                                    @foreach (var tipo in GetTiposCuentaDisponibles())
+                                    {
+                                        <option value="@tipo">@GetNombreTipoCuenta(tipo)</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">NÚMERO DE CUENTA *</span>
+                            <input type="text" class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="cuentaTemporal.NumeroCuenta" maxlength="50" />
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">NOMBRE TITULAR *</span>
+                            <input type="text" class="hospital-input" style="font-size: 11px; padding: 4px; background-color: #f0f0f0;" value="@(Empleado?.NombreCompleto ?? "")" readonly />
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">DOCUMENTO TITULAR *</span>
+                            <input type="text" class="hospital-input" style="font-size: 11px; padding: 4px; background-color: #f0f0f0;" value="@(Empleado?.Cedula ?? "")" readonly />
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">FECHA APERTURA *</span>
+                            <input type="date" class="hospital-input" style="font-size: 11px; padding: 4px;" @bind="cuentaTemporal.FechaApertura" required />
+                        </div>
+                        <div class="info-item" style="display: flex; align-items: center; gap: 10px;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="checkbox" @bind="cuentaTemporal.EsCuentaNomina" />
+                                <span class="info-label" style="margin: 0;">ES CUENTA DE NÓMINA</span>
+                            </label>
+                        </div>
+                        <div class="info-item" style="display: flex; align-items: center; gap: 10px;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="checkbox" @bind="cuentaTemporal.EstaActiva" />
+                                <span class="info-label" style="margin: 0;">CUENTA ACTIVA</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <span class="info-label">OBSERVACIONES *</span>
+                        <textarea class="hospital-input" style="font-size: 11px; padding: 4px; min-height: 60px; width: 100%;" @bind="cuentaTemporal.Observaciones" maxlength="500" placeholder="Observaciones sobre la cuenta" required></textarea>
+                    </div>
+                }
+                else
+                {
+                    <!-- MODO VISTA -->
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">BANCO</span>
+                            <span class="info-value">@cuenta.Banco</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">TIPO DE CUENTA</span>
+                            <span class="info-value">@GetNombreTipoCuenta(cuenta.TipoCuenta)</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">NÚMERO DE CUENTA</span>
+                            <span class="info-value">@cuenta.NumeroCuenta</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">TITULAR</span>
+                            <span class="info-value">@(cuenta.NombreTitular ?? Empleado?.NombreCompleto)</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">DOCUMENTO TITULAR</span>
+                            <span class="info-value">@(cuenta.DocumentoTitular ?? Empleado?.Cedula)</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">FECHA APERTURA</span>
+                            <span class="info-value">@(cuenta.FechaApertura?.ToString("dd/MM/yyyy") ?? "No registrada")</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(cuenta.Observaciones))
+                        {
+                            <div class="info-item" style="grid-column: 1 / -1;">
+                                <span class="info-label">OBSERVACIONES</span>
+                                <span class="info-value">@cuenta.Observaciones</span>
+                            </div>
+                        }
+                    </div>
+                    
+                    @* Certificado Bancario *@
+                    <div style="margin-top: 15px; padding: 10px; border: 1px solid #CCCCCC; background: #F9F9F9;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 11px; font-weight: bold;">📄 CERTIFICADO BANCARIO</span>
+                            @if (cuenta.DocumentoCertificacionId.HasValue)
+                            {
+                                var doc = Documentos.FirstOrDefault(d => d.Id == cuenta.DocumentoCertificacionId.Value);
+                                if (doc != null)
+                                {
+                                    <div style="display: flex; gap: 5px;">
+                                        <button class="btn-table" @onclick="() => PrevisualizarDocumento(doc)" title="Ver certificado">👁️</button>
+                                        <button class="btn-table" @onclick="() => DescargarDocumento(doc)" title="Descargar">💾</button>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <button class="btn-table" style="background: #E8F0FF;" @onclick="() => AbrirScannerParaCertificadoBancario(cuenta.Id)" title="Escanear certificado">📷 ESCANEAR</button>
+                            }
+                        </div>
+                        @if (cuenta.DocumentoCertificacionId.HasValue)
+                        {
+                            var doc = Documentos.FirstOrDefault(d => d.Id == cuenta.DocumentoCertificacionId.Value);
+                            if (doc != null)
+                            {
+                                <div style="margin-top: 8px; font-size: 10px; color: #666;">
+                                    ✓ @doc.NombreArchivoOriginal 
+                                    <span style="margin-left: 10px;">(@FormatHelper.FormatFileSize(doc.TamanoArchivo))</span>
+                                    <span style="margin-left: 10px;">Subido: @doc.FechaCreacion.ToString("dd/MM/yyyy")</span>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div style="margin-top: 8px; font-size: 10px; color: #999; font-style: italic;">
+                                Sin certificado bancario adjunto
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+<ConfirmDeleteDialog 
+    IsVisible="@showConfirmDeleteCuenta"
+    Title="Eliminar Cuenta Bancaria"
+    Message="@($"¿Está seguro de eliminar la cuenta {cuentaAEliminar?.Banco} - {cuentaAEliminar?.NumeroCuenta}?")"
+    ConfirmButtonText="Confirmo Eliminar Cuenta"
+    OnConfirm="@EliminarCuenta"
+    OnCancel="@(() => showConfirmDeleteCuenta = false)" />

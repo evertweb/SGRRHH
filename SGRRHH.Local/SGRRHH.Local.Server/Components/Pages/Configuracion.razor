@@ -503,8 +503,12 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? TabQuery { get; set; }
+    
     private string seccionActiva = "sistema";
     private bool showConfirmacion;
+    private static readonly HashSet<string> _tabsValidos = new() { "sistema", "notificaciones", "respaldos", "seguridad", "mantenimiento" };
     
     // SISTEMA
     private string empresaNombre = string.Empty;
@@ -574,6 +578,12 @@
             return;
         }
         
+        // Leer tab desde URL
+        if (!string.IsNullOrEmpty(TabQuery) && _tabsValidos.Contains(TabQuery))
+        {
+            seccionActiva = TabQuery;
+        }
+        
         await CargarConfiguracion();
         await CargarInfoSistema();
     }
@@ -607,6 +617,10 @@
         errorMessage = null;
         successMessage = null;
         resultadoMantenimiento = null;
+        
+        // Actualizar URL sin recargar
+        var uri = Navigation.GetUriWithQueryParameter("tab", seccion);
+        Navigation.NavigateTo(uri, replace: true);
         
         // Cargar estadísticas si entramos a mantenimiento
         if (seccion == "mantenimiento")

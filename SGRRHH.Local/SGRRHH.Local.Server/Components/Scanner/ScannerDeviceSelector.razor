@@ -1,0 +1,31 @@
+@using SGRRHH.Local.Domain.DTOs
+
+<div class="scanner-section">
+    <div class="scanner-section-header">ESCÁNER</div>
+    <div class="scanner-section-body">
+        <div class="scanner-field">
+            <select @bind="SelectedDeviceId" class="scanner-select-full" disabled="@Deshabilitado">
+                @if (Scanners.Count == 0)
+                {
+                    <option value="">-- SIN ESCÁNERES --</option>
+                }
+                else
+                {
+                    @foreach (var scanner in Scanners)
+                    {
+                        <option value="@scanner.Id">@scanner.Name</option>
+                    }
+                }
+            </select>
+            <button class="scanner-btn-icon" @onclick="AlRefrescar" disabled="@Deshabilitado" title="Actualizar lista">↻</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<ScannerDeviceDto> Scanners { get; set; } = new();
+    [Parameter] public string? SelectedDeviceId { get; set; }
+    [Parameter] public EventCallback<string?> SelectedDeviceIdChanged { get; set; }
+    [Parameter] public bool Deshabilitado { get; set; }
+    [Parameter] public EventCallback AlRefrescar { get; set; }
+}

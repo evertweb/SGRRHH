@@ -1,0 +1,90 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+
+@if (Empleado == null)
+{
+    return;
+}
+
+<div class="hospital-section">
+    <div class="hospital-section-header">DATOS GENERALES</div>
+    <div class="hospital-section-body">
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">CODIGO *</label>
+                <input type="text" class="hospital-input" @bind="Empleado.Codigo" maxlength="20" readonly />
+                <div class="hospital-field-hint">Codigo automatico asignado</div>
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label required">CEDULA *</label>
+                <InputCedula @bind-Value="Empleado.Cedula" CssClass="hospital-input" Placeholder="Ej: 1.192.208.848" />
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">NOMBRES *</label>
+                <input type="text" class="hospital-input" @bind="Empleado.Nombres" maxlength="100" />
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label required">APELLIDOS *</label>
+                <input type="text" class="hospital-input" @bind="Empleado.Apellidos" maxlength="100" />
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">FECHA NACIMIENTO *</label>
+                <input type="date" class="hospital-input" @bind="Empleado.FechaNacimiento" />
+                @if (Empleado.FechaNacimiento.HasValue)
+                {
+                    var edad = CalcularEdad(Empleado.FechaNacimiento.Value);
+                    <div class="hospital-field-hint">Edad: @edad años</div>
+                }
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label required">GENERO *</label>
+                <select class="hospital-input" @bind="Empleado.Genero">
+                    <option value="">-- SELECCIONE --</option>
+                    @foreach (var g in Enum.GetValues<Genero>())
+                    {
+                        <option value="@g">@g.ToString().ToUpper()</option>
+                    }
+                </select>
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label">ESTADO CIVIL</label>
+                <select class="hospital-input" @bind="Empleado.EstadoCivil">
+                    <option value="">-- SELECCIONE --</option>
+                    @foreach (var ec in Enum.GetValues<EstadoCivil>())
+                    {
+                        <option value="@ec">@ec.ToString().ToUpper()</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="hospital-form-field">
+                <!-- Espacio vacío para mantener la cuadrícula -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Empleado Empleado { get; set; } = new();
+    
+    private int CalcularEdad(DateTime fechaNacimiento)
+    {
+        var hoy = DateTime.Today;
+        var edad = hoy.Year - fechaNacimiento.Year;
+        if (fechaNacimiento.Date > hoy.AddYears(-edad))
+            edad--;
+        return edad;
+    }
+}

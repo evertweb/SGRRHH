@@ -1,0 +1,62 @@
+@using SGRRHH.Local.Domain.DTOs
+
+<div class="scanner-section scanner-section-collapsible">
+    <div class="scanner-section-header scanner-section-toggle" @onclick="AlTogglePanel">
+        <span>CONFIGURACIÓN DE IMAGEN</span>
+        <span>@(MostrarPanel ? "▼" : "▶")</span>
+    </div>
+    @if (MostrarPanel)
+    {
+        <div class="scanner-section-body">
+            <div class="scanner-slider-field">
+                <label>Ajuste imagen:</label>
+                <select class="scanner-select" disabled="@EstaEscaneando">
+                    <option>Automático</option>
+                </select>
+            </div>
+            <div class="scanner-slider-field">
+                <label>Nitidez:</label>
+                <select @bind="ModoNitidez" class="scanner-select" disabled="@EstaEscaneando">
+                    <option value="0">DESACTIVADO</option>
+                    <option value="1">ACTIVADO</option>
+                </select>
+            </div>
+            <div class="scanner-slider-field">
+                <label>Brillo:</label>
+                <input type="range" min="-100" max="100" @bind="Correcciones.Brightness" @bind:event="oninput" disabled="@EstaEscaneando" />
+                <span class="scanner-slider-val">@Correcciones.Brightness</span>
+            </div>
+            <div class="scanner-slider-field">
+                <label>Contraste:</label>
+                <input type="range" min="-100" max="100" @bind="Correcciones.Contrast" @bind:event="oninput" disabled="@EstaEscaneando" />
+                <span class="scanner-slider-val">@Correcciones.Contrast</span>
+            </div>
+            <div class="scanner-slider-field">
+                <label>Gamma:</label>
+                <input type="range" min="10" max="300" @bind="GammaSliderValue" @bind:event="oninput" disabled="@EstaEscaneando" />
+                <span class="scanner-slider-val">@Correcciones.Gamma.ToString("F1")</span>
+            </div>
+            @if (TienePagina && Correcciones.HasCorrections)
+            {
+                <div class="scanner-correction-btns">
+                    <button class="scanner-btn-sm" @onclick="AlRestablecer" disabled="@EstaEscaneando">Restablecer</button>
+                    <button class="scanner-btn-sm scanner-btn-apply" @onclick="AlAplicar" disabled="@EstaEscaneando">Aplicar</button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public ImageCorrectionDto Correcciones { get; set; } = new();
+    [Parameter] public int GammaSliderValue { get; set; }
+    [Parameter] public EventCallback<int> GammaSliderValueChanged { get; set; }
+    [Parameter] public int ModoNitidez { get; set; }
+    [Parameter] public EventCallback<int> ModoNitidezChanged { get; set; }
+    [Parameter] public bool MostrarPanel { get; set; }
+    [Parameter] public bool TienePagina { get; set; }
+    [Parameter] public bool EstaEscaneando { get; set; }
+    [Parameter] public EventCallback AlTogglePanel { get; set; }
+    [Parameter] public EventCallback AlRestablecer { get; set; }
+    [Parameter] public EventCallback AlAplicar { get; set; }
+}

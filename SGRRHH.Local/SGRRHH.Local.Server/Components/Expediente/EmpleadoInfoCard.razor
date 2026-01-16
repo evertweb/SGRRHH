@@ -1,0 +1,35 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.Services
+@using SGRRHH.Local.Shared.Helpers
+
+@if (Empleado == null)
+{
+    return;
+}
+
+<div class="expediente-datos">
+    <div class="expediente-nombre">@Empleado.NombreCompleto</div>
+    <div class="expediente-codigo">@Empleado.Codigo | CÉDULA: @NumberFormatHelper.FormatearCedula(Empleado.Cedula)</div>
+    <div class="expediente-cargo">
+        @(Empleado.Cargo?.Nombre ?? "Sin cargo") - @(Empleado.Departamento?.Nombre ?? "Sin departamento")
+    </div>
+    <div class="expediente-estado estado-@Empleado.Estado.ToString().ToLower()">
+        @EstadoEmpleadoService.ObtenerDescripcion(Empleado.Estado)
+    </div>
+    @if (TransicionesPermitidas.Any())
+    {
+        <div class="estado-selector">
+            <select value="@NuevoEstadoSeleccionado" @onchange="OnNuevoEstadoChanged">
+                <option value="">-- Cambiar estado --</option>
+                @foreach (var estado in TransicionesPermitidas)
+                {
+                    <option value="@((int)estado)">@EstadoEmpleadoService.ObtenerDescripcion(estado)</option>
+                }
+            </select>
+            <button @onclick="OnCambiarEstado" disabled="@(string.IsNullOrEmpty(NuevoEstadoSeleccionado) || IsSavingEstado)">
+                @(IsSavingEstado ? "GUARDANDO..." : "APLICAR")
+            </button>
+        </div>
+    }
+</div>

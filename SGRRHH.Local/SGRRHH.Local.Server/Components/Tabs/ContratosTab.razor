@@ -1,0 +1,54 @@
+@inherits ContratosTabBase
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <span style="font-size: 12px;">TOTAL: @Contratos.Count CONTRATO(S)</span>
+    <button class="btn" @onclick="IrAContratos">
+        NUEVO CONTRATO
+    </button>
+</div>
+
+@if (!Contratos.Any())
+{
+    <div class="empty-message">
+        NO HAY CONTRATOS REGISTRADOS<br />
+        <button class="btn" style="margin-top: 15px;" @onclick="IrAContratos">
+            CREAR PRIMER CONTRATO
+        </button>
+    </div>
+}
+else
+{
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>TIPO</th>
+                <th>CARGO</th>
+                <th>FECHA INICIO</th>
+                <th>FECHA FIN</th>
+                <th>SALARIO</th>
+                <th>ESTADO</th>
+                <th>ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var contrato in Contratos)
+            {
+                <tr>
+                    <td>@contrato.Id</td>
+                    <td>@GetTipoContratoDisplay(contrato.TipoContrato)</td>
+                    <td>@(contrato.Cargo?.Nombre ?? "-")</td>
+                    <td>@contrato.FechaInicio.ToString("dd/MM/yyyy")</td>
+                    <td>@(contrato.FechaFin?.ToString("dd/MM/yyyy") ?? "INDEFINIDO")</td>
+                    <td>@contrato.Salario.ToString("C0")</td>
+                    <td>@contrato.Estado.ToString().ToUpper()</td>
+                    <td>
+                        <button class="btn-table" @onclick="() => IrAEditarContrato(contrato.Id)">
+                            VER/EDITAR
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

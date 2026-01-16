@@ -249,7 +249,7 @@
                             {
                                 @foreach (var asignacion in cuadrillaActiva)
                                 {
-                                    <tr class="@(asignacion.EsLiderCuadrilla ? "lider-row" : "")">
+                                    <tr class="@(asignacion.EsLiderCuadrilla ? "proyecto-detalle-lider-row" : "")">
                                         <td>
                                             <input type="checkbox" 
                                                    checked="@empleadosSeleccionados.Contains(asignacion.EmpleadoId)"
@@ -260,7 +260,7 @@
                                             @(asignacion.Empleado?.NombreCompleto ?? "Empleado #" + asignacion.EmpleadoId)
                                             @if (asignacion.EsLiderCuadrilla)
                                             {
-                                                <span class="badge badge-lider">LÍDER</span>
+                                                <span class="badge proyecto-detalle-badge-lider">LÍDER</span>
                                             }
                                         </td>
                                         <td>
@@ -292,30 +292,30 @@
             {
                 @* PESTAÑA MÉTRICAS - Productividad de la cuadrilla *@
                 <div class="tab-pane">
-                    <div class="metricas-grid">
-                        <div class="metrica-card">
-                            <span class="metrica-valor">@proyecto.TotalHorasTrabajadas.ToString("F0")</span>
-                            <span class="metrica-label">HORAS TOTALES</span>
+                    <div class="proyecto-detalle-metricas-grid">
+                        <div class="proyecto-detalle-metrica-card">
+                            <span class="proyecto-detalle-metrica-valor">@proyecto.TotalHorasTrabajadas.ToString("F0")</span>
+                            <span class="proyecto-detalle-proyecto-detalle-metrica-label">HORAS TOTALES</span>
                         </div>
-                        <div class="metrica-card">
-                            <span class="metrica-valor">@proyecto.TotalJornales</span>
-                            <span class="metrica-label">JORNALES</span>
+                        <div class="proyecto-detalle-metrica-card">
+                            <span class="proyecto-detalle-metrica-valor">@proyecto.TotalJornales</span>
+                            <span class="proyecto-detalle-proyecto-detalle-metrica-label">JORNALES</span>
                         </div>
-                        <div class="metrica-card">
-                            <span class="metrica-valor">$@proyecto.CostoManoObraAcumulado.ToString("N0")</span>
-                            <span class="metrica-label">COSTO MANO OBRA</span>
+                        <div class="proyecto-detalle-metrica-card">
+                            <span class="proyecto-detalle-metrica-valor">$@proyecto.CostoManoObraAcumulado.ToString("N0")</span>
+                            <span class="proyecto-detalle-proyecto-detalle-metrica-label">COSTO MANO OBRA</span>
                         </div>
-                        <div class="metrica-card">
-                            <span class="metrica-valor">@(proyecto.AreaHectareas > 0 ? (proyecto.CostoManoObraAcumulado / proyecto.AreaHectareas)?.ToString("C0") : "-")</span>
-                            <span class="metrica-label">COSTO / HECTÁREA</span>
+                        <div class="proyecto-detalle-metrica-card">
+                            <span class="proyecto-detalle-metrica-valor">@(proyecto.AreaHectareas > 0 ? (proyecto.CostoManoObraAcumulado / proyecto.AreaHectareas)?.ToString("C0") : "-")</span>
+                            <span class="proyecto-detalle-proyecto-detalle-metrica-label">COSTO / HECTÁREA</span>
                         </div>
-                        <div class="metrica-card">
-                            <span class="metrica-valor">@(proyecto.AreaHectareas > 0 ? (proyecto.TotalHorasTrabajadas / proyecto.AreaHectareas)?.ToString("F1") : "-")</span>
-                            <span class="metrica-label">HORAS / HECTÁREA</span>
+                        <div class="proyecto-detalle-metrica-card">
+                            <span class="proyecto-detalle-metrica-valor">@(proyecto.AreaHectareas > 0 ? (proyecto.TotalHorasTrabajadas / proyecto.AreaHectareas)?.ToString("F1") : "-")</span>
+                            <span class="proyecto-detalle-proyecto-detalle-metrica-label">HORAS / HECTÁREA</span>
                         </div>
-                        <div class="metrica-card">
-                            <span class="metrica-valor">@cuadrillaActiva.Count()</span>
-                            <span class="metrica-label">EMPLEADOS ACTIVOS</span>
+                        <div class="proyecto-detalle-metrica-card">
+                            <span class="proyecto-detalle-metrica-valor">@cuadrillaActiva.Count()</span>
+                            <span class="proyecto-detalle-metrica-label">EMPLEADOS ACTIVOS</span>
                         </div>
                     </div>
 
@@ -604,7 +604,7 @@
                         <tbody>
                             @foreach (var hist in historial)
                             {
-                                <tr class="@(!hist.FechaDesasignacion.HasValue ? "activo-row" : "")">
+                                <tr class="@(!hist.FechaDesasignacion.HasValue ? "proyecto-detalle-activo-row" : "")">
                                     <td>@hist.NombreEmpleado</td>
                                     <td>@hist.Rol</td>
                                     <td>@hist.FechaAsignacion.ToString("dd/MM/yyyy")</td>
@@ -615,7 +615,7 @@
                                         }
                                         else
                                         {
-                                            <span class="badge badge-activo">ACTIVO</span>
+                                            <span class="badge proyecto-detalle-badge-activo">ACTIVO</span>
                                         }
                                     </td>
                                     <td class="text-right">@hist.DiasEnProyecto</td>
@@ -676,7 +676,7 @@
         </select>
     </div>
     
-    <div class="grid-2">
+    <div class="proyecto-detalle-grid-2">
         <div class="form-group">
             <label>PORCENTAJE DE DEDICACIÓN:</label>
             <input type="number" @bind="asignacionEdit.PorcentajeDedicacion" min="10" max="100" step="10" />
@@ -700,7 +700,7 @@
     </div>
     
     <div class="form-group">
-        <label class="checkbox-label">
+        <label class="proyecto-detalle-checkbox-label">
             <input type="checkbox" @bind="asignacionEdit.EsLiderCuadrilla" />
             ES LÍDER DE CUADRILLA
         </label>
@@ -732,10 +732,10 @@
     
     <div class="form-group">
         <label>SELECCIONE EMPLEADOS:</label>
-        <div class="empleados-checklist">
+        <div class="proyecto-detalle-empleados-checklist">
             @foreach (var emp in empleadosDisponibles)
             {
-                <label class="checkbox-item">
+                <label class="proyecto-detalle-checkbox-item">
                     <input type="checkbox" 
                            checked="@empleadosParaAsignar.Contains(emp.Id)"
                            @onchange="() => ToggleEmpleadoParaAsignar(emp.Id)" />
@@ -744,12 +744,12 @@
             }
             @if (!empleadosDisponibles.Any())
             {
-                <p class="empty-message">No hay empleados disponibles para asignar</p>
+                <p class="proyecto-detalle-empty-message">No hay empleados disponibles para asignar</p>
             }
         </div>
     </div>
     
-    <div class="resumen-asignacion">
+    <div class="proyecto-detalle-resumen-asignacion">
         <strong>@empleadosParaAsignar.Count empleados seleccionados</strong>
     </div>
 </FormModal>
@@ -807,172 +807,13 @@
 
 @if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="alert alert-danger">@errorMessage</div>
+    <div class="proyecto-detalle-alert proyecto-detalle-alert-danger">@errorMessage</div>
 }
 
 @if (!string.IsNullOrEmpty(successMessage))
 {
-    <div class="alert alert-success">@successMessage</div>
+    <div class="proyecto-detalle-alert proyecto-detalle-alert-success">@successMessage</div>
 }
-
-<style>
-    .proyecto-resumen {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        padding: 16px;
-        margin-bottom: 16px;
-    }
-    
-    .resumen-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 12px;
-    }
-    
-    .resumen-item {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .resumen-item .label {
-        font-size: 11px;
-        color: #6c757d;
-        margin-bottom: 2px;
-    }
-    
-    .resumen-item .value {
-        font-weight: bold;
-        color: #333;
-    }
-    
-    .resumen-item .value.highlight {
-        color: #0d6efd;
-    }
-    
-    .lider-row {
-        background-color: #fff3cd !important;
-    }
-    
-    .badge-lider {
-        background: #ffc107;
-        color: #000;
-        padding: 2px 6px;
-        font-size: 10px;
-        margin-left: 8px;
-        border-radius: 2px;
-    }
-    
-    .badge-activo {
-        background: #198754;
-        color: #fff;
-        padding: 2px 8px;
-        font-size: 10px;
-        border-radius: 2px;
-    }
-    
-    .activo-row {
-        background-color: #d4edda !important;
-    }
-    
-    .metricas-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-    
-    .metrica-card {
-        background: #fff;
-        border: 1px solid #dee2e6;
-        padding: 20px;
-        text-align: center;
-    }
-    
-    .metrica-valor {
-        display: block;
-        font-size: 28px;
-        font-weight: bold;
-        color: #0d6efd;
-    }
-    
-    .metrica-label {
-        display: block;
-        font-size: 11px;
-        color: #6c757d;
-        margin-top: 4px;
-    }
-    
-    .empleados-checklist {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid #dee2e6;
-        padding: 8px;
-        background: #fff;
-    }
-    
-    .checkbox-item {
-        display: block;
-        padding: 6px 8px;
-        cursor: pointer;
-    }
-    
-    .checkbox-item:hover {
-        background: #f8f9fa;
-    }
-    
-    .checkbox-item input {
-        margin-right: 8px;
-    }
-    
-    .resumen-asignacion {
-        background: #e7f3ff;
-        padding: 12px;
-        text-align: center;
-        margin-top: 12px;
-    }
-    
-    .empty-message {
-        color: #6c757d;
-        font-style: italic;
-        padding: 16px;
-        text-align: center;
-    }
-    
-    .checkbox-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-    }
-    
-    .checkbox-label input {
-        width: auto;
-    }
-    
-    .grid-2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-    }
-    
-    .alert {
-        padding: 12px 16px;
-        margin-top: 16px;
-        border-radius: 4px;
-    }
-    
-    .alert-danger {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-    
-    .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-</style>
 
 @code {
     [Parameter] public int ProyectoId { get; set; }
@@ -1117,6 +958,10 @@
     private void CambiarTab(string tab)
     {
         tabActiva = tab;
+        // Actualizar URL sin recargar
+        var uri = Navigation.GetUriWithQueryParameter("tab", tab);
+        Navigation.NavigateTo(uri, replace: true);
+        
         if (tab == "actividades" && reporteProyecto == null)
         {
             _ = CargarActividades();

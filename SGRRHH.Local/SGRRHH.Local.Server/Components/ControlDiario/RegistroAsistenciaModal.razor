@@ -1,0 +1,152 @@
+@using SGRRHH.Local.Domain.Entities
+
+@if (MostrarDetalle && RegistroSeleccionado != null)
+{
+    var empleado = RegistroSeleccionado.Empleado;
+    var detalles = DetallesOrdenados;
+
+    <div class="hospital-modal-overlay">
+        <div class="hospital-modal">
+            <div class="hospital-modal-header">
+                <h2>DETALLE DE REGISTRO</h2>
+                <button @onclick="OnCerrar" class="hospital-btn">CERRAR (ESC)</button>
+            </div>
+
+            <div class="hospital-form">
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>CODIGO:</label>
+                        <span>@empleado?.Codigo</span>
+                    </div>
+                    <div class="form-field">
+                        <label>EMPLEADO:</label>
+                        <span>@empleado?.NombreCompleto</span>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>DEPARTAMENTO:</label>
+                        <span>@(empleado?.Departamento?.Nombre ?? "-")</span>
+                    </div>
+                    <div class="form-field">
+                        <label>FECHA:</label>
+                        <span>@RegistroSeleccionado.Fecha.ToString("dd/MM/yyyy")</span>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>HORA ENTRADA:</label>
+                        <span>@(RegistroSeleccionado.HoraEntrada?.ToString(@"hh\:mm") ?? "-")</span>
+                    </div>
+                    <div class="form-field">
+                        <label>HORA SALIDA:</label>
+                        <span>@(RegistroSeleccionado.HoraSalida?.ToString(@"hh\:mm") ?? "-")</span>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>TOTAL HORAS:</label>
+                        <span>@RegistroSeleccionado.TotalHoras.ToString("F1")</span>
+                    </div>
+                    <div class="form-field">
+                        <label>ESTADO:</label>
+                        <span>@RegistroSeleccionado.Estado</span>
+                    </div>
+                </div>
+                <div class="form-row-full">
+                    <div class="form-field">
+                        <label>OBSERVACIONES:</label>
+                        @if (EditandoObservaciones)
+                        {
+                            <textarea @bind="RegistroSeleccionado.Observaciones"
+                                      rows="2"
+                                      class="hospital-textarea"></textarea>
+                            <button @onclick="OnGuardarObservaciones" class="hospital-btn">GUARDAR</button>
+                            <button @onclick="OnCancelarObservaciones" class="hospital-btn">CANCELAR</button>
+                        }
+                        else
+                        {
+                            <div @onclick="OnEditarObservaciones" class="observaciones-display">
+                                @if (!string.IsNullOrEmpty(RegistroSeleccionado.Observaciones))
+                                {
+                                    @RegistroSeleccionado.Observaciones
+                                }
+                                else
+                                {
+                                    <span class="placeholder-text">CLICK PARA AGREGAR</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="hospital-section">
+                <h3>ACTIVIDADES DEL DIA</h3>
+                <button @onclick="OnAgregarActividad" class="hospital-btn">
+                    AGREGAR ACTIVIDAD (F3)
+                </button>
+            </div>
+
+            @if (!detalles.Any())
+            {
+                <div class="hospital-empty">
+                    SIN ACTIVIDADES REGISTRADAS
+                </div>
+            }
+            else
+            {
+                <table class="hospital-table">
+                    <thead>
+                        <tr>
+                            <th>ORDEN</th>
+                            <th>ACTIVIDAD</th>
+                            <th>PROYECTO</th>
+                            <th>HORA INICIO</th>
+                            <th>HORA FIN</th>
+                            <th>HORAS</th>
+                            <th>CANTIDAD</th>
+                            <th>REND.</th>
+                            <th>DESCRIPCION</th>
+                            <th>ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var detalle in detalles)
+                        {
+                            <tr>
+                                <td>@detalle.Orden</td>
+                                <td>@detalle.Actividad?.Nombre</td>
+                                <td>@(detalle.Proyecto?.Nombre ?? "-")</td>
+                                <td>@(detalle.HoraInicio?.ToString(@"hh\:mm") ?? "-")</td>
+                                <td>@(detalle.HoraFin?.ToString(@"hh\:mm") ?? "-")</td>
+                                <td>@detalle.Horas.ToString("F1")</td>
+                                <td>@(detalle.Cantidad.HasValue ? $"{detalle.Cantidad:F1} {detalle.UnidadMedida}" : "-")</td>
+                                <td class="@GetClasificacionCss(detalle.ClasificacionProductividad)">
+                                    @if (detalle.PorcentajeRendimiento.HasValue)
+                                    {
+                                        <span title="@GetClasificacionTexto(detalle.ClasificacionProductividad)">@detalle.PorcentajeRendimiento?.ToString("F0")%</span>
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                                <td>@(string.IsNullOrEmpty(detalle.Descripcion) ? "-" : (detalle.Descripcion.Length > 50 ? detalle.Descripcion.Substring(0, 50) + "..." : detalle.Descripcion))</td>
+                                <td>
+                                    <button @onclick="() => OnEditarActividad.InvokeAsync(detalle)" class="hospital-btn-small">EDITAR</button>
+                                    <button @onclick="() => OnEliminarActividad.InvokeAsync(detalle)" class="hospital-btn-small">ELIMINAR</button>
+                                </td>
+                            </tr>
+                        }
+                        <tr class="total-row">
+                            <td colspan="5">TOTAL:</td>
+                            <td>@detalles.Sum(d => d.Horas).ToString("F1")</td>
+                            <td colspan="4"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}

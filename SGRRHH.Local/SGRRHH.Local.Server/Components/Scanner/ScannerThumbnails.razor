@@ -1,0 +1,34 @@
+@using SGRRHH.Local.Domain.DTOs
+@inject IImageTransformationService TransformacionImagen
+
+<div class="scanner-section scanner-section-thumbnails">
+    <div class="scanner-section-header">PÁGINAS (@Paginas.Count)</div>
+    <div class="scanner-thumbnails-grid">
+        @for (int i = 0; i < Paginas.Count; i++)
+        {
+            var index = i;
+            var pagina = Paginas[index];
+            <div class="scanner-thumb @(IndiceSeleccionado == index ? "scanner-thumb-selected" : "")"
+                 @onclick="() => AlSeleccionarPagina.InvokeAsync(index)">
+                <span class="scanner-thumb-num">@(index + 1)</span>
+                <img src="@ObtenerUrlImagen(pagina)" alt="Pág @(index + 1)" />
+                <button class="scanner-thumb-del"
+                        @onclick="() => AlEliminarPagina.InvokeAsync(index)"
+                        @onclick:stopPropagation="true"
+                        title="Eliminar">×</button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<ScannedPageDto> Paginas { get; set; } = new();
+    [Parameter] public int IndiceSeleccionado { get; set; }
+    [Parameter] public EventCallback<int> AlSeleccionarPagina { get; set; }
+    [Parameter] public EventCallback<int> AlEliminarPagina { get; set; }
+
+    private string ObtenerUrlImagen(ScannedPageDto pagina)
+    {
+        return TransformacionImagen.ABase64(pagina.ImageBytes, pagina.MimeType);
+    }
+}

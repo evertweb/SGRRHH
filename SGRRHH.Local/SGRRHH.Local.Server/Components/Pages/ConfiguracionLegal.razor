@@ -11,330 +11,31 @@
 
 <PageTitle>Configuración Legal - SGRRHH</PageTitle>
 
-<style>
-    .page-container {
-        width: 100%;
-        min-width: 1024px;
-        padding: 20px;
-        font-family: 'Courier New', monospace;
-    }
-
-    .page-header {
-        border-bottom: 2px solid #000000;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-
-    .page-title {
-        font-size: 18px;
-        font-weight: bold;
-        color: #000000;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-
-    .action-bar {
-        border: 1px solid #000000;
-        padding: 10px;
-        margin-bottom: 20px;
-        background: #FFFFFF;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 10px;
-    }
-
-    .btn {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        padding: 8px 16px;
-        border: 2px solid #000000;
-        background: #FFFFFF;
-        color: #000000;
-        cursor: pointer;
-        text-transform: uppercase;
-        font-weight: bold;
-    }
-
-    .btn:hover:not(:disabled) {
-        background: #F0F0F0;
-    }
-
-    .btn:disabled {
-        border-color: #CCCCCC;
-        color: #CCCCCC;
-        cursor: not-allowed;
-    }
-
-    .btn-primary {
-        background: #000000;
-        color: #FFFFFF;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-        background: #333333;
-    }
-
-    .results-info {
-        font-size: 12px;
-        color: #000000;
-        padding: 10px 0;
-        border-bottom: 1px solid #CCCCCC;
-        margin-bottom: 10px;
-    }
-
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        border: 2px solid #000000;
-        background: #FFFFFF;
-        font-size: 11px;
-    }
-
-    .data-table thead {
-        background: #F0F0F0;
-        border-bottom: 2px solid #000000;
-    }
-
-    .data-table th {
-        padding: 8px;
-        text-align: left;
-        font-weight: bold;
-        color: #000000;
-        text-transform: uppercase;
-        border-right: 1px solid #CCCCCC;
-        font-size: 10px;
-        letter-spacing: 1px;
-    }
-
-    .data-table td {
-        padding: 6px 8px;
-        border-bottom: 1px solid #CCCCCC;
-        border-right: 1px solid #CCCCCC;
-        color: #000000;
-    }
-
-    .data-table tbody tr:hover {
-        background: #F9F9F9;
-    }
-
-    .data-table tbody tr.selected {
-        background: #E8E8E8;
-    }
-
-    .loading-message,
-    .empty-message {
-        text-align: center;
-        padding: 40px;
-        color: #666666;
-        font-size: 12px;
-    }
-
-    .cell-vigente {
-        font-weight: bold;
-        text-transform: uppercase;
-        font-size: 10px;
-    }
-
-    .vigente-si {
-        color: #006400;
-    }
-
-    .vigente-no {
-        color: #8B0000;
-    }
-
-    .cell-money {
-        text-align: right;
-        font-family: 'Courier New', monospace;
-    }
-
-    .cell-percent {
-        text-align: right;
-    }
-
-    .cell-actions {
-        white-space: nowrap;
-    }
-
-    .btn-table {
-        font-family: 'Courier New', monospace;
-        font-size: 10px;
-        padding: 4px 8px;
-        border: 1px solid #000000;
-        background: #FFFFFF;
-        color: #000000;
-        cursor: pointer;
-        margin-right: 4px;
-        text-transform: uppercase;
-    }
-
-    .btn-table:hover {
-        background: #F0F0F0;
-    }
-
-    .shortcuts-bar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: #000000;
-        color: #FFFFFF;
-        padding: 8px 20px;
-        font-size: 11px;
-        border-top: 2px solid #000000;
-        display: flex;
-        gap: 20px;
-        z-index: 1000;
-    }
-
-    .shortcut-item {
-        display: flex;
-        gap: 5px;
-    }
-
-    .shortcut-key {
-        font-weight: bold;
-        color: #FFFF00;
-    }
-
-    .error-message {
-        border: 2px solid #FF0000;
-        background: #FFFFFF;
-        color: #FF0000;
-        padding: 12px;
-        margin: 10px 0;
-        font-size: 12px;
-        font-weight: bold;
-    }
-
-    .success-message {
-        border: 2px solid #008000;
-        background: #FFFFFF;
-        color: #008000;
-        padding: 12px;
-        margin: 10px 0;
-        font-size: 12px;
-        font-weight: bold;
-    }
-
-    /* Modal Styles */
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 2000;
-    }
-
-    .modal-box {
-        background: #FFFFFF;
-        border: 3px solid #000000;
-        padding: 20px;
-        max-width: 800px;
-        width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    .modal-box h3 {
-        font-size: 16px;
-        font-weight: bold;
-        text-transform: uppercase;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #000000;
-        padding-bottom: 10px;
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .form-group.full-width {
-        grid-column: span 2;
-    }
-
-    .form-label {
-        font-size: 11px;
-        font-weight: bold;
-        color: #000000;
-        text-transform: uppercase;
-    }
-
-    .form-input {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        padding: 8px;
-        border: 1px solid #000000;
-        background: #FFFFFF;
-        color: #000000;
-    }
-
-    .form-input:focus {
-        outline: 2px solid #000000;
-        outline-offset: 1px;
-    }
-
-    .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 20px;
-        padding-top: 15px;
-        border-top: 1px solid #CCCCCC;
-    }
-
-    .section-title {
-        font-size: 12px;
-        font-weight: bold;
-        text-transform: uppercase;
-        margin-top: 15px;
-        margin-bottom: 10px;
-        padding: 5px;
-        background: #F0F0F0;
-        border-left: 3px solid #000000;
-    }
-</style>
-
 <MessageToast @ref="messageToast" />
 
-<div class="page-container">
-    <div class="page-header">
-        <h1 class="page-title">CONFIGURACIÓN LEGAL COLOMBIA</h1>
+<div class="configuracion-legal-page-container">
+    <div class="configuracion-legal-page-header">
+        <h1 class="configuracion-legal-page-title">CONFIGURACIÓN LEGAL COLOMBIA</h1>
     </div>
 
     @if (!AuthService.IsAuthenticated)
     {
-        <div class="error-message">ACCESO DENEGADO - DEBE INICIAR SESIÓN</div>
+        <div class="configuracion-legal-error-message">ACCESO DENEGADO - DEBE INICIAR SESIÓN</div>
         return;
     }
 
-    <div class="action-bar">
-        <div class="action-buttons">
-            <button class="btn" @onclick="NuevaConfiguracion">NUEVO (F3)</button>
-            <button class="btn" @onclick="CargarDatos">ACTUALIZAR (F5)</button>
+    <div class="configuracion-legal-action-bar">
+        <div class="configuracion-legal-action-buttons">
+            <button class="configuracion-legal-btn" @onclick="NuevaConfiguracion">NUEVO (F3)</button>
+            <button class="configuracion-legal-btn" @onclick="CargarDatos">ACTUALIZAR (F5)</button>
         </div>
     </div>
 
-    <div class="results-info">
+    <div class="configuracion-legal-results-info">
         Mostrando @configuraciones.Count configuración(es)
     </div>
 
-    <table class="data-table">
+    <table class="configuracion-legal-data-table">
         <thead>
             <tr>
                 <th>AÑO</th>
@@ -353,11 +54,11 @@
         <tbody>
             @if (isLoading)
             {
-                <tr><td colspan="11" class="loading-message">CARGANDO DATOS...</td></tr>
+                <tr><td colspan="11" class="configuracion-legal-loading-message">CARGANDO DATOS...</td></tr>
             }
             else if (!configuraciones.Any())
             {
-                <tr><td colspan="11" class="empty-message">NO HAY CONFIGURACIONES REGISTRADAS</td></tr>
+                <tr><td colspan="11" class="configuracion-legal-empty-message">NO HAY CONFIGURACIONES REGISTRADAS</td></tr>
             }
             else
             {
@@ -366,22 +67,22 @@
                     <tr class="@(selectedConfiguracion?.Id == config.Id ? "selected" : "")"
                         @onclick="() => SelectConfiguracion(config)">
                         <td>@config.Año</td>
-                        <td class="cell-money">@config.SalarioMinimoMensual.ToString("C0")</td>
-                        <td class="cell-money">@config.AuxilioTransporte.ToString("C0")</td>
-                        <td class="cell-percent">@config.PorcentajeSaludEmpleado%</td>
-                        <td class="cell-percent">@config.PorcentajeSaludEmpleador%</td>
-                        <td class="cell-percent">@config.PorcentajePensionEmpleado%</td>
-                        <td class="cell-percent">@config.PorcentajePensionEmpleador%</td>
-                        <td class="cell-percent">@config.PorcentajeCajaCompensacion%</td>
-                        <td class="cell-percent">@config.PorcentajeInteresesCesantias%</td>
-                        <td class="cell-vigente @(config.EsVigente ? "vigente-si" : "vigente-no")">
+                        <td class="configuracion-legal-cell-money">@config.SalarioMinimoMensual.ToString("C0")</td>
+                        <td class="configuracion-legal-cell-money">@config.AuxilioTransporte.ToString("C0")</td>
+                        <td class="configuracion-legal-cell-percent">@config.PorcentajeSaludEmpleado%</td>
+                        <td class="configuracion-legal-cell-percent">@config.PorcentajeSaludEmpleador%</td>
+                        <td class="configuracion-legal-cell-percent">@config.PorcentajePensionEmpleado%</td>
+                        <td class="configuracion-legal-cell-percent">@config.PorcentajePensionEmpleador%</td>
+                        <td class="configuracion-legal-cell-percent">@config.PorcentajeCajaCompensacion%</td>
+                        <td class="configuracion-legal-cell-percent">@config.PorcentajeInteresesCesantias%</td>
+                        <td class="configuracion-legal-cell-vigente @(config.EsVigente ? "configuracion-legal-vigente-si" : "configuracion-legal-vigente-no")">
                             @(config.EsVigente ? "SÍ" : "NO")
                         </td>
-                        <td class="cell-actions">
-                            <button class="btn-table" @onclick="() => EditarConfiguracion(config)" @onclick:stopPropagation="true">EDITAR</button>
+                        <td class="configuracion-legal-cell-actions">
+                            <button class="configuracion-legal-btn-table" @onclick="() => EditarConfiguracion(config)" @onclick:stopPropagation="true">EDITAR</button>
                             @if (!config.EsVigente)
                             {
-                                <button class="btn-table" @onclick="() => ActivarConfiguracion(config)" @onclick:stopPropagation="true">ACTIVAR</button>
+                                <button class="configuracion-legal-btn-table" @onclick="() => ActivarConfiguracion(config)" @onclick:stopPropagation="true">ACTIVAR</button>
                             }
                         </td>
                     </tr>
@@ -391,168 +92,168 @@
     </table>
 </div>
 
-<div class="shortcuts-bar">
-    <div class="shortcut-item">
-        <span class="shortcut-key">F3</span>
+<div class="configuracion-legal-shortcuts-bar">
+    <div class="configuracion-legal-shortcut-item">
+        <span class="configuracion-legal-shortcut-key">F3</span>
         <span>=NUEVO</span>
     </div>
-    <div class="shortcut-item">
-        <span class="shortcut-key">F5</span>
+    <div class="configuracion-legal-shortcut-item">
+        <span class="configuracion-legal-shortcut-key">F5</span>
         <span>=ACTUALIZAR</span>
     </div>
-    <div class="shortcut-item">
-        <span class="shortcut-key">ESC</span>
+    <div class="configuracion-legal-shortcut-item">
+        <span class="configuracion-legal-shortcut-key">ESC</span>
         <span>=SALIR</span>
     </div>
 </div>
 
 @if (showModal)
 {
-    <div class="modal-overlay" @onclick:stopPropagation="true">
-        <div class="modal-box">
+    <div class="configuracion-legal-modal-overlay" @onclick:stopPropagation="true">
+        <div class="configuracion-legal-modal-box">
             <h3>@(isEditing ? "EDITAR" : "NUEVA") CONFIGURACIÓN LEGAL</h3>
             
-            <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">AÑO *</label>
-                    <input type="number" class="form-input" @bind="configEdit.Año" min="2020" max="2050" />
+            <div class="configuracion-legal-form-grid">
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">AÑO *</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.Año" min="2020" max="2050" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">VIGENTE</label>
-                    <select class="form-input" @bind="configEdit.EsVigente">
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">VIGENTE</label>
+                    <select class="configuracion-legal-form-input" @bind="configEdit.EsVigente">
                         <option value="true">SÍ</option>
                         <option value="false">NO</option>
                     </select>
                 </div>
             </div>
 
-            <div class="section-title">SALARIOS</div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">SALARIO MÍNIMO MENSUAL *</label>
-                    <input type="number" class="form-input" @bind="configEdit.SalarioMinimoMensual" step="1" min="0" />
+            <div class="configuracion-legal-section-title">SALARIOS</div>
+            <div class="configuracion-legal-form-grid">
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">SALARIO MÍNIMO MENSUAL *</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.SalarioMinimoMensual" step="1" min="0" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">AUXILIO DE TRANSPORTE *</label>
-                    <input type="number" class="form-input" @bind="configEdit.AuxilioTransporte" step="1" min="0" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">AUXILIO DE TRANSPORTE *</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.AuxilioTransporte" step="1" min="0" />
                 </div>
             </div>
 
-            <div class="section-title">SEGURIDAD SOCIAL - EMPLEADO</div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">% SALUD EMPLEADO</label>
-                    <input type="number" class="form-input" @bind="configEdit.PorcentajeSaludEmpleado" step="0.01" min="0" max="100" />
+            <div class="configuracion-legal-section-title">SEGURIDAD SOCIAL - EMPLEADO</div>
+            <div class="configuracion-legal-form-grid">
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% SALUD EMPLEADO</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.PorcentajeSaludEmpleado" step="0.01" min="0" max="100" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">% PENSIÓN EMPLEADO</label>
-                    <input type="number" class="form-input" @bind="configEdit.PorcentajePensionEmpleado" step="0.01" min="0" max="100" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% PENSIÓN EMPLEADO</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.PorcentajePensionEmpleado" step="0.01" min="0" max="100" />
                 </div>
             </div>
 
-            <div class="section-title">SEGURIDAD SOCIAL - EMPLEADOR</div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">% SALUD EMPLEADOR</label>
-                    <input type="number" class="form-input" @bind="configEdit.PorcentajeSaludEmpleador" step="0.01" min="0" max="100" />
+            <div class="configuracion-legal-section-title">SEGURIDAD SOCIAL - EMPLEADOR</div>
+            <div class="configuracion-legal-form-grid">
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% SALUD EMPLEADOR</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.PorcentajeSaludEmpleador" step="0.01" min="0" max="100" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">% PENSIÓN EMPLEADOR</label>
-                    <input type="number" class="form-input" @bind="configEdit.PorcentajePensionEmpleador" step="0.01" min="0" max="100" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% PENSIÓN EMPLEADOR</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.PorcentajePensionEmpleador" step="0.01" min="0" max="100" />
                 </div>
             </div>
 
-            <div class="section-title">PARAFISCALES</div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">% CAJA COMPENSACIÓN</label>
-                    <input type="number" class="form-input" @bind="configEdit.PorcentajeCajaCompensacion" step="0.01" min="0" max="100" />
+            <div class="configuracion-legal-section-title">PARAFISCALES</div>
+            <div class="configuracion-legal-form-grid">
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% CAJA COMPENSACIÓN</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.PorcentajeCajaCompensacion" step="0.01" min="0" max="100" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">% ICBF</label>
-                    <input type="number" class="form-input" @bind="configEdit.PorcentajeICBF" step="0.01" min="0" max="100" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% ICBF</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.PorcentajeICBF" step="0.01" min="0" max="100" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">% SENA</label>
-                    <input type="number" class="form-input" @bind="configEdit.PorcentajeSENA" step="0.01" min="0" max="100" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% SENA</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.PorcentajeSENA" step="0.01" min="0" max="100" />
                 </div>
             </div>
 
-            <div class="section-title">ARL - RIESGOS LABORALES</div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">ARL CLASE I (MÍN %)</label>
-                    <input type="number" class="form-input" @bind="configEdit.ARLClase1Min" step="0.001" min="0" max="100" />
+            <div class="configuracion-legal-section-title">ARL - RIESGOS LABORALES</div>
+            <div class="configuracion-legal-form-grid">
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">ARL CLASE I (MÍN %)</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.ARLClase1Min" step="0.001" min="0" max="100" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">ARL CLASE V (MÁX %)</label>
-                    <input type="number" class="form-input" @bind="configEdit.ARLClase5Max" step="0.001" min="0" max="100" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">ARL CLASE V (MÁX %)</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.ARLClase5Max" step="0.001" min="0" max="100" />
                 </div>
             </div>
 
-            <div class="section-title">PRESTACIONES Y JORNADA</div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">% INTERESES CESANTÍAS</label>
-                    <input type="number" class="form-input" @bind="configEdit.PorcentajeInteresesCesantias" step="0.01" min="0" max="100" />
+            <div class="configuracion-legal-section-title">PRESTACIONES Y JORNADA</div>
+            <div class="configuracion-legal-form-grid">
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% INTERESES CESANTÍAS</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.PorcentajeInteresesCesantias" step="0.01" min="0" max="100" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">DÍAS VACACIONES/AÑO</label>
-                    <input type="number" class="form-input" @bind="configEdit.DiasVacacionesAño" min="1" max="30" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">DÍAS VACACIONES/AÑO</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.DiasVacacionesAño" min="1" max="30" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">HORAS MÁX. SEMANALES</label>
-                    <input type="number" class="form-input" @bind="configEdit.HorasMaximasSemanales" min="1" max="60" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">HORAS MÁX. SEMANALES</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.HorasMaximasSemanales" min="1" max="60" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">HORAS ORDINARIAS/DÍA</label>
-                    <input type="number" class="form-input" @bind="configEdit.HorasOrdinariasDiarias" min="1" max="12" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">HORAS ORDINARIAS/DÍA</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.HorasOrdinariasDiarias" min="1" max="12" />
                 </div>
             </div>
 
-            <div class="section-title">RECARGOS</div>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label class="form-label">% HORA EXTRA DIURNA</label>
-                    <input type="number" class="form-input" @bind="configEdit.RecargoHoraExtraDiurna" step="0.01" min="0" max="200" />
+            <div class="configuracion-legal-section-title">RECARGOS</div>
+            <div class="configuracion-legal-form-grid">
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% HORA EXTRA DIURNA</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.RecargoHoraExtraDiurna" step="0.01" min="0" max="200" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">% HORA EXTRA NOCTURNA</label>
-                    <input type="number" class="form-input" @bind="configEdit.RecargoHoraExtraNocturna" step="0.01" min="0" max="200" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% HORA EXTRA NOCTURNA</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.RecargoHoraExtraNocturna" step="0.01" min="0" max="200" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">% HORA NOCTURNA</label>
-                    <input type="number" class="form-input" @bind="configEdit.RecargoHoraNocturna" step="0.01" min="0" max="200" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% HORA NOCTURNA</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.RecargoHoraNocturna" step="0.01" min="0" max="200" />
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">% DOMINICAL/FESTIVO</label>
-                    <input type="number" class="form-input" @bind="configEdit.RecargoHoraDominicalFestivo" step="0.01" min="0" max="200" />
+                <div class="configuracion-legal-form-group">
+                    <label class="configuracion-legal-form-label">% DOMINICAL/FESTIVO</label>
+                    <input type="number" class="configuracion-legal-form-input" @bind="configEdit.RecargoHoraDominicalFestivo" step="0.01" min="0" max="200" />
                 </div>
             </div>
 
-            <div class="form-grid">
-                <div class="form-group full-width">
-                    <label class="form-label">OBSERVACIONES</label>
-                    <textarea class="form-input" @bind="configEdit.Observaciones" rows="2"></textarea>
+            <div class="configuracion-legal-form-grid">
+                <div class="configuracion-legal-form-group full-width">
+                    <label class="configuracion-legal-form-label">OBSERVACIONES</label>
+                    <textarea class="configuracion-legal-form-input" @bind="configEdit.Observaciones" rows="2"></textarea>
                 </div>
             </div>
 
-            <div class="modal-actions">
-                <button class="btn" @onclick="CerrarModal">CANCELAR (ESC)</button>
-                <button class="btn btn-primary" @onclick="Guardar" disabled="@isSaving">
+            <div class="configuracion-legal-modal-actions">
+                <button class="configuracion-legal-btn" @onclick="CerrarModal">CANCELAR (ESC)</button>
+                <button class="configuracion-legal-btn configuracion-legal-btn-primary" @onclick="Guardar" disabled="@isSaving">
                     @(isSaving ? "GUARDANDO..." : "GUARDAR (F10)")
                 </button>
             </div>

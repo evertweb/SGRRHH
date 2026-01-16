@@ -19,6 +19,7 @@ public class DapperContext
 
     // Pragmas de sesión que deben ejecutarse en cada conexión
     private const string SessionPragmas = @"
+        PRAGMA foreign_keys = ON;
         PRAGMA busy_timeout = 5000;
         PRAGMA cache_size = -20000;
         PRAGMA temp_store = MEMORY;
@@ -196,6 +197,13 @@ public class DapperContext
             await TryAddColumnAsync(connection, "tipos_permiso", "genera_descuento", "INTEGER DEFAULT 0");
             await TryAddColumnAsync(connection, "tipos_permiso", "porcentaje_descuento", "REAL");
             
+            // =====================================================
+            // CORRECCIÓN: Foreign Key incorrecta en cuentas_bancarias
+            // Problema: La foreign key referencia 'documentos_empleados' (plural)
+            //           pero la tabla correcta es 'documentos_empleado' (singular)
+            // =====================================================
+            await FixCuentasBancariasForeignKeyAsync(connection);
+            
             // Solo ejecutar SeedData si no se ha ejecutado antes
             // Verificamos si existe la configuración "seed_data_initialized"
             var seedInitialized = await connection.QueryFirstOrDefaultAsync<string>(
@@ -218,6 +226,105 @@ public class DapperContext
         {
             _logger.LogError(ex, "Error running SQLite migrations");
             throw;
+        }
+    }
+    
+    /// <summary>
+    /// Corrige la foreign key incorrecta en la tabla cuentas_bancarias.
+    /// Detecta si la foreign key referencia 'documentos_empleados' (incorrecto) 
+    /// y la corrige a 'documentos_empleado' (correcto).
+    /// </summary>
+    private async Task FixCuentasBancariasForeignKeyAsync(SqliteConnection connection)
+    {
+        try
+        {
+            // Verificar si la tabla cuentas_bancarias existe
+            var tableExists = await connection.QueryFirstOrDefaultAsync<int>(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'cuentas_bancarias'");
+            
+            if (tableExists == 0)
+            {
+                // La tabla no existe, se creará correctamente con el Schema
+                return;
+            }
+            
+            // Obtener la definición SQL de la tabla
+            var tableSql = await connection.QueryFirstOrDefaultAsync<string>(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'cuentas_bancarias'");
+            
+            if (string.IsNullOrEmpty(tableSql))
+            {
+                return;
+            }
+            
+            // Verificar si tiene la foreign key incorrecta
+            if (tableSql.Contains("documentos_empleados", StringComparison.OrdinalIgnoreCase) &&
+                !tableSql.Contains("documentos_empleado", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Detectada foreign key incorrecta en cuentas_bancarias. Corrigiendo...");
+                
+                // Deshabilitar foreign keys temporalmente para recrear la tabla
+                await connection.ExecuteAsync("PRAGMA foreign_keys = OFF");
+                
+                try
+                {
+                    // Crear tabla temporal con estructura correcta
+                    await connection.ExecuteAsync(@"
+                        CREATE TABLE cuentas_bancarias_temp (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            empleado_id INTEGER NOT NULL,
+                            banco TEXT NOT NULL,
+                            tipo_cuenta INTEGER NOT NULL DEFAULT 1,
+                            numero_cuenta TEXT NOT NULL,
+                            nombre_titular TEXT,
+                            documento_titular TEXT,
+                            es_cuenta_nomina INTEGER NOT NULL DEFAULT 0,
+                            esta_activa INTEGER NOT NULL DEFAULT 1,
+                            fecha_apertura TEXT,
+                            documento_certificacion_id INTEGER,
+                            observaciones TEXT,
+                            activo INTEGER NOT NULL DEFAULT 1,
+                            fecha_creacion TEXT NOT NULL,
+                            fecha_modificacion TEXT,
+                            FOREIGN KEY (empleado_id) REFERENCES empleados(id) ON DELETE CASCADE,
+                            FOREIGN KEY (documento_certificacion_id) REFERENCES documentos_empleado(id) ON DELETE SET NULL
+                        )");
+                    
+                    // Copiar datos
+                    await connection.ExecuteAsync("INSERT INTO cuentas_bancarias_temp SELECT * FROM cuentas_bancarias");
+                    
+                    // Eliminar tabla original
+                    await connection.ExecuteAsync("DROP TABLE cuentas_bancarias");
+                    
+                    // Renombrar tabla temporal
+                    await connection.ExecuteAsync("ALTER TABLE cuentas_bancarias_temp RENAME TO cuentas_bancarias");
+                    
+                    // Recrear índices
+                    await connection.ExecuteAsync(@"
+                        CREATE INDEX IF NOT EXISTS idx_cuentas_bancarias_empleado 
+                            ON cuentas_bancarias(empleado_id)");
+                    await connection.ExecuteAsync(@"
+                        CREATE INDEX IF NOT EXISTS idx_cuentas_bancarias_nomina 
+                            ON cuentas_bancarias(empleado_id, es_cuenta_nomina) 
+                            WHERE es_cuenta_nomina = 1 AND esta_activa = 1");
+                    await connection.ExecuteAsync(@"
+                        CREATE INDEX IF NOT EXISTS idx_cuentas_bancarias_activas 
+                            ON cuentas_bancarias(empleado_id, esta_activa) 
+                            WHERE esta_activa = 1");
+                    
+                    _logger.LogInformation("Foreign key corregida exitosamente en cuentas_bancarias");
+                }
+                finally
+                {
+                    // Rehabilitar foreign keys
+                    await connection.ExecuteAsync("PRAGMA foreign_keys = ON");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al corregir foreign key en cuentas_bancarias");
+            // No lanzar excepción para no bloquear el inicio de la aplicación
         }
     }
     

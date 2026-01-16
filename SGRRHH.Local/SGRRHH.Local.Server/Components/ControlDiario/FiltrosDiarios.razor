@@ -1,0 +1,12 @@
+<div class="busqueda-box">
+    <input type="text"
+           @bind="searchLocal"
+           @bind:event="oninput"
+           @bind:after="NotificarCambio"
+           placeholder="Buscar empleado... (F2)"
+           class="busqueda-input search-input" />
+    @if (!string.IsNullOrEmpty(searchLocal))
+    {
+        <button @onclick="Limpiar" class="busqueda-clear">✕</button>
+    }
+</div>

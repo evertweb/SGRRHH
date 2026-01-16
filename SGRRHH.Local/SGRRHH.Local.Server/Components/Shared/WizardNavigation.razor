@@ -1,0 +1,48 @@
+<div class="hospital-footer">
+    <button type="button" 
+            @onclick="OnCancel" 
+            disabled="@IsSaving" 
+            class="hospital-btn hospital-btn-secondary">
+        CANCELAR (F8)
+    </button>
+    <div class="hospital-btn-group">
+        @if (CurrentStep > 1)
+        {
+            <button type="button" 
+                    @onclick="OnPrevious" 
+                    disabled="@IsSaving" 
+                    class="hospital-btn hospital-btn-secondary">
+                ANTERIOR
+            </button>
+        }
+        @if (CurrentStep < TotalSteps)
+        {
+            <button type="button" 
+                    @onclick="OnNext" 
+                    disabled="@(!CanGoNext || IsSaving)" 
+                    class="hospital-btn hospital-btn-primary">
+                SIGUIENTE
+            </button>
+        }
+        else
+        {
+            <button type="button" 
+                    @onclick="OnFinish" 
+                    disabled="@IsSaving" 
+                    class="hospital-btn hospital-btn-primary">
+                @(IsSaving ? "GUARDANDO..." : "GUARDAR (F5)")
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int CurrentStep { get; set; }
+    [Parameter] public int TotalSteps { get; set; }
+    [Parameter] public bool CanGoNext { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public EventCallback OnPrevious { get; set; }
+    [Parameter] public EventCallback OnNext { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnFinish { get; set; }
+}

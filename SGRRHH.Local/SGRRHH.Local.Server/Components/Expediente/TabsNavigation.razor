@@ -1,0 +1,18 @@
+@if (!Tabs.Any())
+{
+    return;
+}
+
+<div class="expediente-tabs">
+    @foreach (var tab in Tabs.Where(t => t.Visible))
+    {
+        <button class="expediente-tab @(ActiveTab == tab.Id ? "active" : "")"
+                @onclick="() => OnTabChanged.InvokeAsync(tab.Id)">
+            @tab.Label
+            @if (tab.MostrarConteo)
+            {
+                <text> (@tab.Contador)</text>
+            }
+        </button>
+    }
+</div>

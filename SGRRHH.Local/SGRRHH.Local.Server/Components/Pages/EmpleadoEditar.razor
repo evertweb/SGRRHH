@@ -1,0 +1,788 @@
+@page "/empleados/{EmpleadoId:int}/editar"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.Services
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Shared.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
+@inject IAuthService AuthService
+@inject IEmpleadoRepository EmpleadoRepo
+@inject ICatalogCacheService CatalogCache
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject ILogger<EmpleadoEditar> Logger
+
+<PageTitle>Editar Empleado - @(empleado?.NombreCompleto ?? "Cargando...") - SGRRHH</PageTitle>
+
+<!-- Toast Messages -->
+<MessageToast @ref="messageToast" />
+
+<div class="hospital-page-container">
+    @if (isLoading)
+    {
+        <div class="hospital-loading">CARGANDO DATOS DEL EMPLEADO...</div>
+    }
+    else if (empleado == null)
+    {
+        <div class="hospital-error">
+            <p>ERROR: No se encontró el empleado solicitado.</p>
+            <button class="hospital-btn" @onclick="Volver">VOLVER A EMPLEADOS</button>
+        </div>
+    }
+    else
+    {
+        <!-- Header -->
+        <div class="hospital-page-header">
+            <h1 class="hospital-page-title">EDITAR EMPLEADO: @empleado.Codigo - @empleado.NombreCompleto</h1>
+            <div class="hospital-shortcuts-bar">
+                F5=GUARDAR | ESC=CANCELAR
+            </div>
+        </div>
+
+        <!-- Contenido del Formulario -->
+        <div class="hospital-content">
+            <!-- SECCION: DATOS GENERALES -->
+            <div class="hospital-section">
+                <div class="hospital-section-header">DATOS GENERALES</div>
+                <div class="hospital-section-body">
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">CODIGO *</label>
+                            <input type="text" class="hospital-input" value="@empleado.Codigo" readonly style="background-color: #f0f0f0;" />
+                            <div class="hospital-field-hint">Código no editable</div>
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">CEDULA *</label>
+                            <InputCedula @bind-Value="empleado.Cedula" CssClass="hospital-input" Placeholder="Ej: 1.192.208.848" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">NOMBRES *</label>
+                            <input type="text" class="hospital-input" @bind="empleado.Nombres" maxlength="100" />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">APELLIDOS *</label>
+                            <input type="text" class="hospital-input" @bind="empleado.Apellidos" maxlength="100" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">FECHA NACIMIENTO *</label>
+                            <input type="date" class="hospital-input" @bind="empleado.FechaNacimiento" />
+                            @if (empleado.FechaNacimiento.HasValue)
+                            {
+                                var edad = CalcularEdad(empleado.FechaNacimiento.Value);
+                                <div class="hospital-field-hint">Edad: @edad años</div>
+                            }
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">GENERO *</label>
+                            <select class="hospital-input" @bind="empleado.Genero">
+                                <option value="">-- SELECCIONE --</option>
+                                @foreach (var g in Enum.GetValues<Genero>())
+                                {
+                                    <option value="@g">@g.ToString().ToUpper()</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">ESTADO CIVIL</label>
+                            <select class="hospital-input" @bind="empleado.EstadoCivil">
+                                <option value="">-- SELECCIONE --</option>
+                                @foreach (var ec in Enum.GetValues<EstadoCivil>())
+                                {
+                                    <option value="@ec">@ec.ToString().ToUpper()</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">ESTADO ACTUAL</label>
+                            <input type="text" 
+                                   class="hospital-input" 
+                                   value="@EstadoEmpleadoService.ObtenerDescripcion(empleado.Estado)" 
+                                   readonly 
+                                   style="background-color: #f0f0f0; font-weight: bold;" />
+                            <div class="hospital-field-hint">El estado se cambia desde el Expediente</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECCION: INFORMACION LABORAL -->
+            <div class="hospital-section">
+                <div class="hospital-section-header">INFORMACION LABORAL</div>
+                <div class="hospital-section-body">
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">FECHA INGRESO *</label>
+                            <input type="date" class="hospital-input" @bind="empleado.FechaIngreso" />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">DEPARTAMENTO</label>
+                            <select class="hospital-input" @onchange="OnDepartamentoChanged">
+                                <option value="">-- SELECCIONE --</option>
+                                @foreach (var d in departamentos)
+                                {
+                                    <option value="@d.Id" selected="@(empleado.DepartamentoId == d.Id)">@d.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">CARGO</label>
+                            <select class="hospital-input" @bind="empleado.CargoId" disabled="@(!empleado.DepartamentoId.HasValue)">
+                                <option value="">@(empleado.DepartamentoId.HasValue ? "-- SELECCIONE CARGO --" : "-- PRIMERO SELECCIONE DEPARTAMENTO --")</option>
+                                @foreach (var c in CargosFiltrados)
+                                {
+                                    <option value="@c.Id">@c.Nombre @(c.SalarioBase.HasValue ? $"(${c.SalarioBase.Value:N0})" : "")</option>
+                                }
+                            </select>
+                            @if (empleado.DepartamentoId.HasValue && !CargosFiltrados.Any())
+                            {
+                                <div class="hospital-field-hint" style="color: #FF9900;">No hay cargos asociados a este departamento</div>
+                            }
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">SALARIO BASE *</label>
+                            <InputMoneda @bind-Value="empleado.SalarioBase" CssClass="hospital-input" Placeholder="Ej: 1.750.905" />
+                            <div class="hospital-field-hint">
+                                Salario mínimo Colombia 2026: @NumberFormatHelper.FormatearMoneda(1750905m)
+                                @if (empleado.SalarioBase.HasValue && empleado.SalarioBase.Value < 1750905)
+                                {
+                                    <span style="color: #CC0000;"> - ¡ATENCIÓN: MENOR AL SALARIO MÍNIMO!</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECCION: SEGURIDAD SOCIAL -->
+            <div class="hospital-section">
+                <div class="hospital-section-header">SEGURIDAD SOCIAL (COLOMBIA)</div>
+                <div class="hospital-section-body">
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">EPS (SALUD) *</label>
+                            <select class="hospital-input" @onchange="OnEpsChanged">
+                                <option value="">-- SELECCIONE EPS --</option>
+                                @foreach (var eps in epsLista)
+                                {
+                                    <option value="@eps.Id" selected="@(epsIdSeleccionado == eps.Id)">@eps.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">CODIGO EPS</label>
+                            <input type="text" class="hospital-input" value="@empleado.CodigoEPS" readonly style="background-color: #f0f0f0;" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">AFP (PENSION) *</label>
+                            <select class="hospital-input" @onchange="OnAfpChanged">
+                                <option value="">-- SELECCIONE AFP --</option>
+                                @foreach (var afp in afpLista)
+                                {
+                                    <option value="@afp.Id" selected="@(afpIdSeleccionado == afp.Id)">@afp.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">CODIGO AFP</label>
+                            <input type="text" class="hospital-input" value="@empleado.CodigoAFP" readonly style="background-color: #f0f0f0;" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">ARL (RIESGOS LABORALES) *</label>
+                            <select class="hospital-input" @onchange="OnArlChanged">
+                                <option value="">-- SELECCIONE ARL --</option>
+                                @foreach (var arl in arlLista)
+                                {
+                                    <option value="@arl.Id" selected="@(arlIdSeleccionado == arl.Id)">@arl.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">CODIGO ARL</label>
+                            <input type="text" class="hospital-input" value="@empleado.CodigoARL" readonly style="background-color: #f0f0f0;" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">CLASE DE RIESGO ARL *</label>
+                            <select class="hospital-input" @bind="empleado.ClaseRiesgoARL">
+                                <option value="1">CLASE I - Riesgo Mínimo (0.522%)</option>
+                                <option value="2">CLASE II - Riesgo Bajo (1.044%)</option>
+                                <option value="3">CLASE III - Riesgo Medio (2.436%)</option>
+                                <option value="4">CLASE IV - Riesgo Alto (4.350%)</option>
+                                <option value="5">CLASE V - Riesgo Máximo (6.960%)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">CAJA DE COMPENSACION *</label>
+                            <select class="hospital-input" @onchange="OnCajaChanged">
+                                <option value="">-- SELECCIONE CAJA --</option>
+                                @foreach (var caja in cajasLista)
+                                {
+                                    <option value="@caja.Id" selected="@(cajaIdSeleccionado == caja.Id)">@caja.Nombre (@caja.Region)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECCION: CONTACTO -->
+            <div class="hospital-section">
+                <div class="hospital-section-header">CONTACTO</div>
+                <div class="hospital-section-body">
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">TELEFONO CELULAR *</label>
+                            <input type="text" class="hospital-input" @bind="empleado.TelefonoCelular" maxlength="20" placeholder="Ej: 3101234567" />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">TELEFONO FIJO</label>
+                            <input type="text" class="hospital-input" @bind="empleado.TelefonoFijo" maxlength="20" placeholder="Ej: 6012345678" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">WHATSAPP</label>
+                            <input type="text" class="hospital-input" @bind="empleado.Whatsapp" maxlength="20" placeholder="Si es diferente al celular" />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">EMAIL</label>
+                            <input type="email" class="hospital-input" @bind="empleado.Email" maxlength="100" placeholder="correo@ejemplo.com" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECCION: DIRECCION RESIDENCIA -->
+            <div class="hospital-section">
+                <div class="hospital-section-header">DIRECCION RESIDENCIA</div>
+                <div class="hospital-section-body">
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field hospital-form-field-full">
+                            <label class="hospital-label required">DIRECCION *</label>
+                            <input type="text" class="hospital-input" @bind="empleado.Direccion" maxlength="250" placeholder="Calle/Carrera/Vereda + número" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">MUNICIPIO/CIUDAD *</label>
+                            <input type="text" class="hospital-input" @bind="empleado.Municipio" maxlength="100" placeholder="Ej: Medellín, Puerto Berrío" />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">BARRIO/VEREDA</label>
+                            <input type="text" class="hospital-input" @bind="empleado.Barrio" maxlength="100" placeholder="Nombre del barrio o vereda" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECCION: INFORMACION MEDICA -->
+            <div class="hospital-section">
+                <div class="hospital-section-header">INFORMACION MEDICA (EMERGENCIAS)</div>
+                <div class="hospital-section-body">
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">TIPO DE SANGRE (RH) *</label>
+                            <select class="hospital-input" @bind="empleado.TipoSangre">
+                                <option value="">-- SELECCIONE --</option>
+                                <option value="A+">A POSITIVO (A+)</option>
+                                <option value="A-">A NEGATIVO (A-)</option>
+                                <option value="B+">B POSITIVO (B+)</option>
+                                <option value="B-">B NEGATIVO (B-)</option>
+                                <option value="O+">O POSITIVO (O+)</option>
+                                <option value="O-">O NEGATIVO (O-)</option>
+                                <option value="AB+">AB POSITIVO (AB+)</option>
+                                <option value="AB-">AB NEGATIVO (AB-)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">ALERGIAS CONOCIDAS</label>
+                            <input type="text" class="hospital-input" @bind="empleado.Alergias" maxlength="250" placeholder="Medicamentos, alimentos, picaduras..." />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">CONDICIONES MEDICAS</label>
+                            <input type="text" class="hospital-input" @bind="empleado.CondicionesMedicas" maxlength="250" placeholder="Diabetes, hipertensión, epilepsia..." />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">MEDICAMENTOS ACTUALES</label>
+                            <input type="text" class="hospital-input" @bind="empleado.MedicamentosActuales" maxlength="250" placeholder="Medicamentos que toma regularmente" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECCION: CONTACTO DE EMERGENCIA #1 -->
+            <div class="hospital-section">
+                <div class="hospital-section-header">CONTACTO DE EMERGENCIA #1 (OBLIGATORIO)</div>
+                <div class="hospital-section-body">
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">NOMBRE COMPLETO *</label>
+                            <input type="text" class="hospital-input" @bind="empleado.ContactoEmergencia" maxlength="100" placeholder="Nombre y apellido del contacto" />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">PARENTESCO *</label>
+                            <select class="hospital-input" @bind="empleado.ParentescoContactoEmergencia">
+                                <option value="">-- SELECCIONE --</option>
+                                <option value="Esposo(a)">ESPOSO(A)</option>
+                                <option value="Compañero(a)">COMPAÑERO(A) PERMANENTE</option>
+                                <option value="Padre">PADRE</option>
+                                <option value="Madre">MADRE</option>
+                                <option value="Hijo(a)">HIJO(A)</option>
+                                <option value="Hermano(a)">HERMANO(A)</option>
+                                <option value="Tío(a)">TIO(A)</option>
+                                <option value="Abuelo(a)">ABUELO(A)</option>
+                                <option value="Suegro(a)">SUEGRO(A)</option>
+                                <option value="Cuñado(a)">CUÑADO(A)</option>
+                                <option value="Primo(a)">PRIMO(A)</option>
+                                <option value="Amigo(a)">AMIGO(A)</option>
+                                <option value="Vecino(a)">VECINO(A)</option>
+                                <option value="Otro">OTRO</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label required">TELEFONO 1 *</label>
+                            <input type="text" class="hospital-input" @bind="empleado.TelefonoEmergencia" maxlength="20" placeholder="Número principal" />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">TELEFONO 2</label>
+                            <input type="text" class="hospital-input" @bind="empleado.TelefonoEmergencia2" maxlength="20" placeholder="Número alternativo (opcional)" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECCION: CONTACTO DE EMERGENCIA #2 (OPCIONAL) -->
+            <div class="hospital-section">
+                <div class="hospital-section-header">CONTACTO DE EMERGENCIA #2 (OPCIONAL)</div>
+                <div class="hospital-section-body">
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">NOMBRE COMPLETO</label>
+                            <input type="text" class="hospital-input" @bind="empleado.ContactoEmergencia2" maxlength="100" placeholder="Nombre y apellido del segundo contacto" />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">PARENTESCO</label>
+                            <select class="hospital-input" @bind="empleado.ParentescoContactoEmergencia2">
+                                <option value="">-- SELECCIONE --</option>
+                                <option value="Esposo(a)">ESPOSO(A)</option>
+                                <option value="Compañero(a)">COMPAÑERO(A) PERMANENTE</option>
+                                <option value="Padre">PADRE</option>
+                                <option value="Madre">MADRE</option>
+                                <option value="Hijo(a)">HIJO(A)</option>
+                                <option value="Hermano(a)">HERMANO(A)</option>
+                                <option value="Tío(a)">TIO(A)</option>
+                                <option value="Abuelo(a)">ABUELO(A)</option>
+                                <option value="Suegro(a)">SUEGRO(A)</option>
+                                <option value="Cuñado(a)">CUÑADO(A)</option>
+                                <option value="Primo(a)">PRIMO(A)</option>
+                                <option value="Amigo(a)">AMIGO(A)</option>
+                                <option value="Vecino(a)">VECINO(A)</option>
+                                <option value="Otro">OTRO</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">TELEFONO 1</label>
+                            <input type="text" class="hospital-input" @bind="empleado.TelefonoEmergencia2Contacto2" maxlength="20" placeholder="Número principal" />
+                        </div>
+                        
+                        <div class="hospital-form-field">
+                            <label class="hospital-label">TELEFONO 2</label>
+                            <input type="text" class="hospital-input" @bind="empleado.TelefonoEmergencia2Alternativo" maxlength="20" placeholder="Número alternativo" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer con Botones -->
+        <div class="hospital-footer">
+            <button class="hospital-btn hospital-btn-secondary" @onclick="Cancelar" disabled="@isSaving">
+                CANCELAR (ESC)
+            </button>
+            <button class="hospital-btn hospital-btn-primary" @onclick="Guardar" disabled="@isSaving">
+                @(isSaving ? "GUARDANDO..." : "GUARDAR CAMBIOS (F5)")
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int EmpleadoId { get; set; }
+    
+    private MessageToast? messageToast;
+    private Empleado? empleado;
+    private Empleado? empleadoOriginal;
+    
+    private bool isLoading = true;
+    private bool isSaving = false;
+    
+    // Catálogos
+    private List<Cargo> cargos = new();
+    private List<Departamento> departamentos = new();
+    
+    // Catálogos de seguridad social
+    private List<Eps> epsLista = new();
+    private List<Afp> afpLista = new();
+    private List<Arl> arlLista = new();
+    private List<CajaCompensacion> cajasLista = new();
+    
+    // IDs seleccionados para seguridad social
+    private int? epsIdSeleccionado;
+    private int? afpIdSeleccionado;
+    private int? arlIdSeleccionado;
+    private int? cajaIdSeleccionado;
+    
+    // Cargos filtrados por departamento
+    private IEnumerable<Cargo> CargosFiltrados => 
+        empleado?.DepartamentoId.HasValue == true 
+            ? cargos.Where(c => c.DepartamentoId == empleado.DepartamentoId) 
+            : Enumerable.Empty<Cargo>();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        
+        await CargarCatalogos();
+        await CargarEmpleado();
+    }
+    
+    private async Task CargarCatalogos()
+    {
+        try
+        {
+            cargos = await CatalogCache.GetCargosAsync();
+            departamentos = await CatalogCache.GetDepartamentosAsync();
+            epsLista = await CatalogCache.GetEpsAsync();
+            afpLista = await CatalogCache.GetAfpAsync();
+            arlLista = await CatalogCache.GetArlAsync();
+            cajasLista = await CatalogCache.GetCajasCompensacionAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando catálogos");
+            messageToast?.ShowError("Error al cargar catálogos");
+        }
+    }
+    
+    private async Task CargarEmpleado()
+    {
+        try
+        {
+            isLoading = true;
+            empleado = await EmpleadoRepo.GetByIdWithRelationsAsync(EmpleadoId);
+            
+            if (empleado != null)
+            {
+                // Guardar copia original para detectar cambios
+                empleadoOriginal = new Empleado
+                {
+                    Id = empleado.Id,
+                    Codigo = empleado.Codigo,
+                    Cedula = empleado.Cedula,
+                    Nombres = empleado.Nombres,
+                    Apellidos = empleado.Apellidos
+                };
+                
+                // Determinar IDs seleccionados de seguridad social basados en códigos
+                epsIdSeleccionado = epsLista.FirstOrDefault(e => e.Codigo == empleado.CodigoEPS)?.Id;
+                afpIdSeleccionado = afpLista.FirstOrDefault(a => a.Codigo == empleado.CodigoAFP)?.Id;
+                arlIdSeleccionado = arlLista.FirstOrDefault(a => a.Codigo == empleado.CodigoARL)?.Id;
+                cajaIdSeleccionado = cajasLista.FirstOrDefault(c => c.Codigo == empleado.CodigoCajaCompensacion)?.Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando empleado {Id}", EmpleadoId);
+            messageToast?.ShowError("Error al cargar el empleado");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private void OnDepartamentoChanged(ChangeEventArgs e)
+    {
+        if (empleado == null) return;
+        
+        if (int.TryParse(e.Value?.ToString(), out var deptoId))
+        {
+            empleado.DepartamentoId = deptoId;
+            // Limpiar cargo si no pertenece al nuevo departamento
+            if (empleado.CargoId.HasValue)
+            {
+                var cargoActual = cargos.FirstOrDefault(c => c.Id == empleado.CargoId);
+                if (cargoActual?.DepartamentoId != deptoId)
+                {
+                    empleado.CargoId = null;
+                }
+            }
+        }
+        else
+        {
+            empleado.DepartamentoId = null;
+            empleado.CargoId = null;
+        }
+    }
+    
+    private void OnEpsChanged(ChangeEventArgs e)
+    {
+        if (empleado == null) return;
+        
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            epsIdSeleccionado = id;
+            var eps = epsLista.FirstOrDefault(x => x.Id == id);
+            empleado.CodigoEPS = eps?.Codigo ?? "";
+            empleado.EPS = eps?.Nombre ?? "";
+        }
+        else
+        {
+            epsIdSeleccionado = null;
+            empleado.CodigoEPS = "";
+            empleado.EPS = "";
+        }
+    }
+    
+    private void OnAfpChanged(ChangeEventArgs e)
+    {
+        if (empleado == null) return;
+        
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            afpIdSeleccionado = id;
+            var afp = afpLista.FirstOrDefault(x => x.Id == id);
+            empleado.CodigoAFP = afp?.Codigo ?? "";
+            empleado.AFP = afp?.Nombre ?? "";
+        }
+        else
+        {
+            afpIdSeleccionado = null;
+            empleado.CodigoAFP = "";
+            empleado.AFP = "";
+        }
+    }
+    
+    private void OnArlChanged(ChangeEventArgs e)
+    {
+        if (empleado == null) return;
+        
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            arlIdSeleccionado = id;
+            var arl = arlLista.FirstOrDefault(x => x.Id == id);
+            empleado.CodigoARL = arl?.Codigo ?? "";
+            empleado.ARL = arl?.Nombre ?? "";
+        }
+        else
+        {
+            arlIdSeleccionado = null;
+            empleado.CodigoARL = "";
+            empleado.ARL = "";
+        }
+    }
+    
+    private void OnCajaChanged(ChangeEventArgs e)
+    {
+        if (empleado == null) return;
+        
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            cajaIdSeleccionado = id;
+            var caja = cajasLista.FirstOrDefault(x => x.Id == id);
+            empleado.CodigoCajaCompensacion = caja?.Codigo ?? "";
+            empleado.CajaCompensacion = caja?.Nombre ?? "";
+        }
+        else
+        {
+            cajaIdSeleccionado = null;
+            empleado.CodigoCajaCompensacion = "";
+            empleado.CajaCompensacion = "";
+        }
+    }
+    
+    private async Task Guardar()
+    {
+        if (empleado == null) return;
+        
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+            
+            // Validaciones
+            var errores = ValidarFormulario();
+            if (errores.Any())
+            {
+                foreach (var error in errores)
+                {
+                    messageToast?.ShowError(error);
+                }
+                return;
+            }
+            
+            // Validar cédula única (excluyendo el actual)
+            if (await EmpleadoRepo.ExistsCedulaAsync(empleado.Cedula, empleado.Id))
+            {
+                messageToast?.ShowError($"Ya existe otro empleado con la cédula {empleado.Cedula}");
+                return;
+            }
+            
+            // Validar email único (si se proporcionó)
+            if (!string.IsNullOrWhiteSpace(empleado.Email) && 
+                await EmpleadoRepo.ExistsEmailAsync(empleado.Email, empleado.Id))
+            {
+                messageToast?.ShowError($"Ya existe otro empleado con el email {empleado.Email}");
+                return;
+            }
+            
+            // Actualizar timestamp de modificación
+            empleado.FechaModificacion = DateTime.Now;
+            
+            await EmpleadoRepo.UpdateAsync(empleado);
+            
+            messageToast?.ShowSuccess($"Empleado {empleado.Codigo} actualizado correctamente");
+            Logger.LogInformation("Empleado actualizado: {Codigo} por {Usuario}", 
+                empleado.Codigo, AuthService.CurrentUser?.Username);
+            
+            // Esperar un momento para que el usuario vea el mensaje
+            await Task.Delay(1000);
+            
+            // Volver al expediente
+            Navigation.NavigateTo($"/empleados/{empleado.Id}/expediente");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error guardando empleado {Id}", empleado?.Id);
+            messageToast?.ShowError(ErrorTranslationService.Translate(ex));
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+    
+    private List<string> ValidarFormulario()
+    {
+        var errores = new List<string>();
+        
+        if (empleado == null)
+        {
+            errores.Add("No hay empleado para validar");
+            return errores;
+        }
+        
+        if (string.IsNullOrWhiteSpace(empleado.Cedula))
+            errores.Add("La cédula es requerida");
+            
+        if (string.IsNullOrWhiteSpace(empleado.Nombres))
+            errores.Add("Los nombres son requeridos");
+            
+        if (string.IsNullOrWhiteSpace(empleado.Apellidos))
+            errores.Add("Los apellidos son requeridos");
+            
+        if (!empleado.FechaNacimiento.HasValue)
+            errores.Add("La fecha de nacimiento es requerida");
+            
+        if (empleado.Genero == default)
+            errores.Add("El género es requerido");
+            
+        if (empleado.FechaIngreso == default)
+            errores.Add("La fecha de ingreso es requerida");
+            
+        if (!empleado.SalarioBase.HasValue || empleado.SalarioBase <= 0)
+            errores.Add("El salario base es requerido");
+            
+        if (string.IsNullOrWhiteSpace(empleado.TelefonoCelular))
+            errores.Add("El teléfono celular es requerido");
+            
+        if (string.IsNullOrWhiteSpace(empleado.Direccion))
+            errores.Add("La dirección es requerida");
+            
+        if (string.IsNullOrWhiteSpace(empleado.Municipio))
+            errores.Add("El municipio/ciudad es requerido");
+            
+        if (string.IsNullOrWhiteSpace(empleado.TipoSangre))
+            errores.Add("El tipo de sangre es requerido");
+            
+        if (string.IsNullOrWhiteSpace(empleado.ContactoEmergencia))
+            errores.Add("El contacto de emergencia es requerido");
+            
+        if (string.IsNullOrWhiteSpace(empleado.TelefonoEmergencia))
+            errores.Add("El teléfono de emergencia es requerido");
+        
+        return errores;
+    }
+    
+    private void Cancelar()
+    {
+        Navigation.NavigateTo($"/empleados/{EmpleadoId}/expediente");
+    }
+    
+    private void Volver()
+    {
+        Navigation.NavigateTo("/empleados");
+    }
+    
+    private int CalcularEdad(DateTime fechaNacimiento)
+    {
+        var hoy = DateTime.Today;
+        var edad = hoy.Year - fechaNacimiento.Year;
+        if (fechaNacimiento.Date > hoy.AddYears(-edad)) edad--;
+        return edad;
+    }
+}

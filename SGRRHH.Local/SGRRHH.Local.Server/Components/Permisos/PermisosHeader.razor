@@ -1,0 +1,71 @@
+<div class="permisos-header">
+    <h1 class="permisos-title">SISTEMA DE GESTION DE PERMISOS</h1>
+    <div class="permisos-info">
+        USUARIO: @UsuarioNombre |
+        ROL: @(EsAprobador ? "APROBADOR" : "OPERADOR") |
+        FECHA: @FechaActual.ToString("dd/MM/yyyy HH:mm")
+    </div>
+</div>
+
+<div class="permisos-teclas-funcion">
+    <span class="permisos-tecla">F2=BUSCAR</span>
+    <span class="permisos-tecla">F3=NUEVO</span>
+    <span class="permisos-tecla">F4=DETALLE</span>
+    <span class="permisos-tecla">F5=ACTUALIZAR</span>
+    @if (EsAprobador)
+    {
+        <span class="permisos-tecla">F6=APROBAR</span>
+        <span class="permisos-tecla">F7=RECHAZAR</span>
+    }
+    <span class="permisos-tecla">F12=PDF</span>
+    <span class="permisos-tecla">ESC=CERRAR</span>
+    <span class="permisos-tecla">TAB=NAVEGAR</span>
+</div>
+
+<div class="permisos-controles-principales">
+    <button class="btn" @onclick="OnNuevo">NUEVO</button>
+    <button class="btn" @onclick="OnActualizar">ACTUALIZAR</button>
+    <button class="btn" @onclick="OnVerDetalle" disabled="@(!TieneSeleccion)">
+        VER DETALLE
+    </button>
+    @if (EsAprobador)
+    {
+        <button class="btn btn-aprobar" @onclick="OnAprobar" disabled="@(!PuedeAprobar)">
+            APROBAR
+        </button>
+        <button class="btn btn-rechazar" @onclick="OnRechazar" disabled="@(!PuedeAprobar)">
+            RECHAZAR
+        </button>
+    }
+    <button class="btn" @onclick="OnGenerarPdf" disabled="@(!PuedeGenerarPdf)">
+        GENERAR PDF
+    </button>
+</div>
+
+<div class="permisos-info-resultados">
+    REGISTROS: @TotalFiltrados DE @TotalPermisos
+    @if (EsAprobador && PendientesAprobacion > 0)
+    {
+        <span class="permisos-info-pendientes">
+            PENDIENTES DE APROBACION: @PendientesAprobacion
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter] public string UsuarioNombre { get; set; } = "N/A";
+    [Parameter] public DateTime FechaActual { get; set; } = DateTime.Now;
+    [Parameter] public bool EsAprobador { get; set; }
+    [Parameter] public int TotalPermisos { get; set; }
+    [Parameter] public int TotalFiltrados { get; set; }
+    [Parameter] public int PendientesAprobacion { get; set; }
+    [Parameter] public bool TieneSeleccion { get; set; }
+    [Parameter] public bool PuedeAprobar { get; set; }
+    [Parameter] public bool PuedeGenerarPdf { get; set; }
+    [Parameter] public EventCallback OnNuevo { get; set; }
+    [Parameter] public EventCallback OnActualizar { get; set; }
+    [Parameter] public EventCallback OnVerDetalle { get; set; }
+    [Parameter] public EventCallback OnAprobar { get; set; }
+    [Parameter] public EventCallback OnRechazar { get; set; }
+    [Parameter] public EventCallback OnGenerarPdf { get; set; }
+}

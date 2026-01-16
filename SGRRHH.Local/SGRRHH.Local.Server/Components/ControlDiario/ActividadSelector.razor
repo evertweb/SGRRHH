@@ -1,0 +1,184 @@
+@using SGRRHH.Local.Domain.Entities
+
+@if (MostrarModal && ActividadEdit != null && RegistroSeleccionado != null)
+{
+    <div class="hospital-modal-overlay">
+        <div class="hospital-modal">
+            <div class="hospital-modal-header">
+                <h2>@(IsEditingActividad ? "EDITAR ACTIVIDAD" : "AGREGAR ACTIVIDAD")</h2>
+                <button @onclick="OnCerrarModal" class="hospital-btn">CANCELAR (ESC)</button>
+            </div>
+
+            <div class="hospital-form">
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>CATEGORÍA:</label>
+                        <select @bind="categoriaLocal" @bind:after="AfterCategoriaChanged"
+                                disabled="@IsSaving"
+                                class="hospital-select">
+                            <option value="0">-- TODAS LAS CATEGORÍAS --</option>
+                            @foreach (var cat in CategoriasActividad.OrderBy(c => c.Orden))
+                            {
+                                <option value="@cat.Id" style="color: @cat.ColorHex">@cat.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-field required">
+                        <label>ACTIVIDAD:</label>
+                        <select @bind="ActividadEdit.ActividadId"
+                                @bind:after="AfterActividadChanged"
+                                disabled="@IsSaving"
+                                class="hospital-select">
+                            <option value="">-- SELECCIONE --</option>
+                            @foreach (var act in ActividadesFiltradas)
+                            {
+                                <option value="@act.Id">
+                                    @act.Codigo - @act.Nombre @(act.EsDestacada ? "★" : "")
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    @if (ActividadSeleccionadaRequiereProyecto)
+                    {
+                        <div class="form-field required">
+                            <label>PROYECTO:</label>
+                            <select @bind="ActividadEdit.ProyectoId"
+                                    disabled="@IsSaving"
+                                    class="hospital-select">
+                                <option value="">-- SELECCIONE --</option>
+                                @foreach (var proy in Proyectos)
+                                {
+                                    <option value="@proy.Id">@proy.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                </div>
+
+                @if (ActividadSeleccionadaObj?.RequiereCantidad == true)
+                {
+                    <div class="form-row">
+                        <div class="form-field required">
+                            <label>CANTIDAD (@(ActividadSeleccionadaObj?.UnidadAbreviatura ?? "und")):</label>
+                            <input type="number"
+                                   step="0.01"
+                                   @bind="ActividadEdit.Cantidad"
+                                   min="0.01"
+                                   disabled="@IsSaving"
+                                   placeholder="Ej: 2.5"
+                                   class="hospital-input" />
+                            @if (ActividadSeleccionadaObj?.RendimientoEsperado.HasValue == true)
+                            {
+                                <small class="help-text">
+                                    Rendimiento esperado: @ActividadSeleccionadaObj.RendimientoEsperado.Value.ToString("F2") @ActividadSeleccionadaObj.UnidadAbreviatura/hora
+                                </small>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="form-row">
+                    <div class="form-field required">
+                        <label>HORAS:</label>
+                        <input type="number"
+                               @bind="ActividadEdit.Horas"
+                               min="0.25"
+                               max="24"
+                               step="0.25"
+                               disabled="@IsSaving"
+                               class="hospital-input" />
+                    </div>
+                    <div class="form-field">
+                        <label>ORDEN:</label>
+                        <input type="number"
+                               @bind="ActividadEdit.Orden"
+                               min="1"
+                               disabled="@IsSaving"
+                               class="hospital-input" />
+                    </div>
+                </div>
+
+                @if (ActividadEdit.Cantidad.HasValue && ActividadEdit.Cantidad > 0 && ActividadEdit.Horas > 0)
+                {
+                    var rendimientoLogrado = ActividadEdit.Cantidad.Value / ActividadEdit.Horas;
+                    <div class="productividad-preview">
+                        <strong>RENDIMIENTO LOGRADO:</strong>
+                        @rendimientoLogrado.ToString("F2") @(ActividadSeleccionadaObj?.UnidadAbreviatura ?? "")/hora
+
+                        @if (ActividadSeleccionadaObj?.RendimientoEsperado > 0)
+                        {
+                            var porcentaje = (rendimientoLogrado / ActividadSeleccionadaObj.RendimientoEsperado.Value) * 100;
+                            <span class="@GetClasificacionCss(porcentaje)">
+                                (@porcentaje.ToString("F0")% del esperado - @GetClasificacionTexto(porcentaje))
+                            </span>
+                        }
+                    </div>
+                }
+
+                <div class="form-row">
+                    <div class="form-field">
+                        <label>HORA INICIO:</label>
+                        <input type="time"
+                               value="@FormatTimeSpan(ActividadEdit.HoraInicio)"
+                               @onchange="OnHoraInicioChanged"
+                               disabled="@IsSaving"
+                               class="hospital-input" />
+                    </div>
+                    <div class="form-field">
+                        <label>HORA FIN:</label>
+                        <input type="time"
+                               value="@FormatTimeSpan(ActividadEdit.HoraFin)"
+                               @onchange="OnHoraFinChanged"
+                               disabled="@IsSaving"
+                               class="hospital-input" />
+                    </div>
+                </div>
+
+                @if (ActividadSeleccionadaObj?.RequiereCantidad == true)
+                {
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>LOTE/SECTOR ESPECÍFICO:</label>
+                            <input type="text"
+                                   @bind="ActividadEdit.LoteEspecifico"
+                                   maxlength="50"
+                                   disabled="@IsSaving"
+                                   placeholder="Ej: Lote 3, Sector Norte"
+                                   class="hospital-input" />
+                        </div>
+                    </div>
+                }
+
+                <div class="form-row-full">
+                    <div class="form-field">
+                        <label>DESCRIPCION:</label>
+                        <textarea @bind="ActividadEdit.Descripcion"
+                                  rows="3"
+                                  maxlength="500"
+                                  disabled="@IsSaving"
+                                  class="hospital-textarea"></textarea>
+                    </div>
+                </div>
+
+                <div class="hospital-info">
+                    EMPLEADO: @RegistroSeleccionado.Empleado?.NombreCompleto |
+                    FECHA: @FechaSeleccionada.ToString("dd/MM/yyyy") |
+                    HORAS ACTUALES: @RegistroSeleccionado.TotalHoras.ToString("F1")
+                </div>
+            </div>
+
+            <div class="hospital-modal-actions">
+                <button @onclick="OnGuardarActividad" class="hospital-btn" disabled="@IsSaving">
+                    @(IsSaving ? "GUARDANDO..." : "GUARDAR (F5)")
+                </button>
+                <button @onclick="OnCerrarModal" class="hospital-btn" disabled="@IsSaving">
+                    CANCELAR (F8)
+                </button>
+            </div>
+        </div>
+    </div>
+}

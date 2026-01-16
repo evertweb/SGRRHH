@@ -15,7 +15,7 @@
             <div class="logout-text">SESION CERRADA CORRECTAMENTE</div>
         </div>
         
-        <div class="form-actions" style="margin-top: 2rem;">
+        <div class="form-actions logout-actions">
             <button class="btn-login" @onclick="GoToLogin">
                 INICIAR SESION
             </button>
@@ -27,35 +27,6 @@
     </div>
 </div>
 
-<style>
-    .logout-message {
-        text-align: center;
-        padding: 2rem 1rem;
-        border: 1px solid var(--color-border);
-        margin: 1rem 0;
-    }
-    
-    .logout-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
-    
-    .logout-text {
-        font-family: var(--font-family);
-        font-size: 1.1rem;
-        color: var(--color-success, #006600);
-    }
-    
-    .logout-footer {
-        text-align: center;
-        margin-top: 1rem;
-    }
-    
-    .logout-hint {
-        font-size: 0.85rem;
-        color: var(--color-text-muted, #888);
-    }
-</style>
 
 @code {
     private const string SESSION_KEY = "sgrrhh_session_user_id";

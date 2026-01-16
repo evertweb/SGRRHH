@@ -1,0 +1,13 @@
+<div class="hospital-progress-bar">
+    <div class="hospital-progress-text">
+        PASO @CurrentStep DE @TotalSteps: @GetStepName().ToUpper()
+    </div>
+</div>
+
+@code {
+    [Parameter] public int CurrentStep { get; set; }
+    [Parameter] public int TotalSteps { get; set; }
+    [Parameter] public Func<int, string>? StepNameProvider { get; set; }
+    
+    private string GetStepName() => StepNameProvider?.Invoke(CurrentStep) ?? "";
+}

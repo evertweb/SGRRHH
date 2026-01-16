@@ -5,6 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using QuestPDF.Infrastructure;
 using SGRRHH.Local.Domain.Interfaces;
+using SGRRHH.Local.Domain.Services;
 using SGRRHH.Local.Infrastructure.Data;
 using SGRRHH.Local.Infrastructure.Repositories;
 using SGRRHH.Local.Infrastructure.Services;
@@ -59,6 +60,7 @@ builder.Services.AddScoped<IDetalleActividadRepository, DetalleActividadReposito
 builder.Services.AddScoped<IDocumentoEmpleadoRepository, DocumentoEmpleadoRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
+builder.Services.AddScoped<IRegistroDiarioService, RegistroDiarioService>();
 
 // Repositorios Fase 2 - Prestaciones, Nómina, Configuración Legal
 builder.Services.AddScoped<IPrestacionRepository, PrestacionRepository>();
@@ -86,6 +88,14 @@ builder.Services.AddScoped<ICajaCompensacionRepository, CajaCompensacionReposito
 // Repositorio de Dispositivos Autorizados (login sin contraseña)
 builder.Services.AddScoped<IDispositivoAutorizadoRepository, DispositivoAutorizadoRepository>();
 
+// Repositorio de Cuentas Bancarias
+builder.Services.AddScoped<ICuentaBancariaRepository, CuentaBancariaRepository>();
+
+// Repositorios de Dotación y EPP
+builder.Services.AddScoped<ITallasEmpleadoRepository, TallasEmpleadoRepository>();
+builder.Services.AddScoped<IEntregaDotacionRepository, EntregaDotacionRepository>();
+builder.Services.AddScoped<IDetalleEntregaDotacionRepository, DetalleEntregaDotacionRepository>();
+
 // Authentication service
 builder.Services.AddScoped<IAuthService, LocalAuthService>();
 
@@ -105,15 +115,19 @@ builder.Services.AddScoped<IValidacionService, ValidacionService>();
 
 // Servicio de Alertas de Permisos
 builder.Services.AddScoped<IAlertaPermisoService, AlertaPermisoService>();
+builder.Services.AddScoped<IPermisoCalculationService, PermisoCalculationService>();
 
 // Servicio de Reportes de Productividad Silvicultural
 builder.Services.AddScoped<IReporteProductividadService, ReporteProductividadService>();
 
 // Servicio de Escaneo de Documentos (NAPS2.Sdk)
 builder.Services.AddScoped<IScannerService, ScannerService>();
+builder.Services.AddScoped<IScannerModalStateService, ScannerModalStateService>();
+builder.Services.AddScoped<IScannerWorkflowService, ScannerWorkflowService>();
 
 // Servicio de Procesamiento de Imágenes (corrección, rotación, recorte)
 builder.Services.AddScoped<IImageProcessingService, ImageProcessingService>();
+builder.Services.AddScoped<IImageTransformationService, ImageTransformationService>();
 
 // Servicio de OCR (reconocimiento óptico de caracteres)
 builder.Services.AddScoped<IOcrService, OcrService>();
@@ -132,6 +146,9 @@ builder.Services.AddScoped<IKeyboardShortcutService, KeyboardShortcutService>();
 
 // Database Maintenance service
 builder.Services.AddScoped<IDatabaseMaintenanceService, DatabaseMaintenanceService>();
+
+// Servicio de almacenamiento de documentos centralizado
+builder.Services.AddScoped<IDocumentoStorageService, DocumentoStorageService>();
 
 // Background services
 builder.Services.AddHostedService<BackupSchedulerService>();
@@ -182,10 +199,18 @@ app.UseStaticFiles(new StaticFileOptions
     }
 });
 var storagePath = app.Services.GetRequiredService<DatabasePathResolver>().GetStoragePath();
+
+// Configurar MIME types para archivos estáticos de fotos
+var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+provider.Mappings[".png"] = "image/png";
+provider.Mappings[".jpg"] = "image/jpeg";
+provider.Mappings[".jpeg"] = "image/jpeg";
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(Path.Combine(storagePath, "Fotos")),
-    RequestPath = "/fotos"
+    RequestPath = "/fotos",
+    ContentTypeProvider = provider
 });
 app.UseAntiforgery();
 

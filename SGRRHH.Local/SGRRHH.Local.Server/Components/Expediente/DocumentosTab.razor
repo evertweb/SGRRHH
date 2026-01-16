@@ -1,0 +1,154 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.Services
+@using SGRRHH.Local.Shared.Helpers
+
+@{
+    var documentosPorTipo = Documentos.GroupBy(d => d.TipoDocumento).ToDictionary(g => g.Key, g => g.ToList());
+    var totalRequeridos = TiposDocumentosRequeridos.Length;
+    var completados = TiposDocumentosRequeridos.Count(t => documentosPorTipo.ContainsKey(t));
+    var porcentaje = totalRequeridos > 0 ? (completados * 100 / totalRequeridos) : 0;
+}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <div>
+        <span style="font-size: 12px; font-weight: bold;">EXPEDIENTE: @completados/@totalRequeridos DOCUMENTOS (@porcentaje%)</span>
+        <div style="width: 200px; height: 8px; background: #E0E0E0; margin-top: 5px; border: 1px solid #000;">
+            <div style="width: @(porcentaje)%; height: 100%; background: @(porcentaje == 100 ? "#006600" : porcentaje >= 50 ? "#FF9900" : "#CC0000");"></div>
+        </div>
+    </div>
+    <div style="font-size: 11px; color: #666;">
+        TOTAL ARCHIVOS: @Documentos.Count
+    </div>
+</div>
+
+<div class="section" style="margin-bottom: 20px;">
+    <div class="section-header">DOCUMENTOS REQUERIDOS</div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 30px;"></th>
+                <th>TIPO DE DOCUMENTO</th>
+                <th>ARCHIVO</th>
+                <th style="width: 80px;">TAMAÑO</th>
+                <th style="width: 100px;">FECHA EMISIÓN</th>
+                <th style="width: 100px;">VENCIMIENTO</th>
+                <th style="width: 80px;">ESTADO</th>
+                <th style="width: 160px;">ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var tipo in TiposDocumentosRequeridos)
+            {
+                var tieneDocumento = documentosPorTipo.TryGetValue(tipo, out var docs) && docs.Any();
+                var doc = docs?.FirstOrDefault();
+                var status = doc != null ? DocumentHelper.GetDocumentoStatus(doc) : "";
+
+                <tr class="@(!tieneDocumento ? "row-pendiente" : status == "vencido" ? "row-vencido" : "")">
+                    <td style="text-align: center;">
+                        @if (tieneDocumento)
+                        {
+                            <span style="color: #006600; font-weight: bold;">✓</span>
+                        }
+                        else
+                        {
+                            <span style="color: #CC0000;">○</span>
+                        }
+                    </td>
+                    <td style="font-weight: @(!tieneDocumento ? "bold" : "normal");">
+                        @DocumentHelper.GetTipoDocumentoNombre(tipo)
+                    </td>
+                    @if (tieneDocumento && doc != null)
+                    {
+                        <td title="@doc.NombreArchivoOriginal" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            @doc.NombreArchivoOriginal
+                        </td>
+                        <td>@FormatHelper.FormatFileSize(doc.TamanoArchivo)</td>
+                        <td>@(doc.FechaEmision?.ToString("dd/MM/yy") ?? "-")</td>
+                        <td>@(doc.FechaVencimiento?.ToString("dd/MM/yy") ?? "-")</td>
+                        <td class="status-@status">
+                            @if (status == "vencido")
+                            {
+                                <span style="color: #CC0000; font-weight: bold;">VENCIDO</span>
+                            }
+                            else if (status == "proximo")
+                            {
+                                <span style="color: #FF9900;">PROX.</span>
+                            }
+                            else
+                            {
+                                <span style="color: #006600;">OK</span>
+                            }
+                        </td>
+                        <td style="white-space: normal;">
+                            <button class="btn-table" @onclick="() => OnPrevisualizarDocumento.InvokeAsync(doc)" title="Ver documento">👁️</button>
+                            <button class="btn-table" @onclick="() => OnDescargarDocumento.InvokeAsync(doc)" title="Descargar archivo">💾</button>
+                            <button class="btn-table" @onclick="() => OnImprimirDocumento.InvokeAsync(doc)" title="Imprimir documento">🖨️</button>
+                            <button class="btn-table" @onclick="() => OnAbrirScannerParaTipo.InvokeAsync(tipo)" title="Reescanear documento">📷</button>
+                            <button class="btn-table btn-danger" style="color: #CC0000;" @onclick="() => OnConfirmarEliminarDocumento.InvokeAsync(doc)" title="Eliminar documento">🗑️</button>
+                        </td>
+                    }
+                    else
+                    {
+                        <td colspan="5" style="color: #999; font-style: italic;">
+                            — Documento pendiente de carga —
+                        </td>
+                        <td style="white-space: normal;">
+                            <button class="btn-table" style="background: #E8FFE8;" @onclick="() => OnAbrirScannerParaTipo.InvokeAsync(tipo)" title="Escanear documento">📷</button>
+                            <button class="btn-table" style="background: #E8F0FF;" @onclick="() => OnAbrirUploadModalParaTipo.InvokeAsync(tipo)" title="Subir archivo PDF">💾</button>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@{
+    var documentosOtros = Documentos.Where(d => !TiposDocumentosRequeridos.Contains(d.TipoDocumento)).ToList();
+}
+
+@if (documentosOtros.Any())
+{
+    <div class="section">
+        <div class="section-header">OTROS DOCUMENTOS (@documentosOtros.Count)</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>TIPO</th>
+                    <th>NOMBRE</th>
+                    <th>ARCHIVO</th>
+                    <th>TAMAÑO</th>
+                    <th>FECHA</th>
+                    <th style="width: 120px;">ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var doc in documentosOtros)
+                {
+                    <tr>
+                        <td>@DocumentHelper.GetTipoDocumentoNombre(doc.TipoDocumento)</td>
+                        <td>@doc.Nombre</td>
+                        <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">@doc.NombreArchivoOriginal</td>
+                        <td>@FormatHelper.FormatFileSize(doc.TamanoArchivo)</td>
+                        <td>@doc.FechaCreacion.ToString("dd/MM/yy")</td>
+                        <td style="white-space: normal;">
+                            <button class="btn-table" @onclick="() => OnPrevisualizarDocumento.InvokeAsync(doc)" title="Ver documento">👁️</button>
+                            <button class="btn-table" @onclick="() => OnDescargarDocumento.InvokeAsync(doc)" title="Descargar archivo">💾</button>
+                            <button class="btn-table btn-danger" style="color: #CC0000;" @onclick="() => OnConfirmarEliminarDocumento.InvokeAsync(doc)" title="Eliminar documento">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<div style="margin-top: 15px; display: flex; gap: 10px;">
+    <button class="btn" @onclick="() => OnAbrirScannerParaTipo.InvokeAsync(TipoDocumentoEmpleado.Otro)">
+        + ESCANEAR OTRO DOCUMENTO
+    </button>
+    <button class="btn" @onclick="() => OnAbrirUploadModalParaTipo.InvokeAsync(TipoDocumentoEmpleado.Otro)">
+        + SUBIR OTRO ARCHIVO
+    </button>
+</div>

@@ -1,0 +1,23 @@
+@using System.Globalization
+
+<div class="hospital-header">
+    <h1>CONTROL DIARIO</h1>
+    <div class="header-info">
+        <span class="fecha-destacada">@FechaFormateada</span>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="hospital-error">
+        ERROR: @ErrorMessage
+        <button @onclick="OnClearError">ACEPTAR</button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(SuccessMessage))
+{
+    <div class="hospital-success">
+        @SuccessMessage
+    </div>
+}

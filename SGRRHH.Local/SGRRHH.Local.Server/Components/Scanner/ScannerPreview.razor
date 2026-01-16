@@ -1,0 +1,142 @@
+@using SGRRHH.Local.Domain.DTOs
+
+<div class="scanner-preview-main @(Zoom > 0 ? "scanner-preview-scrollable" : "")">
+    @if (EstaEscaneando)
+    {
+        <div class="scanner-progress-overlay">
+            <div class="scanner-progress-content">
+                <div class="scanner-progress-spinner"></div>
+                <div class="scanner-progress-text">@EstadoProgreso</div>
+                <div class="scanner-progress-bar">
+                    <div class="scanner-progress-fill" style="width: @(PorcentajeProgreso * 100)%"></div>
+                </div>
+                <div class="scanner-progress-page">Página @PaginaActual</div>
+            </div>
+        </div>
+    }
+    else if (EstaGenerandoPdf)
+    {
+        <div class="scanner-progress-overlay">
+            <div class="scanner-progress-content">
+                <div class="scanner-progress-spinner"></div>
+                <div class="scanner-progress-text">GENERANDO PDF...</div>
+                <div class="scanner-progress-bar">
+                    <div class="scanner-progress-fill scanner-progress-indeterminate"></div>
+                </div>
+                <div class="scanner-progress-page">Combinando @TotalPaginas página(s)</div>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(ImagenActualUrl) && PaginaActualEscaneada != null)
+    {
+        <div class="scanner-image-wrapper" @ondblclick="AlAbrirPantallaCompleta" title="Doble clic para pantalla completa">
+            <img src="@ImagenActualUrl"
+                 alt="Página escaneada"
+                 class="scanner-main-image"
+                 style="@EstiloZoom" />
+        </div>
+    }
+    else if (EsModoVistaPrevia && !string.IsNullOrWhiteSpace(ImagenVistaPreviaUrl) && ImagenVistaPrevia != null)
+    {
+        <div class="scanner-preview-selection-area"
+             @onmousedown="AlIniciarSeleccion"
+             @onmousemove="AlMoverSeleccion"
+             @onmouseup="AlFinalizarSeleccion"
+             @onmouseleave="AlFinalizarSeleccion">
+            <img src="@ImagenVistaPreviaUrl"
+                 alt="Vista previa"
+                 class="scanner-main-image" />
+
+            @if (AreaSeleccionada != null && !AreaSeleccionada.IsFullArea)
+            {
+                <div class="scanner-selection-box"
+                     style="left: @(AreaSeleccionada.Left)%; top: @(AreaSeleccionada.Top)%;
+                            width: @(AreaSeleccionada.Width)%; height: @(AreaSeleccionada.Height)%;">
+                    <div class="scanner-selection-info">
+                        @(AreaSeleccionada.Width.ToString("F0"))% × @(AreaSeleccionada.Height.ToString("F0"))%
+                    </div>
+                </div>
+            }
+            @if (EstaSeleccionando)
+            {
+                <div class="scanner-selection-box scanner-selection-active"
+                     style="left: @Math.Min(SeleccionInicioX, SeleccionActualX)%;
+                            top: @Math.Min(SeleccionInicioY, SeleccionActualY)%;
+                            width: @Math.Abs(SeleccionActualX - SeleccionInicioX)%;
+                            height: @Math.Abs(SeleccionActualY - SeleccionInicioY)%;"></div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="scanner-placeholder-large">
+            <div class="scanner-placeholder-icon">📄</div>
+            <div class="scanner-placeholder-text">COLOQUE EL DOCUMENTO EN EL ESCÁNER</div>
+            <div class="scanner-placeholder-hint">
+                @if (PermiteMultipagina)
+                {
+                    <span>Presione "ESCANEAR" para digitalizar cada página</span>
+                }
+                else
+                {
+                    <span>Use "Vista Previa" para seleccionar área o "Escanear" directo</span>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<div class="scanner-preview-statusbar">
+    @if (PaginaActualEscaneada != null)
+    {
+        <span>@PaginaActualEscaneada.Width × @PaginaActualEscaneada.Height px</span>
+        <span class="scanner-status-separator">|</span>
+        <span>@FormatFileSize(PaginaActualEscaneada.ImageBytes.Length)</span>
+        <span class="scanner-status-separator">|</span>
+        <span>@PaginaActualEscaneada.ScannedAt.ToString("HH:mm:ss")</span>
+        <span class="scanner-status-separator">|</span>
+        <span class="scanner-status-hint">Doble clic o ⛶ para pantalla completa</span>
+    }
+    else if (ImagenVistaPrevia != null)
+    {
+        <span>Vista previa: @ImagenVistaPrevia.Width × @ImagenVistaPrevia.Height px (@ImagenVistaPrevia.Dpi DPI)</span>
+    }
+    else
+    {
+        <span>Sin documento</span>
+    }
+</div>
+
+@code {
+    [Parameter] public bool EstaEscaneando { get; set; }
+    [Parameter] public bool EstaGenerandoPdf { get; set; }
+    [Parameter] public string EstadoProgreso { get; set; } = "";
+    [Parameter] public double PorcentajeProgreso { get; set; }
+    [Parameter] public int PaginaActual { get; set; }
+    [Parameter] public int TotalPaginas { get; set; }
+    [Parameter] public int Zoom { get; set; }
+    [Parameter] public string EstiloZoom { get; set; } = "";
+    [Parameter] public bool PermiteMultipagina { get; set; }
+    [Parameter] public ScannedPageDto? PaginaActualEscaneada { get; set; }
+    [Parameter] public ScannedDocumentDto? ImagenVistaPrevia { get; set; }
+    [Parameter] public string? ImagenActualUrl { get; set; }
+    [Parameter] public string? ImagenVistaPreviaUrl { get; set; }
+    [Parameter] public bool EsModoVistaPrevia { get; set; }
+    [Parameter] public ScanAreaDto? AreaSeleccionada { get; set; }
+    [Parameter] public bool EstaSeleccionando { get; set; }
+    [Parameter] public double SeleccionInicioX { get; set; }
+    [Parameter] public double SeleccionInicioY { get; set; }
+    [Parameter] public double SeleccionActualX { get; set; }
+    [Parameter] public double SeleccionActualY { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> AlIniciarSeleccion { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> AlMoverSeleccion { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> AlFinalizarSeleccion { get; set; }
+    [Parameter] public EventCallback AlAbrirPantallaCompleta { get; set; }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F2} MB";
+    }
+}

@@ -15,330 +15,37 @@
 
 <PageTitle>SGRRHH - WIZARD REGISTRO MASIVO</PageTitle>
 
-<style>
-    /* SISTEMA HOSPITALARIO - ESTILO WIZARD */
-    * {
-        font-family: 'Courier New', monospace;
-        box-sizing: border-box;
-    }
-
-    body {
-        background: #ffffff;
-        color: #000000;
-        margin: 0;
-        padding: 0;
-    }
-
-    .wizard-container {
-        width: 100%;
-        min-width: 1024px;
-        max-width: 1280px;
-        margin: 0 auto;
-        background: #ffffff;
-        border: 1px solid #000000;
-    }
-
-    .wizard-header {
-        background: #ffffff;
-        border-bottom: 2px solid #000000;
-        padding: 12px 20px;
-    }
-
-    .wizard-header h1 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: bold;
-        text-transform: uppercase;
-    }
-
-    .wizard-step-indicator {
-        background: #f5f5f5;
-        border: 1px solid #000000;
-        border-left: none;
-        border-right: none;
-        padding: 8px 20px;
-        font-size: 14px;
-        font-weight: bold;
-    }
-
-    .wizard-body {
-        padding: 20px;
-        min-height: 400px;
-    }
-
-    .wizard-section {
-        display: none;
-    }
-
-    .wizard-section.active {
-        display: block;
-    }
-
-    .wizard-section h2 {
-        margin: 0 0 20px 0;
-        font-size: 14px;
-        font-weight: bold;
-        text-transform: uppercase;
-        border-bottom: 1px solid #000000;
-        padding-bottom: 8px;
-    }
-
-    .form-row {
-        margin-bottom: 16px;
-    }
-
-    .form-row label {
-        display: block;
-        margin-bottom: 4px;
-        font-size: 13px;
-        font-weight: bold;
-    }
-
-    .form-row input[type="date"],
-    .form-row input[type="time"],
-    .form-row input[type="number"],
-    .form-row input[type="text"],
-    .form-row select {
-        width: 100%;
-        padding: 6px 8px;
-        border: 1px solid #000000;
-        background: #ffffff;
-        font-family: 'Courier New', monospace;
-        font-size: 13px;
-    }
-
-    .form-row input:disabled,
-    .form-row select:disabled {
-        background: #e0e0e0;
-        color: #666666;
-    }
-
-    .form-row-inline {
-        display: flex;
-        gap: 20px;
-    }
-
-    .form-row-inline > div {
-        flex: 1;
-    }
-
-    .employee-list {
-        border: 1px solid #000000;
-        background: #ffffff;
-        max-height: 300px;
-        overflow-y: auto;
-        margin-bottom: 16px;
-    }
-
-    .employee-item {
-        padding: 6px 12px;
-        border-bottom: 1px solid #cccccc;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .employee-item:last-child {
-        border-bottom: none;
-    }
-
-    .employee-item input[type="checkbox"] {
-        margin: 0;
-    }
-
-    .employee-item label {
-        margin: 0;
-        font-size: 13px;
-        cursor: pointer;
-        user-select: none;
-    }
-
-    .selection-controls {
-        margin-bottom: 16px;
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .selection-summary {
-        padding: 8px;
-        background: #f5f5f5;
-        border: 1px solid #000000;
-        font-size: 13px;
-        font-weight: bold;
-    }
-
-    .review-table {
-        width: 100%;
-        border-collapse: collapse;
-        border: 1px solid #000000;
-        margin-bottom: 16px;
-    }
-
-    .review-table th,
-    .review-table td {
-        border: 1px solid #000000;
-        padding: 8px 12px;
-        text-align: left;
-        font-size: 13px;
-    }
-
-    .review-table th {
-        background: #f5f5f5;
-        font-weight: bold;
-    }
-
-    .employee-detail-list {
-        max-height: 150px;
-        overflow-y: auto;
-        font-size: 12px;
-        padding: 4px 0;
-    }
-
-    .wizard-buttons {
-        border-top: 2px solid #000000;
-        padding: 12px 20px;
-        background: #ffffff;
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-    }
-
-    .wizard-buttons-left,
-    .wizard-buttons-right {
-        display: flex;
-        gap: 8px;
-    }
-
-    .btn {
-        padding: 8px 16px;
-        border: 1px solid #000000;
-        background: #ffffff;
-        color: #000000;
-        font-family: 'Courier New', monospace;
-        font-size: 13px;
-        font-weight: bold;
-        cursor: pointer;
-        text-transform: uppercase;
-    }
-
-    .btn:hover:not(:disabled) {
-        background: #f0f0f0;
-    }
-
-    .btn:disabled {
-        background: #e0e0e0;
-        color: #666666;
-        cursor: not-allowed;
-    }
-
-    .btn-primary {
-        background: #000000;
-        color: #ffffff;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-        background: #333333;
-    }
-
-    .message-box {
-        padding: 12px;
-        border: 2px solid #000000;
-        margin-bottom: 16px;
-        font-size: 13px;
-        font-weight: bold;
-    }
-
-    .message-error {
-        background: #ffcccc;
-        color: #cc0000;
-    }
-
-    .message-success {
-        background: #ccffcc;
-        color: #006600;
-    }
-
-    .message-warning {
-        background: #ffffcc;
-        color: #996600;
-    }
-
-    .loading-state {
-        text-align: center;
-        padding: 40px;
-        font-size: 14px;
-    }
-
-    .processing-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.95);
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .processing-box {
-        border: 2px solid #000000;
-        background: #ffffff;
-        padding: 40px;
-        text-align: center;
-    }
-
-    .processing-box h2 {
-        margin: 0 0 20px 0;
-        font-size: 14px;
-        font-weight: bold;
-    }
-
-    .processing-status {
-        font-size: 13px;
-        margin-top: 16px;
-    }
-
-    .hotkeys {
-        font-size: 11px;
-        color: #666666;
-        margin-top: 8px;
-    }
-</style>
-
-<div class="wizard-container">
-    <div class="wizard-header">
+<div class="control-diario-wizard-container">
+    <div class="control-diario-wizard-header">
         <h1>WIZARD REGISTRO MASIVO - CONTROL DIARIO</h1>
-        <div class="hotkeys">F5=CONFIRMAR | F8=CANCELAR | ESC=SALIR</div>
+        <div class="control-diario-hotkeys">F5=CONFIRMAR | F8=CANCELAR | ESC=SALIR</div>
     </div>
 
-    <div class="wizard-step-indicator">
+    <div class="control-diario-wizard-step-indicator">
         Paso @currentStep de @totalSteps
     </div>
 
-    <div class="wizard-body">
+    <div class="control-diario-wizard-body">
         @if (!string.IsNullOrEmpty(wizardError))
         {
-            <div class="message-box message-error">
+            <div class="control-diario-message-box control-diario-message-error">
                 ERROR: @wizardError
             </div>
         }
 
         @if (!string.IsNullOrEmpty(wizardSuccess))
         {
-            <div class="message-box message-success">
+            <div class="control-diario-message-box control-diario-message-success">
                 OPERACION COMPLETADA: @wizardSuccess
             </div>
         }
 
         <!-- PASO 1: Seleccionar Empleados -->
-        <div class="wizard-section @(currentStep == 1 ? "active" : "")">
+        <div class="control-diario-wizard-section @(currentStep == 1 ? "active" : "")">
             <h2>Paso 1: Seleccion de Empleados</h2>
 
-            <div class="selection-controls">
-                <button class="btn" @onclick="SeleccionarTodos" disabled="@isWizardSaving">SELECCIONAR TODOS</button>
+            <div class="control-diario-selection-controls">
+                <button class="control-diario-btn" @onclick="SeleccionarTodos" disabled="@isWizardSaving">SELECCIONAR TODOS</button>
                 <button class="btn" @onclick="DeseleccionarTodos" disabled="@isWizardSaving">DESELECCIONAR TODOS</button>
                 @if (departamentos.Any())
                 {
@@ -353,7 +60,7 @@
                 }
             </div>
 
-            <div class="employee-list">
+            <div class="control-diario-employee-list">
                 @if (isLoading)
                 {
                     <div class="loading-state">CARGANDO EMPLEADOS...</div>
@@ -366,7 +73,7 @@
                 {
                     @foreach (var emp in empleadosFiltrados)
                     {
-                        <div class="employee-item">
+                        <div class="control-diario-employee-item">
                             <input type="checkbox"
                                    id="emp_@emp.Id"
                                    checked="@selectedEmpleadoIds.Contains(emp.Id)"
@@ -378,16 +85,16 @@
                 }
             </div>
 
-            <div class="selection-summary">
+            <div class="control-diario-selection-summary">
                 EMPLEADOS SELECCIONADOS: @selectedEmpleadoIds.Count
             </div>
         </div>
 
         <!-- PASO 2: Fecha y Horarios -->
-        <div class="wizard-section @(currentStep == 2 ? "active" : "")">
+        <div class="control-diario-wizard-section @(currentStep == 2 ? "active" : "")">
             <h2>Paso 2: Fecha y Horarios</h2>
 
-            <div class="form-row">
+            <div class="control-diario-form-row">
                 <label>FECHA DEL REGISTRO: *</label>
                 <input type="date"
                        @bind="wizardDate"
@@ -395,7 +102,7 @@
                        disabled="@isWizardSaving" />
             </div>
 
-            <div class="form-row-inline">
+            <div class="control-diario-form-row-inline">
                 <div>
                     <label>HORA DE ENTRADA: *</label>
                     <input type="time"
@@ -417,14 +124,14 @@
                 var duracion = GetDuracion();
                 if (duracion.HasValue && duracion.Value.TotalHours > 0)
                 {
-                    <div class="form-row">
+                    <div class="control-diario-form-row">
                         <label>HORAS CALCULADAS:</label>
                         <input type="text"
                                value="@GetDuracionLabel() - @wizardHorasManual.ToString("F2") horas"
                                disabled="true" />
                     </div>
 
-                    <div class="form-row">
+                    <div class="control-diario-form-row">
                         <label>AJUSTE MANUAL DE HORAS (OPCIONAL):</label>
                         <input type="number"
                                @bind="wizardHorasManual"
@@ -436,7 +143,7 @@
                 }
                 else
                 {
-                    <div class="message-box message-error">
+                    <div class="control-diario-message-box control-diario-message-error">
                         ERROR: LA HORA DE SALIDA DEBE SER POSTERIOR A LA HORA DE ENTRADA
                     </div>
                 }
@@ -444,10 +151,10 @@
         </div>
 
         <!-- PASO 3: Actividad y Proyecto -->
-        <div class="wizard-section @(currentStep == 3 ? "active" : "")">
+        <div class="control-diario-wizard-section @(currentStep == 3 ? "active" : "")">
             <h2>Paso 3: Actividad y Proyecto</h2>
 
-            <div class="form-row">
+            <div class="control-diario-form-row">
                 <label>ACTIVIDAD: *</label>
                 <select @bind="wizardActividadId" @bind:after="OnActividadChanged" disabled="@isWizardSaving">
                     <option value="0">-- SELECCIONE UNA ACTIVIDAD --</option>
@@ -458,7 +165,7 @@
                 </select>
             </div>
 
-            <div class="form-row">
+            <div class="control-diario-form-row">
                 <label>PROYECTO: @(actividadSeleccionada?.RequiereProyecto == true ? "*" : "(OPCIONAL)")</label>
                 <select @bind="wizardProyectoId" disabled="@isWizardSaving">
                     <option value="0">-- @(actividadSeleccionada?.RequiereProyecto == true ? "SELECCIONE UN PROYECTO" : "NINGUNO") --</option>
@@ -469,7 +176,7 @@
                 </select>
             </div>
 
-            <div class="form-row">
+            <div class="control-diario-form-row">
                 <label>DESCRIPCION:</label>
                 <input type="text"
                        @bind="wizardDescripcion"
@@ -479,10 +186,10 @@
         </div>
 
         <!-- PASO 4: Revision y Confirmacion -->
-        <div class="wizard-section @(currentStep == 4 ? "active" : "")">
+        <div class="control-diario-wizard-section @(currentStep == 4 ? "active" : "")">
             <h2>Paso 4: Revision y Confirmacion</h2>
 
-            <table class="review-table">
+            <table class="control-diario-review-table">
                 <tr>
                     <th>CAMPO</th>
                     <th>VALOR</th>
@@ -499,7 +206,7 @@
                     <td>EMPLEADOS SELECCIONADOS</td>
                     <td>
                         <strong>@selectedEmpleadoIds.Count EMPLEADO(S)</strong>
-                        <div class="employee-detail-list">
+                        <div class="control-diario-employee-detail-list">
                             @foreach (var empId in selectedEmpleadoIds)
                             {
                                 var emp = allEmpleados.FirstOrDefault(e => e.Id == empId);
@@ -527,16 +234,16 @@
 
             @if (!PuedeGuardar())
             {
-                <div class="message-box message-warning">
+                <div class="control-diario-message-box control-diario-message-warning">
                     ADVERTENCIA: COMPLETE TODOS LOS CAMPOS OBLIGATORIOS ANTES DE CONFIRMAR
                 </div>
             }
         </div>
     </div>
 
-    <div class="wizard-buttons">
-        <div class="wizard-buttons-left">
-            <button class="btn" @onclick="Anterior" disabled="@(currentStep == 1 || isWizardSaving)">ANTERIOR</button>
+    <div class="control-diario-wizard-buttons">
+        <div class="control-diario-wizard-buttons-left">
+            <button class="control-diario-btn" @onclick="Anterior" disabled="@(currentStep == 1 || isWizardSaving)">ANTERIOR</button>
         </div>
         <div class="wizard-buttons-right">
             <button class="btn" @onclick="CancelarWizard" disabled="@isWizardSaving">CANCELAR (F8)</button>
@@ -554,10 +261,10 @@
 
 @if (isWizardSaving)
 {
-    <div class="processing-overlay">
-        <div class="processing-box">
+    <div class="control-diario-processing-overlay">
+        <div class="control-diario-processing-box">
             <h2>PROCESANDO REGISTROS</h2>
-            <div class="processing-status">
+            <div class="control-diario-processing-status">
                 PROCESADOS: @registrosProcesados DE @selectedEmpleadoIds.Count
             </div>
         </div>

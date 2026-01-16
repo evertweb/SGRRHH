@@ -1,0 +1,94 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+
+<table class="permisos-tabla">
+    <thead>
+        <tr>
+            <th>N° ACTA</th>
+            <th>EMPLEADO</th>
+            <th>CEDULA</th>
+            <th>TIPO PERMISO</th>
+            <th>FECHA INICIO</th>
+            <th>FECHA FIN</th>
+            <th>DIAS</th>
+            <th>ESTADO</th>
+            <th>SOLICITADO</th>
+            <th>APROBADOR</th>
+            <th>F. APROBACION</th>
+            <th>ACCIONES</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (IsLoading)
+        {
+            <tr><td colspan="12" class="loading-cell">CARGANDO DATOS...</td></tr>
+        }
+        else if (!Permisos.Any())
+        {
+            <tr><td colspan="12" class="empty-cell">NO HAY REGISTROS PARA MOSTRAR</td></tr>
+        }
+        else
+        {
+            @foreach (var permiso in Permisos)
+            {
+                <tr class="@(SelectedPermiso?.Id == permiso.Id ? "permisos-fila-seleccionada" : "")"
+                    @onclick="() => OnSelect.InvokeAsync(permiso)">
+                    <td class="permisos-td-acta">@permiso.NumeroActa</td>
+                    <td>@(permiso.Empleado?.NombreCompleto ?? "N/A")</td>
+                    <td>@(permiso.Empleado?.Cedula ?? "N/A")</td>
+                    <td>@(permiso.TipoPermiso?.Nombre ?? "N/A")</td>
+                    <td>@permiso.FechaInicio.ToString("dd/MM/yyyy")</td>
+                    <td>@permiso.FechaFin.ToString("dd/MM/yyyy")</td>
+                    <td class="permisos-td-centro">@permiso.TotalDias</td>
+                    <td>
+                        <span class="permisos-estado-@permiso.Estado.ToString().ToLower()">
+                            @GetEstadoTexto(permiso.Estado)
+                        </span>
+                    </td>
+                    <td>@permiso.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                    <td>@(permiso.AprobadoPor?.NombreCompleto ?? "-")</td>
+                    <td>@(permiso.FechaAprobacion?.ToString("dd/MM/yyyy") ?? "-")</td>
+                    <td>
+                        <button class="btn" @onclick="() => OnVerDetalle.InvokeAsync(permiso)" @onclick:stopPropagation="true">
+                            VER
+                        </button>
+                        <button class="btn" @onclick="() => OnSeguimiento.InvokeAsync(permiso)" @onclick:stopPropagation="true">
+                            SEGUIMIENTO
+                        </button>
+                        @if (permiso.Estado == EstadoPermiso.Aprobado)
+                        {
+                            <button class="btn" @onclick="() => OnGenerarPdf.InvokeAsync(permiso)" @onclick:stopPropagation="true">
+                                PDF
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public List<Permiso> Permisos { get; set; } = new();
+    [Parameter] public Permiso? SelectedPermiso { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback<Permiso> OnSelect { get; set; }
+    [Parameter] public EventCallback<Permiso> OnVerDetalle { get; set; }
+    [Parameter] public EventCallback<Permiso> OnGenerarPdf { get; set; }
+    [Parameter] public EventCallback<Permiso> OnSeguimiento { get; set; }
+
+    private static string GetEstadoTexto(EstadoPermiso estado)
+    {
+        return estado switch
+        {
+            EstadoPermiso.Pendiente => "PENDIENTE",
+            EstadoPermiso.Aprobado => "APROBADO",
+            EstadoPermiso.Rechazado => "RECHAZADO",
+            EstadoPermiso.Cancelado => "CANCELADO",
+            EstadoPermiso.AprobadoPendienteDocumento => "APROBADO - PEND. DOCUMENTO",
+            EstadoPermiso.AprobadoEnCompensacion => "APROBADO - EN COMPENSACIÓN",
+            EstadoPermiso.Completado => "COMPLETADO",
+            _ => estado.ToString().ToUpper()
+        };
+    }
+}

@@ -1,0 +1,9 @@
+<div class="acciones-principales">
+    <button @onclick="OnCargarRegistros" class="accion-btn" title="Actualizar (F5)">↻</button>
+    <button @onclick="OnCrearRegistros"
+            class="accion-btn-crear"
+            title="Crear registros para empleados sin registro (F3)"
+            disabled="@(EmpleadosSinRegistroCount <= 0)">
+        + CREAR @(EmpleadosSinRegistroCount > 0 ? $"({EmpleadosSinRegistroCount})" : "")
+    </button>
+</div>

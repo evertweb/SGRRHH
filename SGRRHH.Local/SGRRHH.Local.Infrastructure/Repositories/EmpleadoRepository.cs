@@ -109,11 +109,9 @@ SELECT last_insert_rowid();";
 
     public async Task UpdateAsync(Empleado entity)
     {
-        var versionAnterior = entity.FechaModificacion;
         entity.FechaModificacion = DateTime.Now;
         
-        // SQL con control de concurrencia optimista:
-        // Solo actualiza si fecha_modificacion no cambió desde que se cargó el registro
+        // SQL de actualización estándar
         const string sql = @"UPDATE empleados
 SET codigo = @Codigo,
     cedula = @Cedula,
@@ -169,8 +167,7 @@ SET codigo = @Codigo,
     fecha_aprobacion = @FechaAprobacion,
     motivo_rechazo = @MotivoRechazo,
     fecha_modificacion = @FechaModificacion
-WHERE id = @Id 
-  AND (fecha_modificacion = @VersionAnterior OR (fecha_modificacion IS NULL AND @VersionAnterior IS NULL))";
+WHERE id = @Id";
 
         using var connection = _context.CreateConnection();
         var rowsAffected = await connection.ExecuteAsync(sql, new
@@ -229,27 +226,13 @@ WHERE id = @Id
             entity.FechaAprobacion,
             entity.MotivoRechazo,
             entity.FechaModificacion,
-            entity.Id,
-            VersionAnterior = versionAnterior
+            entity.Id
         });
         
         if (rowsAffected == 0)
         {
-            // Verificar si el registro existe
-            var existe = await connection.QuerySingleOrDefaultAsync<DateTime?>(
-                "SELECT fecha_modificacion FROM empleados WHERE id = @Id", 
-                new { entity.Id });
-            
-            if (existe.HasValue || existe == null)
-            {
-                throw new ConcurrencyConflictException(
-                    "Empleado", 
-                    entity.Id, 
-                    versionAnterior, 
-                    existe);
-            }
-            
             _logger.LogWarning("Empleado {Id} no encontrado para actualizar", entity.Id);
+            throw new InvalidOperationException($"No se encontró el empleado con ID {entity.Id}");
         }
     }
 

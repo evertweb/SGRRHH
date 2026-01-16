@@ -4,479 +4,24 @@
 @using SGRRHH.Local.Domain.DTOs
 @using SGRRHH.Local.Domain.Services
 @using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Shared.Helpers
+@using SGRRHH.Local.Infrastructure.Services
+@using SGRRHH.Local.Server.Components.Expediente
+@using SGRRHH.Local.Server.Components.Tabs
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@using Microsoft.Extensions.Logging
 @inject IAuthService AuthService
 @inject IEmpleadoRepository EmpleadoRepo
 @inject IDocumentoEmpleadoRepository DocumentoRepo
 @inject IContratoRepository ContratoRepo
+@inject ICuentaBancariaRepository CuentaBancariaRepo
+@inject NavigationManager Navigation
 @inject ICatalogCacheService CatalogCache
 @inject ILocalStorageService StorageService
-@inject NavigationManager Navigation
+@inject IDocumentoStorageService DocumentoStorageService
 @inject IJSRuntime JS
 @inject ILogger<EmpleadoExpediente> Logger
-
-<PageTitle>Expediente - @(empleado?.NombreCompleto ?? "Cargando...") - SGRRHH</PageTitle>
-
-<style>
-    .expediente-container {
-        font-family: 'Courier New', monospace;
-        background: #FFFFFF;
-        color: #000000;
-        min-width: 1024px;
-        padding: 20px;
-    }
-
-    .expediente-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        border-bottom: 2px solid #000000;
-        padding-bottom: 15px;
-        margin-bottom: 20px;
-    }
-
-    .expediente-info {
-        display: flex;
-        gap: 20px;
-        align-items: flex-start;
-    }
-
-    .expediente-foto {
-        width: 120px;
-        height: 120px;
-        border: 2px solid #000000;
-        background: #F0F0F0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 36px;
-        font-weight: bold;
-        color: #666666;
-    }
-
-    .expediente-foto img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .expediente-datos {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
-
-    .expediente-nombre {
-        font-size: 20px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-
-    .expediente-codigo {
-        font-size: 14px;
-        color: #666666;
-    }
-
-    .expediente-cargo {
-        font-size: 12px;
-        color: #000000;
-    }
-
-    .expediente-estado {
-        display: inline-block;
-        padding: 4px 8px;
-        font-size: 10px;
-        font-weight: bold;
-        text-transform: uppercase;
-        border: 1px solid;
-    }
-
-    .estado-activo { background: #E8FFE8; border-color: #006400; color: #006400; }
-    .estado-retirado { background: #FFE8E8; border-color: #8B0000; color: #8B0000; }
-    .estado-rechazado { background: #FFE8E8; border-color: #8B0000; color: #8B0000; }
-    .estado-pendienteaprobacion { background: #FFFACD; border-color: #B8860B; color: #B8860B; }
-    .estado-envacaciones { background: #E8E8FF; border-color: #4B0082; color: #4B0082; }
-    .estado-enlicencia { background: #E8E8FF; border-color: #4B0082; color: #4B0082; }
-    .estado-enincapacidad { background: #FFEFD5; border-color: #FF8C00; color: #FF8C00; }
-    .estado-suspendido { background: #FFE8E8; border-color: #DC143C; color: #DC143C; }
-
-    .estado-selector {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 5px;
-    }
-
-    .estado-selector select {
-        font-family: 'Courier New', monospace;
-        font-size: 11px;
-        padding: 4px 8px;
-        border: 1px solid #000000;
-        background: #FFFFFF;
-    }
-
-    .estado-selector button {
-        font-family: 'Courier New', monospace;
-        font-size: 10px;
-        padding: 4px 8px;
-        border: 1px solid #000000;
-        background: #FFFFFF;
-        cursor: pointer;
-    }
-
-    .estado-selector button:hover {
-        background: #F0F0F0;
-    }
-
-    .expediente-actions {
-        display: flex;
-        gap: 10px;
-    }
-
-    .btn {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        padding: 8px 16px;
-        border: 2px solid #000000;
-        background: #FFFFFF;
-        color: #000000;
-        cursor: pointer;
-        text-transform: uppercase;
-        font-weight: bold;
-    }
-
-    .btn:hover:not(:disabled) {
-        background: #F0F0F0;
-    }
-
-    .btn:disabled {
-        border-color: #CCCCCC;
-        color: #CCCCCC;
-        cursor: not-allowed;
-    }
-
-    .btn-danger {
-        border-color: #DC143C;
-        color: #DC143C;
-    }
-
-    .btn-danger:hover:not(:disabled) {
-        background: #FFE8E8;
-    }
-
-    .expediente-tabs {
-        display: flex;
-        border-bottom: 2px solid #000000;
-        margin-bottom: 20px;
-    }
-
-    .expediente-tab {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        padding: 10px 20px;
-        border: none;
-        background: #F0F0F0;
-        color: #000000;
-        cursor: pointer;
-        text-transform: uppercase;
-        font-weight: bold;
-        border-top: 2px solid #000000;
-        border-left: 2px solid #000000;
-        border-right: 2px solid #000000;
-        margin-bottom: -2px;
-    }
-
-    .expediente-tab:first-child {
-        margin-left: 0;
-    }
-
-    .expediente-tab.active {
-        background: #FFFFFF;
-        border-bottom: 2px solid #FFFFFF;
-    }
-
-    .expediente-tab:hover:not(.active) {
-        background: #E0E0E0;
-    }
-
-    .tab-content {
-        border: 1px solid #CCCCCC;
-        padding: 20px;
-        background: #FFFFFF;
-    }
-
-    .section {
-        margin-bottom: 20px;
-    }
-
-    .section-header {
-        background: #F0F0F0;
-        border: 1px solid #000000;
-        padding: 8px 12px;
-        font-size: 12px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 10px;
-    }
-
-    .section-body {
-        padding: 15px;
-        border: 1px solid #CCCCCC;
-        border-top: none;
-    }
-
-    .info-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-    }
-
-    .info-item {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .info-label {
-        font-size: 10px;
-        font-weight: bold;
-        color: #666666;
-        text-transform: uppercase;
-    }
-
-    .info-value {
-        font-size: 12px;
-        color: #000000;
-    }
-
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 11px;
-    }
-
-    .data-table thead {
-        background: #F0F0F0;
-    }
-
-    .data-table th,
-    .data-table td {
-        padding: 8px;
-        text-align: left;
-        border: 1px solid #CCCCCC;
-    }
-
-    .data-table th {
-        font-weight: bold;
-        text-transform: uppercase;
-        font-size: 10px;
-    }
-
-    .data-table tbody tr:hover {
-        background: #F9F9F9;
-    }
-
-    .btn-table {
-        font-family: 'Courier New', monospace;
-        font-size: 10px;
-        padding: 4px 8px;
-        border: 1px solid #000000;
-        background: #FFFFFF;
-        color: #000000;
-        cursor: pointer;
-        margin-right: 4px;
-        text-transform: uppercase;
-    }
-
-    .btn-table:hover {
-        background: #F0F0F0;
-    }
-
-    .status-vigente { color: #006400; }
-    .status-vencido { color: #DC143C; font-weight: bold; }
-    .status-proximo { color: #B8860B; }
-
-    .empty-message {
-        text-align: center;
-        padding: 40px;
-        color: #666666;
-        font-size: 12px;
-    }
-
-    .loading-message {
-        text-align: center;
-        padding: 40px;
-        color: #000000;
-        font-size: 14px;
-    }
-
-    .error-message {
-        border: 2px solid #FF0000;
-        background: #FFFFFF;
-        color: #FF0000;
-        padding: 12px;
-        margin: 10px 0;
-        font-size: 12px;
-        font-weight: bold;
-    }
-
-    .success-message {
-        border: 2px solid #008000;
-        background: #FFFFFF;
-        color: #008000;
-        padding: 12px;
-        margin: 10px 0;
-        font-size: 12px;
-        font-weight: bold;
-    }
-
-    .shortcuts-bar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: #000000;
-        color: #FFFFFF;
-        padding: 8px 20px;
-        font-size: 11px;
-        display: flex;
-        gap: 20px;
-        z-index: 1000;
-    }
-
-    .shortcut-item {
-        display: flex;
-        gap: 5px;
-    }
-
-    .shortcut-key {
-        font-weight: bold;
-        color: #FFFF00;
-    }
-
-    /* Modal de previsualización */
-    .preview-modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 3000;
-    }
-
-    .preview-modal {
-        background: #FFFFFF;
-        border: 3px solid #000000;
-        width: 90%;
-        max-width: 1000px;
-        max-height: 90vh;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .preview-header {
-        background: #F0F0F0;
-        border-bottom: 2px solid #000000;
-        padding: 10px 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .preview-title {
-        font-size: 14px;
-        font-weight: bold;
-        text-transform: uppercase;
-    }
-
-    .preview-body {
-        flex: 1;
-        overflow: auto;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #333333;
-        min-height: 500px;
-    }
-
-    .preview-body img {
-        max-width: 100%;
-        max-height: 70vh;
-        object-fit: contain;
-    }
-
-    .preview-body iframe {
-        width: 100%;
-        height: 70vh;
-        border: none;
-    }
-
-    .preview-body .no-preview {
-        color: #FFFFFF;
-        font-size: 14px;
-        text-align: center;
-        padding: 40px;
-    }
-
-    .preview-footer {
-        border-top: 2px solid #000000;
-        padding: 10px 15px;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        background: #F0F0F0;
-    }
-
-    /* Modal de confirmación */
-    .confirm-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 4000;
-    }
-
-    .confirm-dialog {
-        background: #FFFFFF;
-        border: 3px solid #000000;
-        width: 400px;
-        padding: 0;
-    }
-
-    .confirm-header {
-        background: #F0F0F0;
-        border-bottom: 2px solid #000000;
-        padding: 10px 15px;
-        font-size: 14px;
-        font-weight: bold;
-        text-transform: uppercase;
-    }
-
-    .confirm-body {
-        padding: 20px;
-        font-size: 12px;
-    }
-
-    .confirm-footer {
-        border-top: 1px solid #CCCCCC;
-        padding: 10px 15px;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-    }
-</style>
 
 <MessageToast @ref="messageToast" />
 
@@ -492,98 +37,69 @@ else if (empleado == null)
 else
 {
     <div class="expediente-container">
-        <!-- HEADER -->
-        <div class="expediente-header">
-            <div class="expediente-info">
-                <div class="expediente-foto">
-                    @if (!string.IsNullOrEmpty(empleado.FotoPath))
-                    {
-                        <img src="@GetFotoUrl()" alt="@empleado.NombreCompleto" 
-                             onerror="this.style.display='none'; this.parentElement.innerHTML='@GetInitials()';" />
-                    }
-                    else
-                    {
-                        @GetInitials()
-                    }
-                </div>
-                <div class="expediente-datos">
-                    <div class="expediente-nombre">@empleado.NombreCompleto</div>
-                    <div class="expediente-codigo">@empleado.Codigo | CÉDULA: @NumberFormatHelper.FormatearCedula(empleado.Cedula)</div>
-                    <div class="expediente-cargo">
-                        @(empleado.Cargo?.Nombre ?? "Sin cargo") - @(empleado.Departamento?.Nombre ?? "Sin departamento")
-                    </div>
-                    <div class="expediente-estado estado-@empleado.Estado.ToString().ToLower()">
-                        @EstadoEmpleadoService.ObtenerDescripcion(empleado.Estado)
-                    </div>
-                    @if (transicionesPermitidas.Any())
-                    {
-                        <div class="estado-selector">
-                            <select @bind="nuevoEstadoSeleccionado">
-                                <option value="">-- Cambiar estado --</option>
-                                @foreach (var estado in transicionesPermitidas)
-                                {
-                                    <option value="@((int)estado)">@EstadoEmpleadoService.ObtenerDescripcion(estado)</option>
-                                }
-                            </select>
-                            <button @onclick="CambiarEstado" disabled="@(string.IsNullOrEmpty(nuevoEstadoSeleccionado) || isSavingEstado)">
-                                @(isSavingEstado ? "GUARDANDO..." : "APLICAR")
-                            </button>
-                        </div>
-                    }
-                </div>
-            </div>
-            <div class="expediente-actions">
-                <button class="btn" @onclick="Volver">VOLVER (ESC)</button>
-                <button class="btn" @onclick="EditarEmpleado">EDITAR (F4)</button>
-                @if (AuthService.IsAdmin)
-                {
-                    <button class="btn btn-danger" @onclick="ConfirmarEliminar">ELIMINAR</button>
-                }
-            </div>
-        </div>
+        <EmpleadoHeader Empleado="empleado"
+                        TransicionesPermitidas="transicionesPermitidas"
+                        @bind-NuevoEstadoSeleccionado="nuevoEstadoSeleccionado"
+                        IsSavingEstado="isSavingEstado"
+                        OnCambiarEstado="CambiarEstado"
+                        OnCambiarFoto="AbrirCambiarFoto"
+                        OnVolver="Volver"
+                        OnEditarEmpleado="EditarEmpleado"
+                        PuedeEliminar="AuthService.IsAdmin"
+                        OnConfirmarEliminar="ConfirmarEliminar" />
 
-        <!-- TABS -->
-        <div class="expediente-tabs">
-            <button class="expediente-tab @(activeTab == "datos" ? "active" : "")" 
-                    @onclick="@(() => SetActiveTab("datos"))">
-                DATOS PERSONALES
-            </button>
-            <button class="expediente-tab @(activeTab == "documentos" ? "active" : "")" 
-                    @onclick="@(() => SetActiveTab("documentos"))">
-                DOCUMENTOS (@documentos.Count)
-            </button>
-            <button class="expediente-tab @(activeTab == "contratos" ? "active" : "")" 
-                    @onclick="@(() => SetActiveTab("contratos"))">
-                CONTRATOS (@contratos.Count)
-            </button>
-            <button class="expediente-tab @(activeTab == "seguridad" ? "active" : "")" 
-                    @onclick="@(() => SetActiveTab("seguridad"))">
-                SEGURIDAD SOCIAL
-            </button>
-        </div>
+        <TabsNavigation ActiveTab="activeTab"
+                        Tabs="TabsDisponibles"
+                        OnTabChanged="SetActiveTab" />
 
-        <!-- CONTENIDO DE TABS -->
         <div class="tab-content">
             @if (activeTab == "datos")
             {
-                @RenderDatosPersonales()
+                <DatosGeneralesTab Empleado="empleado" />
             }
             else if (activeTab == "documentos")
             {
-                @RenderDocumentos()
+                <DocumentosTab Documentos="documentos"
+                               OnPrevisualizarDocumento="PrevisualizarDocumento"
+                               OnDescargarDocumento="DescargarDocumento"
+                               OnImprimirDocumento="ImprimirDocumento"
+                               OnAbrirScannerParaTipo="AbrirScannerParaTipo"
+                               OnAbrirUploadModalParaTipo="AbrirUploadModalParaTipo"
+                               OnConfirmarEliminarDocumento="ConfirmarEliminarDocumento" />
             }
             else if (activeTab == "contratos")
             {
-                @RenderContratos()
+                <ContratosTab EmpleadoId="EmpleadoId" Contratos="contratos" />
             }
             else if (activeTab == "seguridad")
             {
-                @RenderSeguridadSocial()
+                <SeguridadSocialTab Empleado="empleado" />
+            }
+            else if (activeTab == "bancaria")
+            {
+                <InformacionBancariaTab @ref="informacionBancariaTab"
+                                        EmpleadoId="EmpleadoId"
+                                        Empleado="empleado"
+                                        Documentos="documentos"
+                                        MessageToast="messageToast"
+                                        OnPreviewDocumento="PrevisualizarDocumento"
+                                        OnDownloadDocumento="DescargarDocumento"
+                                        OnSolicitarScannerCertificado="AbrirScannerParaCertificadoBancario" />
+            }
+            else if (activeTab == "dotacion")
+            {
+                <DotacionEppTab @ref="dotacionEppTab"
+                                EmpleadoId="EmpleadoId"
+                                Empleado="empleado"
+                                Documentos="documentos"
+                                messageToast="messageToast"
+                                OnPrevisualizarDocumento="PrevisualizarDocumento"
+                                OnDescargarDocumento="DescargarDocumento"
+                                OnAbrirScannerActa="AbrirScannerParaActaEntrega" />
             }
         </div>
     </div>
 
-    <!-- SHORTCUTS BAR -->
     <div class="shortcuts-bar">
         <div class="shortcut-item">
             <span class="shortcut-key">ESC</span>
@@ -600,7 +116,12 @@ else
     </div>
 }
 
-<!-- Modal de Previsualización -->
+<FotoChangeModal Empleado="empleado"
+                 @bind-IsVisible="showCambiarFotoModal"
+                 OnAbrirScannerFoto="AbrirScannerParaFoto"
+                 OnFotoActualizada="OnFotoActualizada"
+                 MessageToast="messageToast" />
+
 @if (showPreviewModal && previewDocumento != null)
 {
     <div class="preview-modal-overlay" @onclick="CerrarPreview">
@@ -612,9 +133,9 @@ else
             <div class="preview-body">
                 @if (previewBytes != null)
                 {
-                    @if (IsImageMime(previewDocumento.TipoMime))
+                    @if (DocumentHelper.IsImageMime(previewDocumento.TipoMime))
                     {
-                        <img src="data:@previewDocumento.TipoMime;base64,@Convert.ToBase64String(previewBytes)" 
+                        <img src="data:@previewDocumento.TipoMime;base64,@Convert.ToBase64String(previewBytes)"
                              alt="@previewDocumento.Nombre" />
                     }
                     else if (previewDocumento.TipoMime == "application/pdf")
@@ -643,7 +164,6 @@ else
     </div>
 }
 
-<!-- Modal de Confirmación Eliminar -->
 @if (showConfirmDelete)
 {
     <div class="confirm-overlay">
@@ -661,945 +181,77 @@ else
     </div>
 }
 
-<!-- Scanner Modal -->
 <ScannerModal @bind-IsVisible="mostrarScannerModal"
               AllowMultiplePages="true"
               OnScanComplete="OnScanComplete"
               OnPdfGenerated="OnPdfGenerated" />
 
-<!-- Printer Modal -->
 <PrinterModal IsVisible="mostrarPrinterModal"
               PdfBytes="bytesParaImprimir"
-              DocumentName="@nombreDocumentoImprimir"
+              DocumentName="nombreDocumentoImprimir"
               OnClose="CerrarPrinterModal"
               OnPrintComplete="OnPrintComplete" />
 
-@code {
-    [Parameter] public int EmpleadoId { get; set; }
-
-    private MessageToast? messageToast;
-    private Empleado? empleado;
-    private List<DocumentoEmpleado> documentos = new();
-    private List<Contrato> contratos = new();
-    private List<Cargo> cargos = new();
-    private List<Departamento> departamentos = new();
-
-    private bool isLoading = true;
-    private string activeTab = "datos";
-
-    // Previsualización
-    private bool showPreviewModal = false;
-    private DocumentoEmpleado? previewDocumento;
-    private byte[]? previewBytes;
-
-    // Confirmación de eliminación
-    private bool showConfirmDelete = false;
-    
-    // Estado del Scanner
-    private bool mostrarScannerModal = false;
-    
-    // Estado del Printer
-    private bool mostrarPrinterModal = false;
-    private byte[]? bytesParaImprimir = null;
-    private string? nombreDocumentoImprimir = null;
-
-    // Cambio de estado
-    private List<EstadoEmpleado> transicionesPermitidas = new();
-    private string nuevoEstadoSeleccionado = "";
-    private bool isSavingEstado = false;
-
-    private void SetActiveTab(string tab) => activeTab = tab;
-    
-    private void IrADocumentos() => Navigation.NavigateTo($"/documentos/{EmpleadoId}");
-    
-    private void IrAContratos() => Navigation.NavigateTo($"/contratos/{EmpleadoId}");
-    
-    private void IrAEditarContrato(int contratoId) => Navigation.NavigateTo($"/contratos?edit={contratoId}");
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (!AuthService.IsAuthenticated)
-        {
-            Navigation.NavigateTo("/login");
-            return;
-        }
-
-        await CargarDatos();
-    }
-
-    private async Task CargarDatos()
-    {
-        isLoading = true;
-        StateHasChanged();
-
-        try
-        {
-            // Cargar catálogos
-            cargos = await CatalogCache.GetCargosAsync();
-            departamentos = await CatalogCache.GetDepartamentosAsync();
-
-            // Cargar empleado con relaciones
-            empleado = await EmpleadoRepo.GetByIdWithRelationsAsync(EmpleadoId);
-
-            if (empleado != null)
-            {
-                // Cargar documentos
-                documentos = (await DocumentoRepo.GetByEmpleadoIdAsync(EmpleadoId))
-                    .OrderByDescending(d => d.FechaCreacion)
-                    .ToList();
-
-                // Cargar contratos
-                contratos = (await ContratoRepo.GetByEmpleadoIdAsync(EmpleadoId))
-                    .OrderByDescending(c => c.FechaInicio)
-                    .ToList();
-
-                // Cargar relaciones de contratos
-                foreach (var contrato in contratos)
-                {
-                    contrato.Cargo = cargos.FirstOrDefault(c => c.Id == contrato.CargoId);
-                }
-
-                // Cargar transiciones de estado permitidas según rol
-                var rolUsuario = AuthService.CurrentUser?.Rol ?? RolUsuario.Operador;
-                transicionesPermitidas = EstadoEmpleadoService.ObtenerTransicionesPermitidas(empleado.Estado, rolUsuario).ToList();
-                nuevoEstadoSeleccionado = "";
-
-                Logger.LogInformation("Expediente cargado: {Codigo} con {Docs} documentos y {Contratos} contratos",
-                    empleado.Codigo, documentos.Count, contratos.Count);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error cargando expediente del empleado {Id}", EmpleadoId);
-            messageToast?.ShowError("Error al cargar expediente: " + ex.Message);
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private void Volver()
-    {
-        Navigation.NavigateTo("/empleados");
-    }
-
-    private void EditarEmpleado()
-    {
-        // Abrir modal de edición usando el EmpleadoForm existente
-        Navigation.NavigateTo($"/empleados?edit={EmpleadoId}");
-    }
-
-    private async Task CambiarEstado()
-    {
-        if (empleado == null || string.IsNullOrEmpty(nuevoEstadoSeleccionado))
-            return;
-
-        try
-        {
-            isSavingEstado = true;
-            StateHasChanged();
-
-            var nuevoEstado = (EstadoEmpleado)int.Parse(nuevoEstadoSeleccionado);
-            var rolUsuario = AuthService.CurrentUser?.Rol ?? RolUsuario.Operador;
-            
-            // PASO 1: Recargar empleado desde BD para verificar estado actual
-            var empleadoActual = await EmpleadoRepo.GetByIdWithRelationsAsync(empleado.Id);
-            if (empleadoActual == null)
-            {
-                messageToast?.ShowError("El empleado no existe");
-                Navigation.NavigateTo("/empleados");
-                return;
-            }
-            
-            var estadoAnterior = empleadoActual.Estado;
-            
-            // PASO 2: Verificar si el estado cambió desde que se cargó la página
-            if (estadoAnterior != empleado.Estado)
-            {
-                messageToast?.ShowError($"El estado del empleado cambió. Estado actual: {EstadoEmpleadoService.ObtenerDescripcion(estadoAnterior)}. Recargando...");
-                empleado = empleadoActual;
-                transicionesPermitidas = EstadoEmpleadoService.ObtenerTransicionesPermitidas(estadoAnterior, rolUsuario).ToList();
-                nuevoEstadoSeleccionado = "";
-                return;
-            }
-
-            // PASO 3: Validar transición
-            if (!EstadoEmpleadoService.TienePermisoParaTransicion(rolUsuario, estadoAnterior, nuevoEstado))
-            {
-                messageToast?.ShowError("No tiene permisos para realizar este cambio de estado");
-                return;
-            }
-
-            if (!EstadoEmpleadoService.EsTransicionValida(estadoAnterior, nuevoEstado))
-            {
-                messageToast?.ShowError($"No se puede cambiar de {estadoAnterior} a {nuevoEstado}");
-                return;
-            }
-
-            // PASO 4: Aplicar cambio
-            empleadoActual.Estado = nuevoEstado;
-
-            // Si es aprobación, registrar quién aprueba
-            if (estadoAnterior == EstadoEmpleado.PendienteAprobacion && nuevoEstado == EstadoEmpleado.Activo)
-            {
-                empleadoActual.AprobadoPorId = AuthService.CurrentUser?.Id;
-                empleadoActual.FechaAprobacion = DateTime.Now;
-            }
-
-            await EmpleadoRepo.UpdateAsync(empleadoActual);
-
-            Logger.LogInformation("Estado cambiado: {Codigo} de {Anterior} a {Nuevo} por {Usuario}",
-                empleadoActual.Codigo, estadoAnterior, nuevoEstado, AuthService.CurrentUser?.Username);
-
-            messageToast?.ShowSuccess($"Estado cambiado a {EstadoEmpleadoService.ObtenerDescripcion(nuevoEstado)}");
-
-            // Actualizar objeto local
-            empleado = empleadoActual;
-            
-            // Recargar transiciones permitidas
-            transicionesPermitidas = EstadoEmpleadoService.ObtenerTransicionesPermitidas(nuevoEstado, rolUsuario).ToList();
-            nuevoEstadoSeleccionado = "";
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("modificado por otro usuario"))
-        {
-            Logger.LogWarning(ex, "Conflicto de concurrencia cambiando estado del empleado {Id}", empleado?.Id);
-            messageToast?.ShowError("El empleado fue modificado por otro usuario. Recargando datos...");
-            
-            // Recargar empleado
-            var empleadoActualizado = await EmpleadoRepo.GetByIdWithRelationsAsync(empleado!.Id);
-            if (empleadoActualizado != null)
-            {
-                empleado = empleadoActualizado;
-                var rolUsuario = AuthService.CurrentUser?.Rol ?? RolUsuario.Operador;
-                transicionesPermitidas = EstadoEmpleadoService.ObtenerTransicionesPermitidas(empleado.Estado, rolUsuario).ToList();
-            }
-            nuevoEstadoSeleccionado = "";
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error cambiando estado del empleado {Id}", empleado?.Id);
-            messageToast?.ShowError("Error al cambiar estado: " + ex.Message);
-        }
-        finally
-        {
-            isSavingEstado = false;
-            StateHasChanged();
-        }
-    }
-
-    private void ConfirmarEliminar()
-    {
-        showConfirmDelete = true;
-    }
-
-    private async Task EliminarEmpleado()
-    {
-        if (empleado == null) return;
-
-        try
-        {
-            // Eliminar documentos primero
-            foreach (var doc in documentos)
-            {
-                if (!string.IsNullOrEmpty(doc.ArchivoPath))
-                {
-                    await StorageService.DeleteDocumentoEmpleadoAsync(doc.Id);
-                }
-                await DocumentoRepo.DeleteAsync(doc.Id);
-            }
-
-            // Eliminar foto
-            if (!string.IsNullOrEmpty(empleado.FotoPath))
-            {
-                await StorageService.DeleteEmpleadoFotoAsync(empleado.Id);
-            }
-
-            // Eliminar empleado
-            await EmpleadoRepo.DeleteAsync(empleado.Id);
-
-            Logger.LogInformation("Empleado eliminado: {Codigo} por usuario {User}",
-                empleado.Codigo, AuthService.CurrentUser?.Username);
-
-            messageToast?.ShowSuccess($"Empleado {empleado.Codigo} eliminado correctamente");
-            await Task.Delay(1500);
-            Navigation.NavigateTo("/empleados");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error eliminando empleado {Id}", EmpleadoId);
-            messageToast?.ShowError("Error al eliminar: " + ex.Message);
-            showConfirmDelete = false;
-        }
-    }
-
-    // ===== PREVISUALIZACIÓN DE DOCUMENTOS =====
-
-    private async Task PrevisualizarDocumento(DocumentoEmpleado documento)
-    {
-        try
-        {
-            previewDocumento = documento;
-            previewBytes = null;
-            showPreviewModal = true;
-            StateHasChanged();
-
-            // Cargar bytes del archivo
-            var result = await StorageService.GetFileAsync(documento.ArchivoPath);
-            if (result != null && result.Length > 0)
-            {
-                previewBytes = result;
-            }
-            else
-            {
-                messageToast?.ShowError("No se pudo cargar el archivo");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error previsualizando documento {Id}", documento.Id);
-            messageToast?.ShowError("Error al cargar documento: " + ex.Message);
-        }
-        finally
-        {
-            StateHasChanged();
-        }
-    }
-
-    private void CerrarPreview()
-    {
-        showPreviewModal = false;
-        previewDocumento = null;
-        previewBytes = null;
-    }
-
-    private async Task DescargarDocumento(DocumentoEmpleado documento)
-    {
-        try
-        {
-            var bytes = await StorageService.GetFileAsync(documento.ArchivoPath);
-            if (bytes != null && bytes.Length > 0)
-            {
-                await JS.InvokeVoidAsync("downloadFile", documento.NombreArchivoOriginal, documento.TipoMime, bytes);
-                Logger.LogInformation("Documento descargado: {Nombre}", documento.Nombre);
-            }
-            else
-            {
-                messageToast?.ShowError("No se pudo descargar el archivo");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error descargando documento {Id}", documento.Id);
-            messageToast?.ShowError("Error al descargar: " + ex.Message);
-        }
-    }
-
-    private bool IsImageMime(string mime)
-    {
-        return mime.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    // ===== HELPERS =====
-
-    private string GetFotoUrl()
-    {
-        if (string.IsNullOrEmpty(empleado?.FotoPath)) return "/images/default-avatar.png";
-        return $"/files/empleados/{empleado.Id}/foto/{empleado.FotoPath}";
-    }
-
-    private string GetInitials()
-    {
-        if (empleado == null) return "??";
-        var nombres = empleado.Nombres?.Split(' ').FirstOrDefault() ?? "";
-        var apellidos = empleado.Apellidos?.Split(' ').FirstOrDefault() ?? "";
-        return $"{(nombres.Length > 0 ? nombres[0] : '?')}{(apellidos.Length > 0 ? apellidos[0] : '?')}".ToUpper();
-    }
-
-    private int CalcularEdad(DateTime fechaNacimiento)
-    {
-        var hoy = DateTime.Today;
-        var edad = hoy.Year - fechaNacimiento.Year;
-        if (fechaNacimiento.Date > hoy.AddYears(-edad)) edad--;
-        return edad;
-    }
-
-    private string CalcularAntiguedad(DateTime fechaIngreso)
-    {
-        var hoy = DateTime.Today;
-        var años = hoy.Year - fechaIngreso.Year;
-        if (fechaIngreso.Date > hoy.AddYears(-años)) años--;
-        var meses = hoy.Month - fechaIngreso.Month;
-        if (meses < 0) { años--; meses += 12; }
-        if (años > 0 && meses > 0) return $"{años} año(s) {meses} mes(es)";
-        else if (años > 0) return $"{años} año(s)";
-        else return $"{meses} mes(es)";
-    }
-
-    private string GetTipoDocumentoNombre(TipoDocumentoEmpleado tipo)
-    {
-        return tipo switch
-        {
-            TipoDocumentoEmpleado.Cedula => "Cédula",
-            TipoDocumentoEmpleado.HojaVida => "Hoja de Vida",
-            TipoDocumentoEmpleado.CertificadoEstudios => "Certificado Estudios",
-            TipoDocumentoEmpleado.CertificadoLaboral => "Certificado Laboral",
-            TipoDocumentoEmpleado.ExamenMedicoIngreso => "Examen Médico Ingreso",
-            TipoDocumentoEmpleado.ExamenMedicoPeriodico => "Examen Médico Periódico",
-            TipoDocumentoEmpleado.ExamenMedicoEgreso => "Examen Médico Egreso",
-            TipoDocumentoEmpleado.AfiliacionEPS => "Afiliación EPS",
-            TipoDocumentoEmpleado.AfiliacionAFP => "Afiliación AFP",
-            TipoDocumentoEmpleado.AfiliacionARL => "Afiliación ARL",
-            TipoDocumentoEmpleado.AfiliacionCajaCompensacion => "Caja Compensación",
-            TipoDocumentoEmpleado.ReferenciasPersonales => "Referencias Personales",
-            TipoDocumentoEmpleado.ReferenciasLaborales => "Referencias Laborales",
-            TipoDocumentoEmpleado.Antecedentes => "Antecedentes",
-            TipoDocumentoEmpleado.LicenciaConduccion => "Licencia Conducción",
-            TipoDocumentoEmpleado.LibretaMilitar => "Libreta Militar",
-            TipoDocumentoEmpleado.RUT => "RUT",
-            TipoDocumentoEmpleado.CertificadoBancario => "Certificado Bancario",
-            TipoDocumentoEmpleado.ActaEntregaDotacion => "Entrega Dotación",
-            TipoDocumentoEmpleado.Capacitacion => "Capacitación",
-            TipoDocumentoEmpleado.ContratoFirmado => "Contrato Firmado",
-            TipoDocumentoEmpleado.Foto => "Foto",
-            _ => "Otro"
-        };
-    }
-
-    private string GetDocumentoStatus(DocumentoEmpleado doc)
-    {
-        if (!doc.FechaVencimiento.HasValue) return "vigente";
-        var dias = (doc.FechaVencimiento.Value - DateTime.Today).Days;
-        if (dias < 0) return "vencido";
-        if (dias <= 30) return "proximo";
-        return "vigente";
-    }
-
-    private string FormatFileSize(long bytes)
-    {
-        string[] sizes = { "B", "KB", "MB", "GB" };
-        double len = bytes;
-        int order = 0;
-        while (len >= 1024 && order < sizes.Length - 1)
-        {
-            order++;
-            len = len / 1024;
-        }
-        return $"{len:0.##} {sizes[order]}";
-    }
-
-    private string GetTipoContratoDisplay(TipoContrato tipo)
-    {
-        return tipo switch
-        {
-            TipoContrato.Indefinido => "Indefinido",
-            TipoContrato.TerminoFijo => "Término Fijo",
-            TipoContrato.ObraOLabor => "Obra o Labor",
-            TipoContrato.PrestacionServicios => "Prestación Servicios",
-            TipoContrato.Aprendizaje => "Aprendizaje",
-            TipoContrato.Ocasional => "Ocasional",
-            TipoContrato.Temporal => "Temporal",
-            _ => tipo.ToString()
-        };
-    }
-
-    // ===== RENDER FRAGMENTS =====
-
-    private RenderFragment RenderDatosPersonales() => __builder =>
-    {
-        if (empleado == null) return;
-
-        <div class="section">
-            <div class="section-header">INFORMACIÓN PERSONAL</div>
-            <div class="section-body">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">CÓDIGO</span>
-                        <span class="info-value">@empleado.Codigo</span>
+@if (mostrarUploadModal)
+{
+    <div class="confirm-overlay">
+        <div class="confirm-dialog" style="width: 500px;">
+            <div class="confirm-header">SUBIR DOCUMENTO: @DocumentHelper.GetTipoDocumentoNombre(tipoDocumentoParaSubir)</div>
+            <div class="confirm-body">
+                <div style="margin-bottom: 10px;">
+                    <label style="display: block; font-size: 10px; font-weight: bold; margin-bottom: 3px;">NOMBRE:</label>
+                    <input type="text" @bind="uploadNombre" style="width: 100%; padding: 6px; font-family: 'Courier New', monospace; font-size: 11px; border: 1px solid #000;" />
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="display: block; font-size: 10px; font-weight: bold; margin-bottom: 3px;">DESCRIPCIÓN (OPCIONAL):</label>
+                    <input type="text" @bind="uploadDescripcion" style="width: 100%; padding: 6px; font-family: 'Courier New', monospace; font-size: 11px; border: 1px solid #000;" />
+                </div>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 10px; font-weight: bold; margin-bottom: 3px;">FECHA EMISIÓN:</label>
+                        <input type="date" @bind="uploadFechaEmision" style="width: 100%; padding: 6px; font-family: 'Courier New', monospace; font-size: 11px; border: 1px solid #000;" />
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">CÉDULA</span>
-                        <span class="info-value">@NumberFormatHelper.FormatearCedula(empleado.Cedula)</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">NOMBRES</span>
-                        <span class="info-value">@empleado.Nombres</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">APELLIDOS</span>
-                        <span class="info-value">@empleado.Apellidos</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">FECHA NACIMIENTO</span>
-                        <span class="info-value">
-                            @(empleado.FechaNacimiento?.ToString("dd/MM/yyyy") ?? "No registrada")
-                            @if (empleado.FechaNacimiento.HasValue)
-                            {
-                                <text> (@CalcularEdad(empleado.FechaNacimiento.Value) años)</text>
-                            }
-                        </span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">GÉNERO</span>
-                        <span class="info-value">@(empleado.Genero?.ToString() ?? "No registrado")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">ESTADO CIVIL</span>
-                        <span class="info-value">@(empleado.EstadoCivil?.ToString() ?? "No registrado")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">DIRECCIÓN</span>
-                        <span class="info-value">@(empleado.Direccion ?? "No registrada")</span>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 10px; font-weight: bold; margin-bottom: 3px;">FECHA VENCIMIENTO:</label>
+                        <input type="date" @bind="uploadFechaVencimiento" style="width: 100%; padding: 6px; font-family: 'Courier New', monospace; font-size: 11px; border: 1px solid #000;" />
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-header">INFORMACIÓN DE CONTACTO</div>
-            <div class="section-body">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">TELÉFONO</span>
-                        <span class="info-value">@(empleado.Telefono ?? "No registrado")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">EMAIL</span>
-                        <span class="info-value">@(empleado.Email ?? "No registrado")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">CONTACTO EMERGENCIA</span>
-                        <span class="info-value">@(empleado.ContactoEmergencia ?? "No registrado")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">TELÉFONO EMERGENCIA</span>
-                        <span class="info-value">@(empleado.TelefonoEmergencia ?? "No registrado")</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-header">INFORMACIÓN LABORAL</div>
-            <div class="section-body">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">FECHA INGRESO</span>
-                        <span class="info-value">
-                            @empleado.FechaIngreso.ToString("dd/MM/yyyy")
-                            (@CalcularAntiguedad(empleado.FechaIngreso))
-                        </span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">FECHA RETIRO</span>
-                        <span class="info-value">@(empleado.FechaRetiro?.ToString("dd/MM/yyyy") ?? "Activo")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">CARGO</span>
-                        <span class="info-value">@(empleado.Cargo?.Nombre ?? "Sin cargo")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">DEPARTAMENTO</span>
-                        <span class="info-value">@(empleado.Departamento?.Nombre ?? "Sin departamento")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">SALARIO BASE</span>
-                        <span class="info-value">@NumberFormatHelper.FormatearMoneda(empleado.SalarioBase)</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">NIVEL EDUCACIÓN</span>
-                        <span class="info-value">@(empleado.NivelEducacion?.ToString() ?? "No registrado")</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @if (!string.IsNullOrEmpty(empleado.Observaciones))
-        {
-            <div class="section">
-                <div class="section-header">OBSERVACIONES</div>
-                <div class="section-body">
-                    <p>@empleado.Observaciones</p>
-                </div>
-            </div>
-        }
-    };
-
-    private RenderFragment RenderDocumentos() => __builder =>
-    {
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <span style="font-size: 12px;">TOTAL: @documentos.Count DOCUMENTO(S)</span>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn" @onclick="AbrirScanner">
-                    ESCANEAR
-                </button>
-                <button class="btn" @onclick="IrADocumentos">
-                    SUBIR DOCUMENTO
-                </button>
-            </div>
-        </div>
-
-        @if (!documentos.Any())
-        {
-            <div class="empty-message">
-                NO HAY DOCUMENTOS REGISTRADOS<br />
-                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-                    <button class="btn" @onclick="AbrirScanner">
-                        ESCANEAR DOCUMENTO
-                    </button>
-                    <button class="btn" @onclick="IrADocumentos">
-                        SUBIR ARCHIVO
-                    </button>
-                </div>
-            </div>
-        }
-        else
-        {
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>TIPO</th>
-                        <th>NOMBRE</th>
-                        <th>ARCHIVO</th>
-                        <th>TAMAÑO</th>
-                        <th>FECHA EMISIÓN</th>
-                        <th>FECHA VENCIMIENTO</th>
-                        <th>ESTADO</th>
-                        <th>ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var doc in documentos)
+                <div style="margin-bottom: 10px;">
+                    <label style="display: block; font-size: 10px; font-weight: bold; margin-bottom: 3px;">ARCHIVO (PDF, IMÁGENES - MÁX 10MB):</label>
+                    <InputFile OnChange="OnUploadFileSelected" accept=".pdf,.jpg,.jpeg,.png"
+                               style="width: 100%; padding: 6px; font-family: 'Courier New', monospace; font-size: 11px; border: 1px solid #000; background: #fff;" />
+                    @if (!string.IsNullOrEmpty(uploadFileName))
                     {
-                        var status = GetDocumentoStatus(doc);
-                        <tr>
-                            <td>@GetTipoDocumentoNombre(doc.TipoDocumento)</td>
-                            <td>@doc.Nombre</td>
-                            <td>@doc.NombreArchivoOriginal</td>
-                            <td>@FormatFileSize(doc.TamanoArchivo)</td>
-                            <td>@(doc.FechaEmision?.ToString("dd/MM/yyyy") ?? "-")</td>
-                            <td>@(doc.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")</td>
-                            <td class="status-@status">
-                                @if (status == "vencido")
-                                {
-                                    <text>VENCIDO</text>
-                                }
-                                else if (status == "proximo")
-                                {
-                                    <text>POR VENCER</text>
-                                }
-                                else
-                                {
-                                    <text>VIGENTE</text>
-                                }
-                            </td>
-                            <td>
-                                <button class="btn-table" @onclick="() => PrevisualizarDocumento(doc)">VER</button>
-                                <button class="btn-table" @onclick="() => DescargarDocumento(doc)">DESCARGAR</button>
-                                <button class="btn-table" @onclick="() => ImprimirDocumento(doc)">IMPRIMIR</button>
-                            </td>
-                        </tr>
+                        <div style="font-size: 10px; color: #006600; margin-top: 5px;">
+                            ✓ @uploadFileName (@FormatHelper.FormatFileSize(uploadFileBytes?.Length ?? 0))
+                        </div>
                     }
-                </tbody>
-            </table>
-        }
-    };
-
-    private RenderFragment RenderContratos() => __builder =>
-    {
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <span style="font-size: 12px;">TOTAL: @contratos.Count CONTRATO(S)</span>
-            <button class="btn" @onclick="IrAContratos">
-                NUEVO CONTRATO
-            </button>
-        </div>
-
-        @if (!contratos.Any())
-        {
-            <div class="empty-message">
-                NO HAY CONTRATOS REGISTRADOS<br />
-                <button class="btn" style="margin-top: 15px;" @onclick="IrAContratos">
-                    CREAR PRIMER CONTRATO
+                </div>
+            </div>
+            <div class="confirm-footer">
+                <button class="btn" @onclick="CerrarUploadModal">CANCELAR</button>
+                <button class="btn" style="background: #E8FFE8;" @onclick="SubirDocumento" disabled="@(isUploading || uploadFileBytes == null)">
+                    @(isUploading ? "SUBIENDO..." : "GUARDAR")
                 </button>
             </div>
-        }
-        else
-        {
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>TIPO</th>
-                        <th>CARGO</th>
-                        <th>FECHA INICIO</th>
-                        <th>FECHA FIN</th>
-                        <th>SALARIO</th>
-                        <th>ESTADO</th>
-                        <th>ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var contrato in contratos)
-                    {
-                        <tr>
-                            <td>@contrato.Id</td>
-                            <td>@GetTipoContratoDisplay(contrato.TipoContrato)</td>
-                            <td>@(contrato.Cargo?.Nombre ?? "-")</td>
-                            <td>@contrato.FechaInicio.ToString("dd/MM/yyyy")</td>
-                            <td>@(contrato.FechaFin?.ToString("dd/MM/yyyy") ?? "INDEFINIDO")</td>
-                            <td>@NumberFormatHelper.FormatearMoneda(contrato.Salario)</td>
-                            <td>@contrato.Estado.ToString().ToUpper()</td>
-                            <td>
-                                <button class="btn-table" @onclick="() => IrAEditarContrato(contrato.Id)">
-                                    VER/EDITAR
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-    };
+        </div>
+    </div>
+}
 
-    private RenderFragment RenderSeguridadSocial() => __builder =>
-    {
-        if (empleado == null) return;
-
-        <div class="section">
-            <div class="section-header">AFILIACIONES</div>
-            <div class="section-body">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">EPS</span>
-                        <span class="info-value">
-                            @(empleado.EPS ?? "No registrada")
-                            @if (!string.IsNullOrEmpty(empleado.CodigoEPS))
-                            {
-                                <text> (Código: @empleado.CodigoEPS)</text>
-                            }
-                        </span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">AFP (PENSIÓN)</span>
-                        <span class="info-value">
-                            @(empleado.AFP ?? "No registrada")
-                            @if (!string.IsNullOrEmpty(empleado.CodigoAFP))
-                            {
-                                <text> (Código: @empleado.CodigoAFP)</text>
-                            }
-                        </span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">ARL</span>
-                        <span class="info-value">
-                            @(empleado.ARL ?? "No registrada")
-                            @if (!string.IsNullOrEmpty(empleado.CodigoARL))
-                            {
-                                <text> (Código: @empleado.CodigoARL)</text>
-                            }
-                        </span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">CLASE DE RIESGO ARL</span>
-                        <span class="info-value">Clase @empleado.ClaseRiesgoARL</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">CAJA DE COMPENSACIÓN</span>
-                        <span class="info-value">
-                            @(empleado.CajaCompensacion ?? "No registrada")
-                            @if (!string.IsNullOrEmpty(empleado.CodigoCajaCompensacion))
-                            {
-                                <text> (Código: @empleado.CodigoCajaCompensacion)</text>
-                            }
-                        </span>
-                    </div>
-                </div>
+@if (showConfirmDeleteDoc && documentoAEliminar != null)
+{
+    <div class="confirm-overlay">
+        <div class="confirm-dialog">
+            <div class="confirm-header">CONFIRMAR ELIMINACIÓN</div>
+            <div class="confirm-body">
+                <p>¿Está seguro de eliminar el documento <strong>@DocumentHelper.GetTipoDocumentoNombre(documentoAEliminar.TipoDocumento)</strong>?</p>
+                <p style="font-size: 11px; color: #666;">@documentoAEliminar.NombreArchivoOriginal</p>
+                <p style="color: #DC143C; margin-top: 10px; font-size: 11px;">Esta acción no puede deshacerse.</p>
+            </div>
+            <div class="confirm-footer">
+                <button class="btn" @onclick="CancelarEliminarDocumento">CANCELAR</button>
+                <button class="btn btn-danger" @onclick="EliminarDocumento">ELIMINAR</button>
             </div>
         </div>
-
-        <div class="section">
-            <div class="section-header">INFORMACIÓN BANCARIA</div>
-            <div class="section-body">
-                <div class="info-grid">
-                    <div class="info-item">
-                        <span class="info-label">BANCO</span>
-                        <span class="info-value">@(empleado.Banco ?? "No registrado")</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">NÚMERO DE CUENTA</span>
-                        <span class="info-value">@(empleado.NumeroCuenta ?? "No registrado")</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    };
-    
-    // ===== MÉTODOS DEL SCANNER =====
-    
-    private void AbrirScanner()
-    {
-        mostrarScannerModal = true;
-    }
-    
-    private async Task OnScanComplete(List<ScannedPageDto> pages)
-    {
-        if (empleado == null || pages.Count == 0)
-        {
-            Logger.LogWarning("OnScanComplete: No hay empleado o páginas escaneadas");
-            return;
-        }
-        
-        try
-        {
-            Logger.LogInformation($"Guardando {pages.Count} página(s) escaneada(s) para empleado {empleado.Codigo}");
-            
-            foreach (var page in pages)
-            {
-                // Determinar formato basado en el MimeType
-                var extension = page.MimeType.Contains("png") ? ".png" : ".jpg";
-                var fileName = $"Documento_Escaneado_{DateTime.Now:yyyyMMdd_HHmmss}_{page.PageNumber}{extension}";
-                
-                var storageResult = await StorageService.SaveDocumentoEmpleadoAsync(
-                    empleado.Id,
-                    "Documento Escaneado",
-                    page.ImageBytes,
-                    fileName);
-                
-                if (storageResult.IsSuccess)
-                {
-                    var documento = new DocumentoEmpleado
-                    {
-                        EmpleadoId = empleado.Id,
-                        TipoDocumento = TipoDocumentoEmpleado.Otro,
-                        Nombre = pages.Count > 1 ? $"Documento Escaneado (Pág. {page.PageNumber})" : "Documento Escaneado",
-                        NombreArchivoOriginal = fileName,
-                        TipoMime = page.MimeType,
-                        TamanoArchivo = page.ImageBytes.Length,
-                        SubidoPorNombre = AuthService.CurrentUser?.NombreCompleto,
-                        SubidoPorUsuarioId = AuthService.CurrentUser?.Id,
-                        ArchivoPath = storageResult.Value,
-                        Activo = true,
-                        FechaCreacion = DateTime.Now
-                    };
-                    
-                    await DocumentoRepo.AddAsync(documento);
-                    documentos.Insert(0, documento);
-                    
-                    Logger.LogInformation("Imagen escaneada guardada: {Path}", storageResult.Value);
-                }
-                else
-                {
-                    Logger.LogError("Error guardando imagen escaneada: {Error}", storageResult.Error);
-                }
-            }
-            
-            messageToast?.ShowSuccess($"✓ {pages.Count} imagen(es) escaneada(s) guardada(s) exitosamente");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al guardar imágenes escaneadas");
-            messageToast?.ShowError("Error al guardar imágenes escaneadas");
-        }
-        finally
-        {
-            mostrarScannerModal = false;
-            StateHasChanged();
-        }
-    }
-    
-    private async Task OnPdfGenerated(byte[] pdfBytes)
-    {
-        if (empleado == null) return;
-        
-        try
-        {
-            var fileName = $"Documento_Escaneado_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-            var storageResult = await StorageService.SaveDocumentoEmpleadoAsync(
-                empleado.Id,
-                "Documento Escaneado",
-                pdfBytes,
-                fileName);
-            
-            if (storageResult.IsSuccess)
-            {
-                var documento = new DocumentoEmpleado
-                {
-                    EmpleadoId = empleado.Id,
-                    TipoDocumento = TipoDocumentoEmpleado.Otro,
-                    Nombre = "Documento Escaneado",
-                    NombreArchivoOriginal = fileName,
-                    TipoMime = "application/pdf",
-                    TamanoArchivo = pdfBytes.Length,
-                    SubidoPorNombre = AuthService.CurrentUser?.NombreCompleto,
-                    SubidoPorUsuarioId = AuthService.CurrentUser?.Id,
-                    ArchivoPath = storageResult.Value,
-                    Activo = true,
-                    FechaCreacion = DateTime.Now
-                };
-                
-                await DocumentoRepo.AddAsync(documento);
-                documentos.Insert(0, documento);
-                
-                messageToast?.ShowSuccess("Documento escaneado guardado exitosamente");
-                Logger.LogInformation("Documento escaneado guardado: {Path}", storageResult.Value);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al guardar documento escaneado");
-            messageToast?.ShowError("Error al guardar documento escaneado");
-        }
-        
-        mostrarScannerModal = false;
-        StateHasChanged();
-    }
-    
-    // ===== MÉTODOS DEL PRINTER =====
-    
-    private async Task ImprimirDocumento(DocumentoEmpleado documento)
-    {
-        try
-        {
-            var bytes = await StorageService.GetFileAsync(documento.ArchivoPath);
-            if (bytes != null && bytes.Length > 0)
-            {
-                bytesParaImprimir = bytes;
-                nombreDocumentoImprimir = documento.NombreArchivoOriginal;
-                mostrarPrinterModal = true;
-            }
-            else
-            {
-                messageToast?.ShowError("No se pudo cargar el archivo para imprimir");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error al cargar documento para imprimir");
-            messageToast?.ShowError("Error al cargar documento");
-        }
-    }
-    
-    private void OnPrintComplete(PrintJobResultDto result)
-    {
-        if (result.Success)
-        {
-            messageToast?.ShowSuccess($"Documento enviado a imprimir: {result.PrinterName}");
-        }
-        else
-        {
-            messageToast?.ShowError($"Error al imprimir: {result.ErrorMessage}");
-        }
-        
-        mostrarPrinterModal = false;
-        bytesParaImprimir = null;
-        nombreDocumentoImprimir = null;
-    }
-    
-    private void CerrarPrinterModal()
-    {
-        mostrarPrinterModal = false;
-        bytesParaImprimir = null;
-        nombreDocumentoImprimir = null;
-    }
+    </div>
 }

@@ -1,0 +1,19 @@
+<div class="scanner-field-row">
+    <label>Idioma OCR:</label>
+    <select @bind="Idioma" class="scanner-select" disabled="@Deshabilitado">
+        <option value="spa">Español</option>
+        <option value="eng">Inglés</option>
+        <option value="por">Portugués</option>
+    </select>
+    @if (!OcrDisponible)
+    {
+        <span class="scanner-ocr-warning" title="OCR no instalado">⚠️</span>
+    }
+</div>
+
+@code {
+    [Parameter] public string Idioma { get; set; } = "spa";
+    [Parameter] public EventCallback<string> IdiomaChanged { get; set; }
+    [Parameter] public bool OcrDisponible { get; set; }
+    [Parameter] public bool Deshabilitado { get; set; }
+}

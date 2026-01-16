@@ -1,0 +1,230 @@
+@using System.Linq
+@using SGRRHH.Local.Domain.Entities
+
+@if (Empleado == null)
+{
+    return;
+}
+
+<div class="hospital-section">
+    <div class="hospital-section-header">SEGURIDAD SOCIAL (COLOMBIA) - OBLIGATORIO</div>
+    <div class="hospital-section-body">
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">EPS (SALUD) *</label>
+                <select class="hospital-input" @onchange="OnEpsChanged">
+                    <option value="">-- SELECCIONE EPS --</option>
+                    @foreach (var eps in EpsList)
+                    {
+                        <option value="@eps.Id" selected="@(epsIdSeleccionado == eps.Id)">@eps.Nombre</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">CODIGO EPS</label>
+                <input type="text" class="hospital-input" value="@Empleado.CodigoEPS" readonly style="background-color: #f0f0f0;" />
+                <div class="hospital-field-hint">Autocompletado</div>
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">AFP (PENSION) *</label>
+                <select class="hospital-input" @onchange="OnAfpChanged">
+                    <option value="">-- SELECCIONE AFP --</option>
+                    @foreach (var afp in AfpList)
+                    {
+                        <option value="@afp.Id" selected="@(afpIdSeleccionado == afp.Id)">@afp.Nombre</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">CODIGO AFP</label>
+                <input type="text" class="hospital-input" value="@Empleado.CodigoAFP" readonly style="background-color: #f0f0f0;" />
+                <div class="hospital-field-hint">Autocompletado</div>
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">ARL (RIESGOS LABORALES) *</label>
+                <select class="hospital-input" @onchange="OnArlChanged">
+                    <option value="">-- SELECCIONE ARL --</option>
+                    @foreach (var arl in ArlList)
+                    {
+                        <option value="@arl.Id" selected="@(arlIdSeleccionado == arl.Id)">@arl.Nombre</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">CODIGO ARL</label>
+                <input type="text" class="hospital-input" value="@Empleado.CodigoARL" readonly style="background-color: #f0f0f0;" />
+                <div class="hospital-field-hint">Autocompletado</div>
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">CLASE DE RIESGO ARL *</label>
+                <select class="hospital-input" @bind="Empleado.ClaseRiesgoARL">
+                    <option value="1">CLASE I - Riesgo Mínimo (0.522%)</option>
+                    <option value="2">CLASE II - Riesgo Bajo (1.044%)</option>
+                    <option value="3">CLASE III - Riesgo Medio (2.436%)</option>
+                    <option value="4">CLASE IV - Riesgo Alto (4.350%)</option>
+                    <option value="5">CLASE V - Riesgo Máximo (6.960%)</option>
+                </select>
+                <div class="hospital-field-hint">Silvicultura generalmente es Clase IV o V</div>
+            </div>
+            
+            <div class="hospital-form-field">
+                <!-- Espacio vacío -->
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">CAJA DE COMPENSACION *</label>
+                <select class="hospital-input" @onchange="OnCajaChanged">
+                    <option value="">-- SELECCIONE CAJA --</option>
+                    @foreach (var caja in CajasList)
+                    {
+                        <option value="@caja.Id" selected="@(cajaIdSeleccionado == caja.Id)">@caja.Nombre (@caja.Region)</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">CODIGO CAJA COMPENSACION</label>
+                <input type="text" class="hospital-input" value="@Empleado.CodigoCajaCompensacion" readonly style="background-color: #f0f0f0;" />
+                <div class="hospital-field-hint">Autocompletado</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Empleado Empleado { get; set; } = new();
+    [Parameter] public List<Eps> EpsList { get; set; } = new();
+    [Parameter] public List<Afp> AfpList { get; set; } = new();
+    [Parameter] public List<Arl> ArlList { get; set; } = new();
+    [Parameter] public List<CajaCompensacion> CajasList { get; set; } = new();
+    
+    private int? epsIdSeleccionado;
+    private int? afpIdSeleccionado;
+    private int? arlIdSeleccionado;
+    private int? cajaIdSeleccionado;
+    
+    protected override void OnParametersSet()
+    {
+        if (epsIdSeleccionado == null && !string.IsNullOrWhiteSpace(Empleado.EPS))
+        {
+            var eps = EpsList.FirstOrDefault(x => x.Nombre == Empleado.EPS || x.Codigo == Empleado.CodigoEPS);
+            if (eps != null) epsIdSeleccionado = eps.Id;
+        }
+        
+        if (afpIdSeleccionado == null && !string.IsNullOrWhiteSpace(Empleado.AFP))
+        {
+            var afp = AfpList.FirstOrDefault(x => x.Nombre == Empleado.AFP || x.Codigo == Empleado.CodigoAFP);
+            if (afp != null) afpIdSeleccionado = afp.Id;
+        }
+        
+        if (arlIdSeleccionado == null && !string.IsNullOrWhiteSpace(Empleado.ARL))
+        {
+            var arl = ArlList.FirstOrDefault(x => x.Nombre == Empleado.ARL || x.Codigo == Empleado.CodigoARL);
+            if (arl != null) arlIdSeleccionado = arl.Id;
+        }
+        
+        if (cajaIdSeleccionado == null && !string.IsNullOrWhiteSpace(Empleado.CajaCompensacion))
+        {
+            var caja = CajasList.FirstOrDefault(x => x.Nombre == Empleado.CajaCompensacion || x.Codigo == Empleado.CodigoCajaCompensacion);
+            if (caja != null) cajaIdSeleccionado = caja.Id;
+        }
+    }
+    
+    private void OnEpsChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int epsId) && epsId > 0)
+        {
+            var eps = EpsList.FirstOrDefault(x => x.Id == epsId);
+            if (eps != null)
+            {
+                Empleado.EPS = eps.Nombre;
+                Empleado.CodigoEPS = eps.Codigo;
+                epsIdSeleccionado = epsId;
+            }
+        }
+        else
+        {
+            Empleado.EPS = null;
+            Empleado.CodigoEPS = null;
+            epsIdSeleccionado = null;
+        }
+        StateHasChanged();
+    }
+    
+    private void OnAfpChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int afpId) && afpId > 0)
+        {
+            var afp = AfpList.FirstOrDefault(x => x.Id == afpId);
+            if (afp != null)
+            {
+                Empleado.AFP = afp.Nombre;
+                Empleado.CodigoAFP = afp.Codigo;
+                afpIdSeleccionado = afpId;
+            }
+        }
+        else
+        {
+            Empleado.AFP = null;
+            Empleado.CodigoAFP = null;
+            afpIdSeleccionado = null;
+        }
+        StateHasChanged();
+    }
+    
+    private void OnArlChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int arlId) && arlId > 0)
+        {
+            var arl = ArlList.FirstOrDefault(x => x.Id == arlId);
+            if (arl != null)
+            {
+                Empleado.ARL = arl.Nombre;
+                Empleado.CodigoARL = arl.Codigo;
+                arlIdSeleccionado = arlId;
+            }
+        }
+        else
+        {
+            Empleado.ARL = null;
+            Empleado.CodigoARL = null;
+            arlIdSeleccionado = null;
+        }
+        StateHasChanged();
+    }
+    
+    private void OnCajaChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int cajaId) && cajaId > 0)
+        {
+            var caja = CajasList.FirstOrDefault(x => x.Id == cajaId);
+            if (caja != null)
+            {
+                Empleado.CajaCompensacion = caja.Nombre;
+                Empleado.CodigoCajaCompensacion = caja.Codigo;
+                cajaIdSeleccionado = cajaId;
+            }
+        }
+        else
+        {
+            Empleado.CajaCompensacion = null;
+            Empleado.CodigoCajaCompensacion = null;
+            cajaIdSeleccionado = null;
+        }
+        StateHasChanged();
+    }
+}

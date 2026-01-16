@@ -1,0 +1,39 @@
+@using SGRRHH.Local.Domain.Entities
+
+@if (Empleado == null)
+{
+    return;
+}
+
+<div class="expediente-header">
+    <div class="expediente-info">
+        <div class="expediente-foto" @onclick="OnCambiarFoto" title="Click para cambiar foto">
+            @if (!string.IsNullOrEmpty(Empleado.FotoPath))
+            {
+                <img src="@GetFotoUrl()" alt="@Empleado.NombreCompleto"
+                     onerror="this.style.display='none'; this.parentElement.innerHTML='@GetInitials()';" />
+            }
+            else
+            {
+                @GetInitials()
+            }
+            <div class="foto-overlay">📷 CAMBIAR FOTO</div>
+        </div>
+
+        <EmpleadoInfoCard Empleado="Empleado"
+                          TransicionesPermitidas="TransicionesPermitidas"
+                          NuevoEstadoSeleccionado="NuevoEstadoSeleccionado"
+                          NuevoEstadoSeleccionadoChanged="NuevoEstadoSeleccionadoChanged"
+                          IsSavingEstado="IsSavingEstado"
+                          OnCambiarEstado="OnCambiarEstado" />
+    </div>
+
+    <div class="expediente-actions">
+        <button class="btn" @onclick="OnVolver">VOLVER (ESC)</button>
+        <button class="btn" @onclick="OnEditarEmpleado">EDITAR (F4)</button>
+        @if (PuedeEliminar)
+        {
+            <button class="btn btn-danger" @onclick="OnConfirmarEliminar">ELIMINAR</button>
+        }
+    </div>
+</div>

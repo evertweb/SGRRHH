@@ -1,0 +1,56 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+
+<div class="permisos-controles-filtros">
+    <div class="permisos-filtro-grupo">
+        <label class="permisos-filtro-label">BUSCAR:</label>
+        <input type="text" id="searchInput" class="input-text" style="width: 300px;"
+               @bind="SearchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        <button class="btn" @onclick="OnBuscar">BUSCAR</button>
+        @if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            <button class="btn" @onclick="OnLimpiar">LIMPIAR</button>
+        }
+    </div>
+
+    <div class="permisos-filtro-grupo">
+        <label class="permisos-filtro-label">ESTADO:</label>
+        <select class="select" @bind="FiltroEstado" @bind:after="AfterFiltrar" style="width: 200px;">
+            <option value="">TODOS</option>
+            <option value="@((int)EstadoPermiso.Pendiente)">PENDIENTE</option>
+            <option value="@((int)EstadoPermiso.Aprobado)">APROBADO</option>
+            <option value="@((int)EstadoPermiso.Rechazado)">RECHAZADO</option>
+            <option value="@((int)EstadoPermiso.Cancelado)">CANCELADO</option>
+        </select>
+    </div>
+
+    <div class="permisos-filtro-grupo">
+        <label class="permisos-filtro-label">EMPLEADO:</label>
+        <select class="select" @bind="FiltroEmpleadoId" @bind:after="AfterFiltrar" style="width: 300px;">
+            <option value="">TODOS</option>
+            @foreach (var emp in Empleados)
+            {
+                <option value="@emp.Id">@emp.NombreCompleto</option>
+            }
+        </select>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string SearchTerm { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchTermChanged { get; set; }
+    [Parameter] public string FiltroEstado { get; set; } = "";
+    [Parameter] public EventCallback<string> FiltroEstadoChanged { get; set; }
+    [Parameter] public string FiltroEmpleadoId { get; set; } = "";
+    [Parameter] public EventCallback<string> FiltroEmpleadoIdChanged { get; set; }
+    [Parameter] public List<Empleado> Empleados { get; set; } = new();
+    [Parameter] public EventCallback OnBuscar { get; set; }
+    [Parameter] public EventCallback OnLimpiar { get; set; }
+    [Parameter] public EventCallback OnFiltrar { get; set; }
+    [Parameter] public EventCallback<KeyboardEventArgs> OnSearchKeyUp { get; set; }
+
+    private async Task AfterFiltrar()
+    {
+        await OnFiltrar.InvokeAsync();
+    }
+}

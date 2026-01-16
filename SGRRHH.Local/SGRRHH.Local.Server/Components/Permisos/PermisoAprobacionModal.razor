@@ -1,0 +1,318 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@inject IPermisoRepository PermisoRepository
+@inject ISeguimientoPermisoRepository SeguimientoRepository
+@inject IAuthService AuthService
+@inject ILogger<PermisoAprobacionModal> Logger
+
+@if (showAprobacionDialog)
+{
+    <div class="modal-overlay">
+        <div class="permisos-dialogo-confirmacion" style="max-width: 500px;">
+            <div class="permisos-dialogo-titulo">APROBAR PERMISO - TIPO DE RESOLUCIÓN</div>
+
+            <div class="permisos-dialogo-contenido">
+                <div class="permisos-campo-form">
+                    <label class="permisos-campo-label permisos-campo-requerido">TIPO DE RESOLUCIÓN</label>
+                    <select class="permisos-campo-input" @bind="tipoResolucionSeleccionado">
+                        <option value="1">REMUNERADO (No se descuenta)</option>
+                        <option value="2">DESCONTADO (Se descuenta en nómina)</option>
+                        <option value="3">COMPENSADO (Compensará con horas)</option>
+                    </select>
+                </div>
+
+                @if (tipoResolucionSeleccionado == 1)
+                {
+                    <div class="permisos-campo-form">
+                        <label class="permisos-campo-label">¿DOCUMENTO YA ENTREGADO?</label>
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <label>
+                                <input type="radio" name="docEntregado" @onchange="() => documentoYaEntregado = true" checked="@documentoYaEntregado" /> SÍ
+                            </label>
+                            <label>
+                                <input type="radio" name="docEntregado" @onchange="() => documentoYaEntregado = false" checked="@(!documentoYaEntregado)" /> NO (PENDIENTE)
+                            </label>
+                        </div>
+                    </div>
+
+                    @if (!documentoYaEntregado)
+                    {
+                        <div class="permisos-campo-form">
+                            <label class="permisos-campo-label">FECHA LÍMITE PARA ENTREGAR DOCUMENTO</label>
+                            <input type="date" class="permisos-campo-input" @bind="fechaLimiteDocumento" />
+                        </div>
+                    }
+                }
+
+                @if (tipoResolucionSeleccionado == 2)
+                {
+                    <div class="permisos-campo-form">
+                        <label class="permisos-campo-label">MONTO A DESCONTAR</label>
+                        <input type="number" class="permisos-campo-input" @bind="montoDescuentoAprobacion" step="1000" />
+                    </div>
+                    <div class="permisos-campo-form">
+                        <label class="permisos-campo-label">PERÍODO DE DESCUENTO</label>
+                        <input type="text" class="permisos-campo-input" @bind="periodoDescuentoAprobacion" placeholder="AAAA-MM" />
+                    </div>
+                }
+
+                @if (tipoResolucionSeleccionado == 3)
+                {
+                    <div class="permisos-campo-form">
+                        <label class="permisos-campo-label permisos-campo-requerido">HORAS A COMPENSAR</label>
+                        <input type="number" class="permisos-campo-input" @bind="horasCompensarAprobacion" min="1" max="80" />
+                    </div>
+                    <div class="permisos-campo-form">
+                        <label class="permisos-campo-label permisos-campo-requerido">FECHA LÍMITE COMPENSACIÓN</label>
+                        <input type="date" class="permisos-campo-input" @bind="fechaLimiteCompensacion" />
+                    </div>
+                }
+
+                <div class="permisos-campo-form">
+                    <label class="permisos-campo-label">OBSERVACIONES DE APROBACIÓN</label>
+                    <textarea class="permisos-campo-textarea" rows="3" @bind="observacionesAprobacion"></textarea>
+                </div>
+            </div>
+
+            <div class="permisos-dialogo-botones">
+                <button class="btn" @onclick="CerrarAprobacion">CANCELAR</button>
+                <button class="btn btn-aprobar" @onclick="ConfirmarAprobacion" disabled="@isSaving">
+                    CONFIRMAR APROBACIÓN
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showRechazarDialog)
+{
+    <div class="modal-overlay">
+        <div class="permisos-dialogo-confirmacion">
+            <div class="permisos-dialogo-titulo">RECHAZAR PERMISO</div>
+
+            <div class="permisos-dialogo-contenido">
+                <div class="permisos-campo-form">
+                    <label class="permisos-campo-label permisos-campo-requerido">MOTIVO DEL RECHAZO</label>
+                    <textarea class="permisos-campo-textarea" rows="5" @bind="motivoRechazo"></textarea>
+                </div>
+            </div>
+
+            <div class="permisos-dialogo-botones">
+                <button class="btn" @onclick="CerrarRechazo">CANCELAR</button>
+                <button class="btn btn-rechazar" @onclick="ConfirmarRechazo"
+                        disabled="@(string.IsNullOrWhiteSpace(motivoRechazo) || isSaving)">
+                    CONFIRMAR RECHAZO
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<string> OnError { get; set; }
+    [Parameter] public EventCallback<string> OnSuccess { get; set; }
+    [Parameter] public EventCallback OnCompleted { get; set; }
+
+    private bool showAprobacionDialog;
+    private bool showRechazarDialog;
+    private bool isSaving;
+    private Permiso? permisoEdit;
+    private List<TipoPermiso> tiposPermiso = new();
+
+    private int tipoResolucionSeleccionado = 1;
+    private bool documentoYaEntregado;
+    private DateTime? fechaLimiteDocumento;
+    private decimal? montoDescuentoAprobacion;
+    private string? periodoDescuentoAprobacion;
+    private int horasCompensarAprobacion = 8;
+    private DateTime? fechaLimiteCompensacion;
+    private string observacionesAprobacion = "";
+    private string motivoRechazo = "";
+
+    public void OpenAprobacion(Permiso permiso, List<TipoPermiso> tipos)
+    {
+        permisoEdit = permiso;
+        tiposPermiso = tipos;
+
+        if (!AuthService.IsAprobador)
+        {
+            _ = OnError.InvokeAsync("ERROR: NO TIENE PERMISOS PARA APROBAR PERMISOS");
+            return;
+        }
+
+        var tipoPermiso = permisoEdit.TipoPermiso ?? tiposPermiso.FirstOrDefault(t => t.Id == permisoEdit.TipoPermisoId);
+
+        if (tipoPermiso != null)
+        {
+            tipoResolucionSeleccionado = (int)tipoPermiso.TipoResolucionPorDefecto;
+            documentoYaEntregado = !tipoPermiso.RequiereDocumento;
+            fechaLimiteDocumento = DateTime.Today.AddDays(tipoPermiso.DiasLimiteDocumento > 0 ? tipoPermiso.DiasLimiteDocumento : 7);
+            horasCompensarAprobacion = tipoPermiso.HorasCompensarPorDia * permisoEdit.TotalDias;
+            fechaLimiteCompensacion = DateTime.Today.AddDays(tipoPermiso.DiasLimiteCompensacion > 0 ? tipoPermiso.DiasLimiteCompensacion : 30);
+
+            if (tipoPermiso.GeneraDescuento && tipoPermiso.PorcentajeDescuento.HasValue)
+            {
+                tipoResolucionSeleccionado = 2;
+                montoDescuentoAprobacion = null;
+            }
+            else
+            {
+                montoDescuentoAprobacion = null;
+            }
+        }
+        else
+        {
+            tipoResolucionSeleccionado = 1;
+            documentoYaEntregado = false;
+            fechaLimiteDocumento = DateTime.Today.AddDays(7);
+            horasCompensarAprobacion = 8 * permisoEdit.TotalDias;
+            fechaLimiteCompensacion = DateTime.Today.AddDays(30);
+            montoDescuentoAprobacion = null;
+        }
+
+        periodoDescuentoAprobacion = DateTime.Today.ToString("yyyy-MM");
+        observacionesAprobacion = "";
+        showAprobacionDialog = true;
+    }
+
+    public void OpenRechazo(Permiso permiso)
+    {
+        permisoEdit = permiso;
+        motivoRechazo = "";
+        showRechazarDialog = true;
+    }
+
+    private void CerrarAprobacion()
+    {
+        showAprobacionDialog = false;
+    }
+
+    private void CerrarRechazo()
+    {
+        showRechazarDialog = false;
+    }
+
+    private async Task ConfirmarAprobacion()
+    {
+        if (permisoEdit == null)
+            return;
+
+        try
+        {
+            isSaving = true;
+            showAprobacionDialog = false;
+            StateHasChanged();
+
+            permisoEdit.TipoResolucion = (TipoResolucionPermiso)tipoResolucionSeleccionado;
+            permisoEdit.AprobadoPorId = AuthService.CurrentUser!.Id;
+            permisoEdit.FechaAprobacion = DateTime.Now;
+
+            switch (tipoResolucionSeleccionado)
+            {
+                case 1:
+                    if (documentoYaEntregado)
+                    {
+                        permisoEdit.Estado = EstadoPermiso.Aprobado;
+                        permisoEdit.RequiereDocumentoPosterior = false;
+                        permisoEdit.FechaEntregaDocumento = DateTime.Now;
+                        permisoEdit.Completado = true;
+                    }
+                    else
+                    {
+                        permisoEdit.Estado = EstadoPermiso.AprobadoPendienteDocumento;
+                        permisoEdit.RequiereDocumentoPosterior = true;
+                        permisoEdit.FechaLimiteDocumento = fechaLimiteDocumento;
+                        permisoEdit.Completado = false;
+                    }
+                    break;
+                case 2:
+                    permisoEdit.Estado = EstadoPermiso.Aprobado;
+                    permisoEdit.MontoDescuento = montoDescuentoAprobacion;
+                    permisoEdit.PeriodoDescuento = periodoDescuentoAprobacion;
+                    permisoEdit.Completado = true;
+                    break;
+                case 3:
+                    permisoEdit.Estado = EstadoPermiso.AprobadoEnCompensacion;
+                    permisoEdit.HorasCompensar = horasCompensarAprobacion;
+                    permisoEdit.HorasCompensadas = 0;
+                    permisoEdit.FechaLimiteCompensacion = fechaLimiteCompensacion;
+                    permisoEdit.Completado = false;
+                    break;
+            }
+
+            if (!string.IsNullOrWhiteSpace(observacionesAprobacion))
+            {
+                permisoEdit.Observaciones = string.IsNullOrEmpty(permisoEdit.Observaciones)
+                    ? observacionesAprobacion
+                    : $"{permisoEdit.Observaciones}\n[APROBACIÓN]: {observacionesAprobacion}";
+            }
+
+            await PermisoRepository.UpdateAsync(permisoEdit);
+            await SeguimientoRepository.RegistrarAccionAsync(
+                permisoEdit.Id,
+                TipoAccionSeguimiento.Aprobacion,
+                $"Aprobado como {permisoEdit.TipoResolucion}",
+                AuthService.CurrentUser!.Id,
+                observacionesAprobacion
+            );
+
+            var estadoMsg = permisoEdit.Estado switch
+            {
+                EstadoPermiso.AprobadoPendienteDocumento => " (PENDIENTE DOCUMENTO)",
+                EstadoPermiso.AprobadoEnCompensacion => " (EN COMPENSACIÓN)",
+                _ => ""
+            };
+
+            await OnSuccess.InvokeAsync($"OPERACION EXITOSA: PERMISO {permisoEdit.NumeroActa} APROBADO{estadoMsg}");
+            await OnCompleted.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error aprobando permiso");
+            await OnError.InvokeAsync(ErrorTranslationService.Translate(ex));
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmarRechazo()
+    {
+        if (permisoEdit == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(motivoRechazo))
+        {
+            await OnError.InvokeAsync("ERROR: DEBE INGRESAR EL MOTIVO DEL RECHAZO");
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+            showRechazarDialog = false;
+            StateHasChanged();
+
+            permisoEdit.Estado = EstadoPermiso.Rechazado;
+            permisoEdit.AprobadoPorId = AuthService.CurrentUser!.Id;
+            permisoEdit.FechaAprobacion = DateTime.Now;
+            permisoEdit.MotivoRechazo = motivoRechazo;
+
+            await PermisoRepository.UpdateAsync(permisoEdit);
+            await OnSuccess.InvokeAsync($"OPERACION EXITOSA: PERMISO {permisoEdit.NumeroActa} RECHAZADO");
+            await OnCompleted.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error rechazando permiso");
+            await OnError.InvokeAsync(ErrorTranslationService.Translate(ex));
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+}

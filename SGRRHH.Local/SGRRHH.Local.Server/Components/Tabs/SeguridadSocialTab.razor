@@ -1,0 +1,60 @@
+@inherits SeguridadSocialTabBase
+
+@if (Empleado == null)
+{
+    <div class="alert alert-info">Cargando información...</div>
+}
+else
+{
+    <div class="section">
+        <div class="section-header">AFILIACIONES</div>
+        <div class="section-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">EPS</span>
+                    <span class="info-value">
+                        @(Empleado.EPS ?? "No registrada")
+                        @if (!string.IsNullOrEmpty(Empleado.CodigoEPS))
+                        {
+                            <text> (Código: @Empleado.CodigoEPS)</text>
+                        }
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">AFP (PENSIÓN)</span>
+                    <span class="info-value">
+                        @(Empleado.AFP ?? "No registrada")
+                        @if (!string.IsNullOrEmpty(Empleado.CodigoAFP))
+                        {
+                            <text> (Código: @Empleado.CodigoAFP)</text>
+                        }
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">ARL</span>
+                    <span class="info-value">
+                        @(Empleado.ARL ?? "No registrada")
+                        @if (!string.IsNullOrEmpty(Empleado.CodigoARL))
+                        {
+                            <text> (Código: @Empleado.CodigoARL)</text>
+                        }
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">CLASE DE RIESGO ARL</span>
+                    <span class="info-value">Clase @Empleado.ClaseRiesgoARL</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">CAJA DE COMPENSACIÓN</span>
+                    <span class="info-value">
+                        @(Empleado.CajaCompensacion ?? "No registrada")
+                        @if (!string.IsNullOrEmpty(Empleado.CodigoCajaCompensacion))
+                        {
+                            <text> (Código: @Empleado.CodigoCajaCompensacion)</text>
+                        }
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+}

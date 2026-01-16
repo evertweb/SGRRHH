@@ -14,439 +14,11 @@
 
 <PageTitle>Seguimiento de Permisos - SGRRHH</PageTitle>
 
-<style>
-    /* === SISTEMA HOSPITALARIO - SEGUIMIENTO DE PERMISOS === */
-    
-    body, * {
-        font-family: 'Courier New', monospace;
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-    
-    .seguimiento-container {
-        width: 100%;
-        min-width: 1024px;
-        max-width: 1920px;
-        margin: 0 auto;
-        padding: 20px;
-        background: white;
-    }
-    
-    .seguimiento-header {
-        border-bottom: 2px solid black;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-    
-    .seguimiento-title {
-        font-size: 18px;
-        font-weight: bold;
-        margin: 0;
-        text-align: left;
-    }
-    
-    .seguimiento-info {
-        font-size: 12px;
-        margin-top: 5px;
-        color: #000;
-    }
-    
-    /* === DASHBOARD === */
-    
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 15px;
-        margin-bottom: 20px;
-    }
-    
-    .stat-card {
-        border: 2px solid black;
-        padding: 15px;
-        text-align: center;
-        background: white;
-    }
-    
-    .stat-card h3 {
-        font-size: 11px;
-        margin: 0 0 10px 0;
-        font-weight: bold;
-    }
-    
-    .stat-number {
-        font-size: 32px;
-        font-weight: bold;
-        line-height: 1;
-    }
-    
-    .stat-amount {
-        font-size: 12px;
-        margin-top: 5px;
-        color: #666;
-    }
-    
-    .stat-card.urgente {
-        border-color: red;
-        background: #fff0f0;
-    }
-    
-    .stat-card.urgente .stat-number {
-        color: red;
-    }
-    
-    .stat-card.warning {
-        border-color: #cc7700;
-        background: #fffbf0;
-    }
-    
-    .stat-card.warning .stat-number {
-        color: #cc7700;
-    }
-    
-    .stat-card.info {
-        border-color: #0066cc;
-        background: #f0f8ff;
-    }
-    
-    .stat-card.info .stat-number {
-        color: #0066cc;
-    }
-    
-    .stat-card.success {
-        border-color: green;
-        background: #f0fff0;
-    }
-    
-    .stat-card.success .stat-number {
-        color: green;
-    }
-    
-    /* === TABS === */
-    
-    .seguimiento-tabs {
-        border: 1px solid black;
-        margin-bottom: 0;
-        display: flex;
-        background: #f0f0f0;
-    }
-    
-    .seguimiento-tabs button {
-        font-family: 'Courier New', monospace;
-        font-size: 11px;
-        padding: 10px 15px;
-        border: none;
-        border-right: 1px solid black;
-        background: #f0f0f0;
-        cursor: pointer;
-        text-transform: uppercase;
-    }
-    
-    .seguimiento-tabs button:hover {
-        background: #e0e0e0;
-    }
-    
-    .seguimiento-tabs button.active {
-        background: white;
-        font-weight: bold;
-        border-bottom: 2px solid white;
-        margin-bottom: -1px;
-    }
-    
-    /* === CONTENIDO === */
-    
-    .seguimiento-content {
-        border: 1px solid black;
-        border-top: none;
-        padding: 15px;
-        min-height: 400px;
-    }
-    
-    /* === TABLA === */
-    
-    .tabla-seguimiento {
-        width: 100%;
-        border-collapse: collapse;
-        border: 2px solid black;
-        margin-bottom: 15px;
-    }
-    
-    .tabla-seguimiento th {
-        background: white;
-        border: 1px solid black;
-        padding: 8px;
-        text-align: left;
-        font-size: 11px;
-        font-weight: bold;
-    }
-    
-    .tabla-seguimiento td {
-        border: 1px solid black;
-        padding: 6px 8px;
-        font-size: 11px;
-    }
-    
-    .tabla-seguimiento tbody tr {
-        cursor: pointer;
-    }
-    
-    .tabla-seguimiento tbody tr:hover {
-        background: #f5f5f5;
-    }
-    
-    .td-centro {
-        text-align: center;
-    }
-    
-    .td-acta {
-        font-weight: bold;
-    }
-    
-    /* === ESTADOS Y BADGES === */
-    
-    .badge {
-        padding: 2px 6px;
-        font-size: 10px;
-        display: inline-block;
-    }
-    
-    .badge-vencido {
-        background: red;
-        color: white;
-    }
-    
-    .badge-urgente {
-        background: #cc7700;
-        color: white;
-    }
-    
-    .badge-ok {
-        background: green;
-        color: white;
-    }
-    
-    .badge-pendiente {
-        background: yellow;
-        color: black;
-    }
-    
-    .badge-compensacion {
-        background: #0066cc;
-        color: white;
-    }
-    
-    .badge-descuento {
-        background: #660066;
-        color: white;
-    }
-    
-    /* === PROGRESO COMPENSACIÓN === */
-    
-    .progreso-bar {
-        width: 100%;
-        height: 16px;
-        background: #e0e0e0;
-        border: 1px solid black;
-        position: relative;
-    }
-    
-    .progreso-fill {
-        height: 100%;
-        background: green;
-    }
-    
-    .progreso-text {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        text-align: center;
-        font-size: 10px;
-        line-height: 16px;
-    }
-    
-    /* === BOTONES === */
-    
-    .btn {
-        background: white;
-        border: 2px solid black;
-        padding: 8px 16px;
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        cursor: pointer;
-        text-transform: uppercase;
-    }
-    
-    .btn:hover {
-        background: #f0f0f0;
-    }
-    
-    .btn:disabled {
-        background: #e0e0e0;
-        border-color: #999;
-        cursor: not-allowed;
-        color: #666;
-    }
-    
-    .btn-sm {
-        padding: 4px 8px;
-        font-size: 10px;
-    }
-    
-    .btn-primary {
-        border-color: #0066cc;
-    }
-    
-    .btn-success {
-        border-color: green;
-    }
-    
-    .btn-danger {
-        border-color: red;
-    }
-    
-    /* === MODAL === */
-    
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-    }
-    
-    .modal-box {
-        background: white;
-        border: 3px solid black;
-        width: 90%;
-        max-width: 700px;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-    
-    .modal-header {
-        background: black;
-        color: white;
-        padding: 12px;
-        font-size: 13px;
-        font-weight: bold;
-    }
-    
-    .modal-body {
-        padding: 20px;
-    }
-    
-    .modal-footer {
-        border-top: 2px solid black;
-        padding: 15px;
-        text-align: right;
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-    }
-    
-    /* === FORMULARIO === */
-    
-    .form-group {
-        margin-bottom: 15px;
-    }
-    
-    .form-label {
-        display: block;
-        font-size: 11px;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    
-    .input-text {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        border: 1px solid black;
-        padding: 6px;
-        background: white;
-        width: 100%;
-    }
-    
-    .input-text:disabled {
-        background: #e0e0e0;
-    }
-    
-    /* === HISTORIAL === */
-    
-    .historial-item {
-        border: 1px solid #ccc;
-        padding: 10px;
-        margin-bottom: 10px;
-        background: #fafafa;
-    }
-    
-    .historial-fecha {
-        font-size: 10px;
-        color: #666;
-    }
-    
-    .historial-accion {
-        font-weight: bold;
-        font-size: 11px;
-    }
-    
-    .historial-usuario {
-        font-size: 10px;
-        color: #333;
-    }
-    
-    /* === LOADING/EMPTY === */
-    
-    .loading-cell {
-        text-align: center;
-        padding: 40px;
-        font-size: 12px;
-    }
-    
-    .empty-cell {
-        text-align: center;
-        padding: 40px;
-        font-size: 12px;
-        color: #666;
-    }
-    
-    /* === ALERTAS === */
-    
-    .alertas-section {
-        border: 2px solid red;
-        padding: 10px;
-        margin-bottom: 20px;
-        background: #fff0f0;
-    }
-    
-    .alertas-titulo {
-        font-weight: bold;
-        font-size: 12px;
-        color: red;
-        margin-bottom: 10px;
-    }
-    
-    .alerta-item {
-        font-size: 11px;
-        padding: 5px;
-        border-bottom: 1px solid #ffcccc;
-    }
-    
-    .alerta-item:last-child {
-        border-bottom: none;
-    }
-</style>
-
-<div class="seguimiento-container">
+<div class="seguimiento-permisos-container">
     <!-- Header -->
-    <div class="seguimiento-header">
-        <h1 class="seguimiento-title">SEGUIMIENTO DE PERMISOS</h1>
-        <div class="seguimiento-info">
+    <div class="seguimiento-permisos-header">
+        <h1 class="seguimiento-permisos-title">SEGUIMIENTO DE PERMISOS</h1>
+        <div class="seguimiento-permisos-info">
             @DateTime.Now.ToString("dddd, dd 'de' MMMM 'de' yyyy - HH:mm", new System.Globalization.CultureInfo("es-CO"))
             | Usuario: @usuarioNombre
         </div>
@@ -454,51 +26,51 @@
     
     @if (cargando)
     {
-        <div class="loading-cell">CARGANDO DATOS...</div>
+        <div class="seguimiento-permisos-loading-cell">CARGANDO DATOS...</div>
     }
     else
     {
         <!-- Alertas urgentes -->
         @if (alertasUrgentes.Any())
         {
-            <div class="alertas-section">
-                <div class="alertas-titulo">⚠ ALERTAS URGENTES (@alertasUrgentes.Count)</div>
+            <div class="seguimiento-permisos-alertas-section">
+                <div class="seguimiento-permisos-alertas-titulo">⚠ ALERTAS URGENTES (@alertasUrgentes.Count)</div>
                 @foreach (var alerta in alertasUrgentes.Take(5))
                 {
-                    <div class="alerta-item">
+                    <div class="seguimiento-permisos-alerta-item">
                         <strong>@alerta.NumeroActa</strong> - @alerta.Mensaje
-                        <button class="btn btn-sm" @onclick="() => VerPermiso(alerta.PermisoId)">VER</button>
+                        <button class="seguimiento-permisos-btn seguimiento-permisos-btn-sm" @onclick="() => VerPermiso(alerta.PermisoId)">VER</button>
                     </div>
                 }
             </div>
         }
         
         <!-- Dashboard de Estadísticas -->
-        <div class="dashboard-grid">
-            <div class="stat-card urgente">
+        <div class="seguimiento-permisos-dashboard-grid">
+            <div class="seguimiento-permisos-stat-card urgente">
                 <h3>DOCUMENTOS VENCIDOS</h3>
-                <div class="stat-number">@estadisticas.TotalDocumentosVencidos</div>
+                <div class="seguimiento-permisos-stat-number">@estadisticas.TotalDocumentosVencidos</div>
             </div>
             
-            <div class="stat-card warning">
+            <div class="seguimiento-permisos-stat-card warning">
                 <h3>PENDIENTES DOCUMENTO</h3>
-                <div class="stat-number">@estadisticas.TotalPendientesDocumento</div>
+                <div class="seguimiento-permisos-stat-number">@estadisticas.TotalPendientesDocumento</div>
             </div>
             
-            <div class="stat-card info">
+            <div class="seguimiento-permisos-stat-card info">
                 <h3>EN COMPENSACIÓN</h3>
-                <div class="stat-number">@estadisticas.TotalEnCompensacion</div>
+                <div class="seguimiento-permisos-stat-number">@estadisticas.TotalEnCompensacion</div>
             </div>
             
-            <div class="stat-card">
+            <div class="seguimiento-permisos-stat-card">
                 <h3>PARA DESCUENTO</h3>
-                <div class="stat-number">@estadisticas.TotalParaDescuento</div>
-                <div class="stat-amount">$@estadisticas.MontoTotalDescuentos.ToString("N0")</div>
+                <div class="seguimiento-permisos-stat-number">@estadisticas.TotalParaDescuento</div>
+                <div class="seguimiento-permisos-stat-amount">$@estadisticas.MontoTotalDescuentos.ToString("N0")</div>
             </div>
         </div>
         
         <!-- Tabs de Seguimiento -->
-        <div class="seguimiento-tabs">
+        <div class="seguimiento-permisos-tabs">
             <button class="@(tabActivo == "documentos" ? "active" : "")" 
                     @onclick='() => CambiarTab("documentos")'>
                 PENDIENTES DOCUMENTO (@estadisticas.TotalPendientesDocumento)
@@ -518,7 +90,7 @@
         </div>
         
         <!-- Contenido según tab -->
-        <div class="seguimiento-content">
+        <div class="seguimiento-permisos-content">
             @if (tabActivo == "documentos")
             {
                 <TablaPendientesDocumento 
@@ -563,22 +135,22 @@
 <!-- Modal Registrar Documento -->
 @if (mostrarModalDocumento)
 {
-    <div class="modal-overlay" @onclick="CerrarModales">
-        <div class="modal-box" @onclick:stopPropagation>
-            <div class="modal-header">REGISTRAR ENTREGA DE DOCUMENTO</div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">PERMISO</label>
-                    <input type="text" class="input-text" value="@permisoParaAccion?.NumeroActa" disabled />
+    <div class="seguimiento-permisos-modal-overlay" @onclick="CerrarModales">
+        <div class="seguimiento-permisos-modal-box" @onclick:stopPropagation>
+            <div class="seguimiento-permisos-modal-header">REGISTRAR ENTREGA DE DOCUMENTO</div>
+            <div class="seguimiento-permisos-modal-body">
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">PERMISO</label>
+                    <input type="text" class="seguimiento-permisos-input-text" value="@permisoParaAccion?.NumeroActa" disabled />
                 </div>
-                <div class="form-group">
-                    <label class="form-label">OBSERVACIONES</label>
-                    <textarea class="input-text" rows="3" @bind="observacionDocumento"></textarea>
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">OBSERVACIONES</label>
+                    <textarea class="seguimiento-permisos-input-text" rows="3" @bind="observacionDocumento"></textarea>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn" @onclick="CerrarModales">CANCELAR</button>
-                <button class="btn btn-success" @onclick="ConfirmarEntregaDocumento">CONFIRMAR ENTREGA</button>
+            <div class="seguimiento-permisos-modal-footer">
+                <button class="seguimiento-permisos-btn" @onclick="CerrarModales">CANCELAR</button>
+                <button class="seguimiento-permisos-btn seguimiento-permisos-btn-success" @onclick="ConfirmarEntregaDocumento">CONFIRMAR ENTREGA</button>
             </div>
         </div>
     </div>
@@ -587,33 +159,33 @@
 <!-- Modal Registrar Compensación -->
 @if (mostrarModalCompensacion)
 {
-    <div class="modal-overlay" @onclick="CerrarModales">
-        <div class="modal-box" @onclick:stopPropagation>
-            <div class="modal-header">REGISTRAR HORAS COMPENSADAS</div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">PERMISO</label>
-                    <input type="text" class="input-text" value="@permisoParaAccion?.NumeroActa" disabled />
+    <div class="seguimiento-permisos-modal-overlay" @onclick="CerrarModales">
+        <div class="seguimiento-permisos-modal-box" @onclick:stopPropagation>
+            <div class="seguimiento-permisos-modal-header">REGISTRAR HORAS COMPENSADAS</div>
+            <div class="seguimiento-permisos-modal-body">
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">PERMISO</label>
+                    <input type="text" class="seguimiento-permisos-input-text" value="@permisoParaAccion?.NumeroActa" disabled />
                 </div>
-                <div class="form-group">
-                    <label class="form-label">HORAS A COMPENSAR: @permisoParaAccion?.HorasCompensar | COMPENSADAS: @permisoParaAccion?.HorasCompensadas</label>
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">HORAS A COMPENSAR: @permisoParaAccion?.HorasCompensar | COMPENSADAS: @permisoParaAccion?.HorasCompensadas</label>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">FECHA COMPENSACIÓN</label>
-                    <input type="date" class="input-text" @bind="fechaCompensacion" />
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">FECHA COMPENSACIÓN</label>
+                    <input type="date" class="seguimiento-permisos-input-text" @bind="fechaCompensacion" />
                 </div>
-                <div class="form-group">
-                    <label class="form-label">HORAS TRABAJADAS</label>
-                    <input type="number" class="input-text" @bind="horasCompensadas" min="1" max="12" />
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">HORAS TRABAJADAS</label>
+                    <input type="number" class="seguimiento-permisos-input-text" @bind="horasCompensadas" min="1" max="12" />
                 </div>
-                <div class="form-group">
-                    <label class="form-label">DESCRIPCIÓN ACTIVIDAD</label>
-                    <textarea class="input-text" rows="3" @bind="descripcionCompensacion"></textarea>
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">DESCRIPCIÓN ACTIVIDAD</label>
+                    <textarea class="seguimiento-permisos-input-text" rows="3" @bind="descripcionCompensacion"></textarea>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn" @onclick="CerrarModales">CANCELAR</button>
-                <button class="btn btn-success" @onclick="ConfirmarCompensacion">REGISTRAR HORAS</button>
+            <div class="seguimiento-permisos-modal-footer">
+                <button class="seguimiento-permisos-btn" @onclick="CerrarModales">CANCELAR</button>
+                <button class="seguimiento-permisos-btn seguimiento-permisos-btn-success" @onclick="ConfirmarCompensacion">REGISTRAR HORAS</button>
             </div>
         </div>
     </div>
@@ -622,40 +194,40 @@
 <!-- Modal Cambiar Resolución -->
 @if (mostrarModalCambioResolucion)
 {
-    <div class="modal-overlay" @onclick="CerrarModales">
-        <div class="modal-box" @onclick:stopPropagation>
-            <div class="modal-header">CAMBIAR RESOLUCIÓN DE PERMISO</div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">PERMISO</label>
-                    <input type="text" class="input-text" value="@permisoParaAccion?.NumeroActa" disabled />
+    <div class="seguimiento-permisos-modal-overlay" @onclick="CerrarModales">
+        <div class="seguimiento-permisos-modal-box" @onclick:stopPropagation>
+            <div class="seguimiento-permisos-modal-header">CAMBIAR RESOLUCIÓN DE PERMISO</div>
+            <div class="seguimiento-permisos-modal-body">
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">PERMISO</label>
+                    <input type="text" class="seguimiento-permisos-input-text" value="@permisoParaAccion?.NumeroActa" disabled />
                 </div>
-                <div class="form-group">
-                    <label class="form-label">NUEVA RESOLUCIÓN</label>
-                    <select class="input-text" @bind="nuevaResolucion">
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">NUEVA RESOLUCIÓN</label>
+                    <select class="seguimiento-permisos-input-text" @bind="nuevaResolucion">
                         <option value="2">DESCONTADO (Se descuenta en nómina)</option>
                         <option value="1">REMUNERADO (No se descuenta)</option>
                     </select>
                 </div>
                 @if (nuevaResolucion == 2)
                 {
-                    <div class="form-group">
-                        <label class="form-label">MONTO A DESCONTAR</label>
-                        <input type="number" class="input-text" @bind="montoDescuento" step="1000" />
+                    <div class="seguimiento-permisos-form-group">
+                        <label class="seguimiento-permisos-form-label">MONTO A DESCONTAR</label>
+                        <input type="number" class="seguimiento-permisos-input-text" @bind="montoDescuento" step="1000" />
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">PERÍODO DE DESCUENTO</label>
-                        <input type="text" class="input-text" @bind="periodoDescuento" placeholder="AAAA-MM" />
+                    <div class="seguimiento-permisos-form-group">
+                        <label class="seguimiento-permisos-form-label">PERÍODO DE DESCUENTO</label>
+                        <input type="text" class="seguimiento-permisos-input-text" @bind="periodoDescuento" placeholder="AAAA-MM" />
                     </div>
                 }
-                <div class="form-group">
-                    <label class="form-label">MOTIVO DEL CAMBIO</label>
-                    <textarea class="input-text" rows="3" @bind="motivoCambioResolucion"></textarea>
+                <div class="seguimiento-permisos-form-group">
+                    <label class="seguimiento-permisos-form-label">MOTIVO DEL CAMBIO</label>
+                    <textarea class="seguimiento-permisos-input-text" rows="3" @bind="motivoCambioResolucion"></textarea>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn" @onclick="CerrarModales">CANCELAR</button>
-                <button class="btn btn-danger" @onclick="ConfirmarCambioResolucion">CONFIRMAR CAMBIO</button>
+            <div class="seguimiento-permisos-modal-footer">
+                <button class="seguimiento-permisos-btn" @onclick="CerrarModales">CANCELAR</button>
+                <button class="seguimiento-permisos-btn seguimiento-permisos-btn-danger" @onclick="ConfirmarCambioResolucion">CONFIRMAR CAMBIO</button>
             </div>
         </div>
     </div>
@@ -663,10 +235,14 @@
 
 @code {
     // Estados
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? TabQuery { get; set; }
+    
     private bool cargando = true;
     private string tabActivo = "documentos";
     private string usuarioNombre = "";
     private int usuarioId = 0;
+    private static readonly HashSet<string> _tabsValidos = new() { "documentos", "compensacion", "descuentos", "vencidos" };
     
     // Datos
     private EstadisticasSeguimiento estadisticas = new();
@@ -713,6 +289,12 @@
             usuarioNombre = AuthService.CurrentUser.NombreCompleto ?? "Usuario";
             usuarioId = AuthService.CurrentUser.Id;
             
+            // Leer tab desde URL
+            if (!string.IsNullOrEmpty(TabQuery) && _tabsValidos.Contains(TabQuery))
+            {
+                tabActivo = TabQuery;
+            }
+            
             await CargarDatos();
         }
         catch (Exception ex)
@@ -750,7 +332,8 @@
     private void CambiarTab(string tab)
     {
         tabActivo = tab;
-        StateHasChanged();
+        var uri = Navigation.GetUriWithQueryParameter("tab", tab);
+        Navigation.NavigateTo(uri, replace: true);
     }
     
     private void VerPermiso(int permisoId)

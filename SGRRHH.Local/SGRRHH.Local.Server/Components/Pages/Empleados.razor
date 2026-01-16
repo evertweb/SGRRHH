@@ -19,333 +19,41 @@
 
 <PageTitle>Empleados - SGRRHH</PageTitle>
 
-<style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    body {
-        font-family: 'Courier New', monospace;
-        background: #FFFFFF;
-        color: #000000;
-        min-width: 1024px;
-    }
-
-    .page-container {
-        width: 100%;
-        min-width: 1024px;
-        padding: 20px;
-    }
-
-    .page-header {
-        border-bottom: 2px solid #000000;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-
-    .page-title {
-        font-size: 18px;
-        font-weight: bold;
-        color: #000000;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-
-    .action-bar {
-        border: 1px solid #000000;
-        padding: 10px;
-        margin-bottom: 20px;
-        background: #FFFFFF;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-
-    .btn {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        padding: 8px 16px;
-        border: 2px solid #000000;
-        background: #FFFFFF;
-        color: #000000;
-        cursor: pointer;
-        text-transform: uppercase;
-        font-weight: bold;
-    }
-
-    .btn:hover:not(:disabled) {
-        background: #F0F0F0;
-    }
-
-    .btn:disabled {
-        border-color: #CCCCCC;
-        color: #CCCCCC;
-        cursor: not-allowed;
-        background: #F9F9F9;
-    }
-
-    .filter-section {
-        border-top: 1px solid #CCCCCC;
-        padding-top: 10px;
-        display: flex;
-        gap: 10px;
-        align-items: flex-end;
-    }
-
-    .filter-group {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .filter-label {
-        font-size: 11px;
-        font-weight: bold;
-        color: #000000;
-        text-transform: uppercase;
-    }
-
-    .filter-input,
-    .filter-select {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        padding: 6px;
-        border: 1px solid #000000;
-        background: #FFFFFF;
-        color: #000000;
-        min-width: 200px;
-    }
-
-    .filter-select {
-        min-width: 150px;
-    }
-
-    .results-info {
-        font-size: 12px;
-        color: #000000;
-        padding: 10px 0;
-        border-bottom: 1px solid #CCCCCC;
-        margin-bottom: 10px;
-    }
-
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        border: 2px solid #000000;
-        background: #FFFFFF;
-        font-size: 11px;
-    }
-
-    .data-table thead {
-        background: #F0F0F0;
-        border-bottom: 2px solid #000000;
-    }
-
-    .data-table th {
-        padding: 8px;
-        text-align: left;
-        font-weight: bold;
-        color: #000000;
-        text-transform: uppercase;
-        border-right: 1px solid #CCCCCC;
-        font-size: 10px;
-        letter-spacing: 1px;
-    }
-
-    .data-table th:last-child {
-        border-right: none;
-    }
-
-    .data-table td {
-        padding: 6px 8px;
-        border-bottom: 1px solid #CCCCCC;
-        border-right: 1px solid #CCCCCC;
-        color: #000000;
-    }
-
-    .data-table td:last-child {
-        border-right: none;
-    }
-
-    .data-table tbody tr:hover {
-        background: #F9F9F9;
-    }
-
-    .data-table tbody tr.selected {
-        background: #E8E8E8;
-    }
-
-    .loading-message,
-    .empty-message {
-        text-align: center;
-        padding: 40px;
-        color: #666666;
-        font-size: 12px;
-    }
-
-    .cell-code {
-        font-weight: bold;
-    }
-
-    .cell-estado {
-        text-transform: uppercase;
-        font-size: 10px;
-    }
-
-    .estado-activo {
-        color: #006400;
-    }
-
-    .estado-retirado {
-        color: #8B0000;
-    }
-
-    .estado-pendiente {
-        color: #B8860B;
-    }
-
-    .estado-vacaciones {
-        color: #4B0082;
-    }
-
-    .estado-suspendido {
-        color: #DC143C;
-    }
-
-    .cell-actions {
-        white-space: nowrap;
-    }
-
-    .btn-table {
-        font-family: 'Courier New', monospace;
-        font-size: 10px;
-        padding: 4px 8px;
-        border: 1px solid #000000;
-        background: #FFFFFF;
-        color: #000000;
-        cursor: pointer;
-        margin-right: 4px;
-        text-transform: uppercase;
-    }
-
-    .btn-table:hover {
-        background: #F0F0F0;
-    }
-
-    .btn-table.btn-danger-small {
-        color: #ff0000;
-        border-color: #ff0000;
-    }
-
-    .btn-table.btn-danger-small:hover {
-        background: #ff0000;
-        color: #FFFFFF;
-    }
-
-    .pagination-bar {
-        border-top: 2px solid #000000;
-        padding-top: 15px;
-        margin-top: 15px;
-        text-align: center;
-        font-size: 12px;
-    }
-
-    .shortcuts-bar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: #000000;
-        color: #FFFFFF;
-        padding: 8px 20px;
-        font-size: 11px;
-        border-top: 2px solid #000000;
-        display: flex;
-        gap: 20px;
-        z-index: 1000;
-    }
-
-    .shortcut-item {
-        display: flex;
-        gap: 5px;
-    }
-
-    .shortcut-key {
-        font-weight: bold;
-        color: #FFFF00;
-    }
-
-    .error-message {
-        border: 2px solid #FF0000;
-        background: #FFFFFF;
-        color: #FF0000;
-        padding: 12px;
-        margin: 10px 0;
-        font-size: 12px;
-        font-weight: bold;
-    }
-
-    .success-message {
-        border: 2px solid #008000;
-        background: #FFFFFF;
-        color: #008000;
-        padding: 12px;
-        margin: 10px 0;
-        font-size: 12px;
-        font-weight: bold;
-    }
-
-    .warning-message {
-        border: 2px solid #FFA500;
-        background: #FFFFFF;
-        color: #B8860B;
-        padding: 12px;
-        margin: 10px 0;
-        font-size: 12px;
-        font-weight: bold;
-    }
-</style>
-
 <!-- Toast Messages -->
 <MessageToast @ref="messageToast" />
 
 <!-- Unsaved Changes Guard -->
 <UnsavedChangesGuard @ref="unsavedChangesGuard" HasChanges="hasUnsavedChanges" />
 
-<div class="page-container">
-    <div class="page-header">
-        <h1 class="page-title">GESTI�N DE EMPLEADOS</h1>
+<div class="empleados-page-container">
+    <div class="empleados-page-header">
+        <h1 class="empleados-page-title">GESTIÓN DE EMPLEADOS</h1>
     </div>
 
-    <div class="action-bar">
-        <div class="action-buttons">
+    <div class="empleados-action-bar">
+        <div class="empleados-action-buttons">
             @if (PuedeCrear)
             {
-                <button class="btn" @onclick="NuevoEmpleadoOnboarding">NUEVO (F3)</button>
+                <button class="empleados-btn" @onclick="NuevoEmpleadoOnboarding">NUEVO (F3)</button>
             }
-            <button class="btn" @onclick="CargarEmpleados">ACTUALIZAR (F5)</button>
-            <button class="btn" @onclick="Buscar">BUSCAR (F2)</button>
+            <button class="empleados-btn" @onclick="CargarEmpleados">ACTUALIZAR (F5)</button>
+            <button class="empleados-btn" @onclick="Buscar">BUSCAR (F2)</button>
         </div>
         
-        <div class="filter-section">
-            <div class="filter-group">
-                <label class="filter-label">BUSCAR:</label>
+        <div class="empleados-filter-section">
+            <div class="empleados-filter-group">
+                <label class="empleados-filter-label">BUSCAR:</label>
                 <input type="text" 
                        id="searchInput" 
-                       class="filter-input"
+                       class="empleados-filter-input"
                        @bind="searchTerm" 
                        @bind:event="oninput" 
                        @onkeyup="OnSearchKeyUp" />
             </div>
             
-            <div class="filter-group">
-                <label class="filter-label">ESTADO:</label>
-                <select class="filter-select" @bind="filtroEstado" @bind:after="Filtrar">
+            <div class="empleados-filter-group">
+                <label class="empleados-filter-label">ESTADO:</label>
+                <select class="empleados-filter-select" @bind="filtroEstado" @bind:after="Filtrar">
                     <option value="">TODOS</option>
                     <option value="@((int)EstadoEmpleado.Activo)">ACTIVOS</option>
                     <option value="@((int)EstadoEmpleado.PendienteAprobacion)">PENDIENTES</option>
@@ -360,40 +68,34 @@
             
             @if (!string.IsNullOrEmpty(searchTerm) || !string.IsNullOrEmpty(filtroEstado))
             {
-                <button class="btn" @onclick="LimpiarFiltros">LIMPIAR FILTROS</button>
+                <button class="empleados-btn" @onclick="LimpiarFiltros">LIMPIAR FILTROS</button>
             }
         </div>
     </div>
 
-    <div class="results-info">
+    <div class="empleados-results-info">
         Mostrando @empleados.Count de @totalEmpleados registro(s)
         @if (_datosDesactualizados)
         {
             <span style="margin-left: 20px; color: #FF9900; font-weight: bold;">
                 ⚠ HAY CAMBIOS - 
-                <button class="btn" style="display: inline-block; padding: 4px 8px; margin: 0;" @onclick="CargarEmpleados">REFRESCAR AHORA</button>
+                <button class="empleados-btn" style="display: inline-block; padding: 4px 8px; margin: 0;" @onclick="CargarEmpleados">REFRESCAR AHORA</button>
             </span>
         }
     </div>
 
-    <table class="data-table">
+    <table class="empleados-data-table">
         <thead>
             <tr>
-                <th>C�DIGO</th>
-                <th>C�DULA</th>
+                <th>CÓDIGO</th>
+                <th>CÉDULA</th>
                 <th>NOMBRES</th>
                 <th>APELLIDOS</th>
-                <th>FECHA NACIMIENTO</th>
-                <th>G�NERO</th>
-                <th>ESTADO CIVIL</th>
-                <th>TEL�FONO</th>
-                <th>EMAIL</th>
-                <th>FECHA INGRESO</th>
-                <th>FECHA RETIRO</th>
+                <th>TELÉFONO</th>
                 <th>CARGO</th>
                 <th>DEPARTAMENTO</th>
+                <th>FECHA INGRESO</th>
                 <th>ESTADO</th>
-                <th>TIPO CONTRATO</th>
                 <th>SALARIO BASE</th>
                 <th>ACCIONES</th>
             </tr>
@@ -401,11 +103,11 @@
         <tbody>
             @if (isLoading)
             {
-                <tr><td colspan="17" class="loading-message">CARGANDO DATOS...</td></tr>
+                <tr><td colspan="11" class="empleados-loading-message">CARGANDO DATOS...</td></tr>
             }
             else if (!empleados.Any())
             {
-                <tr><td colspan="17" class="empty-message">NO HAY REGISTROS PARA MOSTRAR</td></tr>
+                <tr><td colspan="11" class="empleados-empty-message">NO HAY REGISTROS PARA MOSTRAR</td></tr>
             }
             else
             {
@@ -413,35 +115,30 @@
                 {
                     <tr class="@(selectedEmpleado?.Id == emp.Id ? "selected" : "")"
                         @onclick="() => SelectEmpleado(emp)">
-                        <td class="cell-code">@emp.Codigo</td>
+                        <td class="empleados-cell-code">@emp.Codigo</td>
                         <td>@NumberFormatHelper.FormatearCedula(emp.Cedula)</td>
                         <td>@emp.Nombres</td>
                         <td>@emp.Apellidos</td>
-                        <td>@(emp.FechaNacimiento?.ToString("dd/MM/yyyy") ?? "-")</td>
-                        <td>@(emp.Genero?.ToString() ?? "-")</td>
-                        <td>@(emp.EstadoCivil?.ToString() ?? "-")</td>
-                        <td>@(string.IsNullOrEmpty(emp.Telefono) ? "-" : NumberFormatHelper.FormatearTelefono(emp.Telefono))</td>
-                        <td>@(emp.Email ?? "-")</td>
-                        <td>@emp.FechaIngreso.ToString("dd/MM/yyyy")</td>
-                        <td>@(emp.FechaRetiro?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td>@(string.IsNullOrEmpty(emp.TelefonoCelular) ? "-" : NumberFormatHelper.FormatearTelefono(emp.TelefonoCelular))</td>
                         <td>@(emp.Cargo?.Nombre ?? "-")</td>
                         <td>@(emp.Departamento?.Nombre ?? "-")</td>
-                        <td class="cell-estado estado-@GetEstadoClass(emp.Estado)">@emp.Estado.ToString().ToUpper()</td>
-                        @* <td>@emp.TipoContrato.ToString()</td> *@ @* Campo eliminado - ver Contrato *@
+                        <td>@emp.FechaIngreso.ToString("dd/MM/yyyy")</td>
+                        <td class="empleados-cell-estado estado-@GetEstadoClass(emp.Estado)">@emp.Estado.ToString().ToUpper()</td>
                         <td>@NumberFormatHelper.FormatearMoneda(emp.SalarioBase)</td>
-                        <td class="cell-actions">
+                        <td class="empleados-cell-actions">
+                            <button class="empleados-btn-table" @onclick="() => VerExpediente(emp)" @onclick:stopPropagation="true">VER</button>
                             @if (PuedeEditar)
                             {
-                                <button class="btn-table" @onclick="() => EditarEmpleado(emp)" @onclick:stopPropagation="true">EDITAR</button>
+                                <button class="empleados-btn-table" @onclick="() => EditarEmpleado(emp)" @onclick:stopPropagation="true">EDITAR</button>
                             }
                             @if (PuedeAprobar && emp.Estado == EstadoEmpleado.PendienteAprobacion && 
                                 EstadoEmpleadoService.TienePermisoParaTransicion(AuthService.CurrentUser?.Rol ?? RolUsuario.Operador, emp.Estado, EstadoEmpleado.Activo))
                             {
-                                <button class="btn-table" style="color: #006600; border-color: #006600;" @onclick="() => AprobarEmpleado(emp)" @onclick:stopPropagation="true">APROBAR</button>
+                                <button class="empleados-btn-table" style="color: #006600; border-color: #006600;" @onclick="() => AprobarEmpleado(emp)" @onclick:stopPropagation="true">APROBAR</button>
                             }
                             @if (PuedeEliminar)
                             {
-                                <button class="btn-table btn-danger-small" @onclick="() => ConfirmarEliminarEmpleado(emp)" @onclick:stopPropagation="true">ELIMINAR</button>
+                                <button class="empleados-btn-table btn-danger-small" @onclick="() => ConfirmarEliminarEmpleado(emp)" @onclick:stopPropagation="true">ELIMINAR</button>
                             }
                         </td>
                     </tr>
@@ -452,31 +149,31 @@
 
     @if (totalEmpleados > pageSize)
     {
-        <div class="pagination-bar">
+        <div class="empleados-pagination-bar">
             Mostrando @(((currentPage - 1) * pageSize) + 1) a @(Math.Min(currentPage * pageSize, totalEmpleados)) de @totalEmpleados registro(s) | P�gina @currentPage de @((int)Math.Ceiling((double)totalEmpleados / pageSize))
         </div>
     }
 </div>
 
-<div class="shortcuts-bar">
-    <div class="shortcut-item">
-        <span class="shortcut-key">F2</span>
+<div class="empleados-shortcuts-bar">
+    <div class="empleados-shortcut-item">
+        <span class="empleados-shortcut-key">F2</span>
         <span>=BUSCAR</span>
     </div>
-    <div class="shortcut-item">
-        <span class="shortcut-key">F3</span>
+    <div class="empleados-shortcut-item">
+        <span class="empleados-shortcut-key">F3</span>
         <span>=NUEVO</span>
     </div>
-    <div class="shortcut-item">
-        <span class="shortcut-key">F5</span>
+    <div class="empleados-shortcut-item">
+        <span class="empleados-shortcut-key">F5</span>
         <span>=ACTUALIZAR</span>
     </div>
-    <div class="shortcut-item">
-        <span class="shortcut-key">TAB</span>
+    <div class="empleados-shortcut-item">
+        <span class="empleados-shortcut-key">TAB</span>
         <span>=NAVEGAR</span>
     </div>
-    <div class="shortcut-item">
-        <span class="shortcut-key">ESC</span>
+    <div class="empleados-shortcut-item">
+        <span class="empleados-shortcut-key">ESC</span>
         <span>=SALIR</span>
     </div>
 </div>
@@ -500,6 +197,9 @@
 
 @code {
     [Parameter] public int? EmpleadoIdParam { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "edit")]
+    public int? EditEmpleadoId { get; set; }
     
     private const string PageId = "empleados";
     private MessageToast? messageToast;
@@ -575,14 +275,18 @@
         await CargarCatalogos();
         await CargarEmpleados();
         
-        // Si viene con parámetro, abrir ese empleado
+        // Si viene con query param edit, redirigir a la página de edición
+        if (EditEmpleadoId.HasValue && EditEmpleadoId.Value > 0)
+        {
+            Navigation.NavigateTo($"/empleados/{EditEmpleadoId.Value}/editar", replace: true);
+            return;
+        }
+        
+        // Si viene con parámetro de ruta, abrir el expediente
         if (EmpleadoIdParam.HasValue && EmpleadoIdParam.Value > 0)
         {
-            var empleado = await EmpleadoRepo.GetByIdWithRelationsAsync(EmpleadoIdParam.Value);
-            if (empleado != null)
-            {
-                await EditarEmpleado(empleado);
-            }
+            Navigation.NavigateTo($"/empleados/{EmpleadoIdParam.Value}/expediente", replace: true);
+            return;
         }
         
         // Iniciar polling automático
@@ -722,17 +426,18 @@
         Navigation.NavigateTo("/empleados/onboarding");
     }
     
-    private async Task EditarEmpleado(Empleado empleado)
-    {
-        Navigation.NavigateTo($"/empleados/{empleado.Id}/expediente");
-    }
-    
     private async Task EditarSeleccionado()
     {
         if (selectedEmpleado != null)
         {
-            await EditarEmpleado(selectedEmpleado);
+            EditarEmpleado(selectedEmpleado);
         }
+        await Task.CompletedTask;
+    }
+
+    private void EditarEmpleado(Empleado empleado)
+    {
+        Navigation.NavigateTo($"/empleados/{empleado.Id}/editar");
     }
 
     private async Task AprobarEmpleado(Empleado empleado)
@@ -784,12 +489,6 @@
             Logger.LogInformation("Empleado aprobado: {Codigo} por {Usuario} (Id: {UserId})", 
                 empleadoActual.Codigo, AuthService.CurrentUser?.Username, AuthService.CurrentUser?.Id);
             
-            await CargarEmpleados();
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("modificado por otro usuario"))
-        {
-            Logger.LogWarning(ex, "Conflicto de concurrencia aprobando empleado {Id}", empleado.Id);
-            messageToast?.ShowError("El empleado fue modificado por otro usuario. Por favor, intente nuevamente.");
             await CargarEmpleados();
         }
         catch (Exception ex)

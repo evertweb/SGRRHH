@@ -1,466 +1,36 @@
-﻿@page "/permisos"
+@page "/permisos"
 @page "/permisos/{PermisoIdParam:int?}"
 @using SGRRHH.Local.Domain.Entities
 @using SGRRHH.Local.Domain.Enums
-@using SGRRHH.Local.Shared.Interfaces
-@using Microsoft.AspNetCore.Components.Forms
+@using SGRRHH.Local.Server.Components.Permisos
 @inject IAuthService AuthService
 @inject IPermisoRepository PermisoRepository
-@inject ISeguimientoPermisoRepository SeguimientoRepository
-@inject IIncapacidadRepository IncapacidadRepository
 @inject IReportService ReportService
 @inject ICatalogCacheService CatalogCache
-@inject ILocalStorageService StorageService
 @inject NavigationManager Navigation
 @inject ILogger<Permisos> Logger
 @inject IJSRuntime JSRuntime
+@implements IDisposable
 
 <PageTitle>Permisos - SGRRHH</PageTitle>
 
-<style>
-    /* === SISTEMA HOSPITALARIO - PERMISOS === */
-    
-    body, * {
-        font-family: 'Courier New', monospace;
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-    
-    .permiso-container {
-        width: 100%;
-        min-width: 1024px;
-        max-width: 1920px;
-        margin: 0 auto;
-        padding: 20px;
-        background: white;
-    }
-    
-    .permiso-header {
-        border-bottom: 2px solid black;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-    
-    .permiso-title {
-        font-size: 18px;
-        font-weight: bold;
-        margin: 0;
-        text-align: left;
-    }
-    
-    .permiso-info {
-        font-size: 12px;
-        margin-top: 5px;
-        color: #000;
-    }
-    
-    /* === BLOQUES DE ERROR/CONFIRMACIÓN === */
-    
-    .error-box {
-        border: 3px solid red;
-        background: white;
-        padding: 15px;
-        margin: 20px 0;
-    }
-    
-    .error-title {
-        color: red;
-        font-size: 14px;
-        font-weight: bold;
-        margin: 0 0 10px 0;
-    }
-    
-    .error-text {
-        color: black;
-        font-size: 12px;
-        margin: 0 0 15px 0;
-    }
-    
-    .success-box {
-        border: 2px solid green;
-        background: white;
-        padding: 10px;
-        margin: 20px 0;
-        color: black;
-        font-size: 12px;
-    }
-    
-    /* === TECLAS DE FUNCIÓN === */
-    
-    .teclas-funcion {
-        border: 1px solid black;
-        background: white;
-        padding: 8px;
-        margin-bottom: 15px;
-        font-size: 11px;
-    }
-    
-    .tecla {
-        display: inline-block;
-        margin-right: 15px;
-    }
-    
-    /* === CONTROLES === */
-    
-    .controles-principales {
-        border: 1px solid black;
-        padding: 10px;
-        margin-bottom: 15px;
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-    
-    .controles-filtros {
-        border: 1px solid black;
-        padding: 10px;
-        margin-bottom: 15px;
-    }
-    
-    .filtro-grupo {
-        margin-bottom: 10px;
-    }
-    
-    .filtro-label {
-        display: inline-block;
-        width: 150px;
-        font-size: 12px;
-    }
-    
-    .btn {
-        background: white;
-        border: 2px solid black;
-        padding: 8px 16px;
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        cursor: pointer;
-        text-transform: uppercase;
-    }
-    
-    .btn:hover {
-        background: #f0f0f0;
-    }
-    
-    .btn:disabled {
-        background: #e0e0e0;
-        border-color: #999;
-        cursor: not-allowed;
-        color: #666;
-    }
-    
-    .btn-aprobar {
-        border-color: green;
-    }
-    
-    .btn-rechazar {
-        border-color: red;
-    }
-    
-    .input-text {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        border: 1px solid black;
-        padding: 6px;
-        background: white;
-    }
-    
-    .input-text:disabled {
-        background: #e0e0e0;
-    }
-    
-    .select {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        border: 1px solid black;
-        padding: 6px;
-        background: white;
-    }
-    
-    /* === INFORMACIÓN DE RESULTADOS === */
-    
-    .info-resultados {
-        border: 1px solid black;
-        padding: 8px;
-        margin-bottom: 15px;
-        font-size: 12px;
-        background: white;
-    }
-    
-    .info-pendientes {
-        color: black;
-        background: yellow;
-        padding: 2px 6px;
-        margin-left: 10px;
-    }
-    
-    /* === TABLA === */
-    
-    .tabla-permisos {
-        width: 100%;
-        border-collapse: collapse;
-        border: 2px solid black;
-        margin-bottom: 20px;
-    }
-    
-    .tabla-permisos th {
-        background: white;
-        border: 1px solid black;
-        padding: 8px;
-        text-align: left;
-        font-size: 11px;
-        font-weight: bold;
-    }
-    
-    .tabla-permisos td {
-        border: 1px solid black;
-        padding: 6px 8px;
-        font-size: 11px;
-    }
-    
-    .tabla-permisos tbody tr {
-        cursor: pointer;
-    }
-    
-    .tabla-permisos tbody tr:hover {
-        background: #f5f5f5;
-    }
-    
-    .tabla-permisos tbody tr.fila-seleccionada {
-        background: #d0d0d0;
-    }
-    
-    .td-centro {
-        text-align: center;
-    }
-    
-    .td-acta {
-        font-weight: bold;
-    }
-    
-    /* === ESTADOS === */
-    
-    .estado-pendiente {
-        background: yellow;
-        color: black;
-        padding: 2px 6px;
-        display: inline-block;
-    }
-    
-    .estado-aprobado {
-        background: green;
-        color: white;
-        padding: 2px 6px;
-        display: inline-block;
-    }
-    
-    .estado-rechazado {
-        background: red;
-        color: white;
-        padding: 2px 6px;
-        display: inline-block;
-    }
-    
-    .estado-cancelado {
-        background: #808080;
-        color: white;
-        padding: 2px 6px;
-        display: inline-block;
-    }
-    
-    /* === LOADING/EMPTY === */
-    
-    .loading-cell {
-        text-align: center;
-        padding: 40px;
-        font-size: 12px;
-    }
-    
-    .empty-cell {
-        text-align: center;
-        padding: 40px;
-        font-size: 12px;
-        color: #666;
-    }
-    
-    /* === MODAL === */
-    
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-    }
-    
-    .modal-box {
-        background: white;
-        border: 3px solid black;
-        width: 90%;
-        max-width: 900px;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-    
-    .modal-header {
-        background: black;
-        color: white;
-        padding: 12px;
-        font-size: 13px;
-        font-weight: bold;
-    }
-    
-    .modal-body {
-        padding: 20px;
-    }
-    
-    .modal-footer {
-        border-top: 2px solid black;
-        padding: 15px;
-        text-align: right;
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-    }
-    
-    /* === FORMULARIO === */
-    
-    .formulario-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-    
-    .formulario-seccion {
-        border: 1px solid black;
-        padding: 15px;
-        margin-bottom: 15px;
-    }
-    
-    .seccion-titulo {
-        font-weight: bold;
-        font-size: 12px;
-        margin-bottom: 15px;
-        border-bottom: 1px solid black;
-        padding-bottom: 5px;
-    }
-    
-    .campo-form {
-        margin-bottom: 15px;
-    }
-    
-    .campo-label {
-        display: block;
-        font-size: 11px;
-        font-weight: bold;
-        margin-bottom: 4px;
-    }
-    
-    .campo-requerido::after {
-        content: " *";
-        color: red;
-    }
-    
-    .campo-input {
-        width: 100%;
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        border: 1px solid black;
-        padding: 6px;
-        background: white;
-    }
-    
-    .campo-input:disabled {
-        background: #e0e0e0;
-        color: #666;
-    }
-    
-    .campo-textarea {
-        width: 100%;
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        border: 1px solid black;
-        padding: 6px;
-        background: white;
-        resize: vertical;
-    }
-    
-    .campo-textarea:disabled {
-        background: #e0e0e0;
-        color: #666;
-    }
-    
-    .campo-ayuda {
-        font-size: 10px;
-        color: #666;
-        margin-top: 3px;
-    }
-    
-    /* === DIÁLOGO CONFIRMACIÓN === */
-    
-    .dialogo-confirmacion {
-        border: 3px solid black;
-        background: white;
-        padding: 20px;
-        width: 500px;
-    }
-    
-    .dialogo-titulo {
-        font-size: 14px;
-        font-weight: bold;
-        margin-bottom: 15px;
-        border-bottom: 2px solid black;
-        padding-bottom: 8px;
-    }
-    
-    .dialogo-contenido {
-        margin-bottom: 20px;
-    }
-    
-    .dialogo-botones {
-        display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-    }
-    
-    /* === BLOQUE DE APROBACIÓN === */
-    
-    .bloque-aprobacion {
-        border: 2px solid black;
-        padding: 15px;
-        margin-top: 20px;
-        background: #f9f9f9;
-    }
-    
-    .bloque-aprobacion-titulo {
-        font-weight: bold;
-        font-size: 12px;
-        margin-bottom: 10px;
-    }
-    
-    .bloque-aprobacion-botones {
-        display: flex;
-        gap: 10px;
-    }
-</style>
+<div class="permisos-container">
+    <PermisosHeader UsuarioNombre="@(AuthService.CurrentUser?.NombreCompleto ?? "N/A")"
+                    FechaActual="@DateTime.Now"
+                    EsAprobador="@AuthService.IsAprobador"
+                    TotalPermisos="@totalPermisos"
+                    TotalFiltrados="@totalFiltrados"
+                    PendientesAprobacion="@permisosPendientes"
+                    TieneSeleccion="@(selectedPermiso != null)"
+                    PuedeAprobar="@(selectedPermiso?.Estado == EstadoPermiso.Pendiente)"
+                    PuedeGenerarPdf="@(selectedPermiso?.Estado == EstadoPermiso.Aprobado)"
+                    OnNuevo="@NuevoPermiso"
+                    OnActualizar="@CargarPermisos"
+                    OnVerDetalle="@EditarSeleccionado"
+                    OnAprobar="@AprobarSeleccionado"
+                    OnRechazar="@RechazarSeleccionado"
+                    OnGenerarPdf="@GenerarActaPDF" />
 
-<div class="permiso-container">
-    <!-- CABECERA -->
-    <div class="permiso-header">
-        <h1 class="permiso-title">SISTEMA DE GESTION DE PERMISOS</h1>
-        <div class="permiso-info">
-            USUARIO: @(AuthService.CurrentUser?.NombreCompleto ?? "N/A") | 
-            ROL: @(AuthService.IsAprobador ? "APROBADOR" : "OPERADOR") | 
-            FECHA: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
-        </div>
-    </div>
-    
-    <!-- ERRORES -->
     @if (errorMessage != null)
     {
         <div class="error-box">
@@ -469,662 +39,95 @@
             <button class="btn" @onclick="() => errorMessage = null">ACEPTAR</button>
         </div>
     }
-    
-    <!-- CONFIRMACIONES -->
+
     @if (successMessage != null)
     {
         <div class="success-box">
             @successMessage
         </div>
     }
-    
-    <!-- TECLAS DE FUNCIÓN -->
-    <div class="teclas-funcion">
-        <span class="tecla">F2=BUSCAR</span>
-        <span class="tecla">F3=NUEVO</span>
-        <span class="tecla">F4=DETALLE</span>
-        <span class="tecla">F5=ACTUALIZAR</span>
-        @if (AuthService.IsAprobador)
-        {
-            <span class="tecla">F6=APROBAR</span>
-            <span class="tecla">F7=RECHAZAR</span>
-        }
-        <span class="tecla">F12=PDF</span>
-        <span class="tecla">ESC=CERRAR</span>
-        <span class="tecla">TAB=NAVEGAR</span>
-    </div>
-    
-    <!-- CONTROLES PRINCIPALES -->
-    <div class="controles-principales">
-        <button class="btn" @onclick="NuevoPermiso">NUEVO</button>
-        <button class="btn" @onclick="CargarPermisos">ACTUALIZAR</button>
-        <button class="btn" @onclick="EditarSeleccionado" disabled="@(selectedPermiso == null)">VER DETALLE</button>
-        @if (AuthService.IsAprobador)
-        {
-            <button class="btn btn-aprobar" @onclick="AprobarSeleccionado" 
-                    disabled="@(selectedPermiso?.Estado != EstadoPermiso.Pendiente)">
-                APROBAR
-            </button>
-            <button class="btn btn-rechazar" @onclick="RechazarSeleccionado" 
-                    disabled="@(selectedPermiso?.Estado != EstadoPermiso.Pendiente)">
-                RECHAZAR
-            </button>
-        }
-        <button class="btn" @onclick="GenerarActaPDF" 
-                disabled="@(selectedPermiso?.Estado != EstadoPermiso.Aprobado)">
-            GENERAR PDF
-        </button>
-    </div>
-    
-    <!-- FILTROS -->
-    <div class="controles-filtros">
-        <div class="filtro-grupo">
-            <label class="filtro-label">BUSCAR:</label>
-            <input type="text" id="searchInput" class="input-text" style="width: 300px;"
-                   @bind="searchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
-            <button class="btn" @onclick="Buscar">BUSCAR</button>
-            @if (!string.IsNullOrEmpty(searchTerm))
-            {
-                <button class="btn" @onclick="LimpiarBusqueda">LIMPIAR</button>
-            }
-        </div>
-        
-        <div class="filtro-grupo">
-            <label class="filtro-label">ESTADO:</label>
-            <select class="select" @bind="filtroEstado" @bind:after="Filtrar" style="width: 200px;">
-                <option value="">TODOS</option>
-                <option value="@((int)EstadoPermiso.Pendiente)">PENDIENTE</option>
-                <option value="@((int)EstadoPermiso.Aprobado)">APROBADO</option>
-                <option value="@((int)EstadoPermiso.Rechazado)">RECHAZADO</option>
-                <option value="@((int)EstadoPermiso.Cancelado)">CANCELADO</option>
-            </select>
-        </div>
-        
-        <div class="filtro-grupo">
-            <label class="filtro-label">EMPLEADO:</label>
-            <select class="select" @bind="filtroEmpleadoId" @bind:after="Filtrar" style="width: 300px;">
-                <option value="">TODOS</option>
-                @foreach (var emp in todosEmpleados)
-                {
-                    <option value="@emp.Id">@emp.NombreCompleto</option>
-                }
-            </select>
-        </div>
-    </div>
-    
-    <!-- INFORMACIÓN DE RESULTADOS -->
-    <div class="info-resultados">
-        REGISTROS: @permisos.Count() DE @totalPermisos
-        @if (AuthService.IsAprobador && permisosPendientes > 0)
-        {
-            <span class="info-pendientes">PENDIENTES DE APROBACION: @permisosPendientes</span>
-        }
-    </div>
-    
-    <!-- TABLA DE PERMISOS -->
-    <table class="tabla-permisos">
-        <thead>
-            <tr>
-                <th>N° ACTA</th>
-                <th>EMPLEADO</th>
-                <th>CEDULA</th>
-                <th>TIPO PERMISO</th>
-                <th>FECHA INICIO</th>
-                <th>FECHA FIN</th>
-                <th>DIAS</th>
-                <th>ESTADO</th>
-                <th>SOLICITADO</th>
-                <th>APROBADOR</th>
-                <th>F. APROBACION</th>
-                <th>ACCIONES</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (isLoading)
-            {
-                <tr><td colspan="12" class="loading-cell">CARGANDO DATOS...</td></tr>
-            }
-            else if (!permisos.Any())
-            {
-                <tr><td colspan="12" class="empty-cell">NO HAY REGISTROS PARA MOSTRAR</td></tr>
-            }
-            else
-            {
-                @foreach (var permiso in permisos)
-                {
-                    <tr class="@(selectedPermiso?.Id == permiso.Id ? "fila-seleccionada" : "")"
-                        @onclick="() => SelectPermiso(permiso)">
-                        <td class="td-acta">@permiso.NumeroActa</td>
-                        <td>@(permiso.Empleado?.NombreCompleto ?? "N/A")</td>
-                        <td>@(permiso.Empleado?.Cedula ?? "N/A")</td>
-                        <td>@(permiso.TipoPermiso?.Nombre ?? "N/A")</td>
-                        <td>@permiso.FechaInicio.ToString("dd/MM/yyyy")</td>
-                        <td>@permiso.FechaFin.ToString("dd/MM/yyyy")</td>
-                        <td class="td-centro">@permiso.TotalDias</td>
-                        <td>
-                            <span class="estado-@permiso.Estado.ToString().ToLower()">
-                                @GetEstadoTexto(permiso.Estado)
-                            </span>
-                        </td>
-                        <td>@permiso.FechaSolicitud.ToString("dd/MM/yyyy")</td>
-                        <td>@(permiso.AprobadoPor?.NombreCompleto ?? "-")</td>
-                        <td>@(permiso.FechaAprobacion?.ToString("dd/MM/yyyy") ?? "-")</td>
-                        <td>
-                            <button class="btn" @onclick="() => VerDetalle(permiso)" @onclick:stopPropagation="true">
-                                VER
-                            </button>
-                            @if (permiso.Estado == EstadoPermiso.Aprobado)
-                            {
-                                <button class="btn" @onclick="() => GenerarActa(permiso.Id)" @onclick:stopPropagation="true">
-                                    PDF
-                                </button>
-                            }
-                        </td>
-                    </tr>
-                }
-            }
-        </tbody>
-    </table>
+
+    <PermisosFilters SearchTerm="@searchTerm"
+                     SearchTermChanged="@(value => searchTerm = value)"
+                     FiltroEstado="@filtroEstado"
+                     FiltroEstadoChanged="@(value => filtroEstado = value)"
+                     FiltroEmpleadoId="@filtroEmpleadoId"
+                     FiltroEmpleadoIdChanged="@(value => filtroEmpleadoId = value)"
+                     Empleados="@todosEmpleados"
+                     OnBuscar="@Buscar"
+                     OnLimpiar="@LimpiarBusqueda"
+                     OnFiltrar="@Filtrar"
+                     OnSearchKeyUp="@OnSearchKeyUp" />
+
+    <PermisosTable Permisos="@permisos"
+                   SelectedPermiso="@selectedPermiso"
+                   IsLoading="@isLoading"
+                   OnSelect="@SelectPermiso"
+                   OnVerDetalle="@VerDetalle"
+                   OnGenerarPdf="@GenerarActaDesdeTabla"
+                   OnSeguimiento="@AbrirSeguimiento" />
 </div>
 
-<!-- MODAL FORMULARIO -->
-@if (showModal)
-{
-    <div class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                @(isEditing ? $"DETALLE DE PERMISO - {permisoEdit.NumeroActa}" : "NUEVA SOLICITUD DE PERMISO")
-            </div>
-            
-            <div class="modal-body">
-                <div class="formulario-grid">
-                    <!-- COLUMNA IZQUIERDA -->
-                    <div>
-                        <div class="formulario-seccion">
-                            <div class="seccion-titulo">DATOS DEL PERMISO</div>
-                            
-                            <div class="campo-form">
-                                <label class="campo-label campo-requerido">EMPLEADO</label>
-                                @if (isEditing)
-                                {
-                                    <input type="text" class="campo-input" 
-                                           value="@(permisoEdit.Empleado?.NombreCompleto ?? "")" disabled />
-                                }
-                                else
-                                {
-                                    <select class="campo-input" @bind="permisoEdit.EmpleadoId">
-                                        <option value="0">-- SELECCIONE --</option>
-                                        @foreach (var emp in empleadosActivos)
-                                        {
-                                            <option value="@emp.Id">@emp.NombreCompleto - @NumberFormatHelper.FormatearCedula(emp.Cedula)</option>
-                                        }
-                                    </select>
-                                }
-                            </div>
-                            
-                            <div class="campo-form">
-                                <label class="campo-label campo-requerido">TIPO DE PERMISO</label>
-                                @if (isEditing)
-                                {
-                                    <input type="text" class="campo-input" 
-                                           value="@(permisoEdit.TipoPermiso?.Nombre ?? "")" disabled />
-                                }
-                                else
-                                {
-                                    <select class="campo-input" @bind="permisoEdit.TipoPermisoId">
-                                        <option value="0">-- SELECCIONE --</option>
-                                        @foreach (var tipo in tiposPermiso)
-                                        {
-                                            <option value="@tipo.Id">@tipo.Nombre (@tipo.DiasPorDefecto DIAS)</option>
-                                        }
-                                    </select>
-                                }
-                            </div>
-                            
-                            <div class="campo-form">
-                                <label class="campo-label campo-requerido">FECHA INICIO</label>
-                                <input type="date" class="campo-input" 
-                                       @bind="permisoEdit.FechaInicio" 
-                                       @bind:after="CalcularDias"
-                                       disabled="@isEditing" />
-                            </div>
-                            
-                            <div class="campo-form">
-                                <label class="campo-label campo-requerido">FECHA FIN</label>
-                                <input type="date" class="campo-input" 
-                                       @bind="permisoEdit.FechaFin" 
-                                       @bind:after="CalcularDias"
-                                       disabled="@isEditing" />
-                            </div>
-                            
-                            <div class="campo-form">
-                                <label class="campo-label">TOTAL DE DIAS</label>
-                                <input type="number" class="campo-input" 
-                                       @bind="permisoEdit.TotalDias" disabled />
-                            </div>
-                        </div>
-                        
-                        <div class="formulario-seccion">
-                            <div class="seccion-titulo">JUSTIFICACION</div>
-                            
-                            <div class="campo-form">
-                                <label class="campo-label campo-requerido">MOTIVO</label>
-                                <textarea class="campo-textarea" rows="5" 
-                                          @bind="permisoEdit.Motivo"
-                                          disabled="@isEditing"></textarea>
-                            </div>
-                            
-                            <div class="campo-form">
-                                <label class="campo-label">OBSERVACIONES</label>
-                                <textarea class="campo-textarea" rows="3"
-                                          @bind="permisoEdit.Observaciones"
-                                          disabled="@isEditing"></textarea>
-                            </div>
-                            
-                            @if (!isEditing)
-                            {
-                                <div class="campo-form">
-                                    <label class="campo-label">DOCUMENTO SOPORTE (OPCIONAL)</label>
-                                    <InputFile OnChange="OnDocumentoSelected" accept=".pdf,.jpg,.jpeg,.png" 
-                                               class="campo-input" />
-                                    <div class="campo-ayuda">PDF, JPG O PNG - MAXIMO 5MB</div>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                    
-                    <!-- COLUMNA DERECHA -->
-                    <div>
-                        @if (isEditing)
-                        {
-                            <div class="formulario-seccion">
-                                <div class="seccion-titulo">ESTADO DEL PERMISO</div>
-                                
-                                <div class="campo-form">
-                                    <label class="campo-label">ESTADO ACTUAL</label>
-                                    <div>
-                                        <span class="estado-@permisoEdit.Estado.ToString().ToLower()">
-                                            @GetEstadoTexto(permisoEdit.Estado)
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                <div class="campo-form">
-                                    <label class="campo-label">FECHA DE SOLICITUD</label>
-                                    <input type="text" class="campo-input" 
-                                           value="@permisoEdit.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")" disabled />
-                                </div>
-                                
-                                <div class="campo-form">
-                                    <label class="campo-label">SOLICITADO POR</label>
-                                    <input type="text" class="campo-input" 
-                                           value="@(permisoEdit.SolicitadoPor?.NombreCompleto ?? "")" disabled />
-                                </div>
-                                
-                                @if (permisoEdit.AprobadoPor != null)
-                                {
-                                    <div class="campo-form">
-                                        <label class="campo-label">
-                                            @(permisoEdit.Estado == EstadoPermiso.Aprobado ? "APROBADO POR" : "RECHAZADO POR")
-                                        </label>
-                                        <input type="text" class="campo-input" 
-                                               value="@permisoEdit.AprobadoPor.NombreCompleto" disabled />
-                                    </div>
-                                    
-                                    <div class="campo-form">
-                                        <label class="campo-label">
-                                            FECHA DE @(permisoEdit.Estado == EstadoPermiso.Aprobado ? "APROBACION" : "RECHAZO")
-                                        </label>
-                                        <input type="text" class="campo-input" 
-                                               value="@permisoEdit.FechaAprobacion?.ToString("dd/MM/yyyy HH:mm")" disabled />
-                                    </div>
-                                }
-                                
-                                @if (!string.IsNullOrEmpty(permisoEdit.MotivoRechazo))
-                                {
-                                    <div class="campo-form">
-                                        <label class="campo-label">MOTIVO DEL RECHAZO</label>
-                                        <textarea class="campo-textarea" rows="4" 
-                                                  value="@permisoEdit.MotivoRechazo" disabled></textarea>
-                                    </div>
-                                }
-                                
-                                @if (!string.IsNullOrEmpty(permisoEdit.DocumentoSoportePath))
-                                {
-                                    <div class="campo-form">
-                                        <label class="campo-label">DOCUMENTO SOPORTE</label>
-                                        <button class="btn" @onclick="DescargarDocumentoSoporte" type="button">
-                                            DESCARGAR
-                                        </button>
-                                    </div>
-                                }
-                            </div>
-                            
-                            @if (selectedPermiso?.Estado == EstadoPermiso.Pendiente && AuthService.IsAprobador)
-                            {
-                                <div class="bloque-aprobacion">
-                                    <div class="bloque-aprobacion-titulo">ACCIONES DE APROBACION</div>
-                                    <div class="bloque-aprobacion-botones">
-                                        <button class="btn btn-aprobar" @onclick="() => showAprobacionDialog = true">
-                                            APROBAR
-                                        </button>
-                                        <button class="btn btn-rechazar" @onclick="() => showRechazarDialog = true">
-                                            RECHAZAR
-                                        </button>
-                                    </div>
-                                </div>
-                            }
-                            
-                            @if (selectedPermiso?.Estado == EstadoPermiso.Aprobado && 
-                                 !selectedPermiso.ConvertidoAIncapacidad &&
-                                 EsPermisoMedico(selectedPermiso) &&
-                                 AuthService.IsAprobador)
-                            {
-                                <div class="bloque-aprobacion" style="border-color: #0066cc; margin-top: 15px;">
-                                    <div class="bloque-aprobacion-titulo" style="color: #0066cc;">🏥 CONVERTIR A INCAPACIDAD</div>
-                                    <p style="font-size: 11px; margin: 10px 0; color: #666;">
-                                        Si el empleado regresó del hospital con incapacidad médica, puede convertir este permiso.
-                                    </p>
-                                    <div class="bloque-aprobacion-botones">
-                                        <button class="btn" style="background: #0066cc; color: white; border-color: #0066cc;" 
-                                                @onclick="() => AbrirModalConvertirIncapacidad(selectedPermiso)">
-                                            🏥 CONVERTIR A INCAPACIDAD
-                                        </button>
-                                    </div>
-                                </div>
-                            }
-                            
-                            @if (selectedPermiso?.ConvertidoAIncapacidad == true)
-                            {
-                                <div class="bloque-aprobacion" style="border-color: green; margin-top: 15px; background: #f0fff0;">
-                                    <div class="bloque-aprobacion-titulo" style="color: green;">✅ CONVERTIDO A INCAPACIDAD</div>
-                                    <p style="font-size: 11px; margin: 10px 0;">
-                                        Este permiso fue convertido a incapacidad.
-                                    </p>
-                                    <button class="btn" style="background: green; color: white; border-color: green;" 
-                                            @onclick="IrAIncapacidades">
-                                        VER INCAPACIDADES
-                                    </button>
-                                </div>
-                            }
-                        }
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                @if (!isEditing || selectedPermiso?.Estado == EstadoPermiso.Pendiente)
-                {
-                    <button class="btn" @onclick="Guardar" disabled="@isSaving">
-                        @(isSaving ? "GUARDANDO..." : "GUARDAR")
-                    </button>
-                }
-                <button class="btn" @onclick="CerrarModal">CERRAR</button>
-            </div>
-        </div>
-    </div>
-}
+<PermisoFormModal @ref="formModal"
+                  EmpleadosActivos="@empleadosActivos"
+                  TiposPermiso="@tiposPermiso"
+                  EsAprobador="@AuthService.IsAprobador"
+                  OnSolicitarAprobacion="@AbrirAprobacion"
+                  OnSolicitarRechazo="@AbrirRechazo"
+                  OnGuardado="@HandleGuardado"
+                  OnError="@MostrarError"
+                  OnSuccess="@MostrarExito" />
 
-<!-- DIÁLOGO DE RECHAZO -->
-@if (showRechazarDialog)
-{
-    <div class="modal-overlay">
-        <div class="dialogo-confirmacion">
-            <div class="dialogo-titulo">RECHAZAR PERMISO</div>
-            
-            <div class="dialogo-contenido">
-                <div class="campo-form">
-                    <label class="campo-label campo-requerido">MOTIVO DEL RECHAZO</label>
-                    <textarea class="campo-textarea" rows="5" 
-                              @bind="motivoRechazo"></textarea>
-                </div>
-            </div>
-            
-            <div class="dialogo-botones">
-                <button class="btn" @onclick="() => showRechazarDialog = false">CANCELAR</button>
-                <button class="btn btn-rechazar" @onclick="ConfirmarRechazo" 
-                        disabled="@(string.IsNullOrWhiteSpace(motivoRechazo))">
-                    CONFIRMAR RECHAZO
-                </button>
-            </div>
-        </div>
-    </div>
-}
+<PermisoAprobacionModal @ref="aprobacionModal"
+                        OnError="@MostrarError"
+                        OnSuccess="@MostrarExito"
+                        OnCompleted="@HandleGuardado" />
 
-<!-- DIÁLOGO DE APROBACIÓN CON RESOLUCIÓN -->
-@if (showAprobacionDialog)
-{
-    <div class="modal-overlay">
-        <div class="dialogo-confirmacion" style="max-width: 500px;">
-            <div class="dialogo-titulo">APROBAR PERMISO - TIPO DE RESOLUCIÓN</div>
-            
-            <div class="dialogo-contenido">
-                <div class="campo-form">
-                    <label class="campo-label campo-requerido">TIPO DE RESOLUCIÓN</label>
-                    <select class="campo-input" @bind="tipoResolucionSeleccionado">
-                        <option value="1">REMUNERADO (No se descuenta)</option>
-                        <option value="2">DESCONTADO (Se descuenta en nómina)</option>
-                        <option value="3">COMPENSADO (Compensará con horas)</option>
-                    </select>
-                </div>
-                
-                @if (tipoResolucionSeleccionado == 1)
-                {
-                    <div class="campo-form">
-                        <label class="campo-label">¿DOCUMENTO YA ENTREGADO?</label>
-                        <div style="display: flex; gap: 15px; align-items: center;">
-                            <label>
-                                <input type="radio" name="docEntregado" @onchange="() => documentoYaEntregado = true" checked="@documentoYaEntregado" /> SÍ
-                            </label>
-                            <label>
-                                <input type="radio" name="docEntregado" @onchange="() => documentoYaEntregado = false" checked="@(!documentoYaEntregado)" /> NO (PENDIENTE)
-                            </label>
-                        </div>
-                    </div>
-                    
-                    @if (!documentoYaEntregado)
-                    {
-                        <div class="campo-form">
-                            <label class="campo-label">FECHA LÍMITE PARA ENTREGAR DOCUMENTO</label>
-                            <input type="date" class="campo-input" @bind="fechaLimiteDocumento" />
-                        </div>
-                    }
-                }
-                
-                @if (tipoResolucionSeleccionado == 2)
-                {
-                    <div class="campo-form">
-                        <label class="campo-label">MONTO A DESCONTAR</label>
-                        <input type="number" class="campo-input" @bind="montoDescuentoAprobacion" step="1000" />
-                    </div>
-                    <div class="campo-form">
-                        <label class="campo-label">PERÍODO DE DESCUENTO</label>
-                        <input type="text" class="campo-input" @bind="periodoDescuentoAprobacion" placeholder="AAAA-MM" />
-                    </div>
-                }
-                
-                @if (tipoResolucionSeleccionado == 3)
-                {
-                    <div class="campo-form">
-                        <label class="campo-label campo-requerido">HORAS A COMPENSAR</label>
-                        <input type="number" class="campo-input" @bind="horasCompensarAprobacion" min="1" max="80" />
-                    </div>
-                    <div class="campo-form">
-                        <label class="campo-label campo-requerido">FECHA LÍMITE COMPENSACIÓN</label>
-                        <input type="date" class="campo-input" @bind="fechaLimiteCompensacion" />
-                    </div>
-                }
-                
-                <div class="campo-form">
-                    <label class="campo-label">OBSERVACIONES DE APROBACIÓN</label>
-                    <textarea class="campo-textarea" rows="3" @bind="observacionesAprobacion"></textarea>
-                </div>
-            </div>
-            
-            <div class="dialogo-botones">
-                <button class="btn" @onclick="() => showAprobacionDialog = false">CANCELAR</button>
-                <button class="btn btn-aprobar" @onclick="ConfirmarAprobacion">
-                    CONFIRMAR APROBACIÓN
-                </button>
-            </div>
-        </div>
-    </div>
-}
-
-<!-- MODAL CONVERTIR A INCAPACIDAD -->
-@if (showConvertirIncapacidadDialog)
-{
-    <div class="modal-overlay">
-        <div class="dialogo-confirmacion" style="max-width: 600px;">
-            <div class="dialogo-titulo" style="background: #0066cc;">🏥 CONVERTIR PERMISO A INCAPACIDAD</div>
-            
-            <div class="dialogo-contenido">
-                <p style="font-size: 11px; background: #f0f8ff; padding: 10px; border: 1px solid #0066cc; margin-bottom: 15px;">
-                    📋 <strong>Permiso origen:</strong> @permisoParaConvertir?.NumeroActa<br/>
-                    👤 <strong>Empleado:</strong> @permisoParaConvertir?.Empleado?.NombreCompleto<br/>
-                    📅 <strong>Fecha original:</strong> @permisoParaConvertir?.FechaInicio.ToString("dd/MM/yyyy")
-                </p>
-                
-                <div class="campo-form">
-                    <label class="campo-label campo-requerido">TIPO DE INCAPACIDAD</label>
-                    <select class="campo-input" @bind="incapacidadConversion.TipoIncapacidad">
-                        <option value="@SGRRHH.Local.Domain.Enums.TipoIncapacidad.EnfermedadGeneral">Enfermedad General</option>
-                        <option value="@SGRRHH.Local.Domain.Enums.TipoIncapacidad.AccidenteTrabajo">Accidente de Trabajo</option>
-                        <option value="@SGRRHH.Local.Domain.Enums.TipoIncapacidad.EnfermedadLaboral">Enfermedad Laboral</option>
-                        <option value="@SGRRHH.Local.Domain.Enums.TipoIncapacidad.LicenciaMaternidad">Licencia Maternidad</option>
-                        <option value="@SGRRHH.Local.Domain.Enums.TipoIncapacidad.LicenciaPaternidad">Licencia Paternidad</option>
-                    </select>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="campo-form">
-                        <label class="campo-label campo-requerido">FECHA INICIO INCAPACIDAD</label>
-                        <input type="date" class="campo-input" @bind="incapacidadConversion.FechaInicio" />
-                    </div>
-                    <div class="campo-form">
-                        <label class="campo-label campo-requerido">FECHA FIN INCAPACIDAD</label>
-                        <input type="date" class="campo-input" @bind="incapacidadConversion.FechaFin" />
-                    </div>
-                </div>
-                
-                <div class="campo-form">
-                    <label class="campo-label campo-requerido">FECHA EXPEDICIÓN</label>
-                    <input type="date" class="campo-input" @bind="incapacidadConversion.FechaExpedicion" />
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 15px;">
-                    <div class="campo-form">
-                        <label class="campo-label">CÓDIGO CIE-10</label>
-                        <input type="text" class="campo-input" @bind="incapacidadConversion.DiagnosticoCIE10" placeholder="Ej: J00" />
-                    </div>
-                    <div class="campo-form">
-                        <label class="campo-label campo-requerido">DIAGNÓSTICO</label>
-                        <input type="text" class="campo-input" @bind="incapacidadConversion.DiagnosticoDescripcion" 
-                               placeholder="Descripción del diagnóstico médico" />
-                    </div>
-                </div>
-                
-                <div class="campo-form">
-                    <label class="campo-label campo-requerido">ENTIDAD EMISORA (Médico/IPS)</label>
-                    <input type="text" class="campo-input" @bind="incapacidadConversion.EntidadEmisora" 
-                           placeholder="Nombre del médico o institución" />
-                </div>
-                
-                <div class="campo-form">
-                    <label class="campo-label">ENTIDAD PAGADORA (EPS/ARL)</label>
-                    <input type="text" class="campo-input" @bind="incapacidadConversion.EntidadPagadora" 
-                           placeholder="Nombre de la EPS o ARL" />
-                </div>
-                
-                <div class="campo-form">
-                    <label class="campo-label">OBSERVACIONES</label>
-                    <textarea class="campo-textarea" rows="3" @bind="incapacidadConversion.Observaciones" 
-                              placeholder="Observaciones adicionales..."></textarea>
-                </div>
-                
-                @if (!string.IsNullOrEmpty(errorConversion))
-                {
-                    <div style="color: red; font-size: 11px; padding: 10px; border: 1px solid red; margin-top: 10px;">
-                        @errorConversion
-                    </div>
-                }
-            </div>
-            
-            <div class="dialogo-botones">
-                <button class="btn" @onclick="CerrarModalConvertirIncapacidad">CANCELAR</button>
-                <button class="btn" style="background: #0066cc; color: white; border-color: #0066cc;" 
-                        @onclick="ConfirmarConversionIncapacidad" disabled="@isSaving">
-                    @(isSaving ? "GUARDANDO..." : "🏥 CONVERTIR A INCAPACIDAD")
-                </button>
-            </div>
-        </div>
-    </div>
-}
+<PermisoSeguimientoPanel @ref="seguimientoPanel"
+                         OnError="@MostrarError" />
 
 @code {
     [Parameter] public int? PermisoIdParam { get; set; }
-    
-    // Estado de UI
+
     private bool isLoading = true;
-    private bool showModal = false;
-    private bool isSaving = false;
-    private bool isEditing = false;
-    private bool showRechazarDialog = false;
     private string? errorMessage;
     private string? successMessage;
-    
-    // Datos
+
     private List<Permiso> permisos = new();
     private List<Permiso> todosLosPermisos = new();
     private List<Empleado> todosEmpleados = new();
     private List<Empleado> empleadosActivos = new();
     private List<TipoPermiso> tiposPermiso = new();
-    
-    // Selección y edición
-    private Permiso? selectedPermiso;
-    private Permiso permisoEdit = new();
-    private IBrowserFile? documentoSoporte;
-    
-    // Filtros
+
     private string searchTerm = "";
     private string filtroEstado = "";
     private string filtroEmpleadoId = "";
-    
-    // Estadísticas
+
     private int totalPermisos;
+    private int totalFiltrados;
     private int permisosPendientes;
-    
-    // Rechazo
-    private string motivoRechazo = "";
-    
-    // Aprobación con resolución
-    private bool showAprobacionDialog = false;
-    private int tipoResolucionSeleccionado = 1; // 1=Remunerado, 2=Descontado, 3=Compensado
-    private bool documentoYaEntregado = false;
-    private DateTime? fechaLimiteDocumento;
-    private decimal? montoDescuentoAprobacion;
-    private string? periodoDescuentoAprobacion;
-    private int horasCompensarAprobacion = 8;
-    private DateTime? fechaLimiteCompensacion;
-    private string observacionesAprobacion = "";
-    
-    // Conversión a incapacidad
-    private bool showConvertirIncapacidadDialog = false;
-    private Permiso? permisoParaConvertir;
-    private SGRRHH.Local.Domain.DTOs.CrearIncapacidadDto incapacidadConversion = new();
-    private string? errorConversion;
-    
+
+    private Permiso? selectedPermiso;
+
+    private PermisoFormModal? formModal;
+    private PermisoAprobacionModal? aprobacionModal;
+    private PermisoSeguimientoPanel? seguimientoPanel;
+
+    private static Permisos? currentInstance;
+
     protected override async Task OnInitializedAsync()
     {
+        currentInstance = this;
+
         if (!AuthService.IsAuthenticated)
         {
             Navigation.NavigateTo("/login");
             return;
         }
-        
+
         await CargarDatosIniciales();
     }
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -1132,15 +135,57 @@
             await ConfigurarAtajosTeclado();
         }
     }
-    
+
     protected override async Task OnParametersSetAsync()
     {
         if (PermisoIdParam.HasValue && PermisoIdParam.Value > 0)
         {
-            await CargarPermisoParam();
+            await AbrirDetallePorParametro();
         }
     }
-    
+
+    [JSInvokable("InvokePermisoAction")]
+    public static Task InvokePermisoAction(string accion)
+    {
+        return currentInstance?.HandlePermisoAction(accion) ?? Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        if (currentInstance == this)
+        {
+            currentInstance = null;
+        }
+    }
+
+    private async Task HandlePermisoAction(string accion)
+    {
+        switch (accion)
+        {
+            case "nuevo":
+                await NuevoPermiso();
+                break;
+            case "detalle":
+                await EditarSeleccionado();
+                break;
+            case "actualizar":
+                await CargarPermisos();
+                break;
+            case "aprobar":
+                await AprobarSeleccionado();
+                break;
+            case "rechazar":
+                await RechazarSeleccionado();
+                break;
+            case "pdf":
+                await GenerarActaPDF();
+                break;
+            case "cerrar":
+                Navigation.NavigateTo("/home");
+                break;
+        }
+    }
+
     private async Task ConfigurarAtajosTeclado()
     {
         var jsCode = @"
@@ -1172,7 +217,7 @@
                 }
             });
         ";
-        
+
         try
         {
             await JSRuntime.InvokeVoidAsync("eval", jsCode);
@@ -1182,22 +227,18 @@
             Logger.LogError(ex, "Error configurando atajos de teclado");
         }
     }
-    
+
     private async Task CargarDatosIniciales()
     {
         isLoading = true;
         StateHasChanged();
-        
+
         try
         {
-            // Cargar empleados desde caché
             todosEmpleados = await CatalogCache.GetEmpleadosTodosAsync();
             empleadosActivos = await CatalogCache.GetEmpleadosActivosAsync();
-            
-            // Cargar tipos de permiso desde caché
             tiposPermiso = await CatalogCache.GetTiposPermisoAsync();
-            
-            // Cargar permisos
+
             await CargarPermisos();
         }
         catch (Exception ex)
@@ -1211,26 +252,19 @@
             StateHasChanged();
         }
     }
-    
+
     private async Task CargarPermisos()
     {
         try
         {
             isLoading = true;
             StateHasChanged();
-            
+
             var permisosData = await PermisoRepository.GetAllAsync();
             todosLosPermisos = permisosData.OrderByDescending(p => p.FechaSolicitud).ToList();
             AplicarFiltros();
-            
-            // Calcular estadísticas
+
             permisosPendientes = todosLosPermisos.Count(p => p.Estado == EstadoPermiso.Pendiente);
-            
-            if (successMessage == null)
-            {
-                successMessage = $"OPERACION COMPLETADA: {totalPermisos} REGISTRO(S) CARGADO(S)";
-                _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
-            }
         }
         catch (Exception ex)
         {
@@ -1243,8 +277,8 @@
             StateHasChanged();
         }
     }
-    
-    private async Task CargarPermisoParam()
+
+    private async Task AbrirDetallePorParametro()
     {
         try
         {
@@ -1252,7 +286,7 @@
             if (permiso != null)
             {
                 selectedPermiso = permiso;
-                await VerDetalle(selectedPermiso);
+                await VerDetalle(permiso);
             }
         }
         catch (Exception ex)
@@ -1260,12 +294,11 @@
             Logger.LogError(ex, "Error cargando permiso {Id}", PermisoIdParam);
         }
     }
-    
+
     private void AplicarFiltros()
     {
         permisos = todosLosPermisos;
-        
-        // Filtro por búsqueda
+
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var termino = searchTerm.ToLower();
@@ -1277,46 +310,40 @@
                 p.Motivo.ToLower().Contains(termino)
             ).ToList();
         }
-        
-        // Filtro por estado
+
         if (!string.IsNullOrEmpty(filtroEstado) && int.TryParse(filtroEstado, out int estadoInt))
         {
             permisos = permisos.Where(p => (int)p.Estado == estadoInt).ToList();
         }
-        
-        // Filtro por empleado
+
         if (!string.IsNullOrEmpty(filtroEmpleadoId) && int.TryParse(filtroEmpleadoId, out int empId))
         {
             permisos = permisos.Where(p => p.EmpleadoId == empId).ToList();
         }
-        
-        totalPermisos = permisos.Count;
+
+        totalPermisos = todosLosPermisos.Count;
+        totalFiltrados = permisos.Count;
     }
-    
-    private async Task Buscar()
+
+    private Task Buscar()
     {
         AplicarFiltros();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
-    
-    private async Task Filtrar()
+
+    private Task Filtrar()
     {
         AplicarFiltros();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
-    
-    private async Task LimpiarBusqueda()
+
+    private Task LimpiarBusqueda()
     {
         searchTerm = "";
         AplicarFiltros();
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
-    
-    private async Task FocusBusqueda()
-    {
-        await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('searchInput')?.focus()");
-    }
-    
+
     private Task OnSearchKeyUp(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
@@ -1325,56 +352,31 @@
         }
         return Task.CompletedTask;
     }
-    
+
     private void SelectPermiso(Permiso permiso)
     {
         selectedPermiso = permiso;
         StateHasChanged();
     }
-    
-    // ===== NUEVO PERMISO =====
-    
+
     private async Task NuevoPermiso()
     {
-        permisoEdit = new Permiso
+        selectedPermiso = null;
+        if (formModal != null)
         {
-            FechaSolicitud = DateTime.Now,
-            FechaInicio = DateTime.Today.AddDays(1),
-            FechaFin = DateTime.Today.AddDays(1),
-            TotalDias = 1,
-            Estado = EstadoPermiso.Pendiente
-        };
-        
-        isEditing = false;
-        documentoSoporte = null;
-        showModal = true;
-        
-        await Task.CompletedTask;
+            await formModal.OpenNuevo();
+        }
     }
-    
-    // ===== VER DETALLE =====
-    
+
     private async Task VerDetalle(Permiso permiso)
     {
-        try
+        selectedPermiso = permiso;
+        if (formModal != null)
         {
-            // Cargar permiso completo con relaciones
-            var permisoCompleto = await PermisoRepository.GetByIdAsync(permiso.Id);
-            if (permisoCompleto != null)
-            {
-                permisoEdit = permisoCompleto;
-                selectedPermiso = permisoCompleto;
-                isEditing = true;
-                showModal = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error cargando detalle del permiso");
-            errorMessage = ErrorTranslationService.Translate(ex);
+            await formModal.OpenDetalle(permiso.Id);
         }
     }
-    
+
     private async Task EditarSeleccionado()
     {
         if (selectedPermiso != null)
@@ -1382,375 +384,70 @@
             await VerDetalle(selectedPermiso);
         }
     }
-    
-    // ===== GUARDAR =====
-    
-    private async Task Guardar()
-    {
-        if (isSaving) return;
-        
-        try
-        {
-            isSaving = true;
-            errorMessage = null;
-            StateHasChanged();
-            
-            // Validaciones
-            if (permisoEdit.EmpleadoId <= 0)
-            {
-                errorMessage = "ERROR: DEBE SELECCIONAR UN EMPLEADO";
-                return;
-            }
-            
-            if (permisoEdit.TipoPermisoId <= 0)
-            {
-                errorMessage = "ERROR: DEBE SELECCIONAR UN TIPO DE PERMISO";
-                return;
-            }
-            
-            if (string.IsNullOrWhiteSpace(permisoEdit.Motivo))
-            {
-                errorMessage = "ERROR: DEBE INGRESAR EL MOTIVO DEL PERMISO";
-                return;
-            }
-            
-            if (permisoEdit.FechaInicio < DateTime.Today)
-            {
-                errorMessage = "ERROR: LA FECHA DE INICIO NO PUEDE SER ANTERIOR A HOY";
-                return;
-            }
-            
-            if (permisoEdit.FechaFin < permisoEdit.FechaInicio)
-            {
-                errorMessage = "ERROR: LA FECHA FIN NO PUEDE SER ANTERIOR A LA FECHA INICIO";
-                return;
-            }
-            
-            if (permisoEdit.TotalDias <= 0)
-            {
-                errorMessage = "ERROR: EL TOTAL DE DIAS DEBE SER MAYOR A CERO";
-                return;
-            }
-            
-            // Verificar solapamiento
-            var solapa = await PermisoRepository.ExisteSolapamientoAsync(
-                permisoEdit.EmpleadoId, 
-                permisoEdit.FechaInicio, 
-                permisoEdit.FechaFin, 
-                permisoEdit.Id > 0 ? permisoEdit.Id : null
-            );
-            
-            if (solapa)
-            {
-                errorMessage = "ERROR: YA EXISTE UN PERMISO APROBADO O PENDIENTE PARA ESTE EMPLEADO EN LAS FECHAS SELECCIONADAS";
-                return;
-            }
-            
-            // Generar número de acta
-            if (string.IsNullOrEmpty(permisoEdit.NumeroActa))
-            {
-                permisoEdit.NumeroActa = await PermisoRepository.GetProximoNumeroActaAsync();
-            }
-            
-            // Establecer usuario que solicita
-            permisoEdit.SolicitadoPorId = AuthService.CurrentUser!.Id;
-            
-            // Subir documento soporte si existe
-            if (documentoSoporte != null)
-            {
-                await SubirDocumentoSoporte();
-            }
-            
-            // Guardar
-            var permisoCreado = await PermisoRepository.AddAsync(permisoEdit);
-            
-            if (permisoCreado != null)
-            {
-                successMessage = $"OPERACION EXITOSA: PERMISO {permisoEdit.NumeroActa} CREADO";
-                showModal = false;
-                await CargarPermisos();
-                
-                // Limpiar mensaje después de 3 segundos
-                _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
-            }
-            else
-            {
-                errorMessage = "ERROR: NO SE PUDO CREAR EL PERMISO";
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error guardando permiso");
-            errorMessage = ErrorTranslationService.Translate(ex);
-        }
-        finally
-        {
-            isSaving = false;
-            StateHasChanged();
-        }
-    }
-    
-    private async Task SubirDocumentoSoporte()
-    {
-        if (documentoSoporte == null) return;
-        
-        try
-        {
-            using var stream = documentoSoporte.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024); // 5MB max
-            using var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream);
-            var fileBytes = memoryStream.ToArray();
-            
-            var result = await StorageService.SavePermisoDocumentoAsync(permisoEdit.Id, fileBytes, documentoSoporte.Name);
-            
-            if (result.IsSuccess && result.Value != null)
-            {
-                permisoEdit.DocumentoSoportePath = result.Value;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error subiendo documento soporte");
-            throw;
-        }
-    }
-    
-    private void OnDocumentoSelected(InputFileChangeEventArgs e)
-    {
-        documentoSoporte = e.File;
-    }
-    
-    private async Task DescargarDocumentoSoporte()
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(permisoEdit.DocumentoSoportePath)) return;
-            
-            var result = await StorageService.GetPermisoDocumentoAsync(permisoEdit.Id);
-            
-            if (result.IsSuccess && result.Value != null && result.Value.Length > 0)
-            {
-                var base64 = Convert.ToBase64String(result.Value);
-                await JSRuntime.InvokeVoidAsync("downloadFile", 
-                    $"Permiso-{permisoEdit.NumeroActa}-Soporte.pdf", 
-                    "application/pdf", 
-                    base64);
-            }
-            else
-            {
-                errorMessage = "ERROR: NO SE PUDO DESCARGAR EL DOCUMENTO";
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error descargando documento");
-            errorMessage = ErrorTranslationService.Translate(ex);
-        }
-    }
-    
-    // ===== APROBAR =====
-    
+
     private async Task AprobarSeleccionado()
     {
         if (selectedPermiso?.Estado == EstadoPermiso.Pendiente && AuthService.IsAprobador)
         {
-            await AprobarPermiso();
+            var permiso = await PermisoRepository.GetByIdAsync(selectedPermiso.Id);
+            if (permiso != null)
+            {
+                AbrirAprobacion(permiso);
+            }
         }
     }
-    
-    private async Task AprobarPermiso()
-    {
-        if (!AuthService.IsAprobador)
-        {
-            errorMessage = "ERROR: NO TIENE PERMISOS PARA APROBAR PERMISOS";
-            return;
-        }
-        
-        // Obtener configuración del tipo de permiso para pre-llenar valores
-        var tipoPermiso = permisoEdit.TipoPermiso ?? tiposPermiso.FirstOrDefault(t => t.Id == permisoEdit.TipoPermisoId);
-        
-        if (tipoPermiso != null)
-        {
-            // Usar valores por defecto del tipo de permiso
-            tipoResolucionSeleccionado = (int)tipoPermiso.TipoResolucionPorDefecto;
-            documentoYaEntregado = !tipoPermiso.RequiereDocumento;
-            fechaLimiteDocumento = DateTime.Today.AddDays(tipoPermiso.DiasLimiteDocumento > 0 ? tipoPermiso.DiasLimiteDocumento : 7);
-            horasCompensarAprobacion = tipoPermiso.HorasCompensarPorDia * permisoEdit.TotalDias;
-            fechaLimiteCompensacion = DateTime.Today.AddDays(tipoPermiso.DiasLimiteCompensacion > 0 ? tipoPermiso.DiasLimiteCompensacion : 30);
-            
-            // Si el tipo genera descuento automático, pre-calcular
-            if (tipoPermiso.GeneraDescuento && tipoPermiso.PorcentajeDescuento.HasValue)
-            {
-                tipoResolucionSeleccionado = 2; // Descontado
-                // El monto se calcularía basado en el salario del empleado
-                montoDescuentoAprobacion = null; // Se debe calcular o ingresar manualmente
-            }
-            else
-            {
-                montoDescuentoAprobacion = null;
-            }
-        }
-        else
-        {
-            // Valores por defecto si no hay tipo de permiso
-            tipoResolucionSeleccionado = 1;
-            documentoYaEntregado = false;
-            fechaLimiteDocumento = DateTime.Today.AddDays(7);
-            horasCompensarAprobacion = 8 * permisoEdit.TotalDias;
-            fechaLimiteCompensacion = DateTime.Today.AddDays(30);
-            montoDescuentoAprobacion = null;
-        }
-        
-        periodoDescuentoAprobacion = DateTime.Today.ToString("yyyy-MM");
-        observacionesAprobacion = "";
-        showAprobacionDialog = true;
-    }
-    
-    private async Task ConfirmarAprobacion()
-    {
-        try
-        {
-            isSaving = true;
-            showAprobacionDialog = false;
-            StateHasChanged();
-            
-            // Establecer tipo de resolución
-            permisoEdit.TipoResolucion = (TipoResolucionPermiso)tipoResolucionSeleccionado;
-            permisoEdit.AprobadoPorId = AuthService.CurrentUser!.Id;
-            permisoEdit.FechaAprobacion = DateTime.Now;
-            
-            // Configurar según tipo de resolución
-            switch (tipoResolucionSeleccionado)
-            {
-                case 1: // Remunerado
-                    if (documentoYaEntregado)
-                    {
-                        permisoEdit.Estado = EstadoPermiso.Aprobado;
-                        permisoEdit.RequiereDocumentoPosterior = false;
-                        permisoEdit.FechaEntregaDocumento = DateTime.Now;
-                        permisoEdit.Completado = true;
-                    }
-                    else
-                    {
-                        permisoEdit.Estado = EstadoPermiso.AprobadoPendienteDocumento;
-                        permisoEdit.RequiereDocumentoPosterior = true;
-                        permisoEdit.FechaLimiteDocumento = fechaLimiteDocumento;
-                        permisoEdit.Completado = false;
-                    }
-                    break;
-                    
-                case 2: // Descontado
-                    permisoEdit.Estado = EstadoPermiso.Aprobado;
-                    permisoEdit.MontoDescuento = montoDescuentoAprobacion;
-                    permisoEdit.PeriodoDescuento = periodoDescuentoAprobacion;
-                    permisoEdit.Completado = true;
-                    break;
-                    
-                case 3: // Compensado
-                    permisoEdit.Estado = EstadoPermiso.AprobadoEnCompensacion;
-                    permisoEdit.HorasCompensar = horasCompensarAprobacion;
-                    permisoEdit.HorasCompensadas = 0;
-                    permisoEdit.FechaLimiteCompensacion = fechaLimiteCompensacion;
-                    permisoEdit.Completado = false;
-                    break;
-            }
-            
-            // Guardar observaciones si las hay
-            if (!string.IsNullOrWhiteSpace(observacionesAprobacion))
-            {
-                permisoEdit.Observaciones = string.IsNullOrEmpty(permisoEdit.Observaciones) 
-                    ? observacionesAprobacion 
-                    : $"{permisoEdit.Observaciones}\n[APROBACIÓN]: {observacionesAprobacion}";
-            }
-            
-            await PermisoRepository.UpdateAsync(permisoEdit);
-            
-            // Registrar seguimiento de aprobación
-            await SeguimientoRepository.RegistrarAccionAsync(
-                permisoEdit.Id,
-                TipoAccionSeguimiento.Aprobacion,
-                $"Aprobado como {permisoEdit.TipoResolucion}",
-                AuthService.CurrentUser!.Id,
-                observacionesAprobacion
-            );
-            
-            string estadoMsg = permisoEdit.Estado switch
-            {
-                EstadoPermiso.AprobadoPendienteDocumento => " (PENDIENTE DOCUMENTO)",
-                EstadoPermiso.AprobadoEnCompensacion => " (EN COMPENSACIÓN)",
-                _ => ""
-            };
-            
-            successMessage = $"OPERACION EXITOSA: PERMISO {permisoEdit.NumeroActa} APROBADO{estadoMsg}";
-            showModal = false;
-            await CargarPermisos();
-            
-            _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error aprobando permiso");
-            errorMessage = ErrorTranslationService.Translate(ex);
-        }
-        finally
-        {
-            isSaving = false;
-            StateHasChanged();
-        }
-    }
-    
-    // ===== RECHAZAR =====
-    
+
     private async Task RechazarSeleccionado()
     {
         if (selectedPermiso?.Estado == EstadoPermiso.Pendiente && AuthService.IsAprobador)
         {
-            motivoRechazo = "";
-            showRechazarDialog = true;
+            var permiso = await PermisoRepository.GetByIdAsync(selectedPermiso.Id);
+            if (permiso != null)
+            {
+                AbrirRechazo(permiso);
+            }
         }
     }
-    
-    private async Task ConfirmarRechazo()
+
+    private void AbrirAprobacion(Permiso permiso)
     {
-        if (string.IsNullOrWhiteSpace(motivoRechazo))
+        aprobacionModal?.OpenAprobacion(permiso, tiposPermiso);
+    }
+
+    private void AbrirRechazo(Permiso permiso)
+    {
+        aprobacionModal?.OpenRechazo(permiso);
+    }
+
+    private async Task AbrirSeguimiento(Permiso permiso)
+    {
+        if (seguimientoPanel != null)
         {
-            errorMessage = "ERROR: DEBE INGRESAR EL MOTIVO DEL RECHAZO";
-            return;
-        }
-        
-        try
-        {
-            isSaving = true;
-            showRechazarDialog = false;
-            StateHasChanged();
-            
-            permisoEdit.Estado = EstadoPermiso.Rechazado;
-            permisoEdit.AprobadoPorId = AuthService.CurrentUser!.Id;
-            permisoEdit.FechaAprobacion = DateTime.Now;
-            permisoEdit.MotivoRechazo = motivoRechazo;
-            
-            await PermisoRepository.UpdateAsync(permisoEdit);
-            
-            successMessage = $"OPERACION EXITOSA: PERMISO {permisoEdit.NumeroActa} RECHAZADO";
-            showModal = false;
-            await CargarPermisos();
-            
-            _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error rechazando permiso");
-            errorMessage = ErrorTranslationService.Translate(ex);
-        }
-        finally
-        {
-            isSaving = false;
-            StateHasChanged();
+            await seguimientoPanel.Open(permiso.Id);
         }
     }
-    
-    // ===== PDF =====
-    
+
+    private async Task HandleGuardado()
+    {
+        await CargarPermisos();
+    }
+
+    private Task MostrarError(string mensaje)
+    {
+        errorMessage = mensaje;
+        successMessage = null;
+        return Task.CompletedTask;
+    }
+
+    private Task MostrarExito(string mensaje)
+    {
+        successMessage = mensaje;
+        errorMessage = null;
+        StateHasChanged();
+        _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
+        return Task.CompletedTask;
+    }
+
     private async Task GenerarActaPDF()
     {
         if (selectedPermiso?.Estado == EstadoPermiso.Aprobado)
@@ -1758,33 +455,39 @@
             await GenerarActa(selectedPermiso.Id);
         }
     }
-    
+
+    private async Task GenerarActaDesdeTabla(Permiso permiso)
+    {
+        if (permiso.Estado == EstadoPermiso.Aprobado)
+        {
+            await GenerarActa(permiso.Id);
+        }
+    }
+
     private async Task GenerarActa(int permisoId)
     {
         try
         {
             isLoading = true;
             StateHasChanged();
-            
+
             var result = await ReportService.GenerarActaPermisoAsync(permisoId);
-            
+
             if (result.IsSuccess && result.Value != null)
             {
                 var permiso = await PermisoRepository.GetByIdAsync(permisoId);
                 var fileName = $"Acta_Permiso_{permiso?.NumeroActa ?? permisoId.ToString()}_{DateTime.Now:yyyyMMdd}.pdf";
                 var base64 = Convert.ToBase64String(result.Value);
-                
+
                 await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "application/pdf", base64);
-                
-                successMessage = $"OPERACION EXITOSA: ACTA GENERADA - {fileName}";
+
+                await MostrarExito($"OPERACION EXITOSA: ACTA GENERADA - {fileName}");
                 Logger.LogInformation("Acta de permiso generada: {PermisoId}", permisoId);
             }
             else
             {
                 errorMessage = result.Message ?? "ERROR: NO SE PUDO GENERAR EL ACTA";
             }
-            
-            _ = Task.Delay(3000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
         }
         catch (Exception ex)
         {
@@ -1794,158 +497,6 @@
         finally
         {
             isLoading = false;
-            StateHasChanged();
-        }
-    }
-    
-    // ===== UTILIDADES =====
-    
-    private void CalcularDias()
-    {
-        if (permisoEdit.FechaFin >= permisoEdit.FechaInicio)
-        {
-            // Calcular días laborables (excluyendo fines de semana)
-            var dias = 0;
-            var fecha = permisoEdit.FechaInicio;
-            
-            while (fecha <= permisoEdit.FechaFin)
-            {
-                if (fecha.DayOfWeek != DayOfWeek.Saturday && fecha.DayOfWeek != DayOfWeek.Sunday)
-                {
-                    dias++;
-                }
-                fecha = fecha.AddDays(1);
-            }
-            
-            permisoEdit.TotalDias = dias;
-        }
-    }
-    
-    private string GetEstadoTexto(EstadoPermiso estado)
-    {
-        return estado switch
-        {
-            EstadoPermiso.Pendiente => "PENDIENTE",
-            EstadoPermiso.Aprobado => "APROBADO",
-            EstadoPermiso.Rechazado => "RECHAZADO",
-            EstadoPermiso.Cancelado => "CANCELADO",
-            _ => estado.ToString().ToUpper()
-        };
-    }
-    
-    private async Task CerrarModal()
-    {
-        showModal = false;
-        selectedPermiso = null;
-        permisoEdit = new();
-        documentoSoporte = null;
-        errorMessage = null;
-        
-        await Task.CompletedTask;
-    }
-    
-    // ===== CONVERSIÓN A INCAPACIDAD =====
-    
-    private void IrAIncapacidades()
-    {
-        Navigation.NavigateTo("/incapacidades");
-    }
-    
-    private bool EsPermisoMedico(Permiso? permiso)
-    {
-        if (permiso?.TipoPermiso == null) return false;
-        
-        var nombreTipo = permiso.TipoPermiso.Nombre.ToLower();
-        return nombreTipo.Contains("médic") || 
-               nombreTipo.Contains("medic") ||
-               nombreTipo.Contains("cita") ||
-               nombreTipo.Contains("hospital") ||
-               nombreTipo.Contains("salud");
-    }
-    
-    private void AbrirModalConvertirIncapacidad(Permiso permiso)
-    {
-        permisoParaConvertir = permiso;
-        errorConversion = null;
-        
-        // Pre-llenar datos desde el permiso
-        incapacidadConversion = new SGRRHH.Local.Domain.DTOs.CrearIncapacidadDto
-        {
-            EmpleadoId = permiso.EmpleadoId,
-            PermisoOrigenId = permiso.Id,
-            FechaInicio = permiso.FechaInicio,
-            FechaFin = permiso.FechaFin.AddDays(3), // Sugerir 3 días más
-            FechaExpedicion = DateTime.Today,
-            TipoIncapacidad = SGRRHH.Local.Domain.Enums.TipoIncapacidad.EnfermedadGeneral,
-            DiagnosticoDescripcion = permiso.Motivo ?? "",
-            EntidadEmisora = "",
-            EntidadPagadora = permiso.Empleado?.EPS ?? ""
-        };
-        
-        showConvertirIncapacidadDialog = true;
-    }
-    
-    private void CerrarModalConvertirIncapacidad()
-    {
-        showConvertirIncapacidadDialog = false;
-        permisoParaConvertir = null;
-        errorConversion = null;
-    }
-    
-    private async Task ConfirmarConversionIncapacidad()
-    {
-        errorConversion = null;
-        
-        // Validaciones
-        if (string.IsNullOrWhiteSpace(incapacidadConversion.DiagnosticoDescripcion))
-        {
-            errorConversion = "Debe ingresar el diagnóstico";
-            return;
-        }
-        
-        if (string.IsNullOrWhiteSpace(incapacidadConversion.EntidadEmisora))
-        {
-            errorConversion = "Debe ingresar la entidad emisora (médico/IPS)";
-            return;
-        }
-        
-        if (incapacidadConversion.FechaFin < incapacidadConversion.FechaInicio)
-        {
-            errorConversion = "La fecha fin debe ser mayor o igual a la fecha inicio";
-            return;
-        }
-        
-        try
-        {
-            isSaving = true;
-            StateHasChanged();
-            
-            // Crear incapacidad desde el permiso
-            var incapacidad = await IncapacidadRepository.CrearDesdePermisoAsync(
-                permisoParaConvertir!.Id,
-                incapacidadConversion,
-                AuthService.CurrentUserId ?? 1
-            );
-            
-            Logger.LogInformation("Permiso {PermisoId} convertido a incapacidad {IncapacidadId}", 
-                permisoParaConvertir.Id, incapacidad.Id);
-            
-            successMessage = $"OPERACIÓN EXITOSA: Permiso {permisoParaConvertir.NumeroActa} convertido a incapacidad {incapacidad.NumeroIncapacidad}";
-            
-            CerrarModalConvertirIncapacidad();
-            showModal = false;
-            await CargarPermisos();
-            
-            _ = Task.Delay(5000).ContinueWith(_ => { successMessage = null; StateHasChanged(); });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error convirtiendo permiso a incapacidad");
-            errorConversion = ErrorTranslationService.Translate(ex);
-        }
-        finally
-        {
-            isSaving = false;
             StateHasChanged();
         }
     }

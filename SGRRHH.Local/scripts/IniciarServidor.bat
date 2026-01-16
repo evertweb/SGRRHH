@@ -8,8 +8,10 @@ echo                SGRRHH LOCAL - SERVIDOR
 echo ============================================================
 echo.
 echo Iniciando aplicacion...
-echo Logs en tiempo real. Presione Ctrl+C para detener.
 echo.
+echo El navegador se abrira automaticamente...
+echo.
+echo Logs en tiempo real. Presione Ctrl+C para detener.
 echo ============================================================
 
 C:\SGRRHH\SGRRHH.Local.Server.exe

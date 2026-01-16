@@ -1,0 +1,12 @@
+@using SGRRHH.Local.Domain.Entities
+
+@if (Empleado == null)
+{
+    return;
+}
+
+@* Sin sección de datos bancarios en el onboarding actual. *@
+
+@code {
+    [Parameter] public Empleado Empleado { get; set; } = new();
+}

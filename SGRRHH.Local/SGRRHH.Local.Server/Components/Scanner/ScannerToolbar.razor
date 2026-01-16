@@ -1,0 +1,56 @@
+<div class="scanner-preview-toolbar">
+    <div class="scanner-toolbar-left">
+        @if (PermiteMultipagina && TotalPaginas > 0)
+        {
+            <button class="scanner-tool-btn" @onclick="AlPaginaAnterior" disabled="@(PaginaActual <= 0)" title="Página anterior">◀</button>
+            <span class="scanner-page-indicator">@(PaginaActual + 1) / @TotalPaginas</span>
+            <button class="scanner-tool-btn" @onclick="AlPaginaSiguiente" disabled="@(PaginaActual >= TotalPaginas - 1)" title="Página siguiente">▶</button>
+            <div class="scanner-tool-separator"></div>
+        }
+        @if (TienePaginas)
+        {
+            <button class="scanner-tool-btn" @onclick="@(() => AlRotar.InvokeAsync(-90))" title="Rotar izquierda 90°">↺</button>
+            <button class="scanner-tool-btn" @onclick="@(() => AlRotar.InvokeAsync(90))" title="Rotar derecha 90°">↻</button>
+            <button class="scanner-tool-btn" @onclick="@(() => AlRotar.InvokeAsync(180))" title="Rotar 180°">⟲</button>
+            <div class="scanner-tool-separator"></div>
+            <button class="scanner-tool-btn" @onclick="AlVoltearHorizontal" title="Voltear horizontal">⇆</button>
+            <button class="scanner-tool-btn" @onclick="AlVoltearVertical" title="Voltear vertical">⇅</button>
+            <div class="scanner-tool-separator"></div>
+            <button class="scanner-tool-btn" @onclick="AlAutoRecortar" title="Auto-recortar bordes">⬚</button>
+        }
+    </div>
+    <div class="scanner-toolbar-right">
+        <button class="scanner-tool-btn" @onclick="AlZoomOut" title="Alejar" disabled="@(Zoom <= 25)">−</button>
+        <span class="scanner-zoom-indicator">@(Zoom == 0 ? "Auto" : $"{Zoom}%")</span>
+        <button class="scanner-tool-btn" @onclick="AlZoomIn" title="Acercar" disabled="@(Zoom >= 200)">+</button>
+        <div class="scanner-tool-separator"></div>
+        <button class="scanner-tool-btn @(Zoom == 0 ? "active" : "")" @onclick="@(() => AlDefinirZoom.InvokeAsync(0))" title="Ajustar automáticamente">AJUSTAR</button>
+        <button class="scanner-tool-btn @(Zoom == 100 ? "active" : "")" @onclick="@(() => AlDefinirZoom.InvokeAsync(100))" title="Tamaño real">100%</button>
+        <div class="scanner-tool-separator"></div>
+        <button class="scanner-tool-btn scanner-fullscreen-btn"
+                @onclick="AlAbrirPantallaCompleta"
+                title="Ver en pantalla completa (doble clic en imagen)"
+                disabled="@( !PuedeAbrirPantallaCompleta )">
+            AMPLIAR
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool TienePaginas { get; set; }
+    [Parameter] public bool PermiteMultipagina { get; set; }
+    [Parameter] public int PaginaActual { get; set; }
+    [Parameter] public int TotalPaginas { get; set; }
+    [Parameter] public int Zoom { get; set; }
+    [Parameter] public bool PuedeAbrirPantallaCompleta { get; set; }
+    [Parameter] public EventCallback<int> AlRotar { get; set; }
+    [Parameter] public EventCallback AlVoltearHorizontal { get; set; }
+    [Parameter] public EventCallback AlVoltearVertical { get; set; }
+    [Parameter] public EventCallback AlAutoRecortar { get; set; }
+    [Parameter] public EventCallback AlZoomIn { get; set; }
+    [Parameter] public EventCallback AlZoomOut { get; set; }
+    [Parameter] public EventCallback<int> AlDefinirZoom { get; set; }
+    [Parameter] public EventCallback AlPaginaAnterior { get; set; }
+    [Parameter] public EventCallback AlPaginaSiguiente { get; set; }
+    [Parameter] public EventCallback AlAbrirPantallaCompleta { get; set; }
+}

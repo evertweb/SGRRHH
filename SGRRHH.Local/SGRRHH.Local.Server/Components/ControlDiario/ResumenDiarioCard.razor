@@ -1,0 +1,14 @@
+<div class="resumen-compacto">
+    <span class="resumen-stat"><strong>@RegistrosFiltrados</strong> de @TotalRegistros registros</span>
+    <span class="resumen-sep">|</span>
+    <span class="resumen-stat completados">✓ @Completados completados</span>
+    <span class="resumen-sep">|</span>
+    <span class="resumen-stat pendientes">○ @Pendientes pendientes</span>
+    <span class="resumen-sep">|</span>
+    <span class="resumen-stat horas">⏱ @TotalHoras.ToString("F1")h</span>
+    @if (!string.IsNullOrEmpty(SearchTerm))
+    {
+        <span class="resumen-sep">|</span>
+        <span class="filtro-activo">Filtro: "@SearchTerm"</span>
+    }
+</div>

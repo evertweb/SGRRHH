@@ -1,0 +1,75 @@
+@* Modal genérico reutilizable *@
+@if (IsVisible)
+{
+    <div class="modal-backdrop" @onclick="HandleBackdropClick">
+        <div class="modal-content" style="max-width: @MaxWidth;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@Title</h3>
+                <button class="close-btn" @onclick="HandleClose" type="button">×</button>
+            </div>
+            <div class="modal-body">
+                @ChildContent
+            </div>
+            @if (Footer != null)
+            {
+                <div class="modal-footer">
+                    @Footer
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<style>
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #000;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+    
+    .close-btn:hover {
+        color: #CC0000;
+    }
+    
+    .modal-content {
+        background-color: #fff;
+        border: 2px solid #000;
+        max-height: 90vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+</style>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string MaxWidth { get; set; } = "600px";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = false;
+
+    private async Task HandleClose()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await HandleClose();
+        }
+    }
+}

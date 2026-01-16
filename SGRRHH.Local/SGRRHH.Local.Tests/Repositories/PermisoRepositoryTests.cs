@@ -1,6 +1,7 @@
 using BCrypt.Net;
 using Dapper;
 using FluentAssertions;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SGRRHH.Local.Domain.Entities;
@@ -115,6 +116,39 @@ public class PermisoRepositoryTests
 
         // Assert
         nextActa.Should().Be($"PERM-{currentYear}-0010");
+    }
+
+    [Fact]
+    public async Task AddAsync_WithMissingEmpleado_ThrowsForeignKeyException()
+    {
+        // Arrange: crear dependencias mínimas sin empleado
+        using var connection = _fixture.Context.CreateConnection();
+
+        var tipoPermisoId = await connection.ExecuteScalarAsync<int>(@"INSERT INTO tipos_permiso (nombre, descripcion, color, requiere_aprobacion)
+VALUES ('FK Test', 'Valida FK', '#FF0000', 1);
+SELECT last_insert_rowid();");
+
+        var usuarioId = await connection.ExecuteScalarAsync<int>(@"INSERT INTO usuarios (username, password_hash, nombre_completo, rol, activo)
+VALUES ('fk_tester', @PasswordHash, 'FK Tester', 1, 1);
+SELECT last_insert_rowid();", new { PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!", workFactor: 11) });
+
+        var permiso = new Permiso
+        {
+            NumeroActa = await _repository.GetProximoNumeroActaAsync(),
+            EmpleadoId = 9999, // No existe
+            TipoPermisoId = tipoPermisoId,
+            Motivo = "FK debe fallar",
+            FechaSolicitud = DateTime.Today,
+            FechaInicio = DateTime.Today,
+            FechaFin = DateTime.Today,
+            TotalDias = 1,
+            Estado = EstadoPermiso.Pendiente,
+            SolicitadoPorId = usuarioId,
+            Activo = true
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<SqliteException>(() => _repository.AddAsync(permiso));
     }
 
     private async Task<(int empleadoId, int usuarioId, int tipoPermisoId)> CreateDependenciesAsync()

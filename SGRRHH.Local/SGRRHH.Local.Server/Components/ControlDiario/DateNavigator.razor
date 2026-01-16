@@ -1,0 +1,9 @@
+<div class="fecha-navegacion">
+    <button @onclick="Anterior" class="fecha-btn" title="Día anterior">◄</button>
+    <input type="date"
+           @bind="fechaLocal"
+           @bind:after="NotificarCambio"
+           class="fecha-input" />
+    <button @onclick="Siguiente" class="fecha-btn" title="Día siguiente">►</button>
+    <button @onclick="IrHoy" class="fecha-btn-hoy" title="Ir a hoy">HOY</button>
+</div>

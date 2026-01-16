@@ -1,0 +1,210 @@
+@using SGRRHH.Local.Domain.Entities
+
+@if (Empleado == null)
+{
+    return;
+}
+
+<div class="hospital-section">
+    <div class="hospital-section-header">CONTACTO</div>
+    <div class="hospital-section-body">
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">TELEFONO CELULAR *</label>
+                <input type="text" class="hospital-input" @bind="Empleado.TelefonoCelular" maxlength="20" placeholder="Ej: 3101234567" />
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">TELEFONO FIJO</label>
+                <input type="text" class="hospital-input" @bind="Empleado.TelefonoFijo" maxlength="20" placeholder="Ej: 6012345678" />
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label">WHATSAPP</label>
+                <input type="text" class="hospital-input" @bind="Empleado.Whatsapp" maxlength="20" placeholder="Si es diferente al celular" />
+                <div class="hospital-field-hint">Dejar vacío si es igual al celular</div>
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">EMAIL</label>
+                <input type="email" class="hospital-input" @bind="Empleado.Email" maxlength="100" placeholder="correo@ejemplo.com" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="hospital-section">
+    <div class="hospital-section-header">DIRECCION RESIDENCIA</div>
+    <div class="hospital-section-body">
+        <div class="hospital-form-row">
+            <div class="hospital-form-field hospital-form-field-full">
+                <label class="hospital-label required">DIRECCION *</label>
+                <input type="text" class="hospital-input" @bind="Empleado.Direccion" maxlength="250" placeholder="Calle/Carrera/Vereda + número" />
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">MUNICIPIO/CIUDAD *</label>
+                <input type="text" class="hospital-input" @bind="Empleado.Municipio" maxlength="100" placeholder="Ej: Medellín, Puerto Berrío" />
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">BARRIO/VEREDA</label>
+                <input type="text" class="hospital-input" @bind="Empleado.Barrio" maxlength="100" placeholder="Nombre del barrio o vereda" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="hospital-section">
+    <div class="hospital-section-header">INFORMACION MEDICA (EMERGENCIAS)</div>
+    <div class="hospital-section-body">
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">TIPO DE SANGRE (RH) *</label>
+                <select class="hospital-input" @bind="Empleado.TipoSangre">
+                    <option value="">-- SELECCIONE --</option>
+                    <option value="A+">A POSITIVO (A+)</option>
+                    <option value="A-">A NEGATIVO (A-)</option>
+                    <option value="B+">B POSITIVO (B+)</option>
+                    <option value="B-">B NEGATIVO (B-)</option>
+                    <option value="O+">O POSITIVO (O+)</option>
+                    <option value="O-">O NEGATIVO (O-)</option>
+                    <option value="AB+">AB POSITIVO (AB+)</option>
+                    <option value="AB-">AB NEGATIVO (AB-)</option>
+                </select>
+                <div class="hospital-field-hint">CRÍTICO para emergencias en campo</div>
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">ALERGIAS CONOCIDAS</label>
+                <input type="text" class="hospital-input" @bind="Empleado.Alergias" maxlength="250" placeholder="Medicamentos, alimentos, picaduras..." />
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label">CONDICIONES MEDICAS</label>
+                <input type="text" class="hospital-input" @bind="Empleado.CondicionesMedicas" maxlength="250" placeholder="Diabetes, hipertensión, epilepsia..." />
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">MEDICAMENTOS ACTUALES</label>
+                <input type="text" class="hospital-input" @bind="Empleado.MedicamentosActuales" maxlength="250" placeholder="Medicamentos que toma regularmente" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="hospital-section">
+    <div class="hospital-section-header">CONTACTO DE EMERGENCIA #1 (OBLIGATORIO)</div>
+    <div class="hospital-section-body">
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">NOMBRE COMPLETO *</label>
+                <input type="text" class="hospital-input" @bind="Empleado.ContactoEmergencia" maxlength="100" placeholder="Nombre y apellido del contacto" />
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label required">PARENTESCO *</label>
+                <select class="hospital-input" @bind="Empleado.ParentescoContactoEmergencia">
+                    <option value="">-- SELECCIONE --</option>
+                    <option value="Esposo(a)">ESPOSO(A)</option>
+                    <option value="Compañero(a)">COMPAÑERO(A) PERMANENTE</option>
+                    <option value="Padre">PADRE</option>
+                    <option value="Madre">MADRE</option>
+                    <option value="Hijo(a)">HIJO(A)</option>
+                    <option value="Hermano(a)">HERMANO(A)</option>
+                    <option value="Tío(a)">TIO(A)</option>
+                    <option value="Abuelo(a)">ABUELO(A)</option>
+                    <option value="Suegro(a)">SUEGRO(A)</option>
+                    <option value="Cuñado(a)">CUÑADO(A)</option>
+                    <option value="Primo(a)">PRIMO(A)</option>
+                    <option value="Amigo(a)">AMIGO(A)</option>
+                    <option value="Vecino(a)">VECINO(A)</option>
+                    <option value="Otro">OTRO</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label required">TELEFONO 1 *</label>
+                <input type="text" class="hospital-input" @bind="Empleado.TelefonoEmergencia" maxlength="20" placeholder="Número principal" />
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">TELEFONO 2</label>
+                <input type="text" class="hospital-input" @bind="Empleado.TelefonoEmergencia2" maxlength="20" placeholder="Número alternativo (opcional)" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="hospital-section">
+    <div class="hospital-section-header">CONTACTO DE EMERGENCIA #2 (OPCIONAL)</div>
+    <div class="hospital-section-body">
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label">NOMBRE COMPLETO</label>
+                <input type="text" class="hospital-input" @bind="Empleado.ContactoEmergencia2" maxlength="100" placeholder="Nombre y apellido del segundo contacto" />
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">PARENTESCO</label>
+                <select class="hospital-input" @bind="Empleado.ParentescoContactoEmergencia2">
+                    <option value="">-- SELECCIONE --</option>
+                    <option value="Esposo(a)">ESPOSO(A)</option>
+                    <option value="Compañero(a)">COMPAÑERO(A) PERMANENTE</option>
+                    <option value="Padre">PADRE</option>
+                    <option value="Madre">MADRE</option>
+                    <option value="Hijo(a)">HIJO(A)</option>
+                    <option value="Hermano(a)">HERMANO(A)</option>
+                    <option value="Tío(a)">TIO(A)</option>
+                    <option value="Abuelo(a)">ABUELO(A)</option>
+                    <option value="Suegro(a)">SUEGRO(A)</option>
+                    <option value="Cuñado(a)">CUÑADO(A)</option>
+                    <option value="Primo(a)">PRIMO(A)</option>
+                    <option value="Amigo(a)">AMIGO(A)</option>
+                    <option value="Vecino(a)">VECINO(A)</option>
+                    <option value="Otro">OTRO</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="hospital-form-row">
+            <div class="hospital-form-field">
+                <label class="hospital-label">TELEFONO 1</label>
+                <input type="text" class="hospital-input" @bind="Empleado.TelefonoEmergencia2Contacto2" maxlength="20" placeholder="Número principal" />
+            </div>
+            
+            <div class="hospital-form-field">
+                <label class="hospital-label">TELEFONO 2</label>
+                <input type="text" class="hospital-input" @bind="Empleado.TelefonoEmergencia2Alternativo" maxlength="20" placeholder="Número alternativo" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="hospital-section">
+    <div class="hospital-section-header">OBSERVACIONES GENERALES</div>
+    <div class="hospital-section-body">
+        <div class="hospital-form-row">
+            <div class="hospital-form-field hospital-form-field-full">
+                <label class="hospital-label">OBSERVACIONES</label>
+                <textarea class="hospital-input hospital-textarea" 
+                          @bind="Empleado.Observaciones" 
+                          maxlength="500"
+                          rows="3"
+                          placeholder="Notas adicionales sobre el empleado..."></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Empleado Empleado { get; set; } = new();
+}
