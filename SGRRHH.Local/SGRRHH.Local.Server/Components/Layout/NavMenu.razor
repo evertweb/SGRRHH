@@ -48,7 +48,8 @@
                 </NavLink>
             </div>
 
-            @* SECCIÓN DESACOPLADA - SOLICITUDES (MVP)
+            @if (false) // SECCIÓN DESACOPLADA - SOLICITUDES (MVP)
+            {
             <!-- SOLICITUDES -->
             <div class="nav-section">SOLICITUDES</div>
             
@@ -78,7 +79,7 @@
                     <span class="nav-icon">🏖️</span> Vacaciones
                 </NavLink>
             </div>
-            FIN SECCIÓN DESACOPLADA *@
+            } // FIN SECCIÓN DESACOPLADA SOLICITUDES
             
             <!-- CONTROL DE TIEMPO -->
             <div class="nav-section">CONTROL DIARIO</div>
@@ -95,7 +96,8 @@
                 </NavLink>
             </div>
             
-            @* SECCIÓN DESACOPLADA - INFORMES (MVP)
+            @if (false) // SECCIÓN DESACOPLADA - INFORMES (MVP)
+            {
             <!-- REPORTES -->
             <div class="nav-section">INFORMES</div>
             
@@ -113,7 +115,7 @@
                     </NavLink>
                 </div>
             }
-            FIN SECCIÓN DESACOPLADA *@
+            } // FIN SECCIÓN DESACOPLADA INFORMES
             
             <!-- ADMINISTRACIÓN (Solo Admin) -->
             @if (AuthService.IsAdmin)
