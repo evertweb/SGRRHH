@@ -1,9 +1,9 @@
 ﻿@page "/home"
 @using SGRRHH.Local.Shared.Interfaces
 @inject IEmpleadoRepository EmpleadoRepo
-@inject IPermisoRepository PermisoRepo
+@* DESACOPLADO MVP: @inject IPermisoRepository PermisoRepo *@
 @inject IContratoRepository ContratoRepo
-@inject IVacacionRepository VacacionRepo
+@* DESACOPLADO MVP: @inject IVacacionRepository VacacionRepo *@
 @inject IAuthService AuthService
 @inject IKeyboardShortcutService KeyboardShortcutService
 @inject NavigationManager Navigation
@@ -19,6 +19,7 @@
             <div class="metric-label">EMPLEADOS ACTIVOS</div>
             <div class="metric-action">VER TODOS</div>
         </div>
+        @* DESACOPLADO MVP - Permisos
         <div class="metric-card @(permisosPendientes > 0 ? "metric-warning" : "")" @onclick="@(() => Navigation.NavigateTo("/permisos"))">
             <div class="metric-value">@permisosPendientes</div>
             <div class="metric-label">PERMISOS PENDIENTES</div>
@@ -27,6 +28,7 @@
                 <div class="metric-action">CLICK PARA VER</div>
             }
         </div>
+        *@
         <div class="metric-card @(contratosPorVencer > 0 ? "metric-alert" : "")" @onclick="@(() => Navigation.NavigateTo("/contratos"))">
             <div class="metric-value">@contratosPorVencer</div>
             <div class="metric-label">CONTRATOS POR VENCER</div>
@@ -35,6 +37,7 @@
                 <div class="metric-action">CLICK PARA VER</div>
             }
         </div>
+        @* DESACOPLADO MVP - Vacaciones
         <div class="metric-card @(vacacionesPendientes > 0 ? "metric-info" : "")" @onclick="@(() => Navigation.NavigateTo("/vacaciones"))">
             <div class="metric-value">@vacacionesPendientes</div>
             <div class="metric-label">VACACIONES PENDIENTES</div>
@@ -43,6 +46,7 @@
                 <div class="metric-action">CLICK PARA VER</div>
             }
         </div>
+        *@
     </div>
 
     <!-- Alertas Importantes -->
@@ -82,6 +86,7 @@
                 <span class="qa-icon">👥</span>
                 <span class="qa-label">EMPLEADOS</span>
             </button>
+            @* DESACOPLADO MVP - Permisos y Nómina
             <button class="quick-access-btn" @onclick="@(() => Navigation.NavigateTo("/permisos"))">
                 <span class="qa-icon">📝</span>
                 <span class="qa-label">PERMISOS</span>
@@ -89,6 +94,11 @@
             <button class="quick-access-btn" @onclick="@(() => Navigation.NavigateTo("/nomina"))">
                 <span class="qa-icon">💰</span>
                 <span class="qa-label">NÓMINA</span>
+            </button>
+            *@
+            <button class="quick-access-btn" @onclick="@(() => Navigation.NavigateTo("/catalogos"))">
+                <span class="qa-icon">📚</span>
+                <span class="qa-label">CATÁLOGOS</span>
             </button>
         </div>
     </div>
@@ -164,17 +174,21 @@
             // Empleados activos
             empleadosActivos = await EmpleadoRepo.CountActiveAsync();
             
+            /* DESACOPLADO MVP - Permisos
             // Permisos pendientes de aprobación
             var permisosPendientesLista = await PermisoRepo.GetPendientesAsync();
             permisosPendientes = permisosPendientesLista.Count();
+            */
             
             // Contratos próximos a vencer (30 días)
             var contratosProximos = await ContratoRepo.GetContratosProximosAVencerAsync(30);
             contratosPorVencer = contratosProximos.Count();
             
+            /* DESACOPLADO MVP - Vacaciones
             // Vacaciones pendientes de aprobación
             var vacacionesPendientesLista = await VacacionRepo.GetPendientesAsync();
             vacacionesPendientes = vacacionesPendientesLista.Count();
+            */
         }
         catch (Exception ex)
         {
@@ -201,6 +215,7 @@
                 });
             }
             
+            /* DESACOPLADO MVP - Permisos
             // Alerta de permisos pendientes
             if (permisosPendientes > 0)
             {
@@ -212,7 +227,9 @@
                     Accion = "REVISAR"
                 });
             }
+            */
             
+            /* DESACOPLADO MVP - Vacaciones
             // Alerta de vacaciones pendientes
             if (vacacionesPendientes > 0)
             {
@@ -224,6 +241,7 @@
                     Accion = "VER"
                 });
             }
+            */
         }
         catch (Exception ex)
         {
