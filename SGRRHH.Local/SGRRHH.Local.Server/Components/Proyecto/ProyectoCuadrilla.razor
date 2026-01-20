@@ -1,0 +1,590 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Infrastructure.Services
+@inject IProyectoService ProyectoService
+@inject IEmpleadoRepository EmpleadoRepository
+@inject ILogger<ProyectoCuadrilla> Logger
+
+<div class="tab-pane">
+    <div class="action-bar">
+        <div class="action-buttons">
+            <button class="btn-primary" @onclick="MostrarModalAsignar">ASIGNAR EMPLEADO</button>
+            <button class="btn-action" @onclick="MostrarModalAsignarMasivo">ASIGNAR MÚLTIPLES</button>
+            @if (empleadosSeleccionados.Any())
+            {
+                <button class="btn-danger" @onclick="DesasignarSeleccionados">
+                    DESASIGNAR SELECCIONADOS (@empleadosSeleccionados.Count)
+                </button>
+            }
+            <button class="btn-action" @onclick="CargarCuadrilla">ACTUALIZAR</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="proyecto-detalle-alert proyecto-detalle-alert-danger">@errorMessage</div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="proyecto-detalle-alert proyecto-detalle-alert-success">@successMessage</div>
+    }
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 40px;"><input type="checkbox" @onchange="ToggleSeleccionarTodos" /></th>
+                <th>CÓDIGO</th>
+                <th>NOMBRE</th>
+                <th>ROL</th>
+                <th class="text-center">DEDICACIÓN</th>
+                <th>FECHA ASIGNACIÓN</th>
+                <th class="text-right">HORAS</th>
+                <th>ÚLTIMA ACTIVIDAD</th>
+                <th>ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Cuadrilla == null || !Cuadrilla.Any())
+            {
+                <tr>
+                    <td colspan="9" class="empty-state">
+                        NO HAY EMPLEADOS ASIGNADOS A ESTE PROYECTO
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var asignacion in Cuadrilla)
+                {
+                    <tr class="@(asignacion.EsLiderCuadrilla ? "proyecto-detalle-lider-row" : "")">
+                        <td>
+                            <input type="checkbox" 
+                                   checked="@empleadosSeleccionados.Contains(asignacion.EmpleadoId)"
+                                   @onchange="() => ToggleSeleccion(asignacion.EmpleadoId)" />
+                        </td>
+                        <td>@(asignacion.Empleado?.Codigo ?? "-")</td>
+                        <td>
+                            @(asignacion.Empleado?.NombreCompleto ?? "Empleado #" + asignacion.EmpleadoId)
+                            @if (asignacion.EsLiderCuadrilla)
+                            {
+                                <span class="badge proyecto-detalle-badge-lider">LÍDER</span>
+                            }
+                        </td>
+                        <td>
+                            @if (asignacion.RolEnum.HasValue)
+                            {
+                                <span>@GetRolLabel(asignacion.RolEnum.Value)</span>
+                            }
+                            else
+                            {
+                                <span>@(asignacion.Rol ?? "-")</span>
+                            }
+                        </td>
+                        <td class="text-center">@asignacion.PorcentajeDedicacion%</td>
+                        <td>@asignacion.FechaAsignacion.ToString("dd/MM/yyyy")</td>
+                        <td class="text-right">@asignacion.TotalHorasTrabajadas.ToString("F1") h</td>
+                        <td>@(asignacion.UltimaFechaTrabajo?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td class="table-actions">
+                            <button class="btn-action" @onclick="() => EditarAsignacion(asignacion)">EDITAR</button>
+                            <button class="btn-danger" @onclick="() => ConfirmarDesasignar(asignacion)">DESASIGNAR</button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Asignar Empleado Individual -->
+<FormModal @bind-IsVisible="showModalAsignar"
+           Title="@(isEditingAsignacion ? "EDITAR ASIGNACIÓN" : "ASIGNAR EMPLEADO AL PROYECTO")"
+           OnSaveClicked="GuardarAsignacion"
+           OnCancelClicked="() => showModalAsignar = false"
+           IsSaving="isSaving">
+    
+    @if (!isEditingAsignacion)
+    {
+        <div class="form-field">
+            <label>EMPLEADO:</label>
+            <select @bind="asignacionEdit.EmpleadoId" class="form-input">
+                <option value="0">-- Seleccione empleado --</option>
+                @foreach (var emp in empleadosDisponibles)
+                {
+                    <option value="@emp.Id">@emp.Codigo - @emp.NombreCompleto</option>
+                }
+            </select>
+        </div>
+    }
+    else
+    {
+        <div class="form-group">
+            <label>EMPLEADO:</label>
+            <input type="text" value="@empleadoEditando?.NombreCompleto" readonly disabled class="form-input" />
+        </div>
+    }
+    
+    <div class="form-group">
+        <label>ROL EN EL PROYECTO:</label>
+        <select @bind="asignacionEdit.RolEnum" class="form-input">
+            <option value="">-- Sin rol específico --</option>
+            @foreach (var rol in Enum.GetValues<RolProyectoForestal>())
+            {
+                <option value="@rol">@GetRolLabel(rol)</option>
+            }
+        </select>
+    </div>
+    
+    <div class="proyecto-detalle-grid-2">
+        <div class="form-group">
+            <label>PORCENTAJE DE DEDICACIÓN:</label>
+            <input type="number" @bind="asignacionEdit.PorcentajeDedicacion" min="10" max="100" step="10" class="form-input" />
+            <small>100% = Tiempo completo</small>
+        </div>
+        
+        <div class="form-group">
+            <label>FECHA DE ASIGNACIÓN:</label>
+            <input type="date" @bind="asignacionEdit.FechaAsignacion" class="form-input" />
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <label>TIPO DE VINCULACIÓN:</label>
+        <select @bind="asignacionEdit.TipoVinculacion" class="form-input">
+            <option value="">-- Seleccione --</option>
+            <option value="Permanente">Permanente</option>
+            <option value="Temporal">Temporal</option>
+            <option value="Por Tarea">Por Tarea</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label class="proyecto-detalle-checkbox-label">
+            <input type="checkbox" @bind="asignacionEdit.EsLiderCuadrilla" />
+            ES LÍDER DE CUADRILLA
+        </label>
+    </div>
+    
+    <div class="form-group">
+        <label>OBSERVACIONES:</label>
+        <textarea @bind="asignacionEdit.Observaciones" rows="2" class="form-input"></textarea>
+    </div>
+</FormModal>
+
+<!-- Modal Asignación Masiva -->
+<FormModal @bind-IsVisible="showModalAsignarMasivo"
+           Title="ASIGNAR MÚLTIPLES EMPLEADOS"
+           OnSaveClicked="GuardarAsignacionMasiva"
+           OnCancelClicked="() => showModalAsignarMasivo = false"
+           IsSaving="isSaving">
+    
+    <div class="form-group">
+        <label>ROL PARA TODOS:</label>
+        <select @bind="rolMasivo" class="form-input">
+            <option value="">-- Sin rol específico --</option>
+            @foreach (var rol in Enum.GetValues<RolProyectoForestal>())
+            {
+                <option value="@((int)rol)">@GetRolLabel(rol)</option>
+            }
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>SELECCIONE EMPLEADOS:</label>
+        <div class="proyecto-detalle-empleados-checklist">
+            @foreach (var emp in empleadosDisponibles)
+            {
+                <label class="proyecto-detalle-checkbox-item">
+                    <input type="checkbox" 
+                           checked="@empleadosParaAsignar.Contains(emp.Id)"
+                           @onchange="() => ToggleEmpleadoParaAsignar(emp.Id)" />
+                    @emp.Codigo - @emp.NombreCompleto
+                </label>
+            }
+            @if (!empleadosDisponibles.Any())
+            {
+                <p class="proyecto-detalle-empty-message">No hay empleados disponibles para asignar</p>
+            }
+        </div>
+    </div>
+    
+    <div class="proyecto-detalle-resumen-asignacion">
+        <strong>@empleadosParaAsignar.Count empleados seleccionados</strong>
+    </div>
+</FormModal>
+
+<!-- Modal Confirmar Desasignación -->
+<FormModal @bind-IsVisible="showModalDesasignar"
+           Title="CONFIRMAR DESASIGNACIÓN"
+           OnSaveClicked="EjecutarDesasignacion"
+           OnCancelClicked="() => showModalDesasignar = false"
+           IsSaving="isSaving">
+    
+    <p>¿Está seguro que desea desasignar a <strong>@(asignacionADesasignar?.Empleado?.NombreCompleto ?? "este empleado")</strong> del proyecto?</p>
+    
+    <div class="form-group">
+        <label>MOTIVO DE DESASIGNACIÓN:</label>
+        <select @bind="motivoDesasignacion" class="form-input">
+            <option value="">-- Seleccione motivo --</option>
+            <option value="Terminación de labor">Terminación de labor asignada</option>
+            <option value="Rotación a otro proyecto">Rotación a otro proyecto</option>
+            <option value="Finalización de contrato">Finalización de contrato</option>
+            <option value="Renuncia">Renuncia del empleado</option>
+            <option value="Bajo rendimiento">Bajo rendimiento</option>
+            <option value="Incapacidad">Incapacidad médica</option>
+            <option value="Vacaciones">Vacaciones</option>
+            <option value="Otro">Otro motivo</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label>OBSERVACIONES:</label>
+        <textarea @bind="observacionesDesasignacion" rows="2" class="form-input"></textarea>
+    </div>
+</FormModal>
+
+<!-- Modal Desasignar Múltiples -->
+<FormModal @bind-IsVisible="showModalDesasignarMultiples"
+           Title="DESASIGNAR EMPLEADOS SELECCIONADOS"
+           OnSaveClicked="EjecutarDesasignacionMultiple"
+           OnCancelClicked="() => showModalDesasignarMultiples = false"
+           IsSaving="isSaving">
+    
+    <p>¿Está seguro que desea desasignar a <strong>@empleadosSeleccionados.Count empleados</strong> del proyecto?</p>
+    
+    <div class="form-group">
+        <label>MOTIVO DE DESASIGNACIÓN:</label>
+        <select @bind="motivoDesasignacion" class="form-input">
+            <option value="">-- Seleccione motivo --</option>
+            <option value="Terminación de labor">Terminación de labor asignada</option>
+            <option value="Rotación a otro proyecto">Rotación a otro proyecto</option>
+            <option value="Finalización de proyecto">Finalización de proyecto</option>
+            <option value="Otro">Otro motivo</option>
+        </select>
+    </div>
+</FormModal>
+
+@code {
+    [Parameter] public int ProyectoId { get; set; }
+    [Parameter] public List<ProyectoEmpleado> Cuadrilla { get; set; } = new();
+    [Parameter] public EventCallback OnUpdate { get; set; }
+
+    private bool isSaving;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    // Modales
+    private bool showModalAsignar;
+    private bool showModalAsignarMasivo;
+    private bool showModalDesasignar;
+    private bool showModalDesasignarMultiples;
+    private bool isEditingAsignacion;
+    
+    // Edición
+    private ProyectoEmpleado asignacionEdit = new();
+    private Empleado? empleadoEditando;
+    private ProyectoEmpleado? asignacionADesasignar;
+    private string motivoDesasignacion = "";
+    private string observacionesDesasignacion = "";
+    
+    // Listas auxiliares
+    private List<Empleado> empleadosDisponibles = new();
+    private HashSet<int> empleadosSeleccionados = new();
+    private HashSet<int> empleadosParaAsignar = new();
+    private string rolMasivo = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar empleados disponibles inicialmente
+        await CargarEmpleadosDisponibles();
+    }
+
+    private async Task CargarCuadrilla()
+    {
+        await OnUpdate.InvokeAsync();
+        // Recargar disponibles después de actualizar la cuadrilla desde el padre
+        await CargarEmpleadosDisponibles(); 
+    }
+
+    private async Task CargarEmpleadosDisponibles()
+    {
+        try
+        {
+            var todosEmpleados = await EmpleadoRepository.GetAllActiveAsync();
+            var asignadosIds = Cuadrilla.Select(c => c.EmpleadoId).ToHashSet();
+            empleadosDisponibles = todosEmpleados
+                .Where(e => !asignadosIds.Contains(e.Id))
+                .OrderBy(e => e.NombreCompleto)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando empleados disponibles");
+        }
+    }
+
+    private void MostrarModalAsignar()
+    {
+        asignacionEdit = new ProyectoEmpleado
+        {
+            ProyectoId = ProyectoId,
+            FechaAsignacion = DateTime.Today,
+            PorcentajeDedicacion = 100
+        };
+        isEditingAsignacion = false;
+        empleadoEditando = null;
+        showModalAsignar = true;
+    }
+
+    private void MostrarModalAsignarMasivo()
+    {
+        empleadosParaAsignar.Clear();
+        rolMasivo = "";
+        showModalAsignarMasivo = true;
+    }
+
+    private async Task GuardarAsignacion()
+    {
+        if (!isEditingAsignacion && asignacionEdit.EmpleadoId <= 0)
+        {
+            errorMessage = "Debe seleccionar un empleado";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            if (asignacionEdit.RolEnum.HasValue)
+            {
+                asignacionEdit.Rol = asignacionEdit.RolEnum.Value.ToString();
+            }
+
+            // Usamos ProyectoService en lugar de Repository
+            await ProyectoService.AsignarEmpleadoAsync(asignacionEdit);
+            
+            successMessage = isEditingAsignacion ? "Asignación actualizada correctamente" : "Empleado asignado correctamente";
+            showModalAsignar = false;
+            await CargarCuadrilla();
+            AutoClearMessages();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar asignación");
+            errorMessage = $"Error al guardar: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GuardarAsignacionMasiva()
+    {
+        if (!empleadosParaAsignar.Any())
+        {
+            errorMessage = "Debe seleccionar al menos un empleado";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            RolProyectoForestal? rol = null;
+            if (!string.IsNullOrEmpty(rolMasivo) && int.TryParse(rolMasivo, out int rolInt))
+            {
+                rol = (RolProyectoForestal)rolInt;
+            }
+
+            // Usamos ProyectoService
+            await ProyectoService.AsignarMultiplesAsync(ProyectoId, empleadosParaAsignar, rol);
+
+            successMessage = $"{empleadosParaAsignar.Count} empleados asignados correctamente";
+            showModalAsignarMasivo = false;
+            await CargarCuadrilla();
+            AutoClearMessages();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error en asignación masiva");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void EditarAsignacion(ProyectoEmpleado asignacion)
+    {
+        asignacionEdit = new ProyectoEmpleado
+        {
+            Id = asignacion.Id,
+            ProyectoId = asignacion.ProyectoId,
+            EmpleadoId = asignacion.EmpleadoId,
+            FechaAsignacion = asignacion.FechaAsignacion,
+            RolEnum = asignacion.RolEnum,
+            Rol = asignacion.Rol,
+            PorcentajeDedicacion = asignacion.PorcentajeDedicacion,
+            TipoVinculacion = asignacion.TipoVinculacion,
+            EsLiderCuadrilla = asignacion.EsLiderCuadrilla,
+            Observaciones = asignacion.Observaciones
+        };
+        empleadoEditando = asignacion.Empleado;
+        isEditingAsignacion = true;
+        showModalAsignar = true;
+    }
+
+    private void ConfirmarDesasignar(ProyectoEmpleado asignacion)
+    {
+        asignacionADesasignar = asignacion;
+        motivoDesasignacion = "";
+        observacionesDesasignacion = "";
+        showModalDesasignar = true;
+    }
+
+    private async Task EjecutarDesasignacion()
+    {
+        if (asignacionADesasignar == null) return;
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            var motivo = string.IsNullOrEmpty(observacionesDesasignacion) 
+                ? motivoDesasignacion 
+                : $"{motivoDesasignacion}: {observacionesDesasignacion}";
+
+            // Usamos ProyectoService
+            await ProyectoService.DesasignarEmpleadoAsync(
+                ProyectoId, 
+                asignacionADesasignar.EmpleadoId, 
+                motivo);
+
+            successMessage = "Empleado desasignado correctamente";
+            showModalDesasignar = false;
+            await CargarCuadrilla();
+            AutoClearMessages();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al desasignar empleado");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void DesasignarSeleccionados()
+    {
+        motivoDesasignacion = "";
+        showModalDesasignarMultiples = true;
+    }
+
+    private async Task EjecutarDesasignacionMultiple()
+    {
+        if (!empleadosSeleccionados.Any()) return;
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            // Usamos ProyectoService
+            await ProyectoService.DesasignarMultiplesAsync(
+                ProyectoId, 
+                empleadosSeleccionados, 
+                motivoDesasignacion);
+
+            successMessage = $"{empleadosSeleccionados.Count} empleados desasignados correctamente";
+            showModalDesasignarMultiples = false;
+            await CargarCuadrilla();
+            AutoClearMessages();
+            empleadosSeleccionados.Clear();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error en desasignación múltiple");
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleSeleccionarTodos(ChangeEventArgs e)
+    {
+        if ((bool)(e.Value ?? false))
+        {
+            empleadosSeleccionados = Cuadrilla.Select(c => c.EmpleadoId).ToHashSet();
+        }
+        else
+        {
+            empleadosSeleccionados.Clear();
+        }
+        StateHasChanged();
+    }
+
+    private void ToggleSeleccion(int empleadoId)
+    {
+        if (empleadosSeleccionados.Contains(empleadoId))
+            empleadosSeleccionados.Remove(empleadoId);
+        else
+            empleadosSeleccionados.Add(empleadoId);
+        StateHasChanged();
+    }
+
+    private void ToggleEmpleadoParaAsignar(int empleadoId)
+    {
+        if (empleadosParaAsignar.Contains(empleadoId))
+            empleadosParaAsignar.Remove(empleadoId);
+        else
+            empleadosParaAsignar.Add(empleadoId);
+        StateHasChanged();
+    }
+    
+    private void AutoClearMessages()
+    {
+        _ = Task.Delay(3000).ContinueWith(_ =>
+        {
+            successMessage = null;
+            errorMessage = null;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private string GetRolLabel(RolProyectoForestal rol) => rol switch
+    {
+        RolProyectoForestal.Operario => "Operario",
+        RolProyectoForestal.Capataz => "Capataz",
+        RolProyectoForestal.Motosierrista => "Motosierrista",
+        RolProyectoForestal.Tractorista => "Tractorista",
+        RolProyectoForestal.Guadanero => "Guadañero",
+        RolProyectoForestal.Aplicador => "Aplicador",
+        RolProyectoForestal.Viverista => "Viverista",
+        RolProyectoForestal.Conductor => "Conductor",
+        RolProyectoForestal.Ayudante => "Ayudante",
+        RolProyectoForestal.Topografo => "Topógrafo",
+        RolProyectoForestal.Supervisor => "Supervisor",
+        RolProyectoForestal.TecnicoForestal => "Técnico Forestal",
+        RolProyectoForestal.Vigilante => "Vigilante",
+        RolProyectoForestal.Arriero => "Arriero",
+        RolProyectoForestal.Cocinero => "Cocinero",
+        RolProyectoForestal.Otro => "Otro",
+        _ => rol.ToString()
+    };
+}

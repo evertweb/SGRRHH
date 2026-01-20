@@ -199,7 +199,7 @@
 @code {
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
-    [Parameter] public EventCallback<PrintJobResultDto> OnPrintComplete { get; set; }
+    [Parameter] public EventCallback<ResultadoImpresionDto> OnPrintComplete { get; set; }
     
     /// <summary>
     /// Bytes del PDF a imprimir
@@ -318,7 +318,7 @@
             // Suscribirse a progreso
             PrintService.PrintProgress += OnPrintProgress;
             
-            Result<PrintJobResultDto> result;
+            Result<ResultadoImpresionDto> result;
             
             if (PdfBytes != null)
             {
@@ -337,7 +337,7 @@
             }
             else
             {
-                result = Result<PrintJobResultDto>.Fail("No hay documento para imprimir");
+                result = Result<ResultadoImpresionDto>.Fail("No hay documento para imprimir");
             }
             
             if (result.IsSuccess && result.Value != null)

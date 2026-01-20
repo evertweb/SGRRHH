@@ -1,0 +1,155 @@
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Shared.Interfaces
+@inject IReporteProductividadService ReporteService
+@inject ILogger<ProyectoActividades> Logger
+
+<div class="tab-pane">
+    <div class="toolbar" style="margin-bottom: 16px;">
+        <div class="toolbar-group">
+            <label>DESDE:</label>
+            <input type="date" @bind="fechaInicio" />
+        </div>
+        <div class="toolbar-group">
+            <label>HASTA:</label>
+            <input type="date" @bind="fechaFin" />
+        </div>
+        <div class="toolbar-group">
+            <button @onclick="CargarActividades">APLICAR</button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading">CARGANDO ACTIVIDADES...</div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="proyecto-detalle-alert proyecto-detalle-alert-danger">@errorMessage</div>
+    }
+    else if (reporteProyecto != null)
+    {
+        <!-- Resumen por categoría -->
+        @if (reporteProyecto.PorCategoria.Any())
+        {
+            <div class="categorias-resumen">
+                @foreach (var categoria in reporteProyecto.PorCategoria)
+                {
+                    <div class="categoria-card" style="border-left: 4px solid @(categoria.ColorHex ?? "#333")">
+                        <div class="categoria-nombre">@categoria.Categoria</div>
+                        <div class="categoria-horas">@categoria.Horas.ToString("F0") h</div>
+                        <div class="categoria-porcentaje">@categoria.PorcentajeHoras.ToString("F0")%</div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Tabla de actividades -->
+        @if (reporteProyecto.PorActividad.Any())
+        {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ACTIVIDAD</th>
+                        <th>CATEGORÍA</th>
+                        <th class="text-right">HORAS</th>
+                        <th class="text-right">CANTIDAD</th>
+                        <th>UNIDAD</th>
+                        <th class="text-right">REND. LOGRADO</th>
+                        <th class="text-right">REND. ESP.</th>
+                        <th class="text-center">% REND.</th>
+                        <th class="text-center">VECES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var actividad in reporteProyecto.PorActividad)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@actividad.Codigo</strong><br/>
+                                <small>@actividad.Nombre</small>
+                            </td>
+                            <td>@(actividad.Categoria ?? "-")</td>
+                            <td class="text-right">@actividad.Horas.ToString("F1")</td>
+                            <td class="text-right">@(actividad.Cantidad?.ToString("F1") ?? "-")</td>
+                            <td>@(actividad.UnidadMedida ?? "-")</td>
+                            <td class="text-right">@(actividad.RendimientoLogrado?.ToString("F2") ?? "-")</td>
+                            <td class="text-right">@(actividad.RendimientoEsperado?.ToString("F2") ?? "-")</td>
+                            <td class="text-center">
+                                @if (actividad.PorcentajeRendimiento.HasValue)
+                                {
+                                    <span class="badge @GetBadgeClaseRendimiento(actividad.PorcentajeRendimiento.Value)">
+                                        @actividad.PorcentajeRendimiento.Value.ToString("F0")%
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                            <td class="text-center">@actividad.Registros</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="empty-state">NO HAY ACTIVIDADES REGISTRADAS EN EL PERIODO</div>
+        }
+    }
+    else
+    {
+        <div class="empty-state">SELECCIONE UN PERIODO Y PRESIONE APLICAR</div>
+    }
+</div>
+
+@code {
+    [Parameter] public int ProyectoId { get; set; }
+
+    private DateTime fechaInicio;
+    private DateTime fechaFin;
+    private bool isLoading;
+    private string? errorMessage;
+    private ReporteProyectoDetalle? reporteProyecto;
+
+    protected override async Task OnInitializedAsync()
+    {
+        fechaInicio = new DateTime(DateTime.Today.Year, 1, 1);
+        fechaFin = DateTime.Today;
+        await CargarActividades();
+    }
+
+    private async Task CargarActividades()
+    {
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            reporteProyecto = await ReporteService.GetReporteProyectoAsync(ProyectoId, fechaInicio, fechaFin);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar actividades del proyecto");
+            errorMessage = $"Error al cargar actividades: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetBadgeClaseRendimiento(decimal porcentaje)
+    {
+        return porcentaje switch
+        {
+            >= 120 => "badge-excelente",
+            >= 100 => "badge-optimo",
+            >= 80 => "badge-aceptable",
+            >= 60 => "badge-bajo",
+            _ => "badge-critico"
+        };
+    }
+}

@@ -3,6 +3,7 @@
 @using SGRRHH.Local.Shared.Interfaces
 @inject ITipoPermisoRepository TipoPermisoRepository
 @inject ICatalogCacheService CatalogCache
+@inject IDataSyncNotifier DataSync
 @inject ILogger<TiposPermisoTab> Logger
 @inject IJSRuntime JSRuntime
 
@@ -483,6 +484,10 @@
             }
             
             CatalogCache.InvalidateCache(CatalogType.TiposPermiso);
+            
+            // Notificar cambio en tiempo real
+            await DataSync.NotifyChangeAsync("TipoPermiso", isEditing ? "Updated" : "Created", editItem.Id);
+            
             Buscar();
             CerrarModal();
         }
@@ -518,6 +523,9 @@
             
             items.RemoveAll(t => t.Id == itemToDelete.Id);
             CatalogCache.InvalidateCache(CatalogType.TiposPermiso);
+            
+            // Notificar eliminación en tiempo real
+            await DataSync.NotifyChangeAsync("TipoPermiso", "Deleted", itemToDelete.Id);
             
             await SetSuccess($"Tipo de permiso '{itemToDelete.Nombre}' eliminado correctamente");
             Logger.LogInformation($"Tipo de permiso eliminado: {itemToDelete.Nombre}");

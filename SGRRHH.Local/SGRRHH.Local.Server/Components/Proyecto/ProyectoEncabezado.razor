@@ -1,0 +1,72 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@inject NavigationManager Navigation
+
+@if (Proyecto != null)
+{
+    <div class="proyecto-header">
+        <div class="proyecto-header-left">
+            <span class="proyecto-codigo">@Proyecto.Codigo</span>
+            <h1>@Proyecto.Nombre</h1>
+            <div class="proyecto-meta">
+                <span class="badge badge-tipo-@((int)Proyecto.TipoProyecto)">
+                    @GetTipoProyectoLabel(Proyecto.TipoProyecto)
+                </span>
+                <span class="badge badge-@Proyecto.Estado.ToString().ToLower()">@Proyecto.Estado</span>
+                @if (Proyecto.Especie != null)
+                {
+                    <span class="badge badge-especie">🌲 @Proyecto.Especie.NombreComun</span>
+                }
+                @if (Proyecto.EstaVencido)
+                {
+                    <span class="badge badge-vencido">⚠️ VENCIDO</span>
+                }
+                else if (Proyecto.EstaProximoAVencer)
+                {
+                    <span class="badge badge-warning">⏰ POR VENCER</span>
+                }
+            </div>
+        </div>
+        <div class="proyecto-header-right">
+            <button class="btn-primary" @onclick="EditarProyecto">✏️ EDITAR</button>
+            <button @onclick="Volver">← VOLVER</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Proyecto? Proyecto { get; set; }
+
+    private void EditarProyecto()
+    {
+        if (Proyecto != null)
+        {
+            Navigation.NavigateTo($"/catalogos?tab=proyectos&editar={Proyecto.Id}");
+        }
+    }
+
+    private void Volver()
+    {
+        Navigation.NavigateTo("/catalogos?tab=proyectos");
+    }
+
+    private string GetTipoProyectoLabel(TipoProyectoForestal tipo) => tipo switch
+    {
+        TipoProyectoForestal.PlantacionNueva => "Plantación Nueva",
+        TipoProyectoForestal.Mantenimiento => "Mantenimiento",
+        TipoProyectoForestal.Raleo => "Raleo",
+        TipoProyectoForestal.PodaFormacion => "Poda Formación",
+        TipoProyectoForestal.PodaSanitaria => "Poda Sanitaria",
+        TipoProyectoForestal.Cosecha => "Cosecha",
+        TipoProyectoForestal.Reforestacion => "Reforestación",
+        TipoProyectoForestal.Vivero => "Vivero",
+        TipoProyectoForestal.InvestigacionEnsayo => "Investigación/Ensayo",
+        TipoProyectoForestal.InfraestructuraVial => "Infraestructura Vial",
+        TipoProyectoForestal.ControlFitosanitario => "Control Fitosanitario",
+        TipoProyectoForestal.Fertilizacion => "Fertilización",
+        TipoProyectoForestal.Inventario => "Inventario",
+        TipoProyectoForestal.ControlMalezas => "Control de Malezas",
+        TipoProyectoForestal.Otro => "Otro",
+        _ => tipo.ToString()
+    };
+}

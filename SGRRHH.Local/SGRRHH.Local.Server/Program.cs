@@ -10,6 +10,8 @@ using SGRRHH.Local.Infrastructure.Data;
 using SGRRHH.Local.Infrastructure.Repositories;
 using SGRRHH.Local.Infrastructure.Services;
 using SGRRHH.Local.Server.Components;
+using SGRRHH.Local.Server.Hubs;
+using SGRRHH.Local.Server.Services;
 using SGRRHH.Local.Shared.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -150,6 +152,9 @@ builder.Services.AddScoped<IDatabaseMaintenanceService, DatabaseMaintenanceServi
 // Servicio de almacenamiento de documentos centralizado
 builder.Services.AddScoped<IDocumentoStorageService, DocumentoStorageService>();
 
+// Servicio de sincronización de datos en tiempo real (SignalR)
+builder.Services.AddScoped<IDataSyncNotifier, DataSyncNotifier>();
+
 // Background services
 builder.Services.AddHostedService<BackupSchedulerService>();
 
@@ -216,6 +221,9 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+// SignalR Hub para sincronización en tiempo real
+app.MapHub<DataSyncHub>("/datasync");
 
 // ============================================================================
 // Banner informativo y apertura de navegador

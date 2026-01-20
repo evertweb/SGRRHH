@@ -1,0 +1,61 @@
+@using SGRRHH.Local.Domain.DTOs
+
+<div class="panel-lateral">
+    <div class="panel-titulo">RESUMEN TEXTUAL</div>
+
+    @if (Resumen != null)
+    {
+        <div class="panel-seccion">
+            <span class="panel-label">EMPLEADO:</span>
+            <span class="panel-valor">@Resumen.NombreEmpleado</span>
+
+            <span class="panel-label">CEDULA:</span>
+            <span class="panel-valor">@Resumen.CedulaEmpleado</span>
+        </div>
+
+        <div class="panel-seccion">
+            <span class="panel-label">DIAS DISPONIBLES:</span>
+            <span class="panel-valor">@Resumen.TotalDiasDisponibles</span>
+
+            <span class="panel-label">DIAS USADOS:</span>
+            <span class="panel-valor">@Resumen.DiasUsados</span>
+
+            <span class="panel-label">DIAS RESTANTES:</span>
+            <span class="panel-valor">@Resumen.DiasRestantes</span>
+        </div>
+
+        <div class="panel-seccion">
+            <span class="panel-label">ANTIGÜEDAD:</span>
+            <span class="panel-valor">@Resumen.AntiguedadAnios AÑOS</span>
+
+            <span class="panel-label">PERIODO ACTUAL:</span>
+            <span class="panel-valor">@DateTime.Now.Year</span>
+        </div>
+
+        @if (Resumen.UltimaVacacion != null)
+        {
+            <div class="panel-seccion">
+                <span class="panel-label">ULTIMA VACACION:</span>
+                <span class="panel-valor">
+                    @Resumen.UltimaVacacion.FechaInicio.ToString("dd/MM/yyyy") -
+                    @Resumen.UltimaVacacion.FechaFin.ToString("dd/MM/yyyy")
+                </span>
+                <span class="panel-valor">@Resumen.UltimaVacacion.DiasTomados DIAS</span>
+            </div>
+        }
+
+        <div class="panel-aviso">
+            NOTA: Los calculos se basan en 15 dias base mas 1 dia adicional cada 5 años de antigüedad.
+        </div>
+    }
+    else
+    {
+        <div class="empty-cell">
+            SELECCIONE UN EMPLEADO EN LOS FILTROS PARA VER EL RESUMEN
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public ResumenVacaciones? Resumen { get; set; }
+}

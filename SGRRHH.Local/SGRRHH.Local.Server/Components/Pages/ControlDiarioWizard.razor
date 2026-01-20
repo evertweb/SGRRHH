@@ -60,30 +60,43 @@
                 }
             </div>
 
-            <div class="control-diario-employee-list">
-                @if (isLoading)
-                {
-                    <div class="loading-state">CARGANDO EMPLEADOS...</div>
-                }
-                else if (!empleadosFiltrados.Any())
-                {
-                    <div class="loading-state">NO HAY EMPLEADOS DISPONIBLES</div>
-                }
-                else
-                {
+            @if (isLoading)
+            {
+                <div class="loading-state">CARGANDO EMPLEADOS...</div>
+            }
+            else if (!empleadosFiltrados.Any())
+            {
+                <div class="loading-state">NO HAY EMPLEADOS DISPONIBLES</div>
+            }
+            else
+            {
+                <div class="control-diario-employee-grid">
                     @foreach (var emp in empleadosFiltrados)
                     {
-                        <div class="control-diario-employee-item">
-                            <input type="checkbox"
-                                   id="emp_@emp.Id"
-                                   checked="@selectedEmpleadoIds.Contains(emp.Id)"
-                                   @onchange="() => ToggleEmpleado(emp.Id)"
-                                   disabled="@isWizardSaving" />
-                            <label for="emp_@emp.Id">@emp.Codigo - @emp.NombreCompleto (@(emp.Departamento?.Nombre ?? "SIN DEPARTAMENTO"))</label>
+                        var isSelected = selectedEmpleadoIds.Contains(emp.Id);
+                        <div class="employee-card @(isSelected ? "selected" : "")" @onclick="() => ToggleEmpleado(emp.Id)">
+                             <div class="check-indicator">✓</div>
+                             
+                             <div class="employee-photo-container">
+                                @if (!string.IsNullOrEmpty(emp.FotoPath))
+                                {
+                                     <img src="@GetFotoUrl(emp)" class="employee-photo" onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\'employee-placeholder\'>@GetInitials(emp)</div>';" />
+                                }
+                                else
+                                {
+                                     <div class="employee-placeholder">@GetInitials(emp)</div>
+                                }
+                             </div>
+                             
+                             <div class="employee-info-area">
+                                 <div class="employee-code">@emp.Codigo</div>
+                                 <div class="employee-name">@emp.NombreCompleto</div>
+                                 <div class="employee-dept">@(emp.Departamento?.Nombre ?? "SIN DEPARTAMENTO")</div>
+                             </div>
                         </div>
                     }
-                }
-            </div>
+                </div>
+            }
 
             <div class="control-diario-selection-summary">
                 EMPLEADOS SELECCIONADOS: @selectedEmpleadoIds.Count
@@ -411,7 +424,7 @@
         try
         {
             // Cargar datos en paralelo
-            var empleadosTask = EmpleadoRepository.GetAllActiveAsync();
+            var empleadosTask = EmpleadoRepository.GetAllActiveWithRelationsAsync();
             var actividadesTask = ActividadRepository.GetAllActiveAsync();
             var proyectosTask = ProyectoRepository.GetByEstadoAsync(EstadoProyecto.Activo);
             var departamentosTask = DepartamentoRepository.GetAllActiveAsync();
@@ -723,5 +736,34 @@
             return null;
         
         return TimeSpan.TryParse(value, out var time) ? time : null;
+    }
+
+    private string GetFotoUrl(Empleado emp)
+    {
+        if (string.IsNullOrEmpty(emp.FotoPath)) return "";
+
+        var path = emp.FotoPath.Replace("\\", "/");
+
+        if (path.StartsWith("Fotos/", StringComparison.OrdinalIgnoreCase))
+        {
+            path = path.Substring(6);
+            return $"/fotos/{path}?v={DateTime.Now.Ticks}";
+        }
+
+        if (!path.Contains("/"))
+        {
+            return $"/fotos/Empleados/{emp.Id}/{path}?v={DateTime.Now.Ticks}";
+        }
+
+        return $"/fotos/{path}?v={DateTime.Now.Ticks}";
+    }
+
+    private string GetInitials(Empleado emp)
+    {
+        if (emp == null) return "??";
+
+        var nombres = emp.Nombres?.Split(' ').FirstOrDefault() ?? "";
+        var apellidos = emp.Apellidos?.Split(' ').FirstOrDefault() ?? "";
+        return $"{(nombres.Length > 0 ? nombres[0] : '?')}{(apellidos.Length > 0 ? apellidos[0] : '?')}".ToUpper();
     }
 }

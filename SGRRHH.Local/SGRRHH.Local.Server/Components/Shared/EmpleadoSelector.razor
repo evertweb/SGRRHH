@@ -2,6 +2,8 @@
 @using SGRRHH.Local.Shared.Interfaces
 @inject IEmpleadoRepository EmpleadoRepository
 @inject ILogger<EmpleadoSelector> Logger
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <div class="empleado-selector">
     <div class="selector-search">
@@ -78,6 +80,47 @@
     protected override async Task OnParametersSetAsync()
     {
         await BuscarEmpleados();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var dotNetRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("connectDataSync", dotNetRef);
+                Logger.LogInformation("[EmpleadoSelector] Conectado a SignalR Hub");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "[EmpleadoSelector] Error conectando a SignalR Hub");
+            }
+        }
+    }
+    
+    [JSInvokable]
+    public async Task OnDataChanged(string entityType, string changeType, int? entityId)
+    {
+        if (entityType == "Empleado")
+        {
+            Logger.LogInformation("[EmpleadoSelector] Empleado modificado, recargando lista");
+            await BuscarEmpleados();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("disconnectDataSync");
+            Logger.LogInformation("[EmpleadoSelector] Desconectado de SignalR Hub");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[EmpleadoSelector] Error desconectando de SignalR Hub");
+        }
     }
 
     private async Task BuscarEmpleados()

@@ -13,6 +13,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject ILogger<EmpleadoOnboarding> Logger
+@implements IAsyncDisposable
 
 <PageTitle>Nuevo Empleado - SGRRHH</PageTitle>
 
@@ -151,6 +152,64 @@
 
         // Obtener siguiente código
         empleado.Codigo = await EmpleadoRepo.GetNextCodigoAsync();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Conectar al Hub de SignalR para recibir notificaciones en tiempo real
+                var dotNetRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("connectDataSync", dotNetRef);
+                Logger.LogInformation("[EmpleadoOnboarding] Conectado a SignalR Hub");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "[EmpleadoOnboarding] Error conectando a SignalR Hub");
+            }
+        }
+    }
+    
+    [JSInvokable]
+    public async Task OnDataChanged(string entityType, string changeType, int? entityId)
+    {
+        Logger.LogInformation("[EmpleadoOnboarding] Cambio recibido: {EntityType} - {ChangeType}", entityType, changeType);
+        
+        try
+        {
+            // Recargar catálogos si cambian Cargos o Departamentos
+            if (entityType == "Cargo")
+            {
+                cargos = await CatalogCache.GetCargosAsync();
+                await InvokeAsync(StateHasChanged);
+                Logger.LogInformation("[EmpleadoOnboarding] Lista de Cargos actualizada ({Count} items)", cargos.Count);
+            }
+            else if (entityType == "Departamento")
+            {
+                departamentos = await CatalogCache.GetDepartamentosAsync();
+                await InvokeAsync(StateHasChanged);
+                Logger.LogInformation("[EmpleadoOnboarding] Lista de Departamentos actualizada ({Count} items)", departamentos.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[EmpleadoOnboarding] Error recargando catálogos");
+        }
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("disconnectDataSync");
+            Logger.LogInformation("[EmpleadoOnboarding] Desconectado de SignalR Hub");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[EmpleadoOnboarding] Error desconectando de SignalR Hub");
+        }
     }
     
     private async Task CargarCatalogos()

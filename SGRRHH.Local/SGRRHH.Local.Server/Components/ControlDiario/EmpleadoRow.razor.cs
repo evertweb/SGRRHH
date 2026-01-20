@@ -13,6 +13,8 @@ public partial class EmpleadoRow : ComponentBase
 
     [Parameter] public int? EditandoSalidaId { get; set; }
 
+    [Parameter] public int ModoVisualizacion { get; set; } = 1; // 1=Asistencia, 2=Produccion, 3=Cierre
+
     [Parameter] public EventCallback<RegistroDiario> OnSeleccionar { get; set; }
 
     [Parameter] public EventCallback<RegistroDiario> OnEditarEntrada { get; set; }

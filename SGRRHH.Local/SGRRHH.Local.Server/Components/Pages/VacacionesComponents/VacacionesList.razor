@@ -1,0 +1,84 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+
+<div class="table-container">
+    <table class="tabla-vacaciones">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>EMPLEADO</th>
+                <th>CEDULA</th>
+                <th>PERIODO</th>
+                <th>FECHA INICIO</th>
+                <th>FECHA FIN</th>
+                <th>DIAS</th>
+                <th>ESTADO</th>
+                <th>FECHA SOLICITUD</th>
+                <th>SOLICITADO POR</th>
+                <th>APROBADO POR</th>
+                <th>F. APROBACION</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (IsLoading)
+            {
+                <tr><td colspan="12" class="loading-cell">CARGANDO DATOS...</td></tr>
+            }
+            else if (!Vacaciones.Any())
+            {
+                <tr><td colspan="12" class="empty-cell">NO HAY REGISTROS PARA MOSTRAR</td></tr>
+            }
+            else
+            {
+                @foreach (var vac in Vacaciones)
+                {
+                    <tr class="@(SelectedVacacion?.Id == vac.Id ? "fila-seleccionada" : "")"
+                        @onclick="() => SelectVacacion(vac)">
+                        <td class="td-centro">@vac.Id</td>
+                        <td>@(vac.Empleado?.NombreCompleto ?? "N/A")</td>
+                        <td>@(vac.Empleado?.Cedula ?? "N/A")</td>
+                        <td class="td-centro">@vac.PeriodoCorrespondiente</td>
+                        <td>@vac.FechaInicio.ToString("dd/MM/yyyy")</td>
+                        <td>@vac.FechaFin.ToString("dd/MM/yyyy")</td>
+                        <td class="td-centro">@vac.DiasTomados</td>
+                        <td>
+                            <span class="estado-@(vac.Estado.ToString().ToLower())">
+                                @GetEstadoTexto(vac.Estado)
+                            </span>
+                        </td>
+                        <td>@vac.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                        <td>@(vac.SolicitadoPor?.NombreCompleto ?? "N/A")</td>
+                        <td>@(vac.AprobadoPor?.NombreCompleto ?? "N/A")</td>
+                        <td>@(vac.FechaAprobacion?.ToString("dd/MM/yyyy") ?? "-")</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public List<Vacacion> Vacaciones { get; set; } = new();
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public Vacacion? SelectedVacacion { get; set; }
+    [Parameter] public EventCallback<Vacacion> OnVacacionSelected { get; set; }
+
+    private async Task SelectVacacion(Vacacion vacacion)
+    {
+        await OnVacacionSelected.InvokeAsync(vacacion);
+    }
+
+    private string GetEstadoTexto(EstadoVacacion estado)
+    {
+        return estado switch
+        {
+            EstadoVacacion.Pendiente => "PENDIENTE",
+            EstadoVacacion.Aprobada => "APROBADA",
+            EstadoVacacion.Rechazada => "RECHAZADA",
+            EstadoVacacion.Programada => "PROGRAMADA",
+            EstadoVacacion.Disfrutada => "DISFRUTADA",
+            EstadoVacacion.Cancelada => "CANCELADA",
+            _ => estado.ToString().ToUpper()
+        };
+    }
+}

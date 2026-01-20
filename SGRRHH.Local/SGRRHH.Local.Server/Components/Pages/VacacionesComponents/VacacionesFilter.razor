@@ -1,0 +1,110 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+
+<div class="controles-filtros">
+    <div class="filtro-grupo">
+        <label class="filtro-label">BUSCAR:</label>
+        <input type="text" id="searchInput" class="input-text vac-filter-wide"
+               @bind="SearchTerm" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        <button class="btn" @onclick="Buscar">BUSCAR</button>
+        @if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            <button class="btn" @onclick="LimpiarBusqueda">LIMPIAR</button>
+        }
+    </div>
+
+    <div class="filtro-grupo">
+        <label class="filtro-label">ESTADO:</label>
+        <select class="select vac-filter-estado" @bind="FiltroEstado" @bind:after="Filtrar">
+            <option value="">TODOS</option>
+            <option value="@((int)EstadoVacacion.Pendiente)">PENDIENTE</option>
+            <option value="@((int)EstadoVacacion.Aprobada)">APROBADA</option>
+            <option value="@((int)EstadoVacacion.Rechazada)">RECHAZADA</option>
+            <option value="@((int)EstadoVacacion.Programada)">PROGRAMADA</option>
+            <option value="@((int)EstadoVacacion.Disfrutada)">DISFRUTADA</option>
+            <option value="@((int)EstadoVacacion.Cancelada)">CANCELADA</option>
+        </select>
+    </div>
+
+    <div class="filtro-grupo">
+        <label class="filtro-label">EMPLEADO:</label>
+        <select class="select vac-filter-empleado" @bind="FiltroEmpleadoId" @bind:after="Filtrar">
+            <option value="">TODOS</option>
+            @foreach (var emp in Empleados)
+            {
+                <option value="@emp.Id">@emp.NombreCompleto</option>
+            }
+        </select>
+    </div>
+
+    <div class="filtro-grupo">
+        <label class="filtro-label">PERIODO:</label>
+        <select class="select vac-filter-periodo" @bind="FiltroPeriodo" @bind:after="Filtrar">
+            <option value="">TODOS</option>
+            @for (int year = DateTime.Now.Year; year >= DateTime.Now.Year - 5; year--)
+            {
+                <option value="@year">@year</option>
+            }
+        </select>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<Empleado> Empleados { get; set; } = new();
+    [Parameter] public EventCallback OnFilterChanged { get; set; }
+    
+    // Two-way binding parameters
+    [Parameter] public string SearchTerm { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchTermChanged { get; set; }
+
+    [Parameter] public string FiltroEstado { get; set; } = "";
+    [Parameter] public EventCallback<string> FiltroEstadoChanged { get; set; }
+
+    [Parameter] public string FiltroEmpleadoId { get; set; } = "";
+    [Parameter] public EventCallback<string> FiltroEmpleadoIdChanged { get; set; }
+
+    [Parameter] public string FiltroPeriodo { get; set; } = "";
+    [Parameter] public EventCallback<string> FiltroPeriodoChanged { get; set; }
+
+    [Inject] IJSRuntime JSRuntime { get; set; }
+
+    private async Task Buscar()
+    {
+        await NotifyFilterChanged();
+    }
+
+    private async Task Filtrar()
+    {
+        await NotifyFilterChanged();
+    }
+
+    private async Task LimpiarBusqueda()
+    {
+        SearchTerm = "";
+        await SearchTermChanged.InvokeAsync(SearchTerm);
+        await NotifyFilterChanged();
+        await Task.Delay(100);
+        try {
+            await JSRuntime.InvokeVoidAsync("focusElement", "searchInput");
+        } catch { /* Ignore JS errors */ }
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await Buscar();
+        }
+    }
+
+    private async Task NotifyFilterChanged()
+    {
+        // Update bindings
+        await SearchTermChanged.InvokeAsync(SearchTerm);
+        await FiltroEstadoChanged.InvokeAsync(FiltroEstado);
+        await FiltroEmpleadoIdChanged.InvokeAsync(FiltroEmpleadoId);
+        await FiltroPeriodoChanged.InvokeAsync(FiltroPeriodo);
+
+        await OnFilterChanged.InvokeAsync();
+    }
+}

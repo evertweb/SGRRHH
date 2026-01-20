@@ -1,0 +1,109 @@
+@using SGRRHH.Local.Domain.Entities
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+@if (Proyecto != null)
+{
+    <div class="tab-pane">
+        <div class="proyecto-mapa">
+            @if (!Proyecto.Latitud.HasValue || !Proyecto.Longitud.HasValue)
+            {
+                <div class="sin-coordenadas">
+                    <div class="icono">🗺️</div>
+                    <h3>COORDENADAS NO REGISTRADAS</h3>
+                    <p>Para ver el proyecto en el mapa, registre las coordenadas GPS.</p>
+                    <div class="formato-coordenadas">
+                        <p><strong>Formatos aceptados:</strong></p>
+                        <ul>
+                            <li>Grados decimales: -4.1234, -74.5678</li>
+                            <li>Ejemplo: Latitud = 6.2518, Longitud = -75.5636</li>
+                        </ul>
+                    </div>
+                    <button class="btn-primary" @onclick="EditarProyecto" style="margin-top: 16px;">
+                        EDITAR PROYECTO PARA AGREGAR COORDENADAS
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="mapa-info">
+                    <div class="coordenadas">
+                        <strong>COORDENADAS:</strong> 
+                        @Proyecto.Latitud.Value.ToString("F6"), @Proyecto.Longitud.Value.ToString("F6")
+                        <button @onclick="AbrirEnGoogleMaps" title="Abrir en Google Maps">
+                            🌐 VER EN GOOGLE MAPS
+                        </button>
+                    </div>
+                    @if (Proyecto.AltitudMsnm.HasValue)
+                    {
+                        <div class="altitud">
+                            <strong>ALTITUD:</strong> @Proyecto.AltitudMsnm msnm
+                        </div>
+                    }
+                </div>
+
+                <!-- Mapa embebido (OpenStreetMap) -->
+                <div class="mapa-container">
+                    <iframe 
+                        width="100%" 
+                        height="400" 
+                        frameborder="0" 
+                        scrolling="no" 
+                        src="https://www.openstreetmap.org/export/embed.html?bbox=@(((double)Proyecto.Longitud.Value - 0.01).ToString(System.Globalization.CultureInfo.InvariantCulture)),@(((double)Proyecto.Latitud.Value - 0.01).ToString(System.Globalization.CultureInfo.InvariantCulture)),@(((double)Proyecto.Longitud.Value + 0.01).ToString(System.Globalization.CultureInfo.InvariantCulture)),@(((double)Proyecto.Latitud.Value + 0.01).ToString(System.Globalization.CultureInfo.InvariantCulture))&layer=mapnik&marker=@(((double)Proyecto.Latitud.Value).ToString(System.Globalization.CultureInfo.InvariantCulture)),@(((double)Proyecto.Longitud.Value).ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                        style="border: 2px solid #333;">
+                    </iframe>
+                </div>
+
+                <!-- Información de ubicación -->
+                <div class="ubicacion-info">
+                    <h3>INFORMACIÓN DE UBICACIÓN</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>DEPARTAMENTO:</label>
+                            <span>@(Proyecto.Departamento ?? "-")</span>
+                        </div>
+                        <div class="info-item">
+                            <label>MUNICIPIO:</label>
+                            <span>@(Proyecto.Municipio ?? "-")</span>
+                        </div>
+                        <div class="info-item">
+                            <label>VEREDA:</label>
+                            <span>@(Proyecto.Vereda ?? "-")</span>
+                        </div>
+                        <div class="info-item">
+                            <label>PREDIO:</label>
+                            <span>@(Proyecto.Predio ?? "-")</span>
+                        </div>
+                        <div class="info-item">
+                            <label>LOTE:</label>
+                            <span>@(Proyecto.Lote ?? "-")</span>
+                        </div>
+                        <div class="info-item">
+                            <label>ÁREA:</label>
+                            <span>@(Proyecto.AreaHectareas?.ToString("F2") ?? "-") ha</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Proyecto? Proyecto { get; set; }
+
+    private async Task AbrirEnGoogleMaps()
+    {
+        if (Proyecto?.Latitud == null || Proyecto?.Longitud == null) return;
+        var url = $"https://www.google.com/maps?q={((double)Proyecto.Latitud.Value).ToString(System.Globalization.CultureInfo.InvariantCulture)},{((double)Proyecto.Longitud.Value).ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private void EditarProyecto()
+    {
+        if (Proyecto != null)
+        {
+            Navigation.NavigateTo($"/catalogos?tab=proyectos&editar={Proyecto.Id}");
+        }
+    }
+}

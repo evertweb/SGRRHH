@@ -1,0 +1,54 @@
+@using SGRRHH.Local.Domain.DTOs
+
+<div class="tab-pane">
+    <h3>HISTORIAL DE ASIGNACIONES</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>EMPLEADO</th>
+                <th>ROL</th>
+                <th>FECHA INGRESO</th>
+                <th>FECHA SALIDA</th>
+                <th class="text-right">DÍAS</th>
+                <th class="text-right">HORAS</th>
+                <th>MOTIVO SALIDA</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Historial != null)
+            {
+                @foreach (var hist in Historial)
+                {
+                    <tr class="@(!hist.FechaDesasignacion.HasValue ? "proyecto-detalle-activo-row" : "")">
+                        <td>@hist.NombreEmpleado</td>
+                        <td>@hist.Rol</td>
+                        <td>@hist.FechaAsignacion.ToString("dd/MM/yyyy")</td>
+                        <td>
+                            @if (hist.FechaDesasignacion.HasValue)
+                            {
+                                @hist.FechaDesasignacion.Value.ToString("dd/MM/yyyy")
+                            }
+                            else
+                            {
+                                <span class="badge proyecto-detalle-badge-activo">ACTIVO</span>
+                            }
+                        </td>
+                        <td class="text-right">@hist.DiasEnProyecto</td>
+                        <td class="text-right">@hist.HorasTrabajadas.ToString("F1")</td>
+                        <td>@(hist.MotivoDesasignacion ?? "-")</td>
+                    </tr>
+                }
+                @if (!Historial.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="empty-state">NO HAY HISTORIAL DE ASIGNACIONES</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public List<ProyectoEmpleadoHistorial> Historial { get; set; } = new();
+}

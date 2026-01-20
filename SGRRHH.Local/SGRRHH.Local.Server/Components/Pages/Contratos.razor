@@ -14,7 +14,7 @@
 @inject NavigationManager Navigation
 @inject ILogger<Contratos> Logger
 @inject IJSRuntime JSRuntime
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>Contratos - SGRRHH</PageTitle>
 
@@ -516,6 +516,17 @@
     {
         if (firstRender)
         {
+            try
+            {
+                var dotNetRef = DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("connectDataSync", dotNetRef);
+                Logger.LogInformation("[Contratos] Conectado a SignalR Hub");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "[Contratos] Error conectando a SignalR Hub");
+            }
+            
             // Mostrar mensaje de éxito si existe
             if (successMessage != null)
             {
@@ -526,8 +537,51 @@
         }
     }
     
-    public void Dispose()
+    [JSInvokable]
+    public async Task OnDataChanged(string entityType, string changeType, int? entityId)
     {
+        Logger.LogInformation("[Contratos] Cambio recibido: {EntityType} - {ChangeType}", entityType, changeType);
+        
+        try
+        {
+            if (entityType == "Empleado")
+            {
+                var empleadosActivos = await EmpleadoRepository.GetAllActiveAsync();
+                empleados = empleadosActivos.ToList();
+                await InvokeAsync(StateHasChanged);
+                Logger.LogInformation("[Contratos] Empleados actualizados ({Count} items)", empleados.Count);
+            }
+            else if (entityType == "Cargo")
+            {
+                var cargosActivos = await CargoRepository.GetAllActiveAsync();
+                cargos = cargosActivos.ToList();
+                // Actualizar relación en contratos cargados
+                foreach (var contrato in todosContratos)
+                {
+                    contrato.Cargo = cargos.FirstOrDefault(c => c.Id == contrato.CargoId);
+                }
+                await InvokeAsync(StateHasChanged);
+                Logger.LogInformation("[Contratos] Cargos actualizados ({Count} items)", cargos.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[Contratos] Error recargando catálogos");
+        }
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("disconnectDataSync");
+            Logger.LogInformation("[Contratos] Desconectado de SignalR Hub");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[Contratos] Error desconectando de SignalR Hub");
+        }
+        
         KeyboardShortcutService.ClearPageShortcuts(PageId);
     }
     

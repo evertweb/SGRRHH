@@ -1,0 +1,75 @@
+@using SGRRHH.Local.Domain.Entities
+
+@if (Proyecto != null)
+{
+    <div class="tab-pane">
+        <div class="proyecto-detalle-metricas-grid">
+            <div class="proyecto-detalle-metrica-card">
+                <span class="proyecto-detalle-metrica-valor">@Proyecto.TotalHorasTrabajadas.ToString("F0")</span>
+                <span class="proyecto-detalle-proyecto-detalle-metrica-label">HORAS TOTALES</span>
+            </div>
+            <div class="proyecto-detalle-metrica-card">
+                <span class="proyecto-detalle-metrica-valor">@Proyecto.TotalJornales</span>
+                <span class="proyecto-detalle-proyecto-detalle-metrica-label">JORNALES</span>
+            </div>
+            <div class="proyecto-detalle-metrica-card">
+                <span class="proyecto-detalle-metrica-valor">$@Proyecto.CostoManoObraAcumulado.ToString("N0")</span>
+                <span class="proyecto-detalle-proyecto-detalle-metrica-label">COSTO MANO OBRA</span>
+            </div>
+            <div class="proyecto-detalle-metrica-card">
+                <span class="proyecto-detalle-metrica-valor">@(Proyecto.AreaHectareas > 0 ? (Proyecto.CostoManoObraAcumulado / Proyecto.AreaHectareas)?.ToString("C0") : "-")</span>
+                <span class="proyecto-detalle-proyecto-detalle-metrica-label">COSTO / HECTÁREA</span>
+            </div>
+            <div class="proyecto-detalle-metrica-card">
+                <span class="proyecto-detalle-metrica-valor">@(Proyecto.AreaHectareas > 0 ? (Proyecto.TotalHorasTrabajadas / Proyecto.AreaHectareas)?.ToString("F1") : "-")</span>
+                <span class="proyecto-detalle-proyecto-detalle-metrica-label">HORAS / HECTÁREA</span>
+            </div>
+            <div class="proyecto-detalle-metrica-card">
+                <span class="proyecto-detalle-metrica-valor">@Cuadrilla.Count()</span>
+                <span class="proyecto-detalle-metrica-label">EMPLEADOS ACTIVOS</span>
+            </div>
+        </div>
+
+        <!-- Tabla de productividad por empleado -->
+        <h3 style="margin-top: 24px; margin-bottom: 16px;">PRODUCTIVIDAD POR EMPLEADO</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>EMPLEADO</th>
+                    <th>ROL</th>
+                    <th class="text-right">HORAS</th>
+                    <th class="text-right">JORNALES</th>
+                    <th class="text-right">DÍAS</th>
+                    <th class="text-right">PROM. HORAS/DÍA</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Cuadrilla != null)
+                {
+                    @foreach (var emp in Cuadrilla.OrderByDescending(e => e.TotalHorasTrabajadas))
+                    {
+                        <tr>
+                            <td>@(emp.Empleado?.NombreCompleto ?? "Empleado #" + emp.EmpleadoId)</td>
+                            <td>@emp.NombreRol</td>
+                            <td class="text-right">@emp.TotalHorasTrabajadas.ToString("F1")</td>
+                            <td class="text-right">@emp.TotalJornales</td>
+                            <td class="text-right">@emp.DiasTrabajados</td>
+                            <td class="text-right">@emp.PromedioHorasDia.ToString("F1")</td>
+                        </tr>
+                    }
+                    @if (!Cuadrilla.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="empty-state">NO HAY DATOS DE PRODUCTIVIDAD</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter] public Proyecto? Proyecto { get; set; }
+    [Parameter] public List<ProyectoEmpleado> Cuadrilla { get; set; } = new();
+}

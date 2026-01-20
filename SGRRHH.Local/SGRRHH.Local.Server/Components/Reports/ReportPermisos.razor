@@ -1,0 +1,435 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.DTOs
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Infrastructure.Services
+@inject IPermisoRepository PermisoRepository
+@inject IReportService ReportService
+@inject IJSRuntime JSRuntime
+@inject ILogger<ReportPermisos> Logger
+
+<div class="panel">
+    <div class="panel-header">FILTROS - REPORTE DE PERMISOS</div>
+    <div class="panel-body">
+        <div class="grid-3">
+            <div class="form-group required">
+                <label>FECHA INICIO</label>
+                <input type="date" @bind="filtroFechaInicio" class="form-input" />
+            </div>
+            <div class="form-group required">
+                <label>FECHA FIN</label>
+                <input type="date" @bind="filtroFechaFin" class="form-input" />
+            </div>
+            <div class="form-group">
+                <label>EMPLEADO</label>
+                <select @bind="filtroEmpleadoId" class="form-input">
+                    <option value="">Todos</option>
+                    @if (Empleados != null)
+                    {
+                        @foreach (var emp in Empleados)
+                        {
+                            <option value="@emp.Id">@emp.NombreCompleto</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>TIPO DE PERMISO</label>
+                <select @bind="filtroTipoPermisoId" class="form-input">
+                    <option value="">Todos</option>
+                    @if (TiposPermiso != null)
+                    {
+                        @foreach (var tipo in TiposPermiso)
+                        {
+                            <option value="@tipo.Id">@tipo.Nombre</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ESTADO</label>
+                <select @bind="filtroEstadoPermiso" class="form-input">
+                    <option value="">Todos</option>
+                    @foreach (var estado in Enum.GetValues<EstadoPermiso>())
+                    {
+                        <option value="@estado">@estado</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>DEPARTAMENTO</label>
+                <select @bind="filtroDepartamento" class="form-input">
+                    <option value="">Todos</option>
+                    @if (Departamentos != null)
+                    {
+                        @foreach (var dept in Departamentos)
+                        {
+                            <option value="@dept.Id">@dept.Nombre</option>
+                        }
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="btn-primary" @onclick="GenerarReporte" disabled="@(isGenerating || !ValidarFechas())">
+                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                </button>
+                <button @onclick="VistaPrevia" disabled="@(isGenerating || !ValidarFechas())">
+                    VISTA PREVIA
+                </button>
+                <button class="btn-success" @onclick="ExportarExcel" disabled="@(isGenerating || !ValidarFechas())">
+                    EXPORTAR A EXCEL
+                </button>
+                <button @onclick="ImprimirReporte" disabled="@(isGenerating || !ValidarFechas())">
+                    IMPRIMIR
+                </button>
+            </div>
+        </div>
+        @if (!ValidarFechas())
+        {
+            <div class="validation-message" style="color: var(--color-error); font-size: 11px; margin-top: 5px;">
+                * Debe seleccionar un rango de fechas válido
+            </div>
+        }
+    </div>
+</div>
+
+@if (errorMessage != null)
+{
+    <div class="error-block">
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="success-block">
+        <p>@successMessage</p>
+    </div>
+}
+
+@if (mostrarVistaPrevia)
+{
+    <div class="panel">
+        <div class="panel-header">
+            VISTA PREVIA DEL REPORTE
+            <button @onclick="CerrarVistaPrevia">CERRAR</button>
+        </div>
+        <div class="panel-body">
+            @if (permisosReporte.Any())
+            {
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>N° ACTA</th>
+                            <th>FECHA</th>
+                            <th>EMPLEADO</th>
+                            <th>TIPO</th>
+                            <th>FECHA INICIO</th>
+                            <th>FECHA FIN</th>
+                            <th>DÍAS</th>
+                            <th>ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var permiso in permisosReporte)
+                        {
+                            <tr>
+                                <td>@permiso.NumeroActa</td>
+                                <td>@permiso.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                                <td>@(permiso.Empleado?.NombreCompleto ?? "-")</td>
+                                <td>@(permiso.TipoPermiso?.Nombre ?? "-")</td>
+                                <td>@permiso.FechaInicio.ToString("dd/MM/yyyy")</td>
+                                <td>@permiso.FechaFin.ToString("dd/MM/yyyy")</td>
+                                <td>@permiso.TotalDias</td>
+                                <td>
+                                    <span class="badge badge-@permiso.Estado.ToString().ToLower()">
+                                        @permiso.Estado
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 15px;">
+                    <div class="stats-card" style="border: 1px solid var(--color-border); padding: 10px; text-align: center;">
+                        <h3 style="font-size: 11px; margin-bottom: 5px;">TOTAL PERMISOS</h3>
+                        <div class="value" style="font-size: 14px; font-weight: bold;">@permisosReporte.Count</div>
+                    </div>
+                    <div class="stats-card" style="border: 1px solid var(--color-border); padding: 10px; text-align: center;">
+                        <h3 style="font-size: 11px; margin-bottom: 5px;">DÍAS TOTALES</h3>
+                        <div class="value" style="font-size: 14px; font-weight: bold;">@permisosReporte.Sum(p => p.TotalDias)</div>
+                    </div>
+                    <div class="stats-card" style="border: 1px solid var(--color-border); padding: 10px; text-align: center;">
+                        <h3 style="font-size: 11px; margin-bottom: 5px;">APROBADOS</h3>
+                        <div class="value" style="font-size: 14px; font-weight: bold;">@permisosReporte.Count(p => p.Estado == EstadoPermiso.Aprobado)</div>
+                    </div>
+                    <div class="stats-card" style="border: 1px solid var(--color-border); padding: 10px; text-align: center;">
+                        <h3 style="font-size: 11px; margin-bottom: 5px;">RECHAZADOS</h3>
+                        <div class="value" style="font-size: 14px; font-weight: bold;">@permisosReporte.Count(p => p.Estado == EstadoPermiso.Rechazado)</div>
+                    </div>
+                    <div class="stats-card" style="border: 1px solid var(--color-border); padding: 10px; text-align: center;">
+                        <h3 style="font-size: 11px; margin-bottom: 5px;">PENDIENTES</h3>
+                        <div class="value" style="font-size: 14px; font-weight: bold;">@permisosReporte.Count(p => p.Estado == EstadoPermiso.Pendiente)</div>
+                    </div>
+                </div>
+            }
+            else
+            {
+               <div class="empty-state">
+                    <div class="message">No hay datos para mostrar con los filtros seleccionados</div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<PrinterModal IsVisible="mostrarPrinterModal"
+              PdfBytes="bytesParaImprimir"
+              DocumentName="@nombreDocumentoImprimir"
+              OnClose="CerrarPrinterModal"
+              OnPrintComplete="OnPrintComplete" />
+
+@code {
+    [Parameter] public List<Empleado> Empleados { get; set; } = new();
+    [Parameter] public List<TipoPermiso> TiposPermiso { get; set; } = new();
+    [Parameter] public List<Departamento> Departamentos { get; set; } = new();
+
+    private bool isGenerating = false;
+    private bool mostrarVistaPrevia = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    // Filtros
+    private DateTime? filtroFechaInicio = DateTime.Now.AddMonths(-1);
+    private DateTime? filtroFechaFin = DateTime.Now;
+    private string? filtroEmpleadoId = "";
+    private string? filtroTipoPermisoId = "";
+    private string? filtroEstadoPermiso = "";
+    private string? filtroDepartamento = "";
+
+    private List<Permiso> permisosReporte = new();
+
+    // Printer
+    private bool mostrarPrinterModal = false;
+    private byte[]? bytesParaImprimir = null;
+    private string? nombreDocumentoImprimir = null;
+
+    private bool ValidarFechas()
+    {
+        return filtroFechaInicio.HasValue && 
+               filtroFechaFin.HasValue && 
+               filtroFechaInicio.Value <= filtroFechaFin.Value;
+    }
+
+    private async Task GenerarReporte()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+            successMessage = null;
+
+            if (!ValidarFechas()) {
+                errorMessage = "Fechas inválidas.";
+                return;
+            }
+
+            await CargarDatos();
+
+            if (!permisosReporte.Any())
+            {
+                errorMessage = "No se encontraron permisos con los filtros seleccionados";
+                return;
+            }
+
+            // Generar PDF
+            var pdfBytes = ReportService.GenerarReportePermisosPdf(permisosReporte, 
+                filtroFechaInicio!.Value, filtroFechaFin!.Value);
+            
+            await DescargarArchivo(pdfBytes, 
+                $"Permisos_{filtroFechaInicio:yyyyMMdd}_{filtroFechaFin:yyyyMMdd}.pdf", 
+                "application/pdf");
+
+            successMessage = $"Reporte generado exitosamente. Total: {permisosReporte.Count} permisos, {permisosReporte.Sum(p => p.TotalDias)} días";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al generar reporte de permisos");
+            errorMessage = $"Error al generar el reporte: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task VistaPrevia()
+    {
+        try
+        {
+            errorMessage = null;
+            await CargarDatos();
+            mostrarVistaPrevia = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar vista previa de permisos");
+            errorMessage = $"Error al cargar la vista previa: {ex.Message}";
+        }
+    }
+
+    private async Task CargarDatos()
+    {
+        if (!filtroFechaInicio.HasValue || !filtroFechaFin.HasValue)
+        {
+            permisosReporte = new List<Permiso>();
+            return;
+        }
+
+        permisosReporte = (await PermisoRepository.GetAllAsync()).ToList();
+
+        // Filtrar por rango de fechas
+        permisosReporte = permisosReporte
+            .Where(p => p.FechaInicio >= filtroFechaInicio.Value && p.FechaFin <= filtroFechaFin.Value)
+            .ToList();
+
+        // Aplicar filtro de empleado
+        if (!string.IsNullOrEmpty(filtroEmpleadoId) && int.TryParse(filtroEmpleadoId, out var empId))
+        {
+            permisosReporte = permisosReporte.Where(p => p.EmpleadoId == empId).ToList();
+        }
+
+        // Aplicar filtro de tipo de permiso
+        if (!string.IsNullOrEmpty(filtroTipoPermisoId) && int.TryParse(filtroTipoPermisoId, out var tipoId))
+        {
+            permisosReporte = permisosReporte.Where(p => p.TipoPermisoId == tipoId).ToList();
+        }
+
+        // Aplicar filtro de estado
+        if (!string.IsNullOrEmpty(filtroEstadoPermiso) && Enum.TryParse<EstadoPermiso>(filtroEstadoPermiso, out var estado))
+        {
+            permisosReporte = permisosReporte.Where(p => p.Estado == estado).ToList();
+        }
+
+        // Aplicar filtro de departamento
+        if (!string.IsNullOrEmpty(filtroDepartamento) && int.TryParse(filtroDepartamento, out var deptId))
+        {
+            permisosReporte = permisosReporte.Where(p => p.Empleado?.DepartamentoId == deptId).ToList();
+        }
+
+        // Ordenar por fecha
+        permisosReporte = permisosReporte.OrderByDescending(p => p.FechaSolicitud).ToList();
+    }
+
+    private async Task ExportarExcel()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            await CargarDatos();
+
+            if (!permisosReporte.Any())
+            {
+                errorMessage = "No hay datos para exportar";
+                return;
+            }
+
+            // Generar Excel
+            var excelBytes = ReportService.GenerarReportePermisosExcel(permisosReporte);
+            await DescargarArchivo(excelBytes, 
+                $"Permisos_{filtroFechaInicio:yyyyMMdd}_{filtroFechaFin:yyyyMMdd}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+            successMessage = $"Datos exportados a Excel exitosamente. Total: {permisosReporte.Count} permisos";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al exportar permisos a Excel");
+            errorMessage = $"Error al exportar: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task ImprimirReporte()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            if (!ValidarFechas())
+            {
+                errorMessage = "Debe seleccionar un rango de fechas válido";
+                return;
+            }
+
+            await CargarDatos();
+
+            if (!permisosReporte.Any())
+            {
+                errorMessage = "No hay datos para imprimir";
+                return;
+            }
+
+            var pdfBytes = ReportService.GenerarReportePermisosPdf(permisosReporte, 
+                filtroFechaInicio!.Value, filtroFechaFin!.Value);
+            AbrirImprimirReporte(pdfBytes, $"Permisos_{filtroFechaInicio:yyyyMMdd}_{filtroFechaFin:yyyyMMdd}.pdf");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al preparar impresión de permisos");
+            errorMessage = $"Error al preparar impresión: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task DescargarArchivo(byte[] fileBytes, string fileName, string mimeType)
+    {
+        var base64 = Convert.ToBase64String(fileBytes);
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, mimeType, base64);
+    }
+
+    private void CerrarVistaPrevia()
+    {
+        mostrarVistaPrevia = false;
+    }
+
+    private void AbrirImprimirReporte(byte[] pdfBytes, string nombreReporte)
+    {
+        bytesParaImprimir = pdfBytes;
+        nombreDocumentoImprimir = nombreReporte;
+        mostrarPrinterModal = true;
+    }
+    
+    private void OnPrintComplete(ResultadoImpresionDto result)
+    {
+        if (result.Success)
+        {
+            successMessage = $"Reporte enviado a imprimir: {result.PrinterName}";
+        }
+        else
+        {
+            errorMessage = $"Error al imprimir: {result.ErrorMessage}";
+        }
+        
+        CerrarPrinterModal();
+    }
+    
+    private void CerrarPrinterModal()
+    {
+        mostrarPrinterModal = false;
+        bytesParaImprimir = null;
+        nombreDocumentoImprimir = null;
+    }
+}

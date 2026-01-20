@@ -5,6 +5,7 @@
 @inject IEmpleadoRepository EmpleadoRepository
 @inject IEspecieForestalRepository EspecieForestalRepository
 @inject ICatalogCacheService CatalogCache
+@inject IDataSyncNotifier DataSync
 @inject ILogger<ProyectosTab> Logger
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
@@ -760,6 +761,10 @@
             }
             
             CatalogCache.InvalidateCache(CatalogType.Proyectos);
+            
+            // Notificar cambio en tiempo real
+            await DataSync.NotifyChangeAsync("Proyecto", isEditing ? "Updated" : "Created", editItem.Id);
+            
             Filtrar();
             CerrarModal();
         }
@@ -795,6 +800,9 @@
             
             items.RemoveAll(p => p.Id == itemToDelete.Id);
             CatalogCache.InvalidateCache(CatalogType.Proyectos);
+            
+            // Notificar eliminación en tiempo real
+            await DataSync.NotifyChangeAsync("Proyecto", "Deleted", itemToDelete.Id);
             
             await SetSuccess($"Proyecto '{itemToDelete.Nombre}' eliminado correctamente");
             Logger.LogInformation($"Proyecto eliminado: {itemToDelete.Codigo}");

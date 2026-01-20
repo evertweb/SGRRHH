@@ -4,6 +4,7 @@
 @inject IDepartamentoRepository DepartamentoRepository
 @inject IConfiguracionLegalRepository ConfigLegalRepository
 @inject ICatalogCacheService CatalogCache
+@inject IDataSyncNotifier DataSync
 @inject ILogger<CargosTab> Logger
 @inject IJSRuntime JSRuntime
 
@@ -528,6 +529,9 @@
             // CRÍTICO: Invalidar caché para que otros componentes vean los cambios
             CatalogCache.InvalidateCache(CatalogType.Cargos);
             
+            // Notificar cambio en tiempo real a todos los usuarios conectados
+            await DataSync.NotifyChangeAsync("Cargo", isEditing ? "Updated" : "Created", editItem.Id);
+            
             // Refiltrar la lista con los datos actualizados
             Filtrar();
             CerrarModal();
@@ -573,6 +577,9 @@
             
             // CRÍTICO: Invalidar caché para que otros componentes vean los cambios
             CatalogCache.InvalidateCache(CatalogType.Cargos);
+            
+            // Notificar eliminación en tiempo real a todos los usuarios conectados
+            await DataSync.NotifyChangeAsync("Cargo", "Deleted", itemToDelete.Id);
             
             await SetSuccess($"Cargo '{itemToDelete.Nombre}' eliminado correctamente");
             Logger.LogInformation($"Cargo eliminado: {itemToDelete.Codigo}");

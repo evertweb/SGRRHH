@@ -176,7 +176,7 @@ public enum PrintQuality
 /// <summary>
 /// Resultado de un trabajo de impresión
 /// </summary>
-public class PrintJobResultDto
+public class ResultadoImpresionDto
 {
     /// <summary>
     /// ID único del trabajo de impresión

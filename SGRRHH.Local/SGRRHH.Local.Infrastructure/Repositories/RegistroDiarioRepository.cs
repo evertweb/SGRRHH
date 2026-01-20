@@ -19,8 +19,9 @@ public class RegistroDiarioRepository : IRegistroDiarioRepository
     public async Task<RegistroDiario> AddAsync(RegistroDiario entity)
     {
         entity.FechaCreacion = DateTime.Now;
-        const string sql = @"INSERT INTO registros_diarios (fecha, empleado_id, hora_entrada, hora_salida, observaciones, estado, activo, fecha_creacion)
-VALUES (@Fecha, @EmpleadoId, @HoraEntrada, @HoraSalida, @Observaciones, @Estado, 1, @FechaCreacion);
+        // Mapear CreadoPorId a usuario_registro_id
+        const string sql = @"INSERT INTO registros_diarios (fecha, empleado_id, hora_entrada, hora_salida, observaciones, estado, usuario_registro_id, activo, fecha_creacion)
+VALUES (@Fecha, @EmpleadoId, @HoraEntrada, @HoraSalida, @Observaciones, @Estado, @CreadoPorId, 1, @FechaCreacion);
 SELECT last_insert_rowid();";
 
         using var connection = _context.CreateConnection();
@@ -55,28 +56,37 @@ WHERE id = @Id";
 
     public async Task<RegistroDiario?> GetByIdAsync(int id)
     {
-        const string sql = "SELECT * FROM registros_diarios WHERE id = @Id";
+        // Mapear usuario_registro_id a CreadoPorId en el SELECT
+        const string sql = @"SELECT id, fecha, empleado_id AS EmpleadoId, hora_entrada AS HoraEntrada, hora_salida AS HoraSalida, 
+                             observaciones, estado, usuario_registro_id AS CreadoPorId, activo, fecha_creacion AS FechaCreacion, fecha_modificacion AS FechaModificacion 
+                             FROM registros_diarios WHERE id = @Id";
         using var connection = _context.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<RegistroDiario>(sql, new { Id = id });
     }
 
     public async Task<IEnumerable<RegistroDiario>> GetAllAsync()
     {
-        const string sql = "SELECT * FROM registros_diarios";
+        const string sql = @"SELECT id, fecha, empleado_id AS EmpleadoId, hora_entrada AS HoraEntrada, hora_salida AS HoraSalida, 
+                             observaciones, estado, usuario_registro_id AS CreadoPorId, activo, fecha_creacion AS FechaCreacion, fecha_modificacion AS FechaModificacion 
+                             FROM registros_diarios";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<RegistroDiario>(sql);
     }
 
     public async Task<IEnumerable<RegistroDiario>> GetAllActiveAsync()
     {
-        const string sql = "SELECT * FROM registros_diarios WHERE activo = 1";
+        const string sql = @"SELECT id, fecha, empleado_id AS EmpleadoId, hora_entrada AS HoraEntrada, hora_salida AS HoraSalida, 
+                             observaciones, estado, usuario_registro_id AS CreadoPorId, activo, fecha_creacion AS FechaCreacion, fecha_modificacion AS FechaModificacion 
+                             FROM registros_diarios WHERE activo = 1";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<RegistroDiario>(sql);
     }
 
     public async Task<RegistroDiario?> GetByFechaEmpleadoAsync(DateTime fecha, int empleadoId)
     {
-        const string sql = "SELECT * FROM registros_diarios WHERE fecha = @Fecha AND empleado_id = @EmpleadoId";
+        const string sql = @"SELECT id, fecha, empleado_id AS EmpleadoId, hora_entrada AS HoraEntrada, hora_salida AS HoraSalida, 
+                             observaciones, estado, usuario_registro_id AS CreadoPorId, activo, fecha_creacion AS FechaCreacion, fecha_modificacion AS FechaModificacion 
+                             FROM registros_diarios WHERE fecha = @Fecha AND empleado_id = @EmpleadoId";
         using var connection = _context.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<RegistroDiario>(sql, new { Fecha = fecha, EmpleadoId = empleadoId });
     }
@@ -98,28 +108,36 @@ WHERE id = @Id";
 
     public async Task<IEnumerable<RegistroDiario>> GetByEmpleadoRangoFechasAsync(int empleadoId, DateTime fechaInicio, DateTime fechaFin)
     {
-        const string sql = "SELECT * FROM registros_diarios WHERE empleado_id = @EmpleadoId AND fecha BETWEEN @FechaInicio AND @FechaFin";
+        const string sql = @"SELECT id, fecha, empleado_id AS EmpleadoId, hora_entrada AS HoraEntrada, hora_salida AS HoraSalida, 
+                             observaciones, estado, usuario_registro_id AS CreadoPorId, activo, fecha_creacion AS FechaCreacion, fecha_modificacion AS FechaModificacion 
+                             FROM registros_diarios WHERE empleado_id = @EmpleadoId AND fecha BETWEEN @FechaInicio AND @FechaFin";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<RegistroDiario>(sql, new { EmpleadoId = empleadoId, FechaInicio = fechaInicio, FechaFin = fechaFin });
     }
 
     public async Task<IEnumerable<RegistroDiario>> GetByFechaAsync(DateTime fecha)
     {
-        const string sql = "SELECT * FROM registros_diarios WHERE fecha = @Fecha";
+        const string sql = @"SELECT id, fecha, empleado_id AS EmpleadoId, hora_entrada AS HoraEntrada, hora_salida AS HoraSalida, 
+                             observaciones, estado, usuario_registro_id AS CreadoPorId, activo, fecha_creacion AS FechaCreacion, fecha_modificacion AS FechaModificacion 
+                             FROM registros_diarios WHERE fecha = @Fecha";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<RegistroDiario>(sql, new { Fecha = fecha });
     }
 
     public async Task<IEnumerable<RegistroDiario>> GetByRangoFechasAsync(DateTime fechaInicio, DateTime fechaFin)
     {
-        const string sql = "SELECT * FROM registros_diarios WHERE fecha BETWEEN @FechaInicio AND @FechaFin";
+        const string sql = @"SELECT id, fecha, empleado_id AS EmpleadoId, hora_entrada AS HoraEntrada, hora_salida AS HoraSalida, 
+                             observaciones, estado, usuario_registro_id AS CreadoPorId, activo, fecha_creacion AS FechaCreacion, fecha_modificacion AS FechaModificacion 
+                             FROM registros_diarios WHERE fecha BETWEEN @FechaInicio AND @FechaFin";
         using var connection = _context.CreateConnection();
         return await connection.QueryAsync<RegistroDiario>(sql, new { FechaInicio = fechaInicio, FechaFin = fechaFin });
     }
 
     public async Task<IEnumerable<RegistroDiario>> GetByEmpleadoWithDetallesAsync(int empleadoId, int? cantidad = null)
     {
-        var sql = "SELECT * FROM registros_diarios WHERE empleado_id = @EmpleadoId ORDER BY fecha DESC";
+        var sql = @"SELECT id, fecha, empleado_id AS EmpleadoId, hora_entrada AS HoraEntrada, hora_salida AS HoraSalida, 
+                    observaciones, estado, usuario_registro_id AS CreadoPorId, activo, fecha_creacion AS FechaCreacion, fecha_modificacion AS FechaModificacion 
+                    FROM registros_diarios WHERE empleado_id = @EmpleadoId ORDER BY fecha DESC";
         if (cantidad.HasValue)
         {
             sql += " LIMIT @Cantidad";
@@ -170,8 +188,9 @@ WHERE rd.empleado_id = @EmpleadoId
     {
         detalle.RegistroDiarioId = registroId;
         detalle.FechaCreacion = DateTime.Now;
-        const string sql = @"INSERT INTO detalles_actividad (registro_diario_id, actividad_id, proyecto_id, descripcion, horas, hora_inicio, hora_fin, orden, activo, fecha_creacion)
-VALUES (@RegistroDiarioId, @ActividadId, @ProyectoId, @Descripcion, @Horas, @HoraInicio, @HoraFin, @Orden, 1, @FechaCreacion);
+        // Se agregaron los campos Cantidad, UnidadMedida y LoteEspecifico
+        const string sql = @"INSERT INTO detalles_actividad (registro_diario_id, actividad_id, proyecto_id, descripcion, horas, hora_inicio, hora_fin, orden, activo, fecha_creacion, cantidad, unidad_medida, lote_especifico)
+VALUES (@RegistroDiarioId, @ActividadId, @ProyectoId, @Descripcion, @Horas, @HoraInicio, @HoraFin, @Orden, 1, @FechaCreacion, @Cantidad, @UnidadMedida, @LoteEspecifico);
 SELECT last_insert_rowid();";
 
         using var connection = _context.CreateConnection();
@@ -188,6 +207,7 @@ SELECT last_insert_rowid();";
     public async Task UpdateDetalleAsync(DetalleActividad detalle)
     {
         detalle.FechaModificacion = DateTime.Now;
+        // Se agregaron los campos Cantidad, UnidadMedida y LoteEspecifico
         const string sql = @"UPDATE detalles_actividad
 SET registro_diario_id = @RegistroDiarioId,
     actividad_id = @ActividadId,
@@ -197,6 +217,9 @@ SET registro_diario_id = @RegistroDiarioId,
     hora_inicio = @HoraInicio,
     hora_fin = @HoraFin,
     orden = @Orden,
+    cantidad = @Cantidad,
+    unidad_medida = @UnidadMedida,
+    lote_especifico = @LoteEspecifico,
     fecha_modificacion = @FechaModificacion
 WHERE id = @Id";
 

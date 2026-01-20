@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using SGRRHH.Local.Domain.Entities;
 using SGRRHH.Local.Domain.Enums;
 using SGRRHH.Local.Shared.Interfaces;
+using ProyectoEntity = SGRRHH.Local.Domain.Entities.Proyecto;
 
 namespace SGRRHH.Local.Server.Components.Pages;
 
@@ -31,9 +32,10 @@ public partial class ControlDiario
     private List<Actividad> actividades = new();
     private List<Actividad> actividadesFiltradas = new();
     private List<CategoriaActividad> categoriasActividad = new();
-    private List<Proyecto> proyectos = new();
+    private List<ProyectoEntity> proyectos = new();
 
     // ESTADO DE LA PAGINA
+    private int activeTab = 1; // 1=Asistencia, 2=Produccion, 3=Cierre
     private DateTime fechaSeleccionada = DateTime.Today;
     private RegistroDiario? registroSeleccionado;
     private DetalleActividad? actividadEdit;
@@ -82,6 +84,11 @@ public partial class ControlDiario
             {
                 fechaSeleccionada = fecha;
             }
+
+            // Set default tab based on time of day (optional, but requested in rationale)
+            // But let's stick to simple default 1 for now, or intelligent:
+            // if (DateTime.Now.Hour >= 16) activeTab = 2; else activeTab = 1;
+            // Let's keep it simple at 1.
 
             await CargarDatosIniciales();
             Logger.LogInformation("ControlDiario inicializado para fecha {Fecha}", fechaSeleccionada.ToString("yyyy-MM-dd"));
@@ -215,9 +222,26 @@ public partial class ControlDiario
         Navigation.NavigateTo($"/control-diario/{fechaSeleccionada:yyyy-MM-dd}");
     }
 
+    private async Task CambiarTab(int tabIndex)
+    {
+        activeTab = tabIndex;
+        await FiltrarRegistros();
+    }
+
     private async Task FiltrarRegistros()
     {
         registrosFiltrados = registrosDia;
+
+        // Filtro por Tab Cierre (3)
+        if (activeTab == 3)
+        {
+            registrosFiltrados = registrosFiltrados.Where(r => 
+                r.Estado == EstadoRegistroDiario.Borrador ||
+                (r.HoraEntrada != null && r.HoraSalida == null) ||
+                (r.HoraEntrada == null && r.HoraSalida != null) ||
+                (r.TotalHoras == 0 && r.Estado != EstadoRegistroDiario.Borrador)
+            ).ToList();
+        }
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {

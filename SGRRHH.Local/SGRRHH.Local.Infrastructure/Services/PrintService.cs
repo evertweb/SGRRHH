@@ -168,13 +168,13 @@ public class PrintService : IPrintService
 
     #region Impresión de Documentos
 
-    public Task<Result<PrintJobResultDto>> PrintPdfAsync(byte[] pdfBytes, PrintOptionsDto? options = null)
+    public Task<Result<ResultadoImpresionDto>> PrintPdfAsync(byte[] pdfBytes, PrintOptionsDto? options = null)
     {
         return Task.Run(async () =>
         {
             if (pdfBytes == null || pdfBytes.Length == 0)
             {
-                return Result<PrintJobResultDto>.Fail("El PDF está vacío");
+                return Result<ResultadoImpresionDto>.Fail("El PDF está vacío");
             }
             
             // Para PDFs, convertimos a imágenes y las imprimimos
@@ -206,13 +206,13 @@ public class PrintService : IPrintService
         });
     }
 
-    public Task<Result<PrintJobResultDto>> PrintPdfFromFileAsync(string pdfPath, PrintOptionsDto? options = null)
+    public Task<Result<ResultadoImpresionDto>> PrintPdfFromFileAsync(string pdfPath, PrintOptionsDto? options = null)
     {
         return Task.Run(async () =>
         {
             if (!File.Exists(pdfPath))
             {
-                return Result<PrintJobResultDto>.Fail($"Archivo no encontrado: {pdfPath}");
+                return Result<ResultadoImpresionDto>.Fail($"Archivo no encontrado: {pdfPath}");
             }
             
             var pdfBytes = await File.ReadAllBytesAsync(pdfPath);
@@ -220,22 +220,22 @@ public class PrintService : IPrintService
         });
     }
 
-    public Task<Result<PrintJobResultDto>> PrintImageAsync(byte[] imageBytes, PrintOptionsDto? options = null)
+    public Task<Result<ResultadoImpresionDto>> PrintImageAsync(byte[] imageBytes, PrintOptionsDto? options = null)
     {
         return PrintImagesAsync(new[] { imageBytes }, options);
     }
 
-    public Task<Result<PrintJobResultDto>> PrintImagesAsync(IEnumerable<byte[]> images, PrintOptionsDto? options = null)
+    public Task<Result<ResultadoImpresionDto>> PrintImagesAsync(IEnumerable<byte[]> images, PrintOptionsDto? options = null)
     {
         return Task.Run(() =>
         {
             if (_isPrinting)
             {
-                return Result<PrintJobResultDto>.Fail("Ya hay una impresión en progreso");
+                return Result<ResultadoImpresionDto>.Fail("Ya hay una impresión en progreso");
             }
             
             options ??= new PrintOptionsDto();
-            var jobResult = new PrintJobResultDto
+            var jobResult = new ResultadoImpresionDto
             {
                 JobName = options.JobName ?? $"Impresión_{DateTime.Now:yyyyMMdd_HHmmss}",
                 PrinterName = options.PrinterName ?? GetDefaultPrinterName() ?? "Desconocida",
@@ -260,7 +260,7 @@ public class PrintService : IPrintService
                 
                 if (_imagesToPrint.Count == 0)
                 {
-                    return Result<PrintJobResultDto>.Fail("No hay imágenes para imprimir");
+                    return Result<ResultadoImpresionDto>.Fail("No hay imágenes para imprimir");
                 }
                 
                 jobResult.PageCount = _imagesToPrint.Count;
@@ -279,7 +279,7 @@ public class PrintService : IPrintService
                     jobResult.Status = PrintJobStatus.Failed;
                     jobResult.Success = false;
                     jobResult.ErrorMessage = $"Impresora '{options.PrinterName}' no válida";
-                    return Result<PrintJobResultDto>.Fail(jobResult.ErrorMessage);
+                    return Result<ResultadoImpresionDto>.Fail(jobResult.ErrorMessage);
                 }
                 
                 // Configurar opciones
@@ -363,7 +363,7 @@ public class PrintService : IPrintService
                     Message = "Impresión completada"
                 });
                 
-                return Result<PrintJobResultDto>.Ok(jobResult);
+                return Result<ResultadoImpresionDto>.Ok(jobResult);
             }
             catch (Exception ex)
             {
@@ -379,7 +379,7 @@ public class PrintService : IPrintService
                     Message = ex.Message
                 });
                 
-                return Result<PrintJobResultDto>.Fail($"Error al imprimir: {ex.Message}");
+                return Result<ResultadoImpresionDto>.Fail($"Error al imprimir: {ex.Message}");
             }
             finally
             {
@@ -395,11 +395,11 @@ public class PrintService : IPrintService
         });
     }
 
-    public Task<Result<PrintJobResultDto>> PrintHtmlAsync(string htmlContent, PrintOptionsDto? options = null)
+    public Task<Result<ResultadoImpresionDto>> PrintHtmlAsync(string htmlContent, PrintOptionsDto? options = null)
     {
         // Para HTML, necesitaríamos un navegador/WebView
         // Por ahora, retornamos un mensaje indicando la limitación
-        return Task.FromResult(Result<PrintJobResultDto>.Fail(
+        return Task.FromResult(Result<ResultadoImpresionDto>.Fail(
             "La impresión de HTML no está soportada. Use PrintPdfAsync con un PDF generado."));
     }
 
@@ -506,12 +506,12 @@ public class PrintService : IPrintService
 
     #region Helpers Privados
 
-    private async Task<Result<PrintJobResultDto>> PrintPdfExternalAsync(byte[] pdfBytes, PrintOptionsDto? options)
+    private async Task<Result<ResultadoImpresionDto>> PrintPdfExternalAsync(byte[] pdfBytes, PrintOptionsDto? options)
     {
         try
         {
             options ??= new PrintOptionsDto();
-            var jobResult = new PrintJobResultDto
+            var jobResult = new ResultadoImpresionDto
             {
                 JobName = options.JobName ?? $"PDF_{DateTime.Now:yyyyMMdd_HHmmss}",
                 PrinterName = options.PrinterName ?? GetDefaultPrinterName() ?? "Predeterminada",
@@ -554,12 +554,12 @@ public class PrintService : IPrintService
             jobResult.Success = true;
             jobResult.Status = PrintJobStatus.Completed;
             
-            return Result<PrintJobResultDto>.Ok(jobResult);
+            return Result<ResultadoImpresionDto>.Ok(jobResult);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al imprimir PDF externamente");
-            return Result<PrintJobResultDto>.Fail($"Error al imprimir PDF: {ex.Message}");
+            return Result<ResultadoImpresionDto>.Fail($"Error al imprimir PDF: {ex.Message}");
         }
     }
 

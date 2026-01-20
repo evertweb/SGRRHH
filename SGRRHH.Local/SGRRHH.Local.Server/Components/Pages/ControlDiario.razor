@@ -34,6 +34,12 @@
         TotalHoras="@registrosDia.Sum(r => r.TotalHoras)"
         SearchTerm="@searchTerm" />
 
+    <div class="control-diario-tabs">
+        <button class="tab-btn @(activeTab == 1 ? "active" : "")" @onclick="() => CambiarTab(1)">1. ASISTENCIA</button>
+        <button class="tab-btn @(activeTab == 2 ? "active" : "")" @onclick="() => CambiarTab(2)">2. PRODUCCION</button>
+        <button class="tab-btn @(activeTab == 3 ? "active" : "")" @onclick="() => CambiarTab(3)">3. CIERRE</button>
+    </div>
+
     <div class="hospital-table-container">
         <table class="hospital-table">
             <thead>
@@ -41,14 +47,26 @@
                     <th>CODIGO</th>
                     <th>NOMBRE COMPLETO</th>
                     <th>DEPARTAMENTO</th>
-                    <th>FECHA</th>
-                    <th>HORA ENTRADA</th>
-                    <th>HORA SALIDA</th>
-                    <th>TOTAL HORAS</th>
-                    <th>NUM ACTIVIDADES</th>
-                    <th>ESTADO</th>
-                    <th>OBSERVACIONES</th>
-                    <th>FECHA CREACION</th>
+                    @if (activeTab == 3) { <th>FECHA</th> }
+                    @if (activeTab == 1 || activeTab == 3)
+                    {
+                        <th>HORA ENTRADA</th>
+                        <th>HORA SALIDA</th>
+                    }
+                    @if (activeTab == 2 || activeTab == 3)
+                    {
+                        <th>TOTAL HORAS</th>
+                        <th>NUM ACTIVIDADES</th>
+                    }
+                    @if (activeTab == 1 || activeTab == 3)
+                    {
+                        <th>ESTADO</th>
+                    }
+                    @if (activeTab == 2 || activeTab == 3)
+                    {
+                        <th>OBSERVACIONES</th>
+                    }
+                    @if (activeTab == 3) { <th>FECHA CREACION</th> }
                     <th>ACCIONES</th>
                 </tr>
             </thead>
@@ -77,6 +95,7 @@
                         var isSelected = registroSeleccionado?.Id == registro.Id;
                         <EmpleadoRow
                             Registro="@registro"
+                            ModoVisualizacion="@activeTab"
                             IsSelected="@isSelected"
                             EditandoEntradaId="@editandoEntrada"
                             EditandoSalidaId="@editandoSalida"

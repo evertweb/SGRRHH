@@ -591,7 +591,7 @@ public partial class EmpleadoExpediente
         }
     }
 
-    private void OnPrintComplete(PrintJobResultDto result)
+    private void OnPrintComplete(ResultadoImpresionDto result)
     {
         if (result.Success)
         {

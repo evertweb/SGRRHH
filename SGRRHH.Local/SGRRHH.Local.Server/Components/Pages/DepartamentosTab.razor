@@ -3,6 +3,7 @@
 @inject IDepartamentoRepository DepartamentoRepository
 @inject IEmpleadoRepository EmpleadoRepository
 @inject ICatalogCacheService CatalogCache
+@inject IDataSyncNotifier DataSync
 @inject ILogger<DepartamentosTab> Logger
 @inject IJSRuntime JSRuntime
 
@@ -370,6 +371,9 @@
             // Invalidar caché
             CatalogCache.InvalidateCache(CatalogType.Departamentos);
             
+            // Notificar cambio en tiempo real a todos los usuarios conectados
+            await DataSync.NotifyChangeAsync("Departamento", isEditing ? "Updated" : "Created", editItem.Id);
+            
             Buscar();
             CerrarModal();
         }
@@ -414,6 +418,9 @@
             
             // Invalidar caché
             CatalogCache.InvalidateCache(CatalogType.Departamentos);
+            
+            // Notificar eliminación en tiempo real a todos los usuarios conectados
+            await DataSync.NotifyChangeAsync("Departamento", "Deleted", itemToDelete.Id);
             
             await SetSuccess($"Área/Departamento '{itemToDelete.Nombre}' eliminado correctamente");
             Logger.LogInformation($"Área/Departamento eliminado: {itemToDelete.Codigo}");

@@ -1,0 +1,368 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Infrastructure.Services
+@using SGRRHH.Local.Domain.DTOs
+@inject IEmpleadoRepository EmployeeRepository
+@inject IReportService ReportService
+@inject IJSRuntime JSRuntime
+@inject ILogger<ReportListadoEmpleados> Logger
+
+<div class="panel">
+    <div class="panel-header">FILTROS - LISTADO DE EMPLEADOS</div>
+    <div class="panel-body">
+        <div class="grid-4">
+            <div class="form-group">
+                <label>ESTADO</label>
+                <select @bind="filtroEstadoEmpleado" class="form-input">
+                    <option value="">Todos</option>
+                    @foreach (var estado in Enum.GetValues<EstadoEmpleado>())
+                    {
+                        <option value="@estado">@estado</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>DEPARTAMENTO</label>
+                <select @bind="filtroDepartamento" class="form-input">
+                    <option value="">Todos</option>
+                    @if (Departamentos != null)
+                    {
+                        @foreach (var dept in Departamentos)
+                        {
+                            <option value="@dept.Id">@dept.Nombre</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>CARGO</label>
+                <select @bind="filtroCargo" class="form-input">
+                    <option value="">Todos</option>
+                    @if (Cargos != null)
+                    {
+                        @foreach (var cargo in Cargos)
+                        {
+                            <option value="@cargo.Id">@cargo.Nombre</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ORDENAR POR</label>
+                <select @bind="ordenEmpleados" class="form-input">
+                    <option value="nombre">Nombre</option>
+                    <option value="cedula">Cédula</option>
+                    <option value="codigo">Código</option>
+                    <option value="fechaIngreso">Fecha Ingreso</option>
+                </select>
+            </div>
+        </div>
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <button class="btn-primary" @onclick="GenerarReporte" disabled="@isGenerating">
+                    @(isGenerating ? "GENERANDO..." : "GENERAR REPORTE")
+                </button>
+                <button @onclick="VistaPrevia" disabled="@isGenerating">
+                    VISTA PREVIA
+                </button>
+                <button class="btn-success" @onclick="ExportarExcel" disabled="@isGenerating">
+                    EXPORTAR A EXCEL
+                </button>
+                <button @onclick="ImprimirReporte" disabled="@isGenerating">
+                    IMPRIMIR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (errorMessage != null)
+{
+    <div class="error-block">
+        <p>@errorMessage</p>
+        <button @onclick="() => errorMessage = null">ACEPTAR</button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="success-block">
+        <p>@successMessage</p>
+    </div>
+}
+
+<!-- Vista previa de datos -->
+@if (mostrarVistaPrevia)
+{
+    <div class="panel">
+        <div class="panel-header">
+            VISTA PREVIA DEL REPORTE
+            <button @onclick="CerrarVistaPrevia">CERRAR</button>
+        </div>
+        <div class="panel-body">
+            @if (empleadosReporte.Any())
+            {
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>CÓDIGO</th>
+                            <th>CÉDULA</th>
+                            <th>NOMBRE COMPLETO</th>
+                            <th>CARGO</th>
+                            <th>DEPARTAMENTO</th>
+                            <th>FECHA INGRESO</th>
+                            <th>ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var emp in empleadosReporte)
+                        {
+                            <tr>
+                                <td>@emp.Codigo</td>
+                                <td>@NumberFormatHelper.FormatearCedula(emp.Cedula)</td>
+                                <td>@emp.NombreCompleto</td>
+                                <td>@(emp.Cargo?.Nombre ?? "-")</td>
+                                <td>@(emp.Departamento?.Nombre ?? "-")</td>
+                                <td>@emp.FechaIngreso.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <span class="badge badge-@emp.Estado.ToString().ToLower()">
+                                        @emp.Estado
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <div class="results-info">
+                    <strong>Total de empleados:</strong> @empleadosReporte.Count
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <div class="message">No hay datos para mostrar con los filtros seleccionados</div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- Printer Modal local o evento para el padre? -->
+<!-- Decisión: Usar el PrinterModal localmente si es posible o emitir evento. 
+     Para simplificar, usaremos el mismo PrinterModal aquí si es reutilizable, 
+     o simplemente invocamos la lógica de impresión.
+     El original usaba un componente <PrinterModal>. Lo duplicaré aquí para ser self-contained.
+-->
+<PrinterModal IsVisible="mostrarPrinterModal"
+              PdfBytes="bytesParaImprimir"
+              DocumentName="@nombreDocumentoImprimir"
+              OnClose="CerrarPrinterModal"
+              OnPrintComplete="OnPrintComplete" />
+
+@code {
+    [Parameter] public List<Departamento> Departamentos { get; set; } = new();
+    [Parameter] public List<Cargo> Cargos { get; set; } = new();
+
+    private bool isGenerating = false;
+    private bool mostrarVistaPrevia = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private string? filtroEstadoEmpleado = "";
+    private string? filtroDepartamento = "";
+    private string? filtroCargo = "";
+    private string ordenEmpleados = "nombre";
+
+    private List<Empleado> empleadosReporte = new();
+
+    // Estado del Printer
+    private bool mostrarPrinterModal = false;
+    private byte[]? bytesParaImprimir = null;
+    private string? nombreDocumentoImprimir = null;
+
+    private async Task GenerarReporte()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+            successMessage = null;
+
+            await CargarDatosEmpleados();
+
+            if (!empleadosReporte.Any())
+            {
+                errorMessage = "No se encontraron empleados con los filtros seleccionados";
+                return;
+            }
+
+            // Generar PDF
+            var pdfBytes = ReportService.GenerarListadoEmpleadosPdf(empleadosReporte);
+            await DescargarArchivo(pdfBytes, $"Empleados_{DateTime.Now:yyyyMMdd}.pdf", "application/pdf");
+
+            successMessage = $"Reporte generado exitosamente. Total: {empleadosReporte.Count} empleados";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al generar reporte de empleados");
+            errorMessage = $"Error al generar el reporte: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task VistaPrevia()
+    {
+        try
+        {
+            errorMessage = null;
+            await CargarDatosEmpleados();
+            mostrarVistaPrevia = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar vista previa de empleados");
+            errorMessage = $"Error al cargar la vista previa: {ex.Message}";
+        }
+    }
+
+    private async Task CargarDatosEmpleados()
+    {
+        empleadosReporte = (await EmployeeRepository.GetAllAsync()).ToList();
+
+        // Aplicar filtro de estado
+        if (!string.IsNullOrEmpty(filtroEstadoEmpleado))
+        {
+            if (Enum.TryParse<EstadoEmpleado>(filtroEstadoEmpleado, out var estado))
+            {
+                empleadosReporte = empleadosReporte.Where(e => e.Estado == estado).ToList();
+            }
+        }
+
+        // Aplicar filtro de departamento
+        if (!string.IsNullOrEmpty(filtroDepartamento) && int.TryParse(filtroDepartamento, out var deptId))
+        {
+            empleadosReporte = empleadosReporte.Where(e => e.DepartamentoId == deptId).ToList();
+        }
+
+        // Aplicar filtro de cargo
+        if (!string.IsNullOrEmpty(filtroCargo) && int.TryParse(filtroCargo, out var cargoId))
+        {
+            empleadosReporte = empleadosReporte.Where(e => e.CargoId == cargoId).ToList();
+        }
+
+        // Ordenar
+        empleadosReporte = ordenEmpleados switch
+        {
+            "nombre" => empleadosReporte.OrderBy(e => e.NombreCompleto).ToList(),
+            "cedula" => empleadosReporte.OrderBy(e => e.Cedula).ToList(),
+            "codigo" => empleadosReporte.OrderBy(e => e.Codigo).ToList(),
+            "fechaIngreso" => empleadosReporte.OrderBy(e => e.FechaIngreso).ToList(),
+            _ => empleadosReporte.OrderBy(e => e.NombreCompleto).ToList()
+        };
+    }
+
+    private async Task ExportarExcel()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            await CargarDatosEmpleados();
+
+            if (!empleadosReporte.Any())
+            {
+                errorMessage = "No hay datos para exportar";
+                return;
+            }
+
+            // Generar Excel
+            var excelBytes = ReportService.GenerarListadoEmpleadosExcel(empleadosReporte);
+            await DescargarArchivo(excelBytes, $"Empleados_{DateTime.Now:yyyyMMdd}.xlsx", 
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+            successMessage = $"Datos exportados a Excel exitosamente. Total: {empleadosReporte.Count} empleados";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al exportar empleados a Excel");
+            errorMessage = $"Error al exportar: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task ImprimirReporte()
+    {
+        try
+        {
+            isGenerating = true;
+            errorMessage = null;
+
+            await CargarDatosEmpleados();
+
+            if (!empleadosReporte.Any())
+            {
+                errorMessage = "No hay datos para imprimir";
+                return;
+            }
+
+            var pdfBytes = ReportService.GenerarListadoEmpleadosPdf(empleadosReporte);
+            AbrirImprimirReporte(pdfBytes, $"Empleados_{DateTime.Now:yyyyMMdd}.pdf");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al preparar impresión de empleados");
+            errorMessage = $"Error al preparar impresión: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+        }
+    }
+
+    private async Task DescargarArchivo(byte[] fileBytes, string fileName, string mimeType)
+    {
+        var base64 = Convert.ToBase64String(fileBytes);
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, mimeType, base64);
+    }
+
+    private void CerrarVistaPrevia()
+    {
+        mostrarVistaPrevia = false;
+    }
+
+    private void AbrirImprimirReporte(byte[] pdfBytes, string nombreReporte)
+    {
+        bytesParaImprimir = pdfBytes;
+        nombreDocumentoImprimir = nombreReporte;
+        mostrarPrinterModal = true;
+    }
+    
+    private void OnPrintComplete(ResultadoImpresionDto result)
+    {
+        if (result.Success)
+        {
+            successMessage = $"Reporte enviado a imprimir: {result.PrinterName}";
+        }
+        else
+        {
+            errorMessage = $"Error al imprimir: {result.ErrorMessage}";
+        }
+        
+        CerrarPrinterModal();
+    }
+    
+    private void CerrarPrinterModal()
+    {
+        mostrarPrinterModal = false;
+        bytesParaImprimir = null;
+        nombreDocumentoImprimir = null;
+    }
+}

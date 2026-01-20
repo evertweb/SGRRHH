@@ -4,6 +4,7 @@
 @inject IActividadRepository ActividadRepository
 @inject ICategoriaActividadRepository CategoriaActividadRepository
 @inject ICatalogCacheService CatalogCache
+@inject IDataSyncNotifier DataSync
 @inject ILogger<ActividadesTab> Logger
 @inject IJSRuntime JSRuntime
 
@@ -546,6 +547,10 @@
             }
             
             CatalogCache.InvalidateCache(CatalogType.Actividades);
+            
+            // Notificar cambio en tiempo real
+            await DataSync.NotifyChangeAsync("Actividad", isEditing ? "Updated" : "Created", editItem.Id);
+            
             Filtrar();
             CerrarModal();
         }
@@ -581,6 +586,10 @@
             
             items.RemoveAll(a => a.Id == itemToDelete.Id);
             CatalogCache.InvalidateCache(CatalogType.Actividades);
+            
+            // Notificar eliminación en tiempo real
+            await DataSync.NotifyChangeAsync("Actividad", "Deleted", itemToDelete.Id);
+            
             await SetSuccess($"Actividad '{itemToDelete.Nombre}' eliminada correctamente");
             Logger.LogInformation($"Actividad eliminada: {itemToDelete.Codigo}");
             

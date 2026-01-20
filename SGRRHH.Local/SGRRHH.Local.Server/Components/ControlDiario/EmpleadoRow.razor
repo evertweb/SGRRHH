@@ -13,78 +13,111 @@
         </a>
     </td>
     <td>@(Registro.Empleado?.Departamento?.Nombre ?? "-")</td>
-    <td>@Registro.Fecha.ToString("dd/MM/yyyy")</td>
-    <td>
-        @if (EstaEditandoEntrada)
-        {
-            <input type="time"
-                   value="@FormatTimeSpan(Registro.HoraEntrada)"
-                   @onchange="OnHoraEntradaChanged"
-                   class="hospital-input-time"
-                   @onclick:stopPropagation="true" />
-        }
-        else
-        {
-            <span @onclick="EditarEntrada" @onclick:stopPropagation="true" class="editable-field">
-                @(Registro.HoraEntrada?.ToString(@"hh\:mm") ?? "-")
-            </span>
-        }
-    </td>
-    <td>
-        @if (EstaEditandoSalida)
-        {
-            <input type="time"
-                   value="@FormatTimeSpan(Registro.HoraSalida)"
-                   @onchange="OnHoraSalidaChanged"
-                   class="hospital-input-time"
-                   @onclick:stopPropagation="true" />
-        }
-        else
-        {
-            <span @onclick="EditarSalida" @onclick:stopPropagation="true" class="editable-field">
-                @(Registro.HoraSalida?.ToString(@"hh\:mm") ?? "-")
-            </span>
-        }
-    </td>
-    <td>@Registro.TotalHoras.ToString("F1")</td>
-    <td>@(Registro.DetallesActividades?.Count ?? 0)</td>
-    <td>
-        @if (Registro.Estado == EstadoRegistroDiario.Borrador)
-        {
-            <span class="estado-borrador">BORRADOR</span>
-        }
-        else if (Registro.Estado == EstadoRegistroDiario.Completado)
-        {
-            <span class="estado-completado">COMPLETADO</span>
-        }
-        else if (Registro.Estado == EstadoRegistroDiario.Aprobado)
-        {
-            <span class="estado-aprobado">APROBADO</span>
-        }
-    </td>
-    <td>@(string.IsNullOrEmpty(Registro.Observaciones) ? "-" : (Registro.Observaciones.Length > 30 ? Registro.Observaciones.Substring(0, 30) + "..." : Registro.Observaciones))</td>
-    <td>@Registro.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+
+    @if (ModoVisualizacion == 3)
+    {
+        <td>@Registro.Fecha.ToString("dd/MM/yyyy")</td>
+    }
+
+    @if (ModoVisualizacion == 1 || ModoVisualizacion == 3)
+    {
+        <td>
+            @if (EstaEditandoEntrada)
+            {
+                <input type="time"
+                       value="@FormatTimeSpan(Registro.HoraEntrada)"
+                       @onchange="OnHoraEntradaChanged"
+                       class="hospital-input-time"
+                       @onclick:stopPropagation="true" />
+            }
+            else
+            {
+                <span @onclick="EditarEntrada" @onclick:stopPropagation="true" class="editable-field">
+                    @(Registro.HoraEntrada?.ToString(@"hh\:mm") ?? "-")
+                </span>
+            }
+        </td>
+        <td>
+            @if (EstaEditandoSalida)
+            {
+                <input type="time"
+                       value="@FormatTimeSpan(Registro.HoraSalida)"
+                       @onchange="OnHoraSalidaChanged"
+                       class="hospital-input-time"
+                       @onclick:stopPropagation="true" />
+            }
+            else
+            {
+                <span @onclick="EditarSalida" @onclick:stopPropagation="true" class="editable-field">
+                    @(Registro.HoraSalida?.ToString(@"hh\:mm") ?? "-")
+                </span>
+            }
+        </td>
+    }
+
+    @if (ModoVisualizacion == 2 || ModoVisualizacion == 3)
+    {
+        <td>@Registro.TotalHoras.ToString("F1")</td>
+        <td>@(Registro.DetallesActividades?.Count ?? 0)</td>
+    }
+
+    @if (ModoVisualizacion == 1 || ModoVisualizacion == 3)
+    {
+        <td>
+            @if (Registro.Estado == EstadoRegistroDiario.Borrador)
+            {
+                <span class="estado-borrador">BORRADOR</span>
+            }
+            else if (Registro.Estado == EstadoRegistroDiario.Completado)
+            {
+                <span class="estado-completado">COMPLETADO</span>
+            }
+            else if (Registro.Estado == EstadoRegistroDiario.Aprobado)
+            {
+                <span class="estado-aprobado">APROBADO</span>
+            }
+        </td>
+    }
+
+    @if (ModoVisualizacion == 2 || ModoVisualizacion == 3)
+    {
+        <td>@(string.IsNullOrEmpty(Registro.Observaciones) ? "-" : (Registro.Observaciones.Length > 30 ? Registro.Observaciones.Substring(0, 30) + "..." : Registro.Observaciones))</td>
+    }
+
+    @if (ModoVisualizacion == 3)
+    {
+        <td>@Registro.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+    }
+
     <td class="acciones-inline">
-        <button @onclick="RegistrarEntrada"
-                @onclick:stopPropagation="true"
-                class="btn-accion-inline btn-entrada"
-                title="Registrar entrada (hora actual)"
-                disabled="@(Registro.HoraEntrada != null)">
-            E
-        </button>
-        <button @onclick="RegistrarSalida"
-                @onclick:stopPropagation="true"
-                class="btn-accion-inline btn-salida"
-                title="Registrar salida (hora actual)"
-                disabled="@(Registro.HoraSalida != null)">
-            S
-        </button>
-        <button @onclick="AgregarActividad"
-                @onclick:stopPropagation="true"
-                class="btn-accion-inline btn-actividad"
-                title="Agregar actividad">
-            +
-        </button>
+        @if (ModoVisualizacion == 1 || ModoVisualizacion == 3)
+        {
+            <button @onclick="RegistrarEntrada"
+                    @onclick:stopPropagation="true"
+                    class="btn-accion-inline btn-entrada"
+                    title="Registrar entrada (hora actual)"
+                    disabled="@(Registro.HoraEntrada != null)">
+                E
+            </button>
+            <button @onclick="RegistrarSalida"
+                    @onclick:stopPropagation="true"
+                    class="btn-accion-inline btn-salida"
+                    title="Registrar salida (hora actual)"
+                    disabled="@(Registro.HoraSalida != null)">
+                S
+            </button>
+        }
+
+        @if (ModoVisualizacion == 2 || ModoVisualizacion == 3)
+        {
+            <button @onclick="AgregarActividad"
+                    @onclick:stopPropagation="true"
+                    class="btn-accion-inline btn-actividad"
+                    title="Agregar actividad">
+                +
+            </button>
+        }
+
         <button @onclick="CompletarRegistro"
                 @onclick:stopPropagation="true"
                 class="btn-accion-inline btn-completar"

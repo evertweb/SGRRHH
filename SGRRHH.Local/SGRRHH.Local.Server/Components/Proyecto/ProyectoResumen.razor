@@ -1,0 +1,166 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+
+@if (Proyecto != null)
+{
+    <div class="tab-pane proyecto-content">
+        <!-- Ficha técnica -->
+        <div class="card">
+            <h2>FICHA TÉCNICA</h2>
+            <div class="ficha-grid">
+                <div class="ficha-item">
+                    <label>PREDIO:</label>
+                    <span>@(Proyecto.Predio ?? "-")</span>
+                </div>
+                <div class="ficha-item">
+                    <label>LOTE:</label>
+                    <span>@(Proyecto.Lote ?? "-")</span>
+                </div>
+                <div class="ficha-item">
+                    <label>ÁREA:</label>
+                    <span>@(Proyecto.AreaHectareas?.ToString("F2") ?? "-") ha</span>
+                </div>
+                <div class="ficha-item">
+                    <label>MUNICIPIO:</label>
+                    <span>@(Proyecto.Municipio ?? "-"), @(Proyecto.Departamento ?? "-")</span>
+                </div>
+                <div class="ficha-item">
+                    <label>FECHA SIEMBRA:</label>
+                    <span>@(Proyecto.FechaSiembra?.ToString("dd/MM/yyyy") ?? "-")</span>
+                </div>
+                <div class="ficha-item">
+                    <label>EDAD CULTIVO:</label>
+                    <span>@(Proyecto.EdadCultivoAnios > 0 ? $"{Proyecto.EdadCultivoAnios} años" : "-")</span>
+                </div>
+                <div class="ficha-item">
+                    <label>DENSIDAD ACTUAL:</label>
+                    <span>@(Proyecto.DensidadActual?.ToString("N0") ?? "-") árboles/ha</span>
+                </div>
+                <div class="ficha-item">
+                    <label>TURNO COSECHA:</label>
+                    <span>@(Proyecto.TurnoCosechaAnios.HasValue ? $"{Proyecto.TurnoCosechaAnios} años" : "-")</span>
+                </div>
+                <div class="ficha-item">
+                    <label>RESPONSABLE:</label>
+                    <span>@(Proyecto.Responsable?.NombreCompleto ?? "-")</span>
+                </div>
+                <div class="ficha-item">
+                    <label>CLIENTE:</label>
+                    <span>@(Proyecto.Cliente ?? "-")</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPIs del proyecto -->
+        <div class="kpi-row">
+            <div class="kpi-card">
+                <div class="kpi-icon">⏱️</div>
+                <div class="kpi-value">@Proyecto.TotalHorasTrabajadas.ToString("N0")</div>
+                <div class="kpi-label">HORAS TRABAJADAS</div>
+                @if (Proyecto.AreaHectareas > 0)
+                {
+                    <div class="kpi-detail">
+                        @((Proyecto.TotalHorasTrabajadas / Proyecto.AreaHectareas.Value).ToString("F1")) h/ha
+                    </div>
+                }
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">📅</div>
+                <div class="kpi-value">@Proyecto.TotalJornales</div>
+                <div class="kpi-label">JORNALES</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">👥</div>
+                <div class="kpi-value">@CuadrillaCount</div>
+                <div class="kpi-label">EN CUADRILLA</div>
+                <button class="kpi-action" @onclick="IrACuadrilla">
+                    GESTIONAR →
+                </button>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon">💰</div>
+                <div class="kpi-value">$@Proyecto.CostoManoObraAcumulado.ToString("N0")</div>
+                <div class="kpi-label">COSTO M.O.</div>
+                @if (Proyecto.AreaHectareas > 0)
+                {
+                    <div class="kpi-detail">
+                        $@((Proyecto.CostoManoObraAcumulado / Proyecto.AreaHectareas.Value).ToString("N0"))/ha
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Progreso del proyecto -->
+        <div class="card">
+            <h2>PROGRESO</h2>
+            <div class="progreso-container">
+                <div class="progreso-bar-grande">
+                    <div class="progreso-fill" style="width: @Proyecto.Progreso%">
+                        <span>@Proyecto.Progreso%</span>
+                    </div>
+                </div>
+                <div class="progreso-fechas">
+                    <span>INICIO: @(Proyecto.FechaInicio?.ToString("dd/MM/yyyy") ?? "-")</span>
+                    <span>FIN EST.: @(Proyecto.FechaFin?.ToString("dd/MM/yyyy") ?? "-")</span>
+                    @if (Proyecto.EstaVencido)
+                    {
+                        var diasVencido = (DateTime.Today - Proyecto.FechaFin!.Value).Days;
+                        <span class="alerta-vencido">⚠️ VENCIDO hace @diasVencido días</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas -->
+        @if (Alertas != null && Alertas.Any())
+        {
+            <div class="card alertas-card">
+                <h2>⚠️ ALERTAS</h2>
+                @foreach (var alerta in Alertas)
+                {
+                    <div class="alerta-item alerta-@alerta.Tipo">
+                        <span class="alerta-icono">@alerta.Icono</span>
+                        <span class="alerta-mensaje">@alerta.Mensaje</span>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Descripción -->
+        @if (!string.IsNullOrEmpty(Proyecto.Descripcion))
+        {
+            <div class="card">
+                <h2>DESCRIPCIÓN</h2>
+                <p>@Proyecto.Descripcion</p>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public Proyecto? Proyecto { get; set; }
+    [Parameter] public int CuadrillaCount { get; set; }
+    [Parameter] public List<AlertaProyecto>? Alertas { get; set; }
+    [Parameter] public EventCallback OnGestionarCuadrilla { get; set; }
+
+    // Necesitamos definir la clase AlertaProyecto localmente si no existe en el dominio,
+    // o en el padre. El padre la tenía como private class.
+    // Deberíamos moverla a un archivo compartido o definirla aquí tambien si es solo VO de UI.
+    // Lo mejor es compartirla o asumir que llegará como objeto genérico, pero por tipado fuerte:
+    // Voy a duplicarla aquí temporalmente o usar dynamic/object si es muy simple,
+    // PERO RECOMENDACIÓN: Moverla a DTOs.
+    // Para no tocar Domain por ahora, la definiré aquí también o usare una clase pública en el namespace del componente padre.
+    // Como son archivos separados, duplicaré la clase interna aqui para que compile, o mejor,
+    // crearé un archivo `ProyectoViewModels.cs` en la carpeta Components/Page/ViewModels si existiera.
+    // Por simplicidad y rapidez: la defino aquí.
+    
+    // NOTA: Para refactor correcto, debería estar en DTO o Shared. 
+    // Voy a asumir que puedo crear un archivo de DTO local o shared.
+    // Crearé un DTO rápido en el archivo si no existe, o usaré un tipo anónimo si Blazor lo permitiera facil (no).
+    // Definiré la clase aquí abajo.
+
+    private async Task IrACuadrilla()
+    {
+        await OnGestionarCuadrilla.InvokeAsync();
+    }
+}

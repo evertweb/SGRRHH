@@ -1,0 +1,337 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Infrastructure.Services 
+@inject IAuthService AuthService
+@inject IVacacionService VacacionService
+@inject IJSRuntime JSRuntime
+@inject ILogger<VacacionesForm> Logger
+
+@if (Show)
+{
+    <div class="modal-overlay vacaciones-modal" @onclick="CerrarModal">
+        <div class="modal-box vacaciones-modal-box" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                @if (IsEditing)
+                {
+                    <text>DETALLE DE VACACION - @(VacacionEdit.Empleado?.NombreCompleto ?? "")</text>
+                }
+                else
+                {
+                    <text>NUEVA SOLICITUD DE VACACION</text>
+                }
+            </div>
+            
+            <div class="modal-body">
+                <div class="formulario-grid">
+                    <!-- COLUMNA IZQUIERDA -->
+                    <div>
+                        <div class="formulario-seccion">
+                            <div class="seccion-titulo">DATOS PRINCIPALES</div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">EMPLEADO</label>
+                                @if (IsEditing || IsViewing)
+                                {
+                                    <input type="text" class="campo-input" 
+                                           value="@(VacacionEdit.Empleado?.NombreCompleto ?? "")" disabled />
+                                }
+                                else
+                                {
+                                    <select class="campo-input" @bind="VacacionEdit.EmpleadoId" @bind:after="OnEmpleadoChanged">
+                                        <option value="0">SELECCIONE EMPLEADO</option>
+                                        @foreach (var emp in EmpleadosActivos)
+                                        {
+                                            <option value="@emp.Id">@emp.NombreCompleto - @emp.Cedula</option>
+                                        }
+                                    </select>
+                                }
+                            </div>
+                            
+                            @if (VacacionEdit.EmpleadoId > 0 && DiasDisponibles.HasValue)
+                            {
+                                <div class="alerta-dias @(DiasDisponibles.Value > 0 ? "alerta-dias-suficiente" : "alerta-dias-insuficiente")">
+                                    <div class="alerta-dias-titulo">DIAS DISPONIBLES EN @DateTime.Now.Year</div>
+                                    <div class="alerta-dias-valor">@DiasDisponibles.Value DIAS</div>
+                                    @if (DiasDisponibles.Value <= 0)
+                                    {
+                                        <div class="alerta-dias-advertencia">
+                                            NO HAY DIAS DE VACACIONES DISPONIBLES PARA ESTE AÑO
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">PERIODO CORRESPONDIENTE</label>
+                                <input type="number" class="campo-input" 
+                                       @bind="VacacionEdit.PeriodoCorrespondiente" 
+                                       disabled="@IsViewing"
+                                       min="@(DateTime.Now.Year - 10)" 
+                                       max="@DateTime.Now.Year" />
+                                <div class="campo-ayuda">Año al que corresponden estas vacaciones</div>
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">FECHA INICIO</label>
+                                <input type="date" class="campo-input" 
+                                       @bind="VacacionEdit.FechaInicio" 
+                                       @bind:after="CalcularDias"
+                                       disabled="@IsViewing" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">FECHA FIN</label>
+                                <input type="date" class="campo-input" 
+                                       @bind="VacacionEdit.FechaFin" 
+                                       @bind:after="CalcularDias"
+                                       disabled="@IsViewing" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label">DIAS A TOMAR</label>
+                                <input type="number" class="campo-input" 
+                                       @bind="VacacionEdit.DiasTomados" disabled />
+                                <div class="campo-ayuda">Calculado automaticamente (dias habiles)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- COLUMNA DERECHA -->
+                    <div>
+                        <div class="formulario-seccion">
+                            <div class="seccion-titulo">INFORMACION ADICIONAL</div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label">OBSERVACIONES</label>
+                                <textarea class="campo-textarea" rows="4"
+                                          @bind="VacacionEdit.Observaciones"
+                                          disabled="@IsViewing"></textarea>
+                            </div>
+                            
+                            @if (IsEditing || IsViewing)
+                            {
+                                <div class="campo-form">
+                                    <label class="campo-label">ESTADO</label>
+                                    <div>
+                                        <span class="estado-@(VacacionEdit.Estado.ToString().ToLower())">
+                                            @GetEstadoTexto(VacacionEdit.Estado)
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div class="campo-form">
+                                    <label class="campo-label">FECHA SOLICITUD</label>
+                                    <input type="text" class="campo-input" 
+                                           value="@VacacionEdit.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")" disabled />
+                                </div>
+                                
+                                <div class="campo-form">
+                                    <label class="campo-label">SOLICITADO POR</label>
+                                    <input type="text" class="campo-input" 
+                                           value="@(VacacionEdit.SolicitadoPor?.NombreCompleto ?? "N/A")" disabled />
+                                </div>
+                                
+                                <div class="campo-form">
+                                    <label class="campo-label">@(VacacionEdit.Estado == EstadoVacacion.Aprobada ? "APROBADO POR" : (VacacionEdit.Estado == EstadoVacacion.Rechazada ? "RECHAZADO POR" : "APROBADO/RECHAZADO POR"))</label>
+                                    <input type="text" class="campo-input" 
+                                           value="@(VacacionEdit.AprobadoPor?.NombreCompleto ?? "-")" disabled />
+                                </div>
+                                
+                                @if (VacacionEdit.Estado != EstadoVacacion.Pendiente)
+                                {
+                                    <div class="campo-form">
+                                        <label class="campo-label">FECHA @(VacacionEdit.Estado == EstadoVacacion.Aprobada ? "APROBACION" : "RECHAZO")</label>
+                                        <input type="text" class="campo-input" 
+                                               value="@VacacionEdit.FechaAprobacion?.ToString("dd/MM/yyyy HH:mm")" disabled />
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(VacacionEdit.MotivoRechazo))
+                                {
+                                    <div class="campo-form">
+                                        <label class="campo-label">MOTIVO RECHAZO</label>
+                                        <textarea class="campo-textarea" rows="3" 
+                                                  value="@VacacionEdit.MotivoRechazo" disabled></textarea>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        
+                        <!-- HISTORIAL -->
+                        @if ((IsEditing || IsViewing) && HistorialVacaciones.Any())
+                        {
+                            <div class="historial-box">
+                                <div class="historial-titulo">HISTORIAL DE VACACIONES</div>
+                                @foreach (var hist in HistorialVacaciones)
+                                {
+                                    <div class="historial-item">
+                                        <strong>@hist.PeriodoCorrespondiente:</strong> 
+                                        @hist.FechaInicio.ToString("dd/MM/yyyy") - @hist.FechaFin.ToString("dd/MM/yyyy")
+                                        (@hist.DiasTomados DIAS) - @hist.Estado
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+                
+                <!-- BLOQUE APROBACION -->
+                @if ((IsEditing || IsViewing) && VacacionEdit.Estado == EstadoVacacion.Pendiente && AuthService.IsAprobador)
+                {
+                    <div class="bloque-aprobacion">
+                        <div class="bloque-aprobacion-titulo">ACCIONES DE APROBACION</div>
+                        <div class="bloque-aprobacion-botones">
+                            <button class="btn btn-aprobar" @onclick="AprobarVacacion">
+                                APROBAR VACACION
+                            </button>
+                            <button class="btn btn-rechazar" @onclick="() => showRechazarDialog = true">
+                                RECHAZAR VACACION
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn" @onclick="CerrarModal">CANCELAR</button>
+                @if (!IsViewing)
+                {
+                    <button class="btn" @onclick="Guardar" disabled="@IsSaving">
+                        @(IsSaving ? "GUARDANDO..." : "GUARDAR")
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- DIALOGO RECHAZO -->
+@if (showRechazarDialog)
+{
+    <div class="modal-overlay" @onclick="() => showRechazarDialog = false">
+        <div class="dialogo-confirmacion" @onclick:stopPropagation="true">
+            <div class="dialogo-titulo">RECHAZAR VACACION</div>
+            
+            <div class="dialogo-contenido">
+                <div class="campo-form">
+                    <label class="campo-label campo-requerido">MOTIVO DEL RECHAZO</label>
+                    <textarea class="campo-textarea" rows="4" 
+                              @bind="motivoRechazo"></textarea>
+                    <div class="campo-ayuda">Explique por que se rechaza esta solicitud</div>
+                </div>
+            </div>
+            
+            <div class="dialogo-botones">
+                <button class="btn" @onclick="() => showRechazarDialog = false">CANCELAR</button>
+                <button class="btn btn-rechazar" @onclick="ConfirmarRechazo" 
+                        disabled="@(string.IsNullOrWhiteSpace(motivoRechazo))">
+                    CONFIRMAR RECHAZO
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public bool IsEditing { get; set; }
+    [Parameter] public bool IsViewing { get; set; }
+    [Parameter] public Vacacion VacacionEdit { get; set; } = new();
+    [Parameter] public List<Empleado> EmpleadosActivos { get; set; } = new();
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<Vacacion> OnSave { get; set; }
+    [Parameter] public EventCallback<Vacacion> OnApprove { get; set; }
+    [Parameter] public EventCallback<(Vacacion, string)> OnReject { get; set; }
+
+    private bool IsSaving = false;
+    private int? DiasDisponibles;
+    private List<Vacacion> HistorialVacaciones = new();
+    private bool showRechazarDialog = false;
+    private string motivoRechazo = "";
+    
+    // Validacion local
+    private string? ErrorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Show && VacacionEdit.EmpleadoId > 0)
+        {
+            await CargarDatosEmpleado(VacacionEdit.EmpleadoId);
+        }
+    }
+
+    private async Task OnEmpleadoChanged()
+    {
+        if (VacacionEdit.EmpleadoId > 0)
+        {
+            await CargarDatosEmpleado(VacacionEdit.EmpleadoId);
+        }
+        else
+        {
+            DiasDisponibles = null;
+            HistorialVacaciones.Clear();
+        }
+    }
+
+    private async Task CargarDatosEmpleado(int empleadoId)
+    {
+        DiasDisponibles = await VacacionService.CalcularDiasDisponiblesAsync(empleadoId, VacacionEdit.PeriodoCorrespondiente);
+        HistorialVacaciones = await VacacionService.GetHistorialAsync(empleadoId);
+    }
+
+    private void CalcularDias()
+    {
+        if (VacacionEdit.FechaInicio != default && VacacionEdit.FechaFin != default)
+        {
+            VacacionEdit.DiasTomados = VacacionService.CalcularDiasHabiles(VacacionEdit.FechaInicio, VacacionEdit.FechaFin);
+        }
+    }
+
+    private async Task Guardar()
+    {
+        IsSaving = true;
+        // Basic validations
+        if (VacacionEdit.EmpleadoId <= 0)
+        {
+             // Ideally notify parent or show toast. For now parent handles most validation OR we can check here.
+             // We will emit save and let parent handle final save or handle here.
+             // Given the complexity refactor, passing back to parent is safer for global error handling, 
+             // but calculating days available needs to be checked here physically or logic duplicated.
+        }
+        
+        await OnSave.InvokeAsync(VacacionEdit);
+        IsSaving = false;
+    }
+
+    private async Task AprobarVacacion()
+    {
+        await OnApprove.InvokeAsync(VacacionEdit);
+    }
+
+    private async Task ConfirmarRechazo()
+    {
+        await OnReject.InvokeAsync((VacacionEdit, motivoRechazo));
+        showRechazarDialog = false;
+        motivoRechazo = "";
+    }
+
+    private async Task CerrarModal()
+    {
+        await OnClose.InvokeAsync();
+    }
+    
+    private string GetEstadoTexto(EstadoVacacion estado)
+    {
+        return estado switch
+        {
+            EstadoVacacion.Pendiente => "PENDIENTE",
+            EstadoVacacion.Aprobada => "APROBADA",
+            EstadoVacacion.Rechazada => "RECHAZADA",
+            EstadoVacacion.Programada => "PROGRAMADA",
+            EstadoVacacion.Disfrutada => "DISFRUTADA",
+            EstadoVacacion.Cancelada => "CANCELADA",
+            _ => estado.ToString().ToUpper()
+        };
+    }
+}

@@ -10,7 +10,7 @@
 @inject NavigationManager Navigation
 @inject ILogger<Permisos> Logger
 @inject IJSRuntime JSRuntime
-@implements IDisposable
+@implements IAsyncDisposable
 
 <PageTitle>Permisos - SGRRHH</PageTitle>
 
@@ -132,7 +132,45 @@
     {
         if (firstRender)
         {
+            try
+            {
+                var dotNetRef = DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("connectDataSync", dotNetRef);
+                Logger.LogInformation("[Permisos] Conectado a SignalR Hub");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "[Permisos] Error conectando a SignalR Hub");
+            }
+            
             await ConfigurarAtajosTeclado();
+        }
+    }
+    
+    [JSInvokable]
+    public async Task OnDataChanged(string entityType, string changeType, int? entityId)
+    {
+        Logger.LogInformation("[Permisos] Cambio recibido: {EntityType} - {ChangeType}", entityType, changeType);
+        
+        try
+        {
+            if (entityType == "Empleado")
+            {
+                todosEmpleados = await CatalogCache.GetEmpleadosTodosAsync();
+                empleadosActivos = await CatalogCache.GetEmpleadosActivosAsync();
+                await InvokeAsync(StateHasChanged);
+                Logger.LogInformation("[Permisos] Empleados actualizados");
+            }
+            else if (entityType == "TipoPermiso")
+            {
+                tiposPermiso = await CatalogCache.GetTiposPermisoAsync();
+                await InvokeAsync(StateHasChanged);
+                Logger.LogInformation("[Permisos] TiposPermiso actualizados ({Count} items)", tiposPermiso.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[Permisos] Error recargando catálogos");
         }
     }
 
@@ -150,8 +188,18 @@
         return currentInstance?.HandlePermisoAction(accion) ?? Task.CompletedTask;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("disconnectDataSync");
+            Logger.LogInformation("[Permisos] Desconectado de SignalR Hub");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[Permisos] Error desconectando de SignalR Hub");
+        }
+        
         if (currentInstance == this)
         {
             currentInstance = null;

@@ -9,6 +9,7 @@
 @inject NavigationManager Navigation
 @inject ILogger<Vacaciones> Logger
 @inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 <PageTitle>Vacaciones - SGRRHH</PageTitle>
 
 <div class="vacacion-container">
@@ -534,6 +535,49 @@
         if (VacacionIdParam.HasValue && VacacionIdParam.Value > 0)
         {
             await CargarVacacionParam();
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var dotNetRef = DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("connectDataSync", dotNetRef);
+                Logger.LogInformation("[Vacaciones] Conectado a SignalR Hub");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "[Vacaciones] Error conectando a SignalR Hub");
+            }
+        }
+    }
+    
+    [JSInvokable]
+    public async Task OnDataChanged(string entityType, string changeType, int? entityId)
+    {
+        if (entityType == "Empleado")
+        {
+            Logger.LogInformation("[Vacaciones] Empleado modificado, recargando lista");
+            var empleados = await EmpleadoRepository.GetAllAsync();
+            todosEmpleados = empleados.OrderBy(e => e.NombreCompleto).ToList();
+            empleadosActivos = todosEmpleados.Where(e => e.Estado == EstadoEmpleado.Activo).ToList();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("disconnectDataSync");
+            Logger.LogInformation("[Vacaciones] Desconectado de SignalR Hub");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[Vacaciones] Error desconectando de SignalR Hub");
         }
     }
     

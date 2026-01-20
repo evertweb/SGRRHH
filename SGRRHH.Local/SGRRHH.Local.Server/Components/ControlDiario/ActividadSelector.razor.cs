@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using ProyectoEntity = SGRRHH.Local.Domain.Entities.Proyecto;
 using SGRRHH.Local.Domain.Entities;
 
 namespace SGRRHH.Local.Server.Components.ControlDiario;
@@ -19,7 +20,7 @@ public partial class ActividadSelector : ComponentBase
 
     [Parameter] public List<Actividad> ActividadesFiltradas { get; set; } = new();
 
-    [Parameter] public List<Proyecto> Proyectos { get; set; } = new();
+    [Parameter] public List<ProyectoEntity> Proyectos { get; set; } = new();
 
     [Parameter] public int CategoriaFiltroId { get; set; }
 

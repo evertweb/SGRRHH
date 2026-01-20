@@ -55,7 +55,7 @@ public interface IPrintService : IDisposable
     /// <param name="pdfBytes">Bytes del PDF</param>
     /// <param name="options">Opciones de impresión</param>
     /// <returns>Resultado del trabajo de impresión</returns>
-    Task<Result<PrintJobResultDto>> PrintPdfAsync(byte[] pdfBytes, PrintOptionsDto? options = null);
+    Task<Result<ResultadoImpresionDto>> PrintPdfAsync(byte[] pdfBytes, PrintOptionsDto? options = null);
     
     /// <summary>
     /// Imprime un archivo PDF desde disco
@@ -63,7 +63,7 @@ public interface IPrintService : IDisposable
     /// <param name="pdfPath">Ruta al archivo PDF</param>
     /// <param name="options">Opciones de impresión</param>
     /// <returns>Resultado del trabajo de impresión</returns>
-    Task<Result<PrintJobResultDto>> PrintPdfFromFileAsync(string pdfPath, PrintOptionsDto? options = null);
+    Task<Result<ResultadoImpresionDto>> PrintPdfFromFileAsync(string pdfPath, PrintOptionsDto? options = null);
     
     /// <summary>
     /// Imprime una imagen
@@ -71,7 +71,7 @@ public interface IPrintService : IDisposable
     /// <param name="imageBytes">Bytes de la imagen</param>
     /// <param name="options">Opciones de impresión</param>
     /// <returns>Resultado del trabajo de impresión</returns>
-    Task<Result<PrintJobResultDto>> PrintImageAsync(byte[] imageBytes, PrintOptionsDto? options = null);
+    Task<Result<ResultadoImpresionDto>> PrintImageAsync(byte[] imageBytes, PrintOptionsDto? options = null);
     
     /// <summary>
     /// Imprime múltiples imágenes (una por página)
@@ -79,7 +79,7 @@ public interface IPrintService : IDisposable
     /// <param name="images">Lista de imágenes en bytes</param>
     /// <param name="options">Opciones de impresión</param>
     /// <returns>Resultado del trabajo de impresión</returns>
-    Task<Result<PrintJobResultDto>> PrintImagesAsync(IEnumerable<byte[]> images, PrintOptionsDto? options = null);
+    Task<Result<ResultadoImpresionDto>> PrintImagesAsync(IEnumerable<byte[]> images, PrintOptionsDto? options = null);
     
     /// <summary>
     /// Imprime un documento HTML
@@ -87,7 +87,7 @@ public interface IPrintService : IDisposable
     /// <param name="htmlContent">Contenido HTML</param>
     /// <param name="options">Opciones de impresión</param>
     /// <returns>Resultado del trabajo de impresión</returns>
-    Task<Result<PrintJobResultDto>> PrintHtmlAsync(string htmlContent, PrintOptionsDto? options = null);
+    Task<Result<ResultadoImpresionDto>> PrintHtmlAsync(string htmlContent, PrintOptionsDto? options = null);
     
     #endregion
     

@@ -1,6 +1,6 @@
 ---
 name: deploy-ssh
-description: Proceso de deploy de SGRRHH al servidor remoto vía SSH/SMB. Usar cuando el usuario pida desplegar, actualizar el servidor o verificar producción.
+description: Proceso de deploy de SGRRHH a servidores remotos vía SSH/SMB. SERVIDORES CONFIGURADOS - Servidor 1 (192.168.1.248:equipo1) Script Deploy-ToServer.ps1 - Servidor 2 (192.168.1.72:fores) Script Deploy-ToServer2.ps1. Usar cuando el usuario pida desplegar, actualizar servidores o verificar producción.
 ---
 # Deploy SSH - SGRRHH
 
@@ -34,34 +34,40 @@ description: Proceso de deploy de SGRRHH al servidor remoto vía SSH/SMB. Usar c
 
 ## Comandos de Deploy
 
-### Deploy Incremental (Recomendado)
+### Servidor 1 (Principal)
+
+**Deploy Incremental:**
 ```powershell
 cd c:\Users\evert\Documents\rrhh\SGRRHH.Local
 .\scripts\Deploy-ToServer.ps1
 ```
-- Compila en modo Release
-- Sincroniza solo archivos modificados
-- Reinicia el servicio automáticamente
 
-### Deploy sin Recompilar
+**Deploy rápido:**
 ```powershell
-.\scripts\Deploy-ToServer.ps1 -SkipBuild
-```
-Usa el build existente en `publish-ssh/`
-
-### Deploy Completo (Full Sync)
-```powershell
-.\scripts\Deploy-ToServer.ps1 -FullSync
+.\scripts\Deploy-ToServer.ps1 -SkipBuild -Force
 ```
 
-> [!WARNING]
-> Full Sync puede eliminar archivos extras en el servidor. Usar con precaución.
+### Servidor 2 (Secundario)
 
-### Deploy con Base de Datos
+**Deploy Incremental:**
 ```powershell
-.\scripts\Deploy-ToServer.ps1 -IncludeDatabase
+cd c:\Users\evert\Documents\rrhh\SGRRHH.Local
+.\scripts\Deploy-ToServer2.ps1
 ```
-Copia la BD local al servidor (sobrescribe la del servidor)
+
+**Deploy rápido:**
+```powershell
+.\scripts\Deploy-ToServer2.ps1 -SkipBuild -Force
+```
+
+### Opciones Disponibles (Ambos Servidores)
+
+| Parámetro | Función |
+|-----------|----------|
+| `-SkipBuild` | Usa el build existente (no recompila) |
+| `-Force` | No pide confirmación |
+| `-FullSync` | Sync completo con /MIR (⚠️ peligroso) |
+| `-IncludeDatabase` | Copia la BD local al servidor |
 
 ## Otros Scripts Disponibles
 
@@ -74,25 +80,43 @@ Copia la BD local al servidor (sobrescribe la del servidor)
 
 ## Verificación Post-Deploy
 
-### Verificar conectividad SSH
+### Servidor 1
+
+**Conectividad SSH:**
 ```powershell
 ssh equipo1@192.168.1.248 "echo OK"
 ```
 
-### Verificar estado del servicio
+**Estado del servicio:**
 ```powershell
 ssh equipo1@192.168.1.248 "sc query SGRRHH_Local"
 ```
 
-### Ver logs recientes
+**Ver logs:**
 ```powershell
 ssh equipo1@192.168.1.248 "type C:\SGRRHH\logs\*.log"
 ```
 
-### Reiniciar servicio manualmente
+### Servidor 2
+
+**Conectividad SSH:**
 ```powershell
-ssh equipo1@192.168.1.248 "net stop SGRRHH_Local && net start SGRRHH_Local"
+ssh fores@192.168.1.72 "echo OK"
 ```
+
+**Verificar proceso:**
+```powershell
+ssh fores@192.168.1.72 "Get-Process | Where-Object {$_.Name -like '*SGRRHH*'}"
+```
+
+**Ver logs:**
+```powershell
+ssh fores@192.168.1.72 "Get-Content C:\SGRRHH\logs\output.log -Tail 50"
+```
+
+**Acceso Web:**
+- Servidor 1: `http://192.168.1.248:5002` | `https://192.168.1.248:5003`
+- Servidor 2: `http://192.168.1.72:5002`
 
 ## Servicio Windows (NSSM)
 
