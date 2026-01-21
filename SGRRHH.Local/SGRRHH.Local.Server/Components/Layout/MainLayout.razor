@@ -58,9 +58,8 @@ else
                 </div>
             </div>
             
-            @if (false) // SECCIÓN DESACOPLADA - SOLICITUDES (MVP)
+            @if (false)
             {
-            <!-- SOLICITUDES -->
             <div class="nav-dropdown @(activeDropdown == "solicitudes" ? "open" : "")">
                 <button type="button" class="nav-dropdown-toggle" @onclick="ToggleSolicitudes" @onclick:stopPropagation="true">SOLICITUDES ▼</button>
                 <div class="nav-dropdown-content">
@@ -71,12 +70,10 @@ else
                     <a href="/seguimiento-permisos">SEGUIMIENTO</a>
                 </div>
             </div>
-            } // FIN SOLICITUDES
+            }
             
-            @if (false) // SECCIÓN DESACOPLADA - NÓMINA (MVP)
+            @if (false)
             {
-            
-            <!-- NÓMINA -->
             <div class="nav-dropdown @(activeDropdown == "nomina" ? "open" : "")">
                 <button type="button" class="nav-dropdown-toggle" @onclick="ToggleNomina" @onclick:stopPropagation="true">NÓMINA ▼</button>
                 <div class="nav-dropdown-content">
@@ -84,7 +81,7 @@ else
                     <a href="/prestaciones">PRESTACIONES</a>
                 </div>
             </div>
-            } // FIN NÓMINA
+            }
             
             <!-- CONTROL -->
             <div class="nav-dropdown @(activeDropdown == "control" ? "open" : "")">
