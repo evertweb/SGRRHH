@@ -12,6 +12,11 @@ public class Actividad : EntidadBase
     /// Código único de la actividad (ej: SIEM-001)
     /// </summary>
     public string Codigo { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Predio o Finca donde se realiza la actividad (opcional)
+    /// </summary>
+    public string? Predio { get; set; }
     
     /// <summary>
     /// Nombre de la actividad
