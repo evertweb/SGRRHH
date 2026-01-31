@@ -1,0 +1,520 @@
+@page "/vacantes"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.Interfaces
+@using SGRRHH.Local.Shared.Interfaces
+@inject IVacanteRepositorio VacanteRepositorio
+@inject IDepartamentoRepository DepartamentoRepository
+@inject ICargoRepository CargoRepository
+@inject ICatalogCacheService CatalogCache
+@inject ILogger<Vacantes> Logger
+@inject IJSRuntime JSRuntime
+
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">GESTIÓN DE VACANTES</h1>
+    </div>
+    
+    <!-- Mensajes de estado -->
+    @if (!string.IsNullOrEmpty(mensajeExito))
+    {
+        <div class="success-block">@mensajeExito</div>
+    }
+    
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="error-block">@mensajeError</div>
+    }
+
+    <!-- Toolbar -->
+    <div class="hospital-toolbar">
+        <div class="hospital-toolbar-group">
+            <button class="btn-primary" @onclick="Nuevo">NUEVA VACANTE [F2]</button>
+            <button class="btn-action" @onclick="CargarDatos">ACTUALIZAR</button>
+            @if (vacanteSeleccionada != null)
+            {
+                <button class="btn-action" @onclick="EditarSeleccionada">EDITAR</button>
+            }
+        </div>
+        <div class="hospital-toolbar-group">
+            <select @bind="filtroEstado" @bind:after="Buscar">
+                <option value="">-- TODOS LOS ESTADOS --</option>
+                @foreach (var estado in Enum.GetValues<EstadoVacante>())
+                {
+                    <option value="@((int)estado)">@estado.ToString().ToUpper()</option>
+                }
+            </select>
+            <input type="text" placeholder="BUSCAR..." 
+                   @bind="terminoBusqueda" @bind:event="oninput" @bind:after="Buscar" />
+            @if (!string.IsNullOrEmpty(terminoBusqueda))
+            {
+                <button class="btn-action" @onclick="LimpiarBusqueda">LIMPIAR</button>
+            }
+        </div>
+    </div>
+
+    <!-- Tabla de Vacantes -->
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>TÍTULO</th>
+                <th>CARGO</th>
+                <th>DEPARTAMENTO</th>
+                <th>ESTADO</th>
+                <th class="text-center">POSICIONES</th>
+                <th>FECHA PUBLICACIÓN</th>
+                <th>FECHA CIERRE</th>
+                <th>ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (cargando)
+            {
+                <tr><td colspan="8" class="loading-cell">CARGANDO VACANTES...</td></tr>
+            }
+            else if (!vacantesFiltradas.Any())
+            {
+                <tr><td colspan="8" class="empty-cell">NO HAY VACANTES PARA MOSTRAR</td></tr>
+            }
+            else
+            {
+                @foreach (var vacante in vacantesFiltradas)
+                {
+                    <tr class="@(vacanteSeleccionada?.Id == vacante.Id ? "selected" : "") @(!vacante.EsActivo ? "row-inactive" : "")"
+                        @onclick="() => SeleccionarVacante(vacante)">
+                        <td><strong>@vacante.Titulo</strong></td>
+                        <td>@(vacante.Cargo?.Nombre ?? "-")</td>
+                        <td>@(vacante.Departamento?.Nombre ?? "-")</td>
+                        <td>
+                            <span class="@ObtenerClaseEstado(vacante.Estado)">
+                                @vacante.Estado.ToString().ToUpper()
+                            </span>
+                        </td>
+                        <td class="text-center">@vacante.CantidadPosiciones</td>
+                        <td>@vacante.FechaPublicacion.ToString("dd/MM/yyyy")</td>
+                        <td>@(vacante.FechaCierre?.ToString("dd/MM/yyyy") ?? "-")</td>
+                        <td class="table-actions">
+                            <button class="btn-action" @onclick="() => Editar(vacante)" @onclick:stopPropagation="true">
+                                EDITAR
+                            </button>
+                            @if (vacante.Estado == EstadoVacante.Borrador)
+                            {
+                                <button class="btn-success" @onclick="() => CambiarEstado(vacante, EstadoVacante.Abierta)" @onclick:stopPropagation="true">
+                                    PUBLICAR
+                                </button>
+                            }
+                            @if (vacante.Estado == EstadoVacante.Abierta)
+                            {
+                                <button class="btn-danger" @onclick="() => CambiarEstado(vacante, EstadoVacante.Cerrada)" @onclick:stopPropagation="true">
+                                    CERRAR
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal de Edición/Creación -->
+@if (mostrarModal)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal-box" @onclick:stopPropagation="true" style="max-width: 700px;">
+            <div class="modal-header">
+                @(esEdicion ? $"EDITAR VACANTE - {vacanteEdicion?.Titulo}" : "NUEVA VACANTE")
+            </div>
+            
+            @if (vacanteEdicion != null)
+            {
+                <div class="formulario-seccion">
+                    <div class="campo-form">
+                        <label class="campo-label campo-requerido">TÍTULO DE LA VACANTE</label>
+                        <input type="text" class="campo-input" id="tituloInput"
+                               @bind="vacanteEdicion.Titulo" maxlength="200"
+                               disabled="@guardando"
+                               placeholder="EJ: INGENIERO FORESTAL, OPERADOR DE MAQUINARIA..." />
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="campo-form">
+                            <label class="campo-label campo-requerido">CARGO</label>
+                            <select class="campo-input" @bind="vacanteEdicion.CargoId" disabled="@guardando">
+                                <option value="0">-- SELECCIONAR CARGO --</option>
+                                @foreach (var cargo in cargos)
+                                {
+                                    <option value="@cargo.Id">@cargo.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="campo-form">
+                            <label class="campo-label campo-requerido">DEPARTAMENTO</label>
+                            <select class="campo-input" @bind="vacanteEdicion.DepartamentoId" disabled="@guardando">
+                                <option value="0">-- SELECCIONAR DEPARTAMENTO --</option>
+                                @foreach (var depto in departamentos)
+                                {
+                                    <option value="@depto.Id">@depto.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="campo-form">
+                        <label class="campo-label">DESCRIPCIÓN</label>
+                        <textarea class="campo-textarea" rows="3"
+                                  @bind="vacanteEdicion.Descripcion"
+                                  disabled="@guardando"
+                                  placeholder="DESCRIPCIÓN DETALLADA DEL PUESTO..."></textarea>
+                    </div>
+                    
+                    <div class="campo-form">
+                        <label class="campo-label">REQUISITOS</label>
+                        <textarea class="campo-textarea" rows="3"
+                                  @bind="vacanteEdicion.Requisitos"
+                                  disabled="@guardando"
+                                  placeholder="REQUISITOS DEL PUESTO (EDUCACIÓN, EXPERIENCIA, HABILIDADES...)"></textarea>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="campo-form">
+                            <label class="campo-label">SALARIO MÍNIMO</label>
+                            <input type="number" class="campo-input"
+                                   @bind="vacanteEdicion.SalarioMinimo"
+                                   disabled="@guardando"
+                                   placeholder="1.300.000" />
+                        </div>
+                        
+                        <div class="campo-form">
+                            <label class="campo-label">SALARIO MÁXIMO</label>
+                            <input type="number" class="campo-input"
+                                   @bind="vacanteEdicion.SalarioMaximo"
+                                   disabled="@guardando"
+                                   placeholder="2.500.000" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="campo-form">
+                            <label class="campo-label campo-requerido">FECHA PUBLICACIÓN</label>
+                            <input type="date" class="campo-input"
+                                   @bind="vacanteEdicion.FechaPublicacion"
+                                   disabled="@guardando" />
+                        </div>
+                        
+                        <div class="campo-form">
+                            <label class="campo-label">FECHA CIERRE (OPCIONAL)</label>
+                            <input type="date" class="campo-input"
+                                   @bind="vacanteEdicion.FechaCierre"
+                                   disabled="@guardando" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="campo-form">
+                            <label class="campo-label">CANTIDAD DE POSICIONES</label>
+                            <input type="number" class="campo-input"
+                                   @bind="vacanteEdicion.CantidadPosiciones"
+                                   min="1" max="50"
+                                   disabled="@guardando" />
+                        </div>
+                        
+                        <div class="campo-form">
+                            <label class="campo-label">ESTADO</label>
+                            <select class="campo-input" @bind="vacanteEdicion.Estado" disabled="@guardando">
+                                @foreach (var estado in Enum.GetValues<EstadoVacante>())
+                                {
+                                    <option value="@estado">@estado.ToString().ToUpper()</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            }
+            
+            <div class="modal-footer">
+                <button class="btn-action" @onclick="CerrarModal" disabled="@guardando">CANCELAR [ESC]</button>
+                <button class="btn-primary" @onclick="Guardar" disabled="@guardando">
+                    @(guardando ? "GUARDANDO..." : "GUARDAR [F9]")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ========== ESTADO ==========
+    private List<Vacante> vacantes = new();
+    private List<Vacante> vacantesFiltradas = new();
+    private List<Departamento> departamentos = new();
+    private List<Cargo> cargos = new();
+    
+    private Vacante? vacanteSeleccionada;
+    private Vacante? vacanteEdicion;
+    
+    private bool cargando;
+    private bool mostrarModal;
+    private bool guardando;
+    private bool esEdicion;
+    
+    private string terminoBusqueda = "";
+    private string? filtroEstado;
+    private string? mensajeExito;
+    private string? mensajeError;
+    
+    // ========== LIFECYCLE ==========
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarCatalogos();
+        await CargarDatos();
+    }
+    
+    // ========== CARGA DE DATOS ==========
+    private async Task CargarCatalogos()
+    {
+        try
+        {
+            departamentos = (await DepartamentoRepository.GetAllActiveAsync()).OrderBy(d => d.Nombre).ToList();
+            cargos = (await CargoRepository.GetAllActiveAsync()).OrderBy(c => c.Nombre).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar catálogos");
+            mensajeError = $"Error al cargar catálogos: {ex.Message}";
+        }
+    }
+    
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        StateHasChanged();
+        
+        try
+        {
+            vacantes = (await VacanteRepositorio.ObtenerTodosAsync()).ToList();
+            Buscar();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar vacantes");
+            mensajeError = $"Error al cargar vacantes: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+    
+    // ========== BÚSQUEDA Y FILTROS ==========
+    private void Buscar()
+    {
+        var resultado = vacantes.AsEnumerable();
+        
+        // Filtro por estado
+        if (!string.IsNullOrEmpty(filtroEstado) && int.TryParse(filtroEstado, out var estadoId))
+        {
+            resultado = resultado.Where(v => (int)v.Estado == estadoId);
+        }
+        
+        // Filtro por texto
+        if (!string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            var term = terminoBusqueda.ToLower();
+            resultado = resultado.Where(v => 
+                v.Titulo.ToLower().Contains(term) ||
+                (v.Descripcion ?? "").ToLower().Contains(term) ||
+                (v.Cargo?.Nombre ?? "").ToLower().Contains(term) ||
+                (v.Departamento?.Nombre ?? "").ToLower().Contains(term)
+            );
+        }
+        
+        vacantesFiltradas = resultado.OrderByDescending(v => v.FechaPublicacion).ToList();
+        StateHasChanged();
+    }
+    
+    private void LimpiarBusqueda()
+    {
+        terminoBusqueda = "";
+        filtroEstado = null;
+        Buscar();
+    }
+    
+    // ========== SELECCIÓN ==========
+    private void SeleccionarVacante(Vacante vacante)
+    {
+        vacanteSeleccionada = vacante;
+        StateHasChanged();
+    }
+    
+    // ========== CRUD ==========
+    private void Nuevo()
+    {
+        vacanteEdicion = new Vacante
+        {
+            Titulo = "",
+            FechaPublicacion = DateTime.Today,
+            CantidadPosiciones = 1,
+            Estado = EstadoVacante.Borrador,
+            EsActivo = true,
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        };
+        esEdicion = false;
+        mostrarModal = true;
+        StateHasChanged();
+    }
+    
+    private void Editar(Vacante vacante)
+    {
+        vacanteEdicion = new Vacante
+        {
+            Id = vacante.Id,
+            Titulo = vacante.Titulo,
+            Descripcion = vacante.Descripcion,
+            Requisitos = vacante.Requisitos,
+            CargoId = vacante.CargoId,
+            DepartamentoId = vacante.DepartamentoId,
+            SalarioMinimo = vacante.SalarioMinimo,
+            SalarioMaximo = vacante.SalarioMaximo,
+            FechaPublicacion = vacante.FechaPublicacion,
+            FechaCierre = vacante.FechaCierre,
+            CantidadPosiciones = vacante.CantidadPosiciones,
+            Estado = vacante.Estado,
+            EsActivo = vacante.EsActivo,
+            Activo = vacante.Activo,
+            FechaCreacion = vacante.FechaCreacion,
+            FechaModificacion = DateTime.Now
+        };
+        esEdicion = true;
+        mostrarModal = true;
+        StateHasChanged();
+    }
+    
+    private void EditarSeleccionada()
+    {
+        if (vacanteSeleccionada != null)
+        {
+            Editar(vacanteSeleccionada);
+        }
+    }
+    
+    private async Task Guardar()
+    {
+        if (vacanteEdicion == null) return;
+        
+        // Validaciones
+        if (string.IsNullOrWhiteSpace(vacanteEdicion.Titulo))
+        {
+            mensajeError = "El título de la vacante es requerido";
+            return;
+        }
+        
+        if (vacanteEdicion.CargoId <= 0)
+        {
+            mensajeError = "Debe seleccionar un cargo";
+            return;
+        }
+        
+        if (vacanteEdicion.DepartamentoId <= 0)
+        {
+            mensajeError = "Debe seleccionar un departamento";
+            return;
+        }
+        
+        guardando = true;
+        mensajeError = null;
+        StateHasChanged();
+        
+        try
+        {
+            if (esEdicion)
+            {
+                var exito = await VacanteRepositorio.ActualizarAsync(vacanteEdicion);
+                if (exito)
+                {
+                    MostrarExito($"Vacante '{vacanteEdicion.Titulo}' actualizada correctamente");
+                    Logger.LogInformation("Vacante actualizada: {Titulo}", vacanteEdicion.Titulo);
+                }
+            }
+            else
+            {
+                var id = await VacanteRepositorio.CrearAsync(vacanteEdicion);
+                if (id > 0)
+                {
+                    MostrarExito($"Vacante '{vacanteEdicion.Titulo}' creada correctamente");
+                    Logger.LogInformation("Vacante creada: {Titulo} con ID {Id}", vacanteEdicion.Titulo, id);
+                }
+            }
+            
+            await CargarDatos();
+            CerrarModal();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar vacante");
+            mensajeError = $"Error al guardar: {ex.Message}";
+        }
+        finally
+        {
+            guardando = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CambiarEstado(Vacante vacante, EstadoVacante nuevoEstado)
+    {
+        try
+        {
+            var exito = await VacanteRepositorio.CambiarEstadoAsync(vacante.Id, nuevoEstado);
+            if (exito)
+            {
+                MostrarExito($"Vacante '{vacante.Titulo}' cambiada a estado {nuevoEstado}");
+                await CargarDatos();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cambiar estado de vacante");
+            mensajeError = $"Error al cambiar estado: {ex.Message}";
+        }
+    }
+    
+    private void CerrarModal()
+    {
+        mostrarModal = false;
+        vacanteEdicion = null;
+        StateHasChanged();
+    }
+    
+    // ========== HELPERS ==========
+    private string ObtenerClaseEstado(EstadoVacante estado)
+    {
+        return estado switch
+        {
+            EstadoVacante.Borrador => "estado-pendiente",
+            EstadoVacante.Abierta => "estado-aprobada",
+            EstadoVacante.Cerrada => "estado-rechazada",
+            EstadoVacante.EnProceso => "estado-programada",
+            EstadoVacante.Cancelada => "estado-cancelada",
+            _ => ""
+        };
+    }
+    
+    private void MostrarExito(string mensaje)
+    {
+        mensajeExito = mensaje;
+        StateHasChanged();
+        
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            if (mensajeExito == mensaje)
+            {
+                mensajeExito = null;
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+}
