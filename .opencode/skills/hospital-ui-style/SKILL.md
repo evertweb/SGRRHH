@@ -1,0 +1,165 @@
+---
+name: hospital-ui-style
+description: Reglas de estilo UI hospitalario para componentes Blazor. Usar al crear o modificar componentes UI, páginas Razor o estilos CSS en SGRRHH.
+license: MIT
+compatibility: opencode
+metadata:
+  project: SGRRHH
+  type: ui-style
+  stack: blazor-server
+  css-system: hospital.css
+---
+# Estilo UI Hospitalario - SGRRHH
+
+## Archivo Principal de Estilos
+
+**Ubicación:** `SGRRHH.Local.Server/wwwroot/css/hospital.css`
+
+> [!CAUTION]
+> **REGLAS ESTRICTAS - NUNCA violar estas reglas:**
+> 1. **NUNCA** crear bloques `<style>` inline en componentes Razor
+> 2. **NUNCA** usar colores arbitrarios (verde terminal #00ff00, etc.)
+> 3. **SIEMPRE** usar las clases CSS existentes
+
+## Variables CSS Disponibles
+
+### Colores Base
+```css
+--color-bg: #FFFFFF;           /* Fondo principal */
+--color-text: #000000;         /* Texto principal */
+--color-border: #666666;       /* Bordes oscuros */
+--color-border-light: #CCCCCC; /* Bordes claros */
+--color-disabled-bg: #F0F0F0;  /* Fondo deshabilitado */
+--color-disabled-text: #999999;/* Texto deshabilitado */
+```
+
+### Colores de Estado
+```css
+--color-error: #CC0000;    /* Errores, eliminación */
+--color-warning: #FF9900;  /* Advertencias, pendientes */
+--color-success: #006600;  /* Éxito, confirmación */
+```
+
+### Tipografía
+```css
+--font-family: 'Courier New', 'Courier', monospace;
+--font-size-base: 13px;
+--font-size-header: 14px;
+```
+
+## Clases CSS por Categoría
+
+### Botones
+| Clase | Uso |
+|-------|-----|
+| `.btn-action` | Botón de acción general |
+| `.btn-primary` | Botón principal (azul) |
+| `.btn-danger` | Acción destructiva (rojo) |
+| `.btn-success` | Confirmación (verde) |
+| `.btn-aprobar` | Aprobar (borde verde) |
+| `.btn-rechazar` | Rechazar (borde rojo) |
+| `.btn-logout` | Cerrar sesión |
+
+### Modales
+| Clase | Uso |
+|-------|-----|
+| `.modal-overlay` | Fondo oscuro semi-transparente |
+| `.modal-box` | Contenedor del modal |
+| `.modal-header` | Cabecera con título |
+| `.modal-footer` | Pie con botones de acción |
+| `.modal-actions` | Contenedor de botones |
+
+### Formularios
+| Clase | Uso |
+|-------|-----|
+| `.form-field` | Contenedor de campo |
+| `.field-label` | Etiqueta de campo |
+| `.field-input` | Input o Select |
+| `.form-input` | Input estándar |
+| `.campo-form` | Campo de formulario |
+| `.campo-label` | Etiqueta de campo |
+| `.campo-input` | Input de campo |
+| `.campo-textarea` | Textarea |
+| `.campo-requerido` | Marca obligatorio (*) |
+| `.campo-ayuda` | Texto de ayuda |
+
+### Tablas
+| Clase | Uso |
+|-------|-----|
+| `.data-table` | Tabla de datos principal |
+| `.tabla-vacaciones` | Tabla específica vacaciones |
+| `.row-inactive` | Fila de registro inactivo |
+| `.cell-truncate` | Celda con texto truncado |
+| `.td-centro` | Celda centrada |
+
+### Mensajes y Estados
+| Clase | Uso |
+|-------|-----|
+| `.error-box` | Contenedor de error grande |
+| `.error-block` | Bloque de error |
+| `.success-box` | Contenedor de éxito |
+| `.success-block` | Bloque de éxito |
+| `.loading-block` | Indicador de carga |
+| `.loading-cell` | Celda de carga en tabla |
+| `.empty-cell` | Celda de tabla vacía |
+
+### Estados de Empleado/Registro
+| Clase | Estado |
+|-------|--------|
+| `.estado-pendiente` | Pendiente (naranja) |
+| `.estado-aprobada` | Aprobado (verde) |
+| `.estado-rechazada` | Rechazado (rojo) |
+| `.estado-programada` | Programado (azul) |
+| `.estado-disfrutada` | Completado (gris) |
+| `.estado-cancelada` | Cancelado (gris) |
+
+### Layout
+| Clase | Uso |
+|-------|-----|
+| `.main-container` | Contenedor principal |
+| `.work-area` | Área de trabajo |
+| `.page-container` | Contenedor de página |
+| `.page-header` | Cabecera de página |
+| `.page-title` | Título de página |
+| `.action-bar` | Barra de acciones |
+| `.filter-section` | Sección de filtros |
+| `.keyboard-shortcut-bar` | Barra de atajos (fija abajo) |
+
+### Paneles
+| Clase | Uso |
+|-------|-----|
+| `.panel-lateral` | Panel lateral |
+| `.panel-titulo` | Título del panel |
+| `.panel-seccion` | Sección del panel |
+| `.panel-label` | Etiqueta en panel |
+| `.panel-valor` | Valor en panel |
+
+## Si Necesitas Estilos Nuevos
+
+1. **Agregar a `hospital.css`**, nunca inline
+2. Usar naming convention existente (snake-case con guiones para CSS)
+3. Documentar el nuevo estilo con comentario
+4. Usar variables CSS existentes para colores
+
+### Ejemplo de Nuevo Estilo
+```css
+/* ===== MI NUEVO COMPONENTE ===== */
+.mi-componente {
+    font-family: var(--font-family);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+}
+
+.mi-componente-error {
+    border-color: var(--color-error);
+    color: var(--color-error);
+}
+```
+
+## Atajos de Teclado (Barra Inferior)
+
+La barra `.keyboard-shortcut-bar` siempre está fija en la parte inferior:
+- Fondo: `#2C2C2C`
+- Texto: `#FFFFFF`
+- Teclas: `.shortcut-item kbd`

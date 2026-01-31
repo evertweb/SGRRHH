@@ -104,6 +104,9 @@
 
     private MessageToast? messageToast;
     
+    // Timer para re-evaluar CanGoNext() periódicamente mientras el usuario llena el formulario
+    private System.Timers.Timer? _refreshTimer;
+    
     private int currentStep = 1;
     private bool isSaving = false;
     private bool showConfirmModal = false;
@@ -149,9 +152,14 @@
         // Cargar catálogos
         await CargarCatalogos();
         
-
         // Obtener siguiente código
         empleado.Codigo = await EmpleadoRepo.GetNextCodigoAsync();
+        
+        // Iniciar timer para re-evaluar validaciones mientras el usuario llena el formulario
+        _refreshTimer = new System.Timers.Timer(500);
+        _refreshTimer.Elapsed += async (sender, e) => await InvokeAsync(StateHasChanged);
+        _refreshTimer.AutoReset = true;
+        _refreshTimer.Start();
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -201,6 +209,10 @@
     
     public async ValueTask DisposeAsync()
     {
+        // Detener timer de refresh
+        _refreshTimer?.Stop();
+        _refreshTimer?.Dispose();
+        
         try
         {
             await JS.InvokeVoidAsync("disconnectDataSync");

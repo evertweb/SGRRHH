@@ -98,6 +98,11 @@ builder.Services.AddScoped<ITallasEmpleadoRepository, TallasEmpleadoRepository>(
 builder.Services.AddScoped<IEntregaDotacionRepository, EntregaDotacionRepository>();
 builder.Services.AddScoped<IDetalleEntregaDotacionRepository, DetalleEntregaDotacionRepository>();
 
+// Repositorios de Hoja de Vida Inteligente (Reclutamiento)
+builder.Services.AddScoped<IVacanteRepositorio, VacanteRepositorio>();
+builder.Services.AddScoped<IAspiranteRepositorio, AspiranteRepositorio>();
+builder.Services.AddScoped<IHojaVidaPdfRepositorio, HojaVidaPdfRepositorio>();
+
 // Authentication service
 builder.Services.AddScoped<IAuthService, LocalAuthService>();
 
