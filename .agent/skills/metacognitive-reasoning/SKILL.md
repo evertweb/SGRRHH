@@ -1,6 +1,6 @@
 ---
 name: metacognitive-reasoning
-description: Framework de razonamiento estructurado para problemas complejos. OBLIGATORIO aplicar en cambios de arquitectura, refactorings grandes, decisiones de diseño o debugging difícil.
+description: Apply when facing architecture changes, large refactors, design decisions, or complex debugging. 5-step structured reasoning framework.
 ---
 # Razonamiento Metacognitivo - SGRRHH
 

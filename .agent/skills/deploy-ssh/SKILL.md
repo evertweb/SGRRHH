@@ -1,6 +1,6 @@
 ---
 name: deploy-ssh
-description: Proceso de deploy de SGRRHH a servidores remotos vía SSH/SMB. SERVIDORES CONFIGURADOS - Servidor 1 (192.168.1.248:equipo1) Script Deploy-ToServer.ps1 - Servidor 2 (192.168.1.72:fores) Script Deploy-ToServer2.ps1. Usar cuando el usuario pida desplegar, actualizar servidores o verificar producción.
+description: Apply when deploying to production servers via SSH/SMB. Covers Deploy-ToServer.ps1 (192.168.1.248) and Deploy-ToServer2.ps1 (192.168.1.72) scripts, service management, and verification.
 ---
 # Deploy SSH - SGRRHH
 
