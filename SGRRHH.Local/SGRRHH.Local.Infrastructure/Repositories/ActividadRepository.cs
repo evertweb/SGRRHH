@@ -25,11 +25,11 @@ public class ActividadRepository : IActividadRepository
     {
         entity.FechaCreacion = DateTime.Now;
         const string sql = @"
-            INSERT INTO actividades (codigo, nombre, descripcion, categoria, category_id, category_text, 
+            INSERT INTO actividades (codigo, nombre, descripcion, predio, categoria, category_id, category_text, 
                 unit_of_measure, unit_abbreviation, expected_yield, minimum_yield, unit_cost,
                 requiere_proyecto, requires_quantity, applicable_project_types, applicable_species, 
                 orden, is_featured, activo, fecha_creacion)
-            VALUES (@Codigo, @Nombre, @Descripcion, @CategoriaTexto, @CategoriaId, @CategoriaTexto,
+            VALUES (@Codigo, @Nombre, @Descripcion, @Predio, @CategoriaTexto, @CategoriaId, @CategoriaTexto,
                 @UnidadMedida, @UnidadAbreviatura, @RendimientoEsperado, @RendimientoMinimo, @CostoUnitario,
                 @RequiereProyecto, @RequiereCantidad, @TiposProyectoAplicables, @EspeciesAplicables,
                 @Orden, @EsDestacada, 1, @FechaCreacion);
@@ -48,6 +48,7 @@ public class ActividadRepository : IActividadRepository
             SET codigo = @Codigo,
                 nombre = @Nombre,
                 descripcion = @Descripcion,
+                predio = @Predio,
                 categoria = @CategoriaTexto,
                 category_id = @CategoriaId,
                 category_text = @CategoriaTexto,
@@ -80,7 +81,7 @@ public class ActividadRepository : IActividadRepository
     public async Task<Actividad?> GetByIdAsync(int id)
     {
         const string sql = @"
-            SELECT a.id, a.codigo, a.nombre, a.descripcion, 
+            SELECT a.id, a.codigo, a.nombre, a.descripcion, a.predio as Predio, 
                    COALESCE(a.category_text, a.categoria) as CategoriaTexto,
                    a.category_id as CategoriaId,
                    COALESCE(a.unit_of_measure, 0) as UnidadMedida,
@@ -120,7 +121,7 @@ public class ActividadRepository : IActividadRepository
     public async Task<IEnumerable<Actividad>> GetAllAsync()
     {
         const string sql = @"
-            SELECT id, codigo, nombre, descripcion, 
+            SELECT id, codigo, nombre, descripcion, predio as Predio, 
                    COALESCE(category_text, categoria) as CategoriaTexto,
                    category_id as CategoriaId,
                    COALESCE(unit_of_measure, 0) as UnidadMedida,
@@ -145,7 +146,7 @@ public class ActividadRepository : IActividadRepository
     public async Task<IEnumerable<Actividad>> GetAllActiveAsync()
     {
         const string sql = @"
-            SELECT id, codigo, nombre, descripcion, 
+            SELECT id, codigo, nombre, descripcion, predio as Predio, 
                    COALESCE(category_text, categoria) as CategoriaTexto,
                    category_id as CategoriaId,
                    COALESCE(unit_of_measure, 0) as UnidadMedida,
@@ -170,7 +171,7 @@ public class ActividadRepository : IActividadRepository
     public async Task<IEnumerable<Actividad>> GetAllWithCategoriaAsync()
     {
         const string sql = @"
-            SELECT a.id, a.codigo, a.nombre, a.descripcion, 
+            SELECT a.id, a.codigo, a.nombre, a.descripcion, a.predio as Predio, 
                    COALESCE(a.category_text, a.categoria) as CategoriaTexto,
                    a.category_id as CategoriaId,
                    COALESCE(a.unit_of_measure, 0) as UnidadMedida,
@@ -213,7 +214,7 @@ public class ActividadRepository : IActividadRepository
     public async Task<IEnumerable<Actividad>> GetAllActiveWithCategoriaAsync()
     {
         const string sql = @"
-            SELECT a.id, a.codigo, a.nombre, a.descripcion, 
+            SELECT a.id, a.codigo, a.nombre, a.descripcion, a.predio as Predio, 
                    COALESCE(a.category_text, a.categoria) as CategoriaTexto,
                    a.category_id as CategoriaId,
                    COALESCE(a.unit_of_measure, 0) as UnidadMedida,
@@ -257,7 +258,7 @@ public class ActividadRepository : IActividadRepository
     public async Task<IEnumerable<Actividad>> GetByCategoriaAsync(string categoria)
     {
         const string sql = @"
-            SELECT id, codigo, nombre, descripcion, 
+            SELECT id, codigo, nombre, descripcion, predio as Predio, 
                    COALESCE(category_text, categoria) as CategoriaTexto,
                    category_id as CategoriaId,
                    COALESCE(unit_of_measure, 0) as UnidadMedida,
@@ -284,7 +285,7 @@ public class ActividadRepository : IActividadRepository
     public async Task<IEnumerable<Actividad>> GetByCategoriaIdAsync(int categoriaId)
     {
         const string sql = @"
-            SELECT a.id, a.codigo, a.nombre, a.descripcion, 
+            SELECT a.id, a.codigo, a.nombre, a.descripcion, a.predio as Predio, 
                    COALESCE(a.category_text, a.categoria) as CategoriaTexto,
                    a.category_id as CategoriaId,
                    COALESCE(a.unit_of_measure, 0) as UnidadMedida,
@@ -338,7 +339,7 @@ public class ActividadRepository : IActividadRepository
     public async Task<IEnumerable<Actividad>> GetDestacadasAsync()
     {
         const string sql = @"
-            SELECT a.id, a.codigo, a.nombre, a.descripcion, 
+            SELECT a.id, a.codigo, a.nombre, a.descripcion, a.predio as Predio, 
                    COALESCE(a.category_text, a.categoria) as CategoriaTexto,
                    a.category_id as CategoriaId,
                    COALESCE(a.unit_of_measure, 0) as UnidadMedida,
@@ -383,7 +384,7 @@ public class ActividadRepository : IActividadRepository
     {
         var term = $"%{searchTerm}%";
         const string sql = @"
-            SELECT a.id, a.codigo, a.nombre, a.descripcion, 
+            SELECT a.id, a.codigo, a.nombre, a.descripcion, a.predio as Predio, 
                    COALESCE(a.category_text, a.categoria) as CategoriaTexto,
                    a.category_id as CategoriaId,
                    COALESCE(a.unit_of_measure, 0) as UnidadMedida,

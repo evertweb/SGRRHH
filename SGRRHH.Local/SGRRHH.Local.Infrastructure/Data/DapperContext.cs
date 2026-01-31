@@ -28,6 +28,67 @@ public class DapperContext
     static DapperContext()
     {
         DefaultTypeMap.MatchNamesWithUnderscores = true;
+        
+        // Registrar TypeHandlers personalizados para SQLite
+        // SQLite almacena TimeSpan como texto, estos handlers permiten la conversión automática
+        SqlMapper.AddTypeHandler(new TimeSpanHandler());
+        SqlMapper.AddTypeHandler(new NullableTimeSpanHandler());
+    }
+    
+    /// <summary>
+    /// TypeHandler para convertir strings de SQLite a TimeSpan.
+    /// SQLite almacena tiempos como texto en formato "HH:mm:ss".
+    /// </summary>
+    private class TimeSpanHandler : SqlMapper.TypeHandler<TimeSpan>
+    {
+        public override TimeSpan Parse(object value)
+        {
+            if (value is TimeSpan ts) return ts;
+            if (value is string str && !string.IsNullOrEmpty(str))
+            {
+                if (TimeSpan.TryParse(str, out var result))
+                    return result;
+            }
+            return TimeSpan.Zero;
+        }
+
+        public override void SetValue(IDbDataParameter parameter, TimeSpan value)
+        {
+            parameter.Value = value.ToString(@"hh\:mm\:ss");
+            parameter.DbType = DbType.String;
+        }
+    }
+    
+    /// <summary>
+    /// TypeHandler para convertir strings de SQLite a TimeSpan?.
+    /// Maneja valores nulos correctamente.
+    /// </summary>
+    private class NullableTimeSpanHandler : SqlMapper.TypeHandler<TimeSpan?>
+    {
+        public override TimeSpan? Parse(object value)
+        {
+            if (value == null || value is DBNull) return null;
+            if (value is TimeSpan ts) return ts;
+            if (value is string str && !string.IsNullOrEmpty(str))
+            {
+                if (TimeSpan.TryParse(str, out var result))
+                    return result;
+            }
+            return null;
+        }
+
+        public override void SetValue(IDbDataParameter parameter, TimeSpan? value)
+        {
+            if (value.HasValue)
+            {
+                parameter.Value = value.Value.ToString(@"hh\:mm\:ss");
+                parameter.DbType = DbType.String;
+            }
+            else
+            {
+                parameter.Value = DBNull.Value;
+            }
+        }
     }
 
     public DapperContext(DatabasePathResolver pathResolver, ILogger<DapperContext> logger)
@@ -167,6 +228,7 @@ public class DapperContext
             await TryAddColumnAsync(connection, "actividades", "applicable_species", "TEXT");
             await TryAddColumnAsync(connection, "actividades", "is_featured", "INTEGER DEFAULT 0");
             await TryAddColumnAsync(connection, "actividades", "category_text", "TEXT");
+            await TryAddColumnAsync(connection, "actividades", "predio", "TEXT");
             
             // Migración: Campos adicionales para detalles de actividades
             await TryAddColumnAsync(connection, "detalles_actividad", "cantidad", "REAL");
