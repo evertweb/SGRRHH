@@ -45,6 +45,7 @@
     <thead>
         <tr>
             <th>CÓDIGO</th>
+            <th>PREDIO</th>
             <th>NOMBRE</th>
             <th>CATEGORÍA</th>
             <th>UNIDAD</th>
@@ -70,6 +71,7 @@
                 <tr class="@(selectedItem?.Id == item.Id ? "selected" : "")"
                     @onclick="() => SelectItem(item)">
                     <td><strong>@item.Codigo</strong></td>
+                    <td>@(item.Predio ?? "-")</td>
                     <td>
                         @item.Nombre
                         @if (item.EsDestacada) { <span class="badge badge-destacado" title="DESTACADA">★</span> }
@@ -152,6 +154,12 @@
                     <label>NOMBRE</label>
                     <input type="text" id="nombreInput" @bind="editItem.Nombre" maxlength="200" 
                            disabled="@isSaving" />
+                </div>
+                
+                <div class="hospital-form-group">
+                    <label>PREDIO / FINCA</label>
+                    <input type="text" @bind="editItem.Predio" maxlength="100" 
+                           disabled="@isSaving" placeholder="Opcional" />
                 </div>
                 
                 <div class="hospital-form-group">
@@ -393,6 +401,7 @@
         {
             Id = item.Id,
             Codigo = item.Codigo,
+            Predio = item.Predio,
             Nombre = item.Nombre,
             Descripcion = item.Descripcion,
             CategoriaId = item.CategoriaId,
