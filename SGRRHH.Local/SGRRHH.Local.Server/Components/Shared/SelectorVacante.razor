@@ -1,0 +1,68 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.Interfaces
+@inject IVacanteRepositorio VacanteRepositorio
+
+<div class="campo-form">
+    <label class="campo-label @(Requerido ? "campo-requerido" : "")">@Etiqueta</label>
+    <select class="campo-input" @bind="ValorSeleccionado" disabled="@Deshabilitado">
+        <option value="">@TextoOpcionVacia</option>
+        @foreach (var vacante in vacantes)
+        {
+            <option value="@vacante.Id">@vacante.Titulo (@vacante.Estado)</option>
+        }
+    </select>
+</div>
+
+@code {
+    [Parameter] public string Etiqueta { get; set; } = "VACANTE";
+    [Parameter] public string TextoOpcionVacia { get; set; } = "-- SELECCIONAR VACANTE --";
+    [Parameter] public int? VacanteId { get; set; }
+    [Parameter] public EventCallback<int?> VacanteIdChanged { get; set; }
+    [Parameter] public bool SoloAbiertas { get; set; } = true;
+    [Parameter] public bool Requerido { get; set; }
+    [Parameter] public bool Deshabilitado { get; set; }
+    
+    private List<Vacante> vacantes = new();
+    
+    private int? ValorSeleccionado
+    {
+        get => VacanteId;
+        set
+        {
+            if (VacanteId != value)
+            {
+                VacanteId = value;
+                VacanteIdChanged.InvokeAsync(value);
+            }
+        }
+    }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarVacantes();
+    }
+    
+    private async Task CargarVacantes()
+    {
+        var todas = await VacanteRepositorio.ObtenerTodosAsync();
+        
+        if (SoloAbiertas)
+        {
+            vacantes = todas
+                .Where(v => v.Estado == EstadoVacante.Abierta || v.Estado == EstadoVacante.EnProceso)
+                .OrderBy(v => v.Titulo)
+                .ToList();
+        }
+        else
+        {
+            vacantes = todas.OrderBy(v => v.Titulo).ToList();
+        }
+    }
+    
+    public async Task RefrescarAsync()
+    {
+        await CargarVacantes();
+        StateHasChanged();
+    }
+}

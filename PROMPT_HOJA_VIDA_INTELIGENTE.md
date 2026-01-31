@@ -572,14 +572,50 @@ Se creó la página de gestión de vacantes con funcionalidad CRUD completa sigu
 
 ## 📋 FASES PENDIENTES
 
-### Fase 4: Módulo Aspirantes UI (Siguiente)
-- [ ] `Aspirantes.razor` - CRUD con filtros por vacante/estado
-- [ ] `ModalContratacion.razor` - Modal para contratar aspirante
-- [ ] `SelectorVacante.razor` - Dropdown de vacantes activas
-- [ ] Agregar enlace en `NavMenu.razor`
-- [ ] Validar compilación
+### ✅ FASE 4: Módulo Aspirantes UI (COMPLETADA)
 
-### Fase 5: Servicio PDF (Día 2-3)
+**Fecha de finalización:** 2026-01-31
+
+#### Resumen
+Se creó la página de gestión de aspirantes con funcionalidad CRUD completa, tabs para datos relacionados (formación, experiencia, referencias) y flujo de estados.
+
+#### Archivos Creados
+
+| Tipo | Archivo | Descripción |
+|------|---------|-------------|
+| Página | `Server/Components/Pages/Aspirantes.razor` | CRUD completo (~850 líneas) |
+| Componente | `Server/Components/Shared/ModalContratacion.razor` | Modal para contratar aspirante |
+| Componente | `Server/Components/Shared/SelectorVacante.razor` | Dropdown de vacantes activas |
+
+#### Archivos Modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `Server/Components/Layout/NavMenu.razor` | Agregado enlace a Aspirantes en sección PERSONAL |
+
+#### Funcionalidades Implementadas
+- Tabla de aspirantes con filtros por vacante y estado
+- Búsqueda de texto (nombre, cédula, teléfono, email)
+- Modal CRUD con 4 tabs:
+  - **Datos Personales**: información básica, contacto, educación, tallas
+  - **Formación**: lista editable de estudios
+  - **Experiencia**: lista editable de trabajos anteriores
+  - **Referencias**: personales y laborales
+- Flujo de estados con botones contextuales:
+  - Registrado → En Revisión → Preseleccionado → Entrevistado → Contratado
+  - Opción de Descartar/Reactivar desde cualquier estado
+- Modal de contratación con campos: fecha ingreso, salario, cargo, departamento, tipo contrato
+- Estilos: clases CSS de `hospital.css` (estado-pendiente, estado-aprobada, etc.)
+
+#### Decisiones de Diseño
+- El enum `NivelEducacion` usa `Secundaria` (no `Bachillerato`)
+- La migración Aspirante→Empleado queda como `// TODO` para Fase 6 (ContratacionService)
+- ModalContratacion incluye DTO interno `DatosContratacion` para parámetros
+- SelectorVacante es reutilizable con parámetros `SoloAbiertas`, `Requerido`, `Deshabilitado`
+
+---
+
+### Fase 5: Servicio PDF (Siguiente)
 - [ ] Instalar iText7: `dotnet add package itext7`
 - [ ] `XmpMetadataHandler.cs` - Leer/escribir metadatos
 - [ ] `PdfFieldMapper.cs` - Mapear campos AcroForm a entidades

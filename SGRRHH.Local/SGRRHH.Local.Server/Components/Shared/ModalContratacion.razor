@@ -1,0 +1,201 @@
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Interfaces
+@inject ICargoRepository CargoRepository
+@inject IDepartamentoRepository DepartamentoRepository
+
+@if (Visible)
+{
+    <div class="modal-overlay" @onclick="Cancelar">
+        <div class="modal-box" @onclick:stopPropagation="true" style="max-width: 600px;">
+            <div class="modal-header">
+                CONTRATAR ASPIRANTE - @(Aspirante?.NombreCompleto ?? "")
+            </div>
+            
+            <div class="formulario-seccion">
+                @if (Aspirante != null)
+                {
+                    <div class="info-resumen">
+                        <p><strong>CÉDULA:</strong> @Aspirante.Cedula</p>
+                        <p><strong>NOMBRE:</strong> @Aspirante.NombreCompleto</p>
+                        <p><strong>VACANTE:</strong> @(Aspirante.Vacante?.Titulo ?? "Sin vacante")</p>
+                    </div>
+                    
+                    <hr class="separador-form" />
+                    
+                    <div class="hospital-form-row">
+                        <div class="campo-form">
+                            <label class="campo-label campo-requerido">FECHA DE INGRESO</label>
+                            <input type="date" class="campo-input"
+                                   @bind="datosContratacion.FechaIngreso"
+                                   disabled="@guardando" />
+                        </div>
+                        
+                        <div class="campo-form">
+                            <label class="campo-label campo-requerido">SALARIO BASE</label>
+                            <input type="number" class="campo-input"
+                                   @bind="datosContratacion.SalarioBase"
+                                   placeholder="1.300.000"
+                                   disabled="@guardando" />
+                        </div>
+                    </div>
+                    
+                    <div class="hospital-form-row">
+                        <div class="campo-form">
+                            <label class="campo-label campo-requerido">CARGO</label>
+                            <select class="campo-input" @bind="datosContratacion.CargoId" disabled="@guardando">
+                                <option value="0">-- SELECCIONAR CARGO --</option>
+                                @foreach (var cargo in cargos)
+                                {
+                                    <option value="@cargo.Id">@cargo.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        <div class="campo-form">
+                            <label class="campo-label campo-requerido">DEPARTAMENTO</label>
+                            <select class="campo-input" @bind="datosContratacion.DepartamentoId" disabled="@guardando">
+                                <option value="0">-- SELECCIONAR DEPARTAMENTO --</option>
+                                @foreach (var depto in departamentos)
+                                {
+                                    <option value="@depto.Id">@depto.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="campo-form">
+                        <label class="campo-label">TIPO DE CONTRATO</label>
+                        <select class="campo-input" @bind="datosContratacion.TipoContrato" disabled="@guardando">
+                            <option value="Indefinido">INDEFINIDO</option>
+                            <option value="Término Fijo">TÉRMINO FIJO</option>
+                            <option value="Obra o Labor">OBRA O LABOR</option>
+                            <option value="Prestación de Servicios">PRESTACIÓN DE SERVICIOS</option>
+                        </select>
+                    </div>
+                    
+                    <div class="campo-form">
+                        <label class="campo-label">NOTAS</label>
+                        <textarea class="campo-textarea" rows="2"
+                                  @bind="datosContratacion.Notas"
+                                  placeholder="NOTAS ADICIONALES SOBRE LA CONTRATACIÓN..."
+                                  disabled="@guardando"></textarea>
+                    </div>
+                }
+                
+                @if (!string.IsNullOrEmpty(mensajeError))
+                {
+                    <div class="error-block">@mensajeError</div>
+                }
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-action" @onclick="Cancelar" disabled="@guardando">CANCELAR [ESC]</button>
+                <button class="btn-success" @onclick="Confirmar" disabled="@guardando">
+                    @(guardando ? "CONTRATANDO..." : "CONFIRMAR CONTRATACIÓN [F9]")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public Aspirante? Aspirante { get; set; }
+    [Parameter] public EventCallback<DatosContratacion> OnContratar { get; set; }
+    
+    private List<Cargo> cargos = new();
+    private List<Departamento> departamentos = new();
+    private DatosContratacion datosContratacion = new();
+    private bool guardando;
+    private string? mensajeError;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        cargos = (await CargoRepository.GetAllActiveAsync()).OrderBy(c => c.Nombre).ToList();
+        departamentos = (await DepartamentoRepository.GetAllActiveAsync()).OrderBy(d => d.Nombre).ToList();
+    }
+    
+    protected override void OnParametersSet()
+    {
+        if (Visible && Aspirante != null)
+        {
+            // Pre-llenar datos desde la vacante
+            datosContratacion = new DatosContratacion
+            {
+                FechaIngreso = DateTime.Today,
+                CargoId = Aspirante.Vacante?.CargoId ?? 0,
+                DepartamentoId = Aspirante.Vacante?.DepartamentoId ?? 0,
+                SalarioBase = Aspirante.Vacante?.SalarioMinimo ?? 0,
+                TipoContrato = "Indefinido"
+            };
+            mensajeError = null;
+        }
+    }
+    
+    private async Task Confirmar()
+    {
+        mensajeError = null;
+        
+        // Validaciones
+        if (datosContratacion.CargoId <= 0)
+        {
+            mensajeError = "Debe seleccionar un cargo";
+            return;
+        }
+        
+        if (datosContratacion.DepartamentoId <= 0)
+        {
+            mensajeError = "Debe seleccionar un departamento";
+            return;
+        }
+        
+        if (datosContratacion.SalarioBase <= 0)
+        {
+            mensajeError = "Debe ingresar un salario válido";
+            return;
+        }
+        
+        guardando = true;
+        StateHasChanged();
+        
+        try
+        {
+            await OnContratar.InvokeAsync(datosContratacion);
+            await Cerrar();
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al contratar: {ex.Message}";
+        }
+        finally
+        {
+            guardando = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task Cancelar()
+    {
+        await Cerrar();
+    }
+    
+    private async Task Cerrar()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(false);
+    }
+    
+    /// <summary>
+    /// DTO para datos de contratación
+    /// </summary>
+    public class DatosContratacion
+    {
+        public DateTime FechaIngreso { get; set; } = DateTime.Today;
+        public int CargoId { get; set; }
+        public int DepartamentoId { get; set; }
+        public decimal SalarioBase { get; set; }
+        public string TipoContrato { get; set; } = "Indefinido";
+        public string? Notas { get; set; }
+    }
+}

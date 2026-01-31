@@ -1,0 +1,1003 @@
+@page "/aspirantes"
+@using SGRRHH.Local.Domain.Entities
+@using SGRRHH.Local.Domain.Enums
+@using SGRRHH.Local.Domain.Interfaces
+@using SGRRHH.Local.Shared.Interfaces
+@using SGRRHH.Local.Server.Components.Shared
+@inject IAspiranteRepositorio AspiranteRepositorio
+@inject IVacanteRepositorio VacanteRepositorio
+@inject IDepartamentoRepository DepartamentoRepository
+@inject ICatalogCacheService CatalogCache
+@inject ILogger<Aspirantes> Logger
+@inject IJSRuntime JSRuntime
+
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">GESTIÓN DE ASPIRANTES</h1>
+    </div>
+    
+    <!-- Mensajes de estado -->
+    @if (!string.IsNullOrEmpty(mensajeExito))
+    {
+        <div class="success-block">@mensajeExito</div>
+    }
+    
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="error-block">@mensajeError</div>
+    }
+
+    <!-- Toolbar -->
+    <div class="hospital-toolbar">
+        <div class="hospital-toolbar-group">
+            <button class="btn-primary" @onclick="Nuevo">NUEVO ASPIRANTE [F2]</button>
+            <button class="btn-action" @onclick="CargarDatos">ACTUALIZAR</button>
+            @if (aspiranteSeleccionado != null)
+            {
+                <button class="btn-action" @onclick="EditarSeleccionado">EDITAR</button>
+                @if (aspiranteSeleccionado.PuedeSerContratado)
+                {
+                    <button class="btn-success" @onclick="AbrirModalContratacion">CONTRATAR</button>
+                }
+            }
+        </div>
+        <div class="hospital-toolbar-group">
+            <select @bind="filtroVacanteId" @bind:after="Buscar">
+                <option value="">-- TODAS LAS VACANTES --</option>
+                @foreach (var vacante in vacantes)
+                {
+                    <option value="@vacante.Id">@vacante.Titulo</option>
+                }
+            </select>
+            <select @bind="filtroEstado" @bind:after="Buscar">
+                <option value="">-- TODOS LOS ESTADOS --</option>
+                @foreach (var estado in Enum.GetValues<EstadoAspirante>())
+                {
+                    <option value="@((int)estado)">@ObtenerTextoEstado(estado)</option>
+                }
+            </select>
+            <input type="text" placeholder="BUSCAR..." 
+                   @bind="terminoBusqueda" @bind:event="oninput" @bind:after="Buscar" />
+            @if (!string.IsNullOrEmpty(terminoBusqueda) || !string.IsNullOrEmpty(filtroEstado) || !string.IsNullOrEmpty(filtroVacanteId))
+            {
+                <button class="btn-action" @onclick="LimpiarBusqueda">LIMPIAR</button>
+            }
+        </div>
+    </div>
+
+    <!-- Tabla de Aspirantes -->
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>CÉDULA</th>
+                <th>NOMBRE</th>
+                <th>VACANTE</th>
+                <th>ESTADO</th>
+                <th>TELÉFONO</th>
+                <th>FECHA REGISTRO</th>
+                <th>ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (cargando)
+            {
+                <tr><td colspan="7" class="loading-cell">CARGANDO ASPIRANTES...</td></tr>
+            }
+            else if (!aspirantesFiltrados.Any())
+            {
+                <tr><td colspan="7" class="empty-cell">NO HAY ASPIRANTES PARA MOSTRAR</td></tr>
+            }
+            else
+            {
+                @foreach (var aspirante in aspirantesFiltrados)
+                {
+                    <tr class="@(aspiranteSeleccionado?.Id == aspirante.Id ? "selected" : "") @(!aspirante.EsActivo ? "row-inactive" : "")"
+                        @onclick="() => SeleccionarAspirante(aspirante)">
+                        <td>@aspirante.Cedula</td>
+                        <td><strong>@aspirante.NombreCompleto</strong></td>
+                        <td class="cell-truncate">@(aspirante.Vacante?.Titulo ?? "-")</td>
+                        <td>
+                            <span class="@ObtenerClaseEstado(aspirante.Estado)">
+                                @ObtenerTextoEstado(aspirante.Estado)
+                            </span>
+                        </td>
+                        <td>@aspirante.Telefono</td>
+                        <td>@aspirante.FechaRegistro.ToString("dd/MM/yyyy")</td>
+                        <td class="table-actions">
+                            <button class="btn-action" @onclick="() => Editar(aspirante)" @onclick:stopPropagation="true">
+                                EDITAR
+                            </button>
+                            @switch (aspirante.Estado)
+                            {
+                                case EstadoAspirante.Registrado:
+                                    <button class="btn-action" @onclick="() => CambiarEstado(aspirante, EstadoAspirante.EnRevision)" @onclick:stopPropagation="true">
+                                        REVISAR
+                                    </button>
+                                    break;
+                                case EstadoAspirante.EnRevision:
+                                    <button class="btn-aprobar" @onclick="() => CambiarEstado(aspirante, EstadoAspirante.Preseleccionado)" @onclick:stopPropagation="true">
+                                        PRESELECCIONAR
+                                    </button>
+                                    <button class="btn-rechazar" @onclick="() => CambiarEstado(aspirante, EstadoAspirante.Descartado)" @onclick:stopPropagation="true">
+                                        DESCARTAR
+                                    </button>
+                                    break;
+                                case EstadoAspirante.Preseleccionado:
+                                    <button class="btn-aprobar" @onclick="() => CambiarEstado(aspirante, EstadoAspirante.Entrevistado)" @onclick:stopPropagation="true">
+                                        ENTREVISTADO
+                                    </button>
+                                    break;
+                                case EstadoAspirante.Entrevistado:
+                                    <button class="btn-success" @onclick="() => AbrirModalContratacionPara(aspirante)" @onclick:stopPropagation="true">
+                                        CONTRATAR
+                                    </button>
+                                    <button class="btn-rechazar" @onclick="() => CambiarEstado(aspirante, EstadoAspirante.Descartado)" @onclick:stopPropagation="true">
+                                        DESCARTAR
+                                    </button>
+                                    break;
+                                case EstadoAspirante.Descartado:
+                                    <button class="btn-action" @onclick="() => CambiarEstado(aspirante, EstadoAspirante.Reactivado)" @onclick:stopPropagation="true">
+                                        REACTIVAR
+                                    </button>
+                                    break;
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal de Edición/Creación -->
+@if (mostrarModal)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal-box modal-grande" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                @(esEdicion ? $"EDITAR ASPIRANTE - {aspiranteEdicion?.NombreCompleto}" : "NUEVO ASPIRANTE")
+            </div>
+            
+            @if (aspiranteEdicion != null)
+            {
+                <!-- Tabs -->
+                <div class="tab-container">
+                    <button class="tab-btn @(tabActivo == 0 ? "tab-activo" : "")" @onclick="() => tabActivo = 0">
+                        DATOS PERSONALES
+                    </button>
+                    <button class="tab-btn @(tabActivo == 1 ? "tab-activo" : "")" @onclick="() => tabActivo = 1" disabled="@(!esEdicion)">
+                        FORMACIÓN
+                    </button>
+                    <button class="tab-btn @(tabActivo == 2 ? "tab-activo" : "")" @onclick="() => tabActivo = 2" disabled="@(!esEdicion)">
+                        EXPERIENCIA
+                    </button>
+                    <button class="tab-btn @(tabActivo == 3 ? "tab-activo" : "")" @onclick="() => tabActivo = 3" disabled="@(!esEdicion)">
+                        REFERENCIAS
+                    </button>
+                </div>
+                
+                <!-- Tab Content -->
+                @if (tabActivo == 0)
+                {
+                    @* TAB DATOS PERSONALES *@
+                    <div class="formulario-seccion">
+                        <div class="hospital-form-row">
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">CÉDULA</label>
+                                <input type="text" class="campo-input" 
+                                       @bind="aspiranteEdicion.Cedula" maxlength="15"
+                                       disabled="@guardando"
+                                       placeholder="1234567890" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label">VACANTE</label>
+                                <select class="campo-input" @bind="aspiranteEdicion.VacanteId" disabled="@guardando">
+                                    <option value="">-- SIN VACANTE --</option>
+                                    @foreach (var vacante in vacantes.Where(v => v.Estado == EstadoVacante.Abierta || v.Estado == EstadoVacante.EnProceso))
+                                    {
+                                        <option value="@vacante.Id">@vacante.Titulo</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="hospital-form-row">
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">NOMBRES</label>
+                                <input type="text" class="campo-input" 
+                                       @bind="aspiranteEdicion.Nombres" maxlength="100"
+                                       disabled="@guardando" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">APELLIDOS</label>
+                                <input type="text" class="campo-input" 
+                                       @bind="aspiranteEdicion.Apellidos" maxlength="100"
+                                       disabled="@guardando" />
+                            </div>
+                        </div>
+                        
+                        <div class="hospital-form-row">
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">FECHA NACIMIENTO</label>
+                                <input type="date" class="campo-input" 
+                                       @bind="aspiranteEdicion.FechaNacimiento"
+                                       disabled="@guardando" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">GÉNERO</label>
+                                <select class="campo-input" @bind="aspiranteEdicion.Genero" disabled="@guardando">
+                                    @foreach (var genero in Enum.GetValues<Genero>())
+                                    {
+                                        <option value="@genero">@genero.ToString().ToUpper()</option>
+                                    }
+                                </select>
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">ESTADO CIVIL</label>
+                                <select class="campo-input" @bind="aspiranteEdicion.EstadoCivil" disabled="@guardando">
+                                    @foreach (var ec in Enum.GetValues<EstadoCivil>())
+                                    {
+                                        <option value="@ec">@ec.ToString().ToUpper()</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="campo-form">
+                            <label class="campo-label campo-requerido">DIRECCIÓN</label>
+                            <input type="text" class="campo-input" 
+                                   @bind="aspiranteEdicion.Direccion" maxlength="200"
+                                   disabled="@guardando" />
+                        </div>
+                        
+                        <div class="hospital-form-row">
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">CIUDAD</label>
+                                <input type="text" class="campo-input" 
+                                       @bind="aspiranteEdicion.Ciudad" maxlength="100"
+                                       disabled="@guardando" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">DEPARTAMENTO</label>
+                                <input type="text" class="campo-input" 
+                                       @bind="aspiranteEdicion.Departamento" maxlength="100"
+                                       disabled="@guardando"
+                                       placeholder="EJ: ANTIOQUIA, CUNDINAMARCA..." />
+                            </div>
+                        </div>
+                        
+                        <div class="hospital-form-row">
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">TELÉFONO</label>
+                                <input type="tel" class="campo-input" 
+                                       @bind="aspiranteEdicion.Telefono" maxlength="15"
+                                       disabled="@guardando" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label">EMAIL</label>
+                                <input type="email" class="campo-input" 
+                                       @bind="aspiranteEdicion.Email" maxlength="100"
+                                       disabled="@guardando" />
+                            </div>
+                        </div>
+                        
+                        <div class="hospital-form-row">
+                            <div class="campo-form">
+                                <label class="campo-label campo-requerido">NIVEL EDUCACIÓN</label>
+                                <select class="campo-input" @bind="aspiranteEdicion.NivelEducacion" disabled="@guardando">
+                                    @foreach (var nivel in Enum.GetValues<NivelEducacion>())
+                                    {
+                                        <option value="@nivel">@nivel.ToString().ToUpper()</option>
+                                    }
+                                </select>
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label">TÍTULO OBTENIDO</label>
+                                <input type="text" class="campo-input" 
+                                       @bind="aspiranteEdicion.TituloObtenido" maxlength="150"
+                                       disabled="@guardando" />
+                            </div>
+                        </div>
+                        
+                        <div class="campo-form">
+                            <label class="campo-label">INSTITUCIÓN EDUCATIVA</label>
+                            <input type="text" class="campo-input" 
+                                   @bind="aspiranteEdicion.InstitucionEducativa" maxlength="150"
+                                   disabled="@guardando" />
+                        </div>
+                        
+                        <div class="hospital-form-row">
+                            <div class="campo-form">
+                                <label class="campo-label">TALLA CASCO</label>
+                                <input type="text" class="campo-input" 
+                                       @bind="aspiranteEdicion.TallasCasco" maxlength="10"
+                                       disabled="@guardando"
+                                       placeholder="S, M, L, XL" />
+                            </div>
+                            
+                            <div class="campo-form">
+                                <label class="campo-label">TALLA BOTAS</label>
+                                <input type="text" class="campo-input" 
+                                       @bind="aspiranteEdicion.TallasBotas" maxlength="10"
+                                       disabled="@guardando"
+                                       placeholder="38, 40, 42..." />
+                            </div>
+                        </div>
+                        
+                        <div class="campo-form">
+                            <label class="campo-label">NOTAS</label>
+                            <textarea class="campo-textarea" rows="2"
+                                      @bind="aspiranteEdicion.Notas"
+                                      disabled="@guardando"
+                                      placeholder="OBSERVACIONES O NOTAS ADICIONALES..."></textarea>
+                        </div>
+                    </div>
+                }
+                else if (tabActivo == 1)
+                {
+                    @* TAB FORMACIÓN *@
+                    <div class="formulario-seccion">
+                        <div class="hospital-toolbar">
+                            <button class="btn-action" @onclick="AgregarFormacion">+ AGREGAR FORMACIÓN</button>
+                        </div>
+                        
+                        @if (!formaciones.Any())
+                        {
+                            <div class="empty-message">NO HAY FORMACIÓN REGISTRADA</div>
+                        }
+                        else
+                        {
+                            @foreach (var (formacion, index) in formaciones.Select((f, i) => (f, i)))
+                            {
+                                <div class="item-editable">
+                                    <div class="hospital-form-row">
+                                        <div class="campo-form">
+                                            <label class="campo-label">NIVEL</label>
+                                            <select class="campo-input" @bind="formacion.Nivel">
+                                                <option value="">-- SELECCIONAR --</option>
+                                                <option value="Primaria">PRIMARIA</option>
+                                                <option value="Bachillerato">BACHILLERATO</option>
+                                                <option value="Técnico">TÉCNICO</option>
+                                                <option value="Tecnológico">TECNOLÓGICO</option>
+                                                <option value="Profesional">PROFESIONAL</option>
+                                                <option value="Especialización">ESPECIALIZACIÓN</option>
+                                                <option value="Maestría">MAESTRÍA</option>
+                                                <option value="Doctorado">DOCTORADO</option>
+                                            </select>
+                                        </div>
+                                        <div class="campo-form">
+                                            <label class="campo-label">TÍTULO</label>
+                                            <input type="text" class="campo-input" @bind="formacion.Titulo" />
+                                        </div>
+                                    </div>
+                                    <div class="hospital-form-row">
+                                        <div class="campo-form">
+                                            <label class="campo-label">INSTITUCIÓN</label>
+                                            <input type="text" class="campo-input" @bind="formacion.Institucion" />
+                                        </div>
+                                        <div class="campo-form">
+                                            <label class="campo-label">FECHA INICIO</label>
+                                            <input type="date" class="campo-input" @bind="formacion.FechaInicio" />
+                                        </div>
+                                        <div class="campo-form">
+                                            <label class="campo-label">FECHA FIN</label>
+                                            <input type="date" class="campo-input" @bind="formacion.FechaFin" disabled="@formacion.EnCurso" />
+                                        </div>
+                                    </div>
+                                    <div class="item-actions">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" @bind="formacion.EnCurso" /> EN CURSO
+                                        </label>
+                                        <button class="btn-danger" @onclick="() => EliminarFormacion(index)">ELIMINAR</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+                else if (tabActivo == 2)
+                {
+                    @* TAB EXPERIENCIA *@
+                    <div class="formulario-seccion">
+                        <div class="hospital-toolbar">
+                            <button class="btn-action" @onclick="AgregarExperiencia">+ AGREGAR EXPERIENCIA</button>
+                        </div>
+                        
+                        @if (!experiencias.Any())
+                        {
+                            <div class="empty-message">NO HAY EXPERIENCIA REGISTRADA</div>
+                        }
+                        else
+                        {
+                            @foreach (var (exp, index) in experiencias.Select((e, i) => (e, i)))
+                            {
+                                <div class="item-editable">
+                                    <div class="hospital-form-row">
+                                        <div class="campo-form">
+                                            <label class="campo-label">EMPRESA</label>
+                                            <input type="text" class="campo-input" @bind="exp.Empresa" />
+                                        </div>
+                                        <div class="campo-form">
+                                            <label class="campo-label">CARGO</label>
+                                            <input type="text" class="campo-input" @bind="exp.Cargo" />
+                                        </div>
+                                    </div>
+                                    <div class="hospital-form-row">
+                                        <div class="campo-form">
+                                            <label class="campo-label">FECHA INICIO</label>
+                                            <input type="date" class="campo-input" @bind="exp.FechaInicio" />
+                                        </div>
+                                        <div class="campo-form">
+                                            <label class="campo-label">FECHA FIN</label>
+                                            <input type="date" class="campo-input" @bind="exp.FechaFin" disabled="@exp.TrabajoActual" />
+                                        </div>
+                                    </div>
+                                    <div class="campo-form">
+                                        <label class="campo-label">FUNCIONES</label>
+                                        <textarea class="campo-textarea" rows="2" @bind="exp.Funciones"></textarea>
+                                    </div>
+                                    <div class="campo-form">
+                                        <label class="campo-label">MOTIVO RETIRO</label>
+                                        <input type="text" class="campo-input" @bind="exp.MotivoRetiro" disabled="@exp.TrabajoActual" />
+                                    </div>
+                                    <div class="item-actions">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" @bind="exp.TrabajoActual" /> TRABAJO ACTUAL
+                                        </label>
+                                        <button class="btn-danger" @onclick="() => EliminarExperiencia(index)">ELIMINAR</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+                else if (tabActivo == 3)
+                {
+                    @* TAB REFERENCIAS *@
+                    <div class="formulario-seccion">
+                        <div class="hospital-toolbar">
+                            <button class="btn-action" @onclick='() => AgregarReferencia("Personal")'>+ REF. PERSONAL</button>
+                            <button class="btn-action" @onclick='() => AgregarReferencia("Laboral")'>+ REF. LABORAL</button>
+                        </div>
+                        
+                        @if (!referencias.Any())
+                        {
+                            <div class="empty-message">NO HAY REFERENCIAS REGISTRADAS</div>
+                        }
+                        else
+                        {
+                            @foreach (var (refe, index) in referencias.Select((r, i) => (r, i)))
+                            {
+                                <div class="item-editable">
+                                    <div class="item-header">
+                                        <span class="@(refe.EsLaboral ? "badge-laboral" : "badge-personal")">
+                                            @refe.Tipo.ToUpper()
+                                        </span>
+                                    </div>
+                                    <div class="hospital-form-row">
+                                        <div class="campo-form">
+                                            <label class="campo-label">NOMBRE COMPLETO</label>
+                                            <input type="text" class="campo-input" @bind="refe.NombreCompleto" />
+                                        </div>
+                                        <div class="campo-form">
+                                            <label class="campo-label">TELÉFONO</label>
+                                            <input type="tel" class="campo-input" @bind="refe.Telefono" />
+                                        </div>
+                                    </div>
+                                    <div class="hospital-form-row">
+                                        <div class="campo-form">
+                                            <label class="campo-label">RELACIÓN</label>
+                                            <input type="text" class="campo-input" @bind="refe.Relacion" 
+                                                   placeholder="@(refe.EsLaboral ? "Jefe, Compañero..." : "Amigo, Familiar...")" />
+                                        </div>
+                                        @if (refe.EsLaboral)
+                                        {
+                                            <div class="campo-form">
+                                                <label class="campo-label">EMPRESA</label>
+                                                <input type="text" class="campo-input" @bind="refe.Empresa" />
+                                            </div>
+                                            <div class="campo-form">
+                                                <label class="campo-label">CARGO</label>
+                                                <input type="text" class="campo-input" @bind="refe.Cargo" />
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="item-actions">
+                                        <button class="btn-danger" @onclick="() => EliminarReferencia(index)">ELIMINAR</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            }
+            
+            <div class="modal-footer">
+                <button class="btn-action" @onclick="CerrarModal" disabled="@guardando">CANCELAR [ESC]</button>
+                <button class="btn-primary" @onclick="Guardar" disabled="@guardando">
+                    @(guardando ? "GUARDANDO..." : "GUARDAR [F9]")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Contratación -->
+<ModalContratacion @bind-Visible="mostrarModalContratacion"
+                   Aspirante="aspiranteParaContratar"
+                   OnContratar="ContratarAspirante" />
+
+@code {
+    // ========== ESTADO ==========
+    private List<Aspirante> aspirantes = new();
+    private List<Aspirante> aspirantesFiltrados = new();
+    private List<Vacante> vacantes = new();
+    
+    private Aspirante? aspiranteSeleccionado;
+    private Aspirante? aspiranteEdicion;
+    private Aspirante? aspiranteParaContratar;
+    
+    // Listas para tabs
+    private List<FormacionAspirante> formaciones = new();
+    private List<ExperienciaAspirante> experiencias = new();
+    private List<ReferenciaAspirante> referencias = new();
+    
+    private bool cargando;
+    private bool mostrarModal;
+    private bool mostrarModalContratacion;
+    private bool guardando;
+    private bool esEdicion;
+    private int tabActivo;
+    
+    private string terminoBusqueda = "";
+    private string? filtroEstado;
+    private string? filtroVacanteId;
+    private string? mensajeExito;
+    private string? mensajeError;
+    
+    // ========== LIFECYCLE ==========
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarVacantes();
+        await CargarDatos();
+    }
+    
+    // ========== CARGA DE DATOS ==========
+    private async Task CargarVacantes()
+    {
+        try
+        {
+            vacantes = (await VacanteRepositorio.ObtenerTodosAsync()).OrderBy(v => v.Titulo).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar vacantes");
+        }
+    }
+    
+    private async Task CargarDatos()
+    {
+        cargando = true;
+        StateHasChanged();
+        
+        try
+        {
+            aspirantes = await AspiranteRepositorio.ObtenerTodosAsync();
+            
+            // Cargar vacante para cada aspirante
+            foreach (var asp in aspirantes)
+            {
+                if (asp.VacanteId.HasValue)
+                {
+                    asp.Vacante = vacantes.FirstOrDefault(v => v.Id == asp.VacanteId);
+                }
+            }
+            
+            Buscar();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar aspirantes");
+            mensajeError = $"Error al cargar aspirantes: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+            StateHasChanged();
+        }
+    }
+    
+    // ========== BÚSQUEDA Y FILTROS ==========
+    private void Buscar()
+    {
+        var resultado = aspirantes.AsEnumerable();
+        
+        // Filtro por vacante
+        if (!string.IsNullOrEmpty(filtroVacanteId) && int.TryParse(filtroVacanteId, out var vacanteId))
+        {
+            resultado = resultado.Where(a => a.VacanteId == vacanteId);
+        }
+        
+        // Filtro por estado
+        if (!string.IsNullOrEmpty(filtroEstado) && int.TryParse(filtroEstado, out var estadoId))
+        {
+            resultado = resultado.Where(a => (int)a.Estado == estadoId);
+        }
+        
+        // Filtro por texto
+        if (!string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            var term = terminoBusqueda.ToLower();
+            resultado = resultado.Where(a => 
+                a.NombreCompleto.ToLower().Contains(term) ||
+                a.Cedula.ToLower().Contains(term) ||
+                (a.Telefono ?? "").ToLower().Contains(term) ||
+                (a.Email ?? "").ToLower().Contains(term)
+            );
+        }
+        
+        aspirantesFiltrados = resultado.OrderByDescending(a => a.FechaRegistro).ToList();
+        StateHasChanged();
+    }
+    
+    private void LimpiarBusqueda()
+    {
+        terminoBusqueda = "";
+        filtroEstado = null;
+        filtroVacanteId = null;
+        Buscar();
+    }
+    
+    // ========== SELECCIÓN ==========
+    private void SeleccionarAspirante(Aspirante aspirante)
+    {
+        aspiranteSeleccionado = aspirante;
+        StateHasChanged();
+    }
+    
+    // ========== CRUD ==========
+    private void Nuevo()
+    {
+        aspiranteEdicion = new Aspirante
+        {
+            Cedula = "",
+            Nombres = "",
+            Apellidos = "",
+            FechaNacimiento = DateTime.Today.AddYears(-25),
+            Genero = Genero.Masculino,
+            EstadoCivil = EstadoCivil.Soltero,
+            Direccion = "",
+            Ciudad = "",
+            Departamento = "",
+            Telefono = "",
+            NivelEducacion = NivelEducacion.Secundaria,
+            Estado = EstadoAspirante.Registrado,
+            EsActivo = true,
+            FechaRegistro = DateTime.Now
+        };
+        formaciones = new();
+        experiencias = new();
+        referencias = new();
+        esEdicion = false;
+        tabActivo = 0;
+        mostrarModal = true;
+        StateHasChanged();
+    }
+    
+    private async Task Editar(Aspirante aspirante)
+    {
+        aspiranteEdicion = new Aspirante
+        {
+            Id = aspirante.Id,
+            VacanteId = aspirante.VacanteId,
+            Cedula = aspirante.Cedula,
+            Nombres = aspirante.Nombres,
+            Apellidos = aspirante.Apellidos,
+            FechaNacimiento = aspirante.FechaNacimiento,
+            Genero = aspirante.Genero,
+            EstadoCivil = aspirante.EstadoCivil,
+            Direccion = aspirante.Direccion,
+            Ciudad = aspirante.Ciudad,
+            Departamento = aspirante.Departamento,
+            Telefono = aspirante.Telefono,
+            Email = aspirante.Email,
+            NivelEducacion = aspirante.NivelEducacion,
+            TituloObtenido = aspirante.TituloObtenido,
+            InstitucionEducativa = aspirante.InstitucionEducativa,
+            TallasCasco = aspirante.TallasCasco,
+            TallasBotas = aspirante.TallasBotas,
+            Estado = aspirante.Estado,
+            Notas = aspirante.Notas,
+            PuntajeEvaluacion = aspirante.PuntajeEvaluacion,
+            EsActivo = aspirante.EsActivo,
+            FechaRegistro = aspirante.FechaRegistro
+        };
+        
+        // Cargar datos relacionados
+        formaciones = await AspiranteRepositorio.ObtenerFormacionAsync(aspirante.Id);
+        experiencias = await AspiranteRepositorio.ObtenerExperienciaAsync(aspirante.Id);
+        referencias = await AspiranteRepositorio.ObtenerReferenciasAsync(aspirante.Id);
+        
+        esEdicion = true;
+        tabActivo = 0;
+        mostrarModal = true;
+        StateHasChanged();
+    }
+    
+    private async Task EditarSeleccionado()
+    {
+        if (aspiranteSeleccionado != null)
+        {
+            await Editar(aspiranteSeleccionado);
+        }
+    }
+    
+    private async Task Guardar()
+    {
+        if (aspiranteEdicion == null) return;
+        
+        // Validaciones
+        if (string.IsNullOrWhiteSpace(aspiranteEdicion.Cedula))
+        {
+            mensajeError = "La cédula es requerida";
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(aspiranteEdicion.Nombres))
+        {
+            mensajeError = "El nombre es requerido";
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(aspiranteEdicion.Apellidos))
+        {
+            mensajeError = "El apellido es requerido";
+            return;
+        }
+        
+        // Verificar cédula duplicada
+        var existeCedula = await AspiranteRepositorio.ExisteCedulaAsync(
+            aspiranteEdicion.Cedula, 
+            esEdicion ? aspiranteEdicion.Id : null
+        );
+        
+        if (existeCedula)
+        {
+            mensajeError = $"Ya existe un aspirante con la cédula {aspiranteEdicion.Cedula}";
+            return;
+        }
+        
+        guardando = true;
+        mensajeError = null;
+        StateHasChanged();
+        
+        try
+        {
+            if (esEdicion)
+            {
+                var exito = await AspiranteRepositorio.ActualizarAsync(aspiranteEdicion);
+                if (exito)
+                {
+                    // Guardar datos relacionados
+                    await AspiranteRepositorio.GuardarFormacionAsync(aspiranteEdicion.Id, formaciones);
+                    await AspiranteRepositorio.GuardarExperienciaAsync(aspiranteEdicion.Id, experiencias);
+                    await AspiranteRepositorio.GuardarReferenciasAsync(aspiranteEdicion.Id, referencias);
+                    
+                    MostrarExito($"Aspirante '{aspiranteEdicion.NombreCompleto}' actualizado correctamente");
+                    Logger.LogInformation("Aspirante actualizado: {Nombre}", aspiranteEdicion.NombreCompleto);
+                }
+            }
+            else
+            {
+                var id = await AspiranteRepositorio.CrearAsync(aspiranteEdicion);
+                if (id > 0)
+                {
+                    MostrarExito($"Aspirante '{aspiranteEdicion.NombreCompleto}' creado correctamente");
+                    Logger.LogInformation("Aspirante creado: {Nombre} con ID {Id}", aspiranteEdicion.NombreCompleto, id);
+                }
+            }
+            
+            await CargarDatos();
+            CerrarModal();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al guardar aspirante");
+            mensajeError = $"Error al guardar: {ex.Message}";
+        }
+        finally
+        {
+            guardando = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task CambiarEstado(Aspirante aspirante, EstadoAspirante nuevoEstado)
+    {
+        try
+        {
+            var exito = await AspiranteRepositorio.CambiarEstadoAsync(aspirante.Id, nuevoEstado);
+            if (exito)
+            {
+                MostrarExito($"Aspirante '{aspirante.NombreCompleto}' cambiado a estado {ObtenerTextoEstado(nuevoEstado)}");
+                await CargarDatos();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cambiar estado de aspirante");
+            mensajeError = $"Error al cambiar estado: {ex.Message}";
+        }
+    }
+    
+    private void CerrarModal()
+    {
+        mostrarModal = false;
+        aspiranteEdicion = null;
+        formaciones = new();
+        experiencias = new();
+        referencias = new();
+        StateHasChanged();
+    }
+    
+    // ========== FORMACIÓN ==========
+    private void AgregarFormacion()
+    {
+        formaciones.Add(new FormacionAspirante
+        {
+            AspiranteId = aspiranteEdicion?.Id ?? 0,
+            FechaInicio = DateTime.Today.AddYears(-4)
+        });
+        StateHasChanged();
+    }
+    
+    private void EliminarFormacion(int index)
+    {
+        if (index >= 0 && index < formaciones.Count)
+        {
+            formaciones.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+    
+    // ========== EXPERIENCIA ==========
+    private void AgregarExperiencia()
+    {
+        experiencias.Add(new ExperienciaAspirante
+        {
+            AspiranteId = aspiranteEdicion?.Id ?? 0,
+            FechaInicio = DateTime.Today.AddYears(-2)
+        });
+        StateHasChanged();
+    }
+    
+    private void EliminarExperiencia(int index)
+    {
+        if (index >= 0 && index < experiencias.Count)
+        {
+            experiencias.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+    
+    // ========== REFERENCIAS ==========
+    private void AgregarReferencia(string tipo)
+    {
+        referencias.Add(new ReferenciaAspirante
+        {
+            AspiranteId = aspiranteEdicion?.Id ?? 0,
+            Tipo = tipo
+        });
+        StateHasChanged();
+    }
+    
+    private void EliminarReferencia(int index)
+    {
+        if (index >= 0 && index < referencias.Count)
+        {
+            referencias.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+    
+    // ========== CONTRATACIÓN ==========
+    private void AbrirModalContratacion()
+    {
+        if (aspiranteSeleccionado != null && aspiranteSeleccionado.PuedeSerContratado)
+        {
+            aspiranteParaContratar = aspiranteSeleccionado;
+            mostrarModalContratacion = true;
+            StateHasChanged();
+        }
+    }
+    
+    private void AbrirModalContratacionPara(Aspirante aspirante)
+    {
+        aspiranteParaContratar = aspirante;
+        aspiranteParaContratar.Vacante = vacantes.FirstOrDefault(v => v.Id == aspirante.VacanteId);
+        mostrarModalContratacion = true;
+        StateHasChanged();
+    }
+    
+    private async Task ContratarAspirante(ModalContratacion.DatosContratacion datos)
+    {
+        if (aspiranteParaContratar == null) return;
+        
+        try
+        {
+            // TODO: Implementar ContratacionService en Fase 6
+            // Por ahora solo marcar como Contratado
+            await AspiranteRepositorio.CambiarEstadoAsync(
+                aspiranteParaContratar.Id, 
+                EstadoAspirante.Contratado,
+                $"Contratado el {datos.FechaIngreso:dd/MM/yyyy} con salario ${datos.SalarioBase:N0}"
+            );
+            
+            MostrarExito($"Aspirante '{aspiranteParaContratar.NombreCompleto}' marcado como CONTRATADO. Migración completa pendiente de implementación.");
+            Logger.LogInformation("Aspirante contratado: {Nombre}", aspiranteParaContratar.NombreCompleto);
+            
+            mostrarModalContratacion = false;
+            aspiranteParaContratar = null;
+            await CargarDatos();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al contratar aspirante");
+            mensajeError = $"Error al contratar: {ex.Message}";
+        }
+    }
+    
+    // ========== HELPERS ==========
+    private string ObtenerClaseEstado(EstadoAspirante estado)
+    {
+        return estado switch
+        {
+            EstadoAspirante.Registrado => "estado-pendiente",
+            EstadoAspirante.EnRevision => "estado-programada",
+            EstadoAspirante.Preseleccionado => "estado-aprobada",
+            EstadoAspirante.Entrevistado => "estado-aprobada",
+            EstadoAspirante.Contratado => "estado-completada",
+            EstadoAspirante.Descartado => "estado-rechazada",
+            EstadoAspirante.Reactivado => "estado-pendiente",
+            _ => ""
+        };
+    }
+    
+    private string ObtenerTextoEstado(EstadoAspirante estado)
+    {
+        return estado switch
+        {
+            EstadoAspirante.Registrado => "REGISTRADO",
+            EstadoAspirante.EnRevision => "EN REVISIÓN",
+            EstadoAspirante.Preseleccionado => "PRESELECCIONADO",
+            EstadoAspirante.Entrevistado => "ENTREVISTADO",
+            EstadoAspirante.Contratado => "CONTRATADO",
+            EstadoAspirante.Descartado => "DESCARTADO",
+            EstadoAspirante.Reactivado => "REACTIVADO",
+            _ => estado.ToString().ToUpper()
+        };
+    }
+    
+    private void MostrarExito(string mensaje)
+    {
+        mensajeExito = mensaje;
+        StateHasChanged();
+        
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            if (mensajeExito == mensaje)
+            {
+                mensajeExito = null;
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+}
