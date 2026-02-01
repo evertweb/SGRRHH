@@ -5,6 +5,7 @@ using NSubstitute;
 using SGRRHH.Local.Domain.Entities;
 using SGRRHH.Local.Domain.Enums;
 using SGRRHH.Local.Infrastructure.Repositories;
+using SGRRHH.Local.Shared.Interfaces;
 using Xunit;
 
 namespace SGRRHH.Local.Tests.Integration;
@@ -22,7 +23,8 @@ public class WorkflowTests
         _fixture.CleanDatabaseAsync().Wait();
 
         _permisoRepository = new PermisoRepository(_fixture.Context, Substitute.For<ILogger<PermisoRepository>>());
-        _vacacionRepository = new VacacionRepository(_fixture.Context, Substitute.For<ILogger<VacacionRepository>>());
+        var empleadoRepo = Substitute.For<IEmpleadoRepository>();
+        _vacacionRepository = new VacacionRepository(_fixture.Context, Substitute.For<ILogger<VacacionRepository>>(), empleadoRepo);
     }
 
     [Fact]

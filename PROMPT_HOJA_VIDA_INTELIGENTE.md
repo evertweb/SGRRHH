@@ -1,11 +1,11 @@
 # PROMPT: Implementar Hoja de Vida Inteligente (Smart CV)
 
-> **Versión**: 1.1  
-> **Fecha**: 2026-01-30  
+> **Versión**: 1.2  
+> **Fecha**: 2026-01-31  
 > **Tipo**: Feature Completa (En Progreso)  
 > **Prioridad**: Alta  
-> **Progreso**: Fases 1-3 completadas ✅ | Continuar desde Fase 4  
-> **Complejidad Restante**: Media (4-5 días de desarrollo)
+> **Progreso**: Fases 1-4 completadas ✅ | Fase 5 en progreso 80% | Continuar desde Fase 5 pendientes  
+> **Complejidad Restante**: Media (2-3 días de desarrollo)
 
 ---
 
@@ -615,12 +615,52 @@ Se creó la página de gestión de aspirantes con funcionalidad CRUD completa, t
 
 ---
 
-### Fase 5: Servicio PDF (Siguiente)
-- [ ] Instalar iText7: `dotnet add package itext7`
-- [ ] `XmpMetadataHandler.cs` - Leer/escribir metadatos
-- [ ] `PdfFieldMapper.cs` - Mapear campos AcroForm a entidades
-- [ ] `PdfHojaVidaService.cs` - Generación y parseo de PDFs
-- [ ] Diseñar template PDF base con campos AcroForm
+### ✅ FASE 5: Servicio PDF (COMPLETADO - 100%)
+
+**Fecha de trabajo:** 2026-01-31
+
+#### Resumen
+Se implementó el servicio de generación y parseo de PDFs con iText 9, incluyendo manejo de metadatos XMP para identificar PDFs generados por Forestech.
+
+#### Archivos Creados
+
+| Tipo | Archivo | Descripción |
+|------|---------|-------------|
+| Paquete NuGet | `itext` + `itext.bouncy-castle-adapter` | Librería PDF iText 9 |
+| Interfaz | `Domain/Interfaces/IPdfHojaVidaService.cs` | Contrato del servicio PDF |
+| Interfaz | `Shared/Interfaces/IXmpMetadataHandler.cs` | Contrato para metadatos XMP |
+| Servicio | `Infrastructure/Services/Pdf/XmpMetadataHandler.cs` | Leer/escribir metadatos XMP |
+| Servicio | `Infrastructure/Services/Pdf/PdfFieldMapper.cs` | Mapear campos AcroForm a entidades |
+| Servicio | `Infrastructure/Services/Pdf/PdfHojaVidaService.cs` | Generación y parseo de PDFs (~600 líneas) |
+| Template | `wwwroot/templates/hoja_vida_template.pdf` | Archivo PDF físico con campos AcroForm y diseño v2 |
+| DTO | `Domain/DTOs/DatosHojaVida.cs` | DTO intermedio para datos del PDF |
+| DTO | `Domain/DTOs/ResultadoParseo.cs` | Resultado de parseo PDF |
+
+#### Decisiones Técnicas
+- **iText 9** (no iText 7): API moderna con mejor manejo de formularios
+- **IXmpMetadataHandler** usa `object` en lugar de `PdfDocument` para desacoplar Domain de iText
+- **System.IO.Path** usado explícitamente para evitar ambiguedad con `iText.Kernel.Geom.Path`
+- Servicios registrados en `Program.cs` con Scoped lifetime
+
+#### Errores Corregidos
+| Error | Causa | Solución |
+|-------|-------|----------|
+| CS0104 | `Path` ambiguo | Usar `System.IO.Path` explícito |
+| CS1061 | Método inexistente | Cambiar `ObtenerPorIdAsync` a `GetByIdAsync` |
+| Runtime | Missing BouncyCastle | Agregar paquete `itext.bouncy-castle-adapter` |
+| Logic | ObjectDisposedException | Usar `writer.SetCloseStream(false)` en PdfHojaVidaService |
+
+#### ✅ Completado Fase 5
+
+| Item | Descripción | Estado |
+|------|-------------|--------|
+| Template PDF | Crear `wwwroot/templates/hoja_vida_template.pdf` con campos AcroForm | Completado (v2 Grid Layout) |
+| Pruebas | Probar generación de PDF vacío y validación de campos | Completado (PdfTemplateTests) |
+| Dependencias | Resolver conflictos de iText 9 y BouncyCastle | Solucionado |
+
+
+
+---
 
 ### Fase 6: Servicio de Contratación (Día 3-4)
 - [ ] `ContratacionService.cs` - Migrar aspirante a empleado
@@ -644,6 +684,7 @@ Se creó la página de gestión de aspirantes con funcionalidad CRUD completa, t
 3. **NO crear bloques `<style>` inline** - Solo clases de `hospital.css`
 4. **Compilar con**: `dotnet build -v:m /bl:build.binlog 2>&1 | Tee-Object build.log`
 5. **Seguir patrones de repositorios existentes** (ver EmpleadoRepository.cs)
+6. **Si el output de build se trunca**: usar workflow `/build-full-output` o script `scripts/parse_build_errors.py`
 
 ---
 
@@ -654,4 +695,4 @@ Se creó la página de gestión de aspirantes con funcionalidad CRUD completa, t
 
 ---
 
-*Documento actualizado: 2026-01-30 (Fases 1-3 completadas)*
+*Documento actualizado: 2026-01-31 (Fases 1-5 completadas, Fases 6-7 pendientes)*

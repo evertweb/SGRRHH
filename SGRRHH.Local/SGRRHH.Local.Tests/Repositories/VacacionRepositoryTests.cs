@@ -5,6 +5,7 @@ using NSubstitute;
 using SGRRHH.Local.Domain.Entities;
 using SGRRHH.Local.Domain.Enums;
 using SGRRHH.Local.Infrastructure.Repositories;
+using SGRRHH.Local.Shared.Interfaces;
 using Xunit;
 
 namespace SGRRHH.Local.Tests.Repositories;
@@ -19,7 +20,8 @@ public class VacacionRepositoryTests
     {
         _fixture = fixture;
         var logger = Substitute.For<ILogger<VacacionRepository>>();
-        _repository = new VacacionRepository(_fixture.Context, logger);
+        var empleadoRepo = Substitute.For<IEmpleadoRepository>();
+        _repository = new VacacionRepository(_fixture.Context, logger, empleadoRepo);
         _fixture.CleanDatabaseAsync().Wait();
     }
 

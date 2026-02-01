@@ -1,0 +1,10 @@
+python : C:\Python314\python.exe: can't open file 
+'C:\\Users\\evert\\Documents\\rrhh\\scripts\\parse_build_errors.py': [Errno 2] No such 
+file or directory
+At line:1 char:116
++ ... oding UTF8; python scripts\parse_build_errors.py build_errors.txt 2>& ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Python314\py...le or directory:String) [ 
+   ], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

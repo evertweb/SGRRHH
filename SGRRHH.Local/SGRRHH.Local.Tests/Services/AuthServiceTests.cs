@@ -29,7 +29,9 @@ public class AuthServiceTests
         var auditRepo = Substitute.For<IAuditLogRepository>();
         auditRepo.AddAsync(Arg.Any<AuditLog>()).Returns(ci => ci.Arg<AuditLog>());
 
-        _authService = new LocalAuthService(_usuarioRepository, auditRepo, auditLogger);
+        var dispositivoRepo = Substitute.For<IDispositivoAutorizadoRepository>();
+        var configService = Substitute.For<IConfiguracionService>();
+        _authService = new LocalAuthService(_usuarioRepository, auditRepo, dispositivoRepo, configService, auditLogger);
     }
 
     [Fact]

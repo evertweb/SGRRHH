@@ -9,6 +9,7 @@ using SGRRHH.Local.Domain.Services;
 using SGRRHH.Local.Infrastructure.Data;
 using SGRRHH.Local.Infrastructure.Repositories;
 using SGRRHH.Local.Infrastructure.Services;
+using SGRRHH.Local.Infrastructure.Services.Pdf;
 using SGRRHH.Local.Server.Components;
 using SGRRHH.Local.Server.Hubs;
 using SGRRHH.Local.Server.Services;
@@ -102,6 +103,11 @@ builder.Services.AddScoped<IDetalleEntregaDotacionRepository, DetalleEntregaDota
 builder.Services.AddScoped<IVacanteRepositorio, VacanteRepositorio>();
 builder.Services.AddScoped<IAspiranteRepositorio, AspiranteRepositorio>();
 builder.Services.AddScoped<IHojaVidaPdfRepositorio, HojaVidaPdfRepositorio>();
+
+// Servicios PDF para Hoja de Vida Inteligente
+builder.Services.AddScoped<IXmpMetadataHandler, XmpMetadataHandler>();
+builder.Services.AddScoped<PdfFieldMapper>();
+builder.Services.AddScoped<IPdfHojaVidaService, PdfHojaVidaService>();
 
 // Authentication service
 builder.Services.AddScoped<IAuthService, LocalAuthService>();
